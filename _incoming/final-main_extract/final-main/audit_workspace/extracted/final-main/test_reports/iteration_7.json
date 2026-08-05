@@ -1,0 +1,43 @@
+{
+  "summary": "Iter7 — Travail hub + Paramètres.Automatisation. Backend: 16/16 pytest pass après correction de 2 bugs SQLite NOT NULL sur user_data.updated_at (INSERT dans _save_automations et _save_automation_prefs). Frontend: KPIs Travail (kpi-projects/tasks/appointments/ca/marge) OK avec vraies données Thomas (CA 21 600 €, marge 88 %, +6 tâches créées aujourd'hui), aucune valeur codée en dur détectée. Nouveau→menu→QuickCreate tâche OK. CRM: 6 colonnes présentes (nouveau/contacte/proposition/negociation/gagne/perdu). Onglets Projets/Documents/DAF IA rendent leurs empty states + boutons goto-bureau/goto-pilotage OK. Paramètres.Automatisation: KPIs, création NL (auto-create-input+btn) + delete custom OK, toggle wellbeing-consent persiste après reload. Nav 'Work' visible. Un pageError React (insertBefore) détecté lors du switch de tab immédiatement après fermeture d'une modale QuickCreate — reproductible mais non bloquant (fresh nav OK).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/automations/custom", "issue": "Avant fix: 500 IntegrityError SQLite (user_data.updated_at NOT NULL). Cause: INSERT dans _save_automations n'incluait pas updated_at. Fixé par l'agent de test."},
+      {"endpoint": "PUT /api/automations/wellbeing-consent", "issue": "Avant fix: même bug NOT NULL sur user_data.updated_at dans _save_automation_prefs. Fixé par l'agent de test."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Travail.jsx (switch de tab post-modale)", "issue": "PageError React 'Failed to execute insertBefore on Node' lors du clic sur travail-tab-crm juste après la fermeture d'un QuickCreate modal (ex: création de tâche → click direct sur CRM tab). Reproductible dans le même run. Non bloquant (une nav fresh /travail?tab=crm ou reload contourne). Probable conflit de re-render entre AnimatePresence de la modale et le changement d'onglet.", "selector": "[data-testid=travail-tab-crm]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/travail — Vue d'ensemble", "issues": ["Section 'Recommandations IA', 'Performance financière', 'Documents récents' non validées visuellement (rendu conditionnel selon la disponibilité des recos — Thomas n'en a peut-être aucune renvoyée). Endpoint /travail/recommendations renvoie 200 avec items:[] pour ce compte. À vérifier avec un compte ayant des leads stale/dépenses récurrentes."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter7_travail_automations.py",
+    "/app/test_reports/pytest/iter7_results.xml"
+  ],
+  "action_items": [
+    "Vérifier le pageError React 'insertBefore' déclenché lors du switch de tab post-modale QuickCreate (dans Travail.jsx, envelopper le contenu des onglets avec AnimatePresence mode='wait' ou ajouter des keys stables).",
+    "Optionnel: dans _save_automations et _save_automation_prefs, ajouter updated_at = NOW()/CURRENT_TIMESTAMP dans les UPDATE aussi pour cohérence audit."
+  ],
+  "critical_code_review_comments": [
+    "routes/automations.py — Deux INSERT sur user_data n'incluaient pas updated_at (colonne NOT NULL en dev SQLite). Bug corrigé, mais indique un manque de tests locaux SQLite avant le merge (les autres modules utilisent la même table). Recommander un test smoke sur toutes les tables user_data au démarrage.",
+    "routes/travail.py — _list_rows/_insert_row utilisent la table user_tasks/crm_leads/crm_events créée à la volée via _ensure_table dans missing_apis.py — cohérence OK et calcul dynamique du pipeline/finance depuis les vraies données confirmé (CA 21 600 € / marge 88 % pour Thomas, matches spec).",
+    "Travail.jsx — le paramètre URL ?tab=<id> est utilisé pour la navigation directe mais l'onglet initial pourrait ne pas être synchronisé si l'utilisateur arrive avec un ?tab=crm (à vérifier — apercu par défaut peut sembler chargé). Non bloquant."
+  ],
+  "updated_files": [
+    "/app/backend/routes/automations.py (INSERT updated_at NOT NULL fix)",
+    "/app/backend/tests/test_iter7_travail_automations.py (nouveau)"
+  ],
+  "success_rate": {"backend": "100% (16/16)", "frontend": "~95% (23/24 checks pass; 1 pageError non bloquant sur switch de tab post-modale)"},
+  "test_credentials": "Thomas: thomas@zayado.fr via POST /api/auth/request-link + verify-link.",
+  "seed_data_creation": "1 tâche TEST_UI_task_* + tests transitoires CRM/agenda/automation custom (créés puis supprimés).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Bugs SQL NOT NULL déjà fixés dans routes/automations.py. Backend 16/16 dans test_iter7_travail_automations.py. Sur le front, un pageError 'insertBefore' est reproductible en cliquant travail-tab-crm juste après avoir soumis un QuickCreate — à investiguer côté rendu (AnimatePresence?). Compte Thomas: CA 21 600 €, marge 88 %, 6 tâches en attente (dont TEST_UI_task_1785849344 laissée en base — à cleaner si besoin). Nav 'Work' visible (compte en anglais).",
+  "rca_of_issue": "user_data.updated_at avec NOT NULL constraint sur SQLite dev, mais les INSERT de _save_automations et _save_automation_prefs (routes/automations.py) ne passaient pas la colonne. Résultat: 500 IntegrityError sur POST /api/automations/custom et PUT /api/automations/wellbeing-consent. Correction: ajout de 'updated_at' avec CURRENT_TIMESTAMP dans les 2 INSERT. Vérifié via pytest (5/5 pour la classe TestAutomations). Le PageError React 'insertBefore' est probablement lié à AnimatePresence + démontage synchrone du modal QuickCreate pendant que setTab modifie le contenu — à corriger côté Travail.jsx (mettre les onglets en mode='wait' ou séparer proprement les stacking contexts)."
+}

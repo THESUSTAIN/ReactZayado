@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0B1B3A" />
+    <title>ZAYADO | Entreprendre avec sens, clarté et stabilité</title>
+    <meta name="description" content="ZAYADO est l'alliance unique entre l'extension technologique de votre business par MyExtension AI (70%) et une collaboration humaine axée sur la performance, l'intégrité et le respect (30%). Pilotez votre activité en restant fidèle à vos valeurs profondes." />
+    <meta property="og:title" content="ZAYADO | Entreprendre avec sens, clarté et stabilité" />
+    <meta property="og:description" content="L'alliance unique entre technologie (MyExtension AI 70%) et collaboration humaine (30%) — performance, intégrité, respect." />
+    <meta property="og:image" content="https://zayado.net/og-image.svg" />
+    <meta property="og:url" content="https://zayado.net" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Zayado" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Zayado — Entreprendre, sans rester seul." />
+    <meta name="twitter:description" content="L'IA prépare 70 %, vous gardez la décision." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  </head>
+  <body class="font-sans antialiased" style="background:#FDFBF6">
+    <div id="root">
+      <!-- Loader minimal anti écran blanc -->
+      <div id="boot-loader" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#FDFBF6;z-index:9999">
+        <div style="width:36px;height:36px;border:3px solid #E8E2D8;border-top-color:#0B1B3A;border-radius:50%;animation:spin .8s linear infinite"></div>
+        <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+      </div>
+    </div>
+    <script type="module" src="/src/main.jsx"></script>
+    <script>
+      (function(){
+        const t=setInterval(()=>{const r=document.getElementById('root');if(r&&r.children.length>1){const l=document.getElementById('boot-loader');if(l)l.style.display='none';clearInterval(t);}},100);
+        setTimeout(()=>clearInterval(t),15000);
+      })();
+    </script>
+  </body>
+</html>

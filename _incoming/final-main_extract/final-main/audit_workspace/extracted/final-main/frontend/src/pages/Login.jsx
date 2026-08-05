@@ -1,0 +1,397 @@
+import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { Mail, ShieldCheck, KeyRound, Loader2, RotateCcw, Server, Lock, Cpu, ArrowRight, X } from "lucide-react";
+import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
+import { usePrefs } from "@/context/PrefsContext";
+import { sendMagicLink, ssoApi } from "@/lib/api";
+import "./login.css";
+
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 13 24 13c3 0 5.8 1.1 7.9 3l5.7-5.7C34.6 6.1 29.6 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.4-2.1 14.1-5.5l-6.5-5.5C29.6 34.9 26.9 36 24 36c-5.2 0-9.6-3.3-11.2-8l-6.6 5.1C9.6 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4.1 5.5l6.5 5.5C41.4 36.8 44 31 44 24c0-1.3-.1-2.3-.4-3.5z"/></svg>
+  );
+}
+function MicrosoftIcon() {
+  return (<svg width="16" height="16" viewBox="0 0 23 23"><path fill="#f35325" d="M1 1h10v10H1z"/><path fill="#81bc06" d="M12 1h10v10H12z"/><path fill="#05a6f0" d="M1 12h10v10H1z"/><path fill="#ffba08" d="M12 12h10v10H12z"/></svg>);
+}
+
+// i18n local à l'écran de connexion (le sélecteur agit ensuite sur toute l'app via PrefsContext)
+const STR = {
+  fr: {
+    welcome: "Bienvenue sur", subtitle: "Connectez-vous ou créez votre compte en un clic — sans mot de passe à retenir.",
+    google: "Google", microsoft: "Microsoft", orEmail: "ou par email", yourEmail: "Votre email",
+    getLink: "Recevoir mon lien", emailSent: "Email envoyé", previewMode: "Mode preview",
+    clickLink: (e) => <>Cliquez sur le lien reçu à <b>{e}</b> pour vous connecter.</>,
+    previewText: "L'email n'est pas envoyé en preview. Cliquez sur ce lien pour vous connecter :",
+    connectNow: "→ Se connecter maintenant", resend: "Renvoyer un lien",
+    noAccount: "Pas de compte ? Il sera créé automatiquement à votre première connexion.",
+    sso: "Se connecter avec le SSO",
+    ssoDomainLabel: "Domaine email de votre entreprise",
+    ssoDomainPh: "votreentreprise.com",
+    ssoGo: "Continuer", ssoBack: "Retour",
+    ssoChecking: "Vérification de votre configuration SSO…",
+    ssoNotConfigured: (d) => `Aucun SSO n'est encore configuré pour ${d}. Contactez-nous pour l'activer.`,
+    ssoContact: "Nous contacter pour activer le SSO",
+    guest: "Aperçu gratuit", testAccount: "Ouvrir le compte test (Thomas)", lastLogin: "Dernière connexion",
+    redirecting: (p) => `Redirection vers ${p}…`, cgu: "CGU", privacy: "Confidentialité",
+    enterEmail: "Entrez votre adresse email.", linkSent: "Lien de connexion envoyé ! Vérifiez votre boîte mail.",
+    previewInfo: "Mode preview : utilisez le lien affiché ci-dessous.",
+    sendFail: "Envoi impossible pour le moment. Essayez Google.",
+    deliveryFail: "L'envoi de l'email est momentanément indisponible. Réessayez dans quelques instants.",
+    errGoogle: "La connexion avec Google a échoué. Réessayez, ou utilisez votre email.",
+    errMsft: "La connexion avec Microsoft a échoué. Réessayez, ou utilisez votre email.",
+    errLink: "Ce lien de connexion est invalide ou a expiré. Demandez-en un nouveau.",
+    trustTitle: "Sécurité & confidentialité",
+    trustHosting: "Hébergement Railway",
+    trustEncryption: "Connexion chiffrée (HTTPS)",
+    trustAi: "Sous-traitants IA : Mammouth · Emergent (secours)",
+    trustLink: "Voir le détail des sous-traitants",
+  },
+  en: {
+    welcome: "Welcome to", subtitle: "Sign in or create your account in one click — no password to remember.",
+    google: "Google", microsoft: "Microsoft", orEmail: "or with email", yourEmail: "Your email",
+    getLink: "Send me a link", emailSent: "Email sent", previewMode: "Preview mode",
+    clickLink: (e) => <>Click the link sent to <b>{e}</b> to sign in.</>,
+    previewText: "Email isn't sent in preview. Click this link to sign in:",
+    connectNow: "→ Sign in now", resend: "Resend a link",
+    noAccount: "No account? It will be created automatically on your first sign-in.",
+    sso: "Sign in with SSO",
+    ssoDomainLabel: "Your company email domain",
+    ssoDomainPh: "yourcompany.com",
+    ssoGo: "Continue", ssoBack: "Back",
+    ssoChecking: "Checking your SSO configuration…",
+    ssoNotConfigured: (d) => `No SSO is configured yet for ${d}. Contact us to set it up.`,
+    ssoContact: "Contact us to enable SSO",
+    guest: "Free preview", testAccount: "Open test account (Thomas)", lastLogin: "Last sign-in",
+    redirecting: (p) => `Redirecting to ${p}…`, cgu: "Terms", privacy: "Privacy",
+    enterEmail: "Enter your email address.", linkSent: "Sign-in link sent! Check your inbox.",
+    previewInfo: "Preview mode: use the link shown below.",
+    sendFail: "Couldn't send right now. Try Google.",
+    deliveryFail: "Email delivery is temporarily unavailable. Please try again shortly.",
+    errGoogle: "Google sign-in failed. Try again, or use your email.",
+    errMsft: "Microsoft sign-in failed. Try again, or use your email.",
+    errLink: "This sign-in link is invalid or expired. Request a new one.",
+    trustTitle: "Security & privacy",
+    trustHosting: "Hosted on Railway",
+    trustEncryption: "Encrypted connection (HTTPS)",
+    trustAi: "AI subprocessors: Mammouth · Emergent (fallback)",
+    trustLink: "See subprocessor details",
+  },
+};
+
+const PRIVACY_URL = "https://zayado.net/confidentialite";
+const CGU_URL = "https://zayado.net/cgu";
+const LAST_EMAIL_KEY = "zayado_last_email";
+const LAST_METHOD_KEY = "zayado_last_login_method";
+
+export default function Login() {
+  const { login, loginMicrosoft } = useAuth();
+  const prefs = usePrefs();
+  const [lang, setLang] = useState(() => (typeof window !== "undefined" && localStorage.getItem("zayado_lang")) || prefs?.prefs?.language || "fr");
+  const t = STR[lang] || STR.fr;
+
+  const [email, setEmail] = useState(() => (typeof window !== "undefined" && localStorage.getItem(LAST_EMAIL_KEY)) || "");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [devLink, setDevLink] = useState(null);
+  const [oauthProvider, setOauthProvider] = useState(null); // "Google" | "Microsoft" | null
+  const [ssoOpen, setSsoOpen] = useState(false);
+  const [ssoDomain, setSsoDomain] = useState("");
+  const [ssoChecking, setSsoChecking] = useState(false);
+  const [ssoNotConfigured, setSsoNotConfigured] = useState(null); // domaine si pas configuré
+
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get("plan");
+    if (p) sessionStorage.setItem("zayado_pending_plan", p);
+  }, []);
+
+  const changeLang = (l) => {
+    setLang(l);
+    localStorage.setItem("zayado_lang", l);
+    prefs?.setPref?.({ language: l });
+  };
+
+  const errorParam = new URLSearchParams(window.location.search).get("error");
+  const errorMessage =
+    errorParam === "google_failed" ? t.errGoogle
+    : errorParam === "microsoft_failed" ? t.errMsft
+    : errorParam === "link_failed" ? t.errLink
+    : null;
+  const isLinkError = errorParam === "link_failed";
+
+  const lastMethod = localStorage.getItem(LAST_METHOD_KEY);
+  const rememberMethod = (m) => localStorage.setItem(LAST_METHOD_KEY, m);
+  const lastMethodLabel = lastMethod === "google" ? "Google" : lastMethod === "microsoft" ? "Microsoft" : lastMethod === "email" ? "Email" : null;
+
+  const doLogin = () => { rememberMethod("google"); setOauthProvider("Google"); login(); };
+  const doLoginMicrosoft = () => { rememberMethod("microsoft"); setOauthProvider("Microsoft"); loginMicrosoft(); };
+
+  // Preview : ouvre directement le compte test Thomas (via lien magique dev, jamais en prod)
+  const openTestAccount = async () => {
+    try {
+      const res = await sendMagicLink("thomas@zayado.fr");
+      const link = res?.dev_link;
+      if (link) { window.location.href = link; }
+      else { toast.error("Compte test indisponible ici."); }
+    } catch { toast.error("Compte test indisponible ici."); }
+  };
+
+  // SSO thesustain.net (SIMULÉ pour la démo) : connecte un compte démo membre
+  // et déclenche le parcours d'habitudes chrétiennes côté onglet "Moi > Habitudes".
+  const openThesustain = async () => {
+    try {
+      localStorage.setItem("zayado_sso", "thesustain");
+      localStorage.removeItem("zayado_sso_seeded");
+      const res = await sendMagicLink("membre@thesustain.net");
+      const link = res?.dev_link;
+      if (link) { window.location.href = link; }
+      else { toast.error("SSO thesustain.net indisponible ici."); }
+    } catch { toast.error("SSO thesustain.net indisponible ici."); }
+  };
+
+  const _host = (typeof window !== "undefined" && window.location.hostname) || "";
+  const IS_PRODUCTION = /(^|\.)zayado\.net$/i.test(_host) || /(^|\.)myextension-ai\.com$/i.test(_host);
+
+  const sendLink = async (addr) => {
+    const value = (addr || "").trim();
+    if (!value) { toast.error(t.enterEmail); return; }
+    setSending(true);
+    try {
+      const res = await sendMagicLink(value);
+      localStorage.setItem(LAST_EMAIL_KEY, value);
+      rememberMethod("email");
+      setSent(true);
+      if (res?.delivered_via_email && !res?.dev_link) {
+        toast.success(t.linkSent); setDevLink(null);
+      } else if (res?.dev_link) {
+        setDevLink(res.dev_link); toast.info(t.previewInfo);
+      } else if (res?.delivery_failed) {
+        // Production : email indisponible, aucun lien exposé
+        setSent(false); toast.error(t.deliveryFail);
+      } else {
+        toast.success(t.linkSent); setDevLink(null);
+      }
+    } catch {
+      toast.error(t.sendFail);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const emailContinue = (e) => { e.preventDefault(); sendLink(email); };
+
+  // SSO entreprise réel : on part du domaine email pro, on interroge le backend
+  // pour savoir si un IdP (SAML/OIDC) est déjà configuré pour ce domaine.
+  // Si oui → redirection vers l'IdP. Si non → on le dit clairement plutôt que
+  // d'ouvrir un mailto silencieux, et on propose un contact explicite.
+  const openSso = () => { setSsoOpen(true); setSsoNotConfigured(null); };
+  const closeSso = () => { setSsoOpen(false); setSsoDomain(""); setSsoNotConfigured(null); };
+  const submitSso = async (e) => {
+    e.preventDefault();
+    const domain = ssoDomain.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+    if (!domain || !domain.includes(".")) { toast.error(t.enterEmail); return; }
+    setSsoChecking(true);
+    setSsoNotConfigured(null);
+    try {
+      const res = await ssoApi.initiate(domain);
+      if (res?.redirect_url) {
+        rememberMethod("sso");
+        window.location.href = res.redirect_url;
+        return;
+      }
+      setSsoNotConfigured(domain);
+    } catch {
+      // Backend SSO pas encore déployé, ou domaine inconnu : on ne redirige jamais
+      // vers un mailto automatique, on l'affiche comme un état "à activer".
+      setSsoNotConfigured(domain);
+    } finally {
+      setSsoChecking(false);
+    }
+  };
+  const contactForSso = () => {
+    const subject = encodeURIComponent(`Demande SSO / SAML entreprise — ${ssoNotConfigured || ""}`);
+    window.location.href = `mailto:contact@zayado.net?subject=${subject}`;
+  };
+
+  return (
+    <div className="login-screen" data-testid="login-page">
+      <div className="login-sky" />
+
+      {oauthProvider && (
+        <div className="login-oauth-overlay" data-testid="login-oauth-overlay">
+          <Loader2 size={34} className="spin" style={{ color: "#E5C887" }} />
+          <p>{t.redirecting(oauthProvider)}</p>
+        </div>
+      )}
+
+      <motion.div className="login-inner"
+        initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+
+        {/* Sélecteur de langue */}
+        <div className="login-topbar">
+          <div className="login-lang" data-testid="login-lang-switch" role="group" aria-label="Language">
+            <button className={lang === "fr" ? "active" : ""} onClick={() => changeLang("fr")} data-testid="login-lang-fr">FR</button>
+            <button className={lang === "en" ? "active" : ""} onClick={() => changeLang("en")} data-testid="login-lang-en">EN</button>
+          </div>
+        </div>
+
+        <div className="login-brand">
+          <img src="/logo-icon.png" alt="MyExtension AI" className="login-logo-img" data-testid="login-logo" />
+        </div>
+
+        <h1 className="login-title-wrap" data-testid="login-title">
+          <span className="login-title">
+            {t.welcome} MyExtension <span className="login-brand-name-accent">AI</span>
+            <span className="login-title-by" data-testid="login-title-by"><em>by</em> Zayado</span>
+          </span>
+        </h1>
+        <p className="login-subtitle login-subtitle-plain">{t.subtitle}</p>
+
+        <div className="login-card" data-testid="login-card">
+
+          {errorMessage && (
+            <div className="login-error-banner" data-testid="login-error-banner">
+              {errorMessage}
+              {isLinkError && (
+                <div style={{ marginTop: 8 }}>
+                  <button className="login-resend" onClick={() => sendLink(email)} disabled={sending} data-testid="login-resend-btn">
+                    {sending ? <Loader2 size={14} className="spin" /> : <RotateCcw size={14} />} {t.resend}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Méthodes sociales principales : Google + Microsoft sur une ligne */}
+          <div className="login-social-row">
+            <button className="login-btn login-btn-light login-btn-social" onClick={doLogin} data-testid="login-google-btn">
+              <GoogleIcon /> {t.google}
+            </button>
+            <button className="login-btn login-btn-msft login-btn-social" onClick={doLoginMicrosoft} data-testid="login-microsoft-btn">
+              <MicrosoftIcon /> {t.microsoft}
+            </button>
+          </div>
+
+          <div className="login-sep"><span>{t.orEmail}</span></div>
+
+          {/* Email — méthode principale */}
+          {sent ? (
+            <div className="login-sent" data-testid="login-email-sent">
+              <Mail size={18} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <strong>{devLink ? t.previewMode : t.emailSent}</strong>
+                {devLink ? (
+                  <>
+                    <span>{t.previewText}</span>
+                    <a href={devLink} data-testid="login-dev-link"
+                      style={{ display: "inline-block", marginTop: 8, padding: "8px 14px", borderRadius: 999,
+                        background: "#C9A449", color: "#0B1F3A", fontWeight: 700, fontSize: 13, textDecoration: "none", wordBreak: "break-all" }}>
+                      {t.connectNow}
+                    </a>
+                    <div style={{ marginTop: 8 }}>
+                      <button className="login-resend" onClick={() => sendLink(email)} disabled={sending} data-testid="login-resend-btn">
+                        {sending ? <Loader2 size={14} className="spin" /> : <RotateCcw size={14} />} {t.resend}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <span>{t.clickLink(email)}</span>
+                    <div style={{ marginTop: 8 }}>
+                      <button className="login-resend" onClick={() => sendLink(email)} disabled={sending} data-testid="login-resend-btn">
+                        {sending ? <Loader2 size={14} className="spin" /> : <RotateCcw size={14} />} {t.resend}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={emailContinue}>
+              <label className="login-input-label" htmlFor="login-email">{t.yourEmail}</label>
+              <input id="login-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                placeholder="vous@exemple.fr" className="login-input" data-testid="login-email-input" />
+              <button type="submit" className="login-btn login-btn-dark" disabled={sending} data-testid="login-email-btn">
+                {sending ? <Loader2 size={16} className="spin" /> : <Mail size={16} />} {t.getLink}
+              </button>
+            </form>
+          )}
+
+          {/* Badge "dernière connexion" — cohérent pour toutes les méthodes */}
+          {lastMethodLabel && (
+            <p className="login-last-line" data-testid="login-last-method">{t.lastLogin} : {lastMethodLabel}</p>
+          )}
+
+          <p className="login-microcopy">{t.noAccount}</p>
+
+          <div className="login-sep-thin" />
+
+          {/* Méthodes secondaires : SSO TheSustain + (preview) compte test Thomas */}
+          <div className="login-secondary">
+            <button className="login-link" onClick={openSso} data-testid="login-sso-btn" style={{ color: "rgba(255,255,255,0.72)" }}><KeyRound size={14} /> {t.sso}</button>
+          </div>
+
+          {ssoOpen && (
+            <div className="login-sso-panel" data-testid="login-sso-panel" onClick={(e) => e.stopPropagation()}
+              style={{ marginTop: 10, padding: "14px 16px", borderRadius: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.85)" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: "#E5C887" }}>Connexion SSO</span>
+                <button type="button" onClick={closeSso} aria-label="Fermer" data-testid="login-sso-close"
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.6)" }}><X size={15} /></button>
+              </div>
+              {ssoNotConfigured ? (
+                <div data-testid="login-sso-not-configured">
+                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", margin: "0 0 10px" }}>{t.ssoNotConfigured(ssoNotConfigured)}</p>
+                  <button type="button" className="login-btn login-btn-teal" onClick={contactForSso} data-testid="login-sso-contact-btn">
+                    {t.ssoContact}
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={submitSso}>
+                  <label className="login-input-label" htmlFor="login-sso-domain">{t.ssoDomainLabel}</label>
+                  <input id="login-sso-domain" type="text" value={ssoDomain} onChange={(e) => setSsoDomain(e.target.value)}
+                    placeholder={t.ssoDomainPh} className="login-input" data-testid="login-sso-domain-input" />
+                  <button type="submit" className="login-btn login-btn-dark" disabled={ssoChecking} data-testid="login-sso-submit-btn">
+                    {ssoChecking ? <><Loader2 size={16} className="spin" /> {t.ssoChecking}</> : <>{t.ssoGo} <ArrowRight size={16} /></>}
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
+          {!IS_PRODUCTION && (
+            <>
+              <div className="login-sep-thin" />
+              <button className="login-btn login-btn-teal" onClick={openTestAccount} data-testid="login-guest-btn">
+                {t.testAccount}
+              </button>
+              <button className="login-btn login-btn-social" onClick={openThesustain} data-testid="login-thesustain-btn"
+                style={{ marginTop: 8, borderColor: "rgba(201,164,73,0.5)", color: "var(--gold-strong, #C9A449)" }}>
+                ✝️ Continuer avec thesustain.net
+              </button>
+            </>
+          )}
+        </div>
+
+        <p className="login-foot">
+          <ShieldCheck size={13} />{" "}
+          <a href={CGU_URL} target="_blank" rel="noopener noreferrer">{t.cgu}</a>
+          <span className="login-link-dot">·</span>
+          <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer" data-testid="login-privacy-link">{t.privacy}</a>
+        </p>
+
+        {/* Bandeau de confiance factuel — pas de badges de certification non obtenus,
+            uniquement des informations vérifiables sur l'hébergement et les sous-traitants IA. */}
+        <div className="login-trust" data-testid="login-trust-footer"
+          style={{ display: "flex", flexWrap: "wrap", gap: 14, justifyContent: "center", marginTop: 14, opacity: 0.7, color: "rgba(255,255,255,0.7)" }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11 }} title={t.trustHosting}>
+            <Server size={12} /> {t.trustHosting}
+          </span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11 }} title={t.trustEncryption}>
+            <Lock size={12} /> {t.trustEncryption}
+          </span>
+        </div>
+      </motion.div>
+    </div>
+  );
+}

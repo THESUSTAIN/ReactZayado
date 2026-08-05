@@ -1,0 +1,99 @@
+{
+  "theme": "hybrid",
+  "theme_description": "Supporte le Dark et Light mode via CSS variables existantes. Le mood est 'Luxury Dashboard' (SaaS premium). Utilisation de textures (noise) et de contrastes élevés. Pas de fond transparent sur les éléments interactifs.",
+  "colors": {
+    "background": "var(--color-navy) - Fond principal (sombre et profond)",
+    "primary": "var(--color-gold, #C9A449) - Utilisé pour l'excellence, les badges Premium/SSO, et le score d'énergie au top",
+    "success": "var(--color-sage, #5DCAA5) - Utilisé pour les habitudes cochées, le bien-être positif, et la croissance",
+    "warning_danger": "var(--color-coral, #F0808A) - Utilisé pour le risque de burn-out, les alertes, et la baisse d'énergie",
+    "accent_deep": "var(--color-plum, #8b6fbf) - Utilisé pour l'IA, les insights profonds, la timeline et les corrélations",
+    "surface": "glass-card (existant) avec un backdrop-blur fort et une bordure 1px subtile (ex: rgba(255,255,255,0.1))"
+  },
+  "typography": {
+    "hero_verdict": "text-4xl md:text-5xl font-light tracking-tight. Pas de typo 'Inter' basique. C'est une déclaration éditoriale. Alignement à gauche.",
+    "h2_section": "text-2xl font-medium tracking-tight, souvent associé à 'card-label'.",
+    "body": "text-base leading-relaxed pour une lisibilité maximale.",
+    "labels": "text-xs uppercase tracking-[0.2em] pour les sur-titres (ex: ÉTAT ACTUEL, ALERTE).",
+    "empty_state_text": "text-lg text-gray-400 font-light, centré."
+  },
+  "visual_enhancers": {
+    "glassmorphism": "Les 'glass-card' doivent ressembler à du cristal dépoli (fort blur, légère saturation, bordure 1px claire).",
+    "inner_glow": "Pour le Hero Verdict, utiliser un léger shadow interne ou un gradient radial en fond très subtil (10% opacité max) avec la couleur dominante du verdict (Sage si positif, Coral si négatif).",
+    "micro_textures": "Ajouter un léger grain/noise sur le fond principal pour casser l'aspect plat numérique (optionnel si pris en charge par le CSS global)."
+  },
+  "component_name": "MoiPage",
+  "component_path": "/app/frontend/src/pages/MoiPage.js",
+  "grids_and_layouts": {
+    "global_container": "max-w-7xl mx-auto p-4 md:p-8 space-y-8",
+    "bento_grid": "Utiliser 'pgrid' ou 'grid grid-cols-1 md:grid-cols-12 gap-6'.",
+    "sections": {
+      "hero_verdict": {
+        "span": "col-span-12",
+        "description": "Le centre névralgique. Si aucun check-in: Empty state massif invitant au check-in du matin. Si check-in fait: Grand texte éditorial (ex: 'Énergie optimale. Priorisez le travail profond.') avec bouton vers la Vision.",
+        "padding": "p-8 md:p-12"
+      },
+      "kpi_row": {
+        "span_items": "col-span-12 md:col-span-4",
+        "items": [
+          "Jauge d'énergie (Score 0-100, jauge circulaire ou barre épaisse)",
+          "Risque de burn-out (Indicateur % avec tendance, couleur Coral si > 60%)",
+          "Coach IA (Recommandation courte, couleur Plum, bouton 'Voir le plan')"
+        ]
+      },
+      "tabs_navigation": {
+        "span": "col-span-12",
+        "description": "Onglets: Aujourd'hui | Bien-être | Habitudes. Design: pillules (zchip) ou soulignement élégant, pas de card native lourde."
+      },
+      "tab_aujourdhui": {
+        "layout": "grid grid-cols-1 md:grid-cols-12 gap-6",
+        "items": {
+          "timeline_energie": "col-span-12 md:col-span-8 (Graphique d'historique 30j ou empty state élégant)",
+          "rappels_inapp": "col-span-12 md:col-span-4 (Notifications douces contextuelles: check-in matin, habitudes non cochées le soir)"
+        }
+      },
+      "tab_habitudes": {
+        "layout": "grid grid-cols-1 md:grid-cols-12 gap-6",
+        "items": {
+          "liste_habitudes": "col-span-12 md:col-span-7 (Liste avec streaks, checkbox personnalisée)",
+          "correlation_card": "col-span-12 md:col-span-5 (Habitudes x Productivité x Bien-être, visualisation ou texte d'insight)"
+        }
+      },
+      "tab_bienetre": {
+        "layout": "grid grid-cols-1 gap-6",
+        "items": {
+          "prevention_burnout": "Détails des facteurs à surveiller (charge mentale, heures travaillées).",
+          "export_pdf": "Bouton large (zbtn) pour générer le 'Bilan santé'."
+        }
+      }
+    }
+  },
+  "motion": {
+    "stagger_entrance": "Framer Motion (si disponible) ou CSS keyframes pour faire apparaître les cards une par une (delay: 0.1s, 0.2s, etc.). Effet: translateY(20px) vers 0, opacity 0 vers 1.",
+    "hover_states": "Sur les 'glass-card' interactives: léger transform translateY(-2px) et augmentation subtile du glow de la bordure.",
+    "tab_transition": "Fondu enchaîné doux (opacity) lors du changement d'onglet."
+  },
+  "accessibility": {
+    "contrast": "Garantir que le texte sur le fond navy ou les cartes de couleur respecte le ratio APCA. Toujours tester le blanc/or sur navy.",
+    "focus": "Anneau de focus visible sur les boutons (zbtn) et les champs (Check-in).",
+    "test_ids": "Ajouter des attributs data-testid (ex: 'moi-hero-verdict', 'moi-tab-habitudes', 'moi-checkin-btn')."
+  },
+  "media": {
+    "illustrations": "Si utilisation d'icônes, privilégier Phosphor Icons (poids Duotone) ou Lucide. Pour les Empty States, une grande icône filaire centrée."
+  },
+  "instructions_to_main_agent": {
+    "1_architecture": "Créer/Mettre à jour MoiPage.js avec le système d'onglets (state actif).",
+    "2_data_mocking": "RÈGLE ABSOLUE: Ne génère pas de faux graphiques avec des '12', '45%'. Utilise les VRAIES données passées en props ou depuis un contexte. Si l'array est vide, affiche un Empty State élégant (ex: 'Aucune donnée d'énergie pour cette semaine.').",
+    "3_sso_simulation": "Pour la démo 'thesustain.net', implémente un bouton ou un toggle caché/simulé qui, lorsqu'activé, injecte les 5 habitudes (Lecture biblique, Prière, Gratitude, Méditation, Service) avec un badge visuel 'var(--color-gold)' sur ces items.",
+    "4_check_in_form": "Le Check-in quotidien doit être un modal (Shadcn/Dialog) ou une carte inline dans le Hero, avec 3 sélecteurs (Énergie, Clarté, Stress) et un bouton de validation. Une fois validé, il met à jour le 'Verdict'.",
+    "5_css_classes": "Réutilise impérativement 'glass-card', 'zbtn', 'zchip', 'card-label', 'pgrid' pour maintenir la cohérence avec le reste de l'app Zayado/MyExtension AI."
+  },
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "You tend to converge toward generic outputs. Avoid this: make creative, distinctive frontends.",
+    "Create depth through layered design elements with z-index hierarchy and glass-morphism effects (backdrop-blur).",
+    "NEVER use complete transparent background in header, overlays, or dropdowns.",
+    "Use 2-3x more spacing (p-6, p-8) than feels comfortable. Cramped designs look cheap.",
+    "Every interaction needs micro-animations - hover states, transitions. Static = dead.",
+    "All interactive and key informational elements MUST include a data-testid attribute.",
+    "NO FAKE DATA. If data is absent, design a beautiful empty state."
+  ]
+}

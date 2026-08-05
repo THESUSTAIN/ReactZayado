@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Forfaits — Zayado</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --navy:#0B1F3A; --navy-2:#0e2748; --gold:#C9A449; --gold-soft:#e0c078;
+    --coral:#E85D4E; --teal:#5DCAA5; --cream:#F6F2EA; --line:rgba(246,242,234,.14);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--navy);color:var(--cream);font-family:'Manrope',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  body{background:radial-gradient(1200px 700px at 50% -10%,#123055 0%,var(--navy) 55%)}
+  .wrap{max-width:1180px;margin:0 auto;padding:56px 22px 80px}
+  .head{text-align:center;max-width:720px;margin:0 auto 46px}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);border:1px solid var(--line);padding:7px 15px;border-radius:999px;margin-bottom:22px}
+  h1{font-family:'Playfair Display',serif;font-weight:600;font-size:clamp(30px,5vw,50px);line-height:1.08;letter-spacing:-.5px}
+  h1 em{font-style:italic;color:var(--gold-soft)}
+  .sub{margin-top:16px;font-size:clamp(15px,2vw,18px);color:rgba(246,242,234,.68);line-height:1.6}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;align-items:stretch}
+  .card{position:relative;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));border:1px solid var(--line);border-radius:22px;padding:30px 26px;display:flex;flex-direction:column;transition:transform .25s ease,border-color .25s ease}
+  .card:hover{transform:translateY(-4px);border-color:rgba(201,164,73,.4)}
+  .card.hot{border-color:rgba(201,164,73,.55);box-shadow:0 20px 60px rgba(201,164,73,.14);background:linear-gradient(180deg,rgba(201,164,73,.10),rgba(255,255,255,.02))}
+  .badge{position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,var(--coral),var(--gold));color:#0B1F3A;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:6px 14px;border-radius:999px;white-space:nowrap}
+  .pname{font-size:13px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--gold)}
+  .promise{font-family:'Playfair Display',serif;font-size:25px;font-weight:600;line-height:1.15;margin:12px 0 6px}
+  .ptag{font-size:13.5px;color:rgba(246,242,234,.6);line-height:1.5;min-height:40px}
+  .price{display:flex;align-items:baseline;gap:6px;margin:22px 0 4px}
+  .price b{font-size:44px;font-weight:800;font-family:'Playfair Display',serif}
+  .price span{font-size:15px;color:rgba(246,242,234,.6)}
+  .promo{font-size:13px;font-weight:700;color:var(--teal);margin-bottom:18px}
+  .promo.none{color:rgba(246,242,234,.4);font-weight:500}
+  .cta{display:block;width:100%;text-align:center;text-decoration:none;cursor:pointer;border:none;font-family:inherit;font-weight:700;font-size:15px;padding:15px 18px;border-radius:14px;transition:filter .2s ease,transform .1s ease;margin-bottom:24px}
+  .cta:active{transform:scale(.985)}
+  .cta.primary{background:linear-gradient(90deg,var(--coral),var(--gold));color:#0B1F3A}
+  .cta.ghost{background:rgba(246,242,234,.08);color:var(--cream);border:1px solid var(--line)}
+  .cta:hover{filter:brightness(1.06)}
+  .feat-title{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(246,242,234,.5);margin-bottom:12px}
+  ul{list-style:none;display:flex;flex-direction:column;gap:11px;margin-top:2px}
+  li{display:flex;gap:10px;font-size:14px;line-height:1.45;color:rgba(246,242,234,.9)}
+  li svg{flex-shrink:0;margin-top:2px;color:var(--teal)}
+  li.human{color:var(--gold-soft);font-weight:600}
+  li.human svg{color:var(--gold)}
+  .ia-note{margin-top:auto;padding-top:18px;font-size:12px;color:rgba(246,242,234,.42);border-top:1px solid var(--line);margin-top:20px}
+  .foot{text-align:center;margin-top:46px;font-size:13px;color:rgba(246,242,234,.5)}
+  .foot a{color:var(--gold-soft)}
+  @media(max-width:900px){.grid{grid-template-columns:1fr;max-width:460px;margin:0 auto}.card.hot{order:-1}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <span class="eyebrow">✦ Forfaits Zayado</span>
+    <h1>Un cockpit pour <em>piloter et faire grandir</em> ton entreprise.</h1>
+    <p class="sub">Tu ne choisis pas un volume d'IA — tu choisis jusqu'où tu veux aller, et combien d'humain t'accompagne. Change de niveau à tout moment.</p>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <p class="foot">Paiement sécurisé via Mollie · Sans engagement, annulable à tout moment · Besoin d'aide ? <a href="mailto:hello@zayado.net">hello@zayado.net</a></p>
+</div>
+
+<script>
+  var APP_URL = "https://app.zayado.net";
+  var check = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+
+  var PLANS = [
+    {
+      id:"start", name:"START", promise:"Tes 3 premiers clients",
+      tag:"Pour lancer ton activité l'esprit serein.",
+      price:29, promo:"1er mois à 1 €", hot:false, cta:"Trouver mes 3 premiers clients", ctaClass:"ghost",
+      feats:["Bilan de création OFFERT","Création d'entreprise à 1 € éligible","Vision Board, Dashboard & Pilotage","Co-pilote IA (Claude rapide + pro)","Workflows simples & Timer","Adresse Paris & devis partenaires","Support email 48 h"],
+      human:null,
+      ia:"IA incluse pour un usage normal."
+    },
+    {
+      id:"grow", name:"GROW", promise:"Passer à 10 k€ de CA / mois",
+      tag:"Pour accélérer ta croissance et tes leads.",
+      price:79, promo:"1er mois à 9 €", hot:true, cta:"Passer à 10 k€/mois", ctaClass:"primary",
+      feats:["Tout START, plus :","Croissance — Expansion Agent (détection de leads)","8 modèles IA (Claude, GPT, Gemini, Grok)","Agent IA — 10 tâches/mois","Workflows avancés & Chatbot support","Cloud backup & partage de crédits","Support chat 24 h"],
+      human:"30 min de coach humain / mois",
+      ia:"IA élargie pour un usage soutenu."
+    },
+    {
+      id:"serenity", name:"SERENITY", promise:"Ne plus être seul",
+      tag:"Pour entreprendre sans rester seul. Le 30 % Humain inclus.",
+      price:149, promo:null, hot:false, cta:"Déléguer & ne plus être seul", ctaClass:"ghost",
+      feats:["Tout GROW, plus :","Mutuelle + RC Pro mutualisées","Adresse de prestige Paris (10 Rue de la Paix)","Supervision DAF / compta","Agent IA illimité","Tableau de bord équipe (2 sièges)","Support premium 6 h"],
+      human:"2 h de coach humain / mois",
+      ia:"IA illimitée pour un usage normal."
+    }
+  ];
+
+  var inIframe = false;
+  try { inIframe = window.self !== window.top; } catch(e){ inIframe = true; }
+
+  function choose(planId){
+    if (inIframe) {
+      // Intégré dans l'app : demande au parent d'ouvrir le paiement Mollie
+      window.parent.postMessage({ type:"zayado-choose-plan", plan: planId }, "*");
+    } else {
+      // Page publique : inscription/connexion puis paiement
+      window.location.href = APP_URL + "/login?plan=" + planId;
+    }
+  }
+
+  function render(){
+    var grid = document.getElementById("grid");
+    grid.innerHTML = PLANS.map(function(p){
+      var lis = p.feats.map(function(f){ return "<li>"+check+"<span>"+f+"</span></li>"; }).join("");
+      var human = p.human ? '<li class="human">'+check+"<span>"+p.human+"</span></li>" : "";
+      return ''
+      + '<div class="card'+(p.hot?' hot':'')+'">'
+      +   (p.hot?'<span class="badge">Le plus choisi</span>':'')
+      +   '<div class="pname">'+p.name+'</div>'
+      +   '<div class="promise">'+p.promise+'</div>'
+      +   '<div class="ptag">'+p.tag+'</div>'
+      +   '<div class="price"><b>'+p.price+'€</b><span>/ mois</span></div>'
+      +   '<div class="promo'+(p.promo?'':' none')+'">'+(p.promo||'Sans remise — l\'humain ne se brade pas')+'</div>'
+      +   '<button class="cta '+p.ctaClass+'" data-plan="'+p.id+'">'+p.cta+'</button>'
+      +   '<div class="feat-title">Ce que tu débloques</div>'
+      +   '<ul>'+lis+human+'</ul>'
+      +   '<div class="ia-note">'+p.ia+'</div>'
+      + '</div>';
+    }).join("");
+    Array.prototype.forEach.call(document.querySelectorAll(".cta"), function(btn){
+      btn.addEventListener("click", function(){ choose(btn.getAttribute("data-plan")); });
+    });
+  }
+  render();
+</script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+{
+  "summary": "Tested (1) the shadcn .dark class sync on <html> and (2) full onboarding narratif with new chapters (Ancrage, Bien-être, Action, Document). The dark class sync IS working (html.classList toggles between 'dark' and '' when the header ambiance toggle is clicked, confirmed by Moon<->Sun icon swap and dashboard visuals). However, the onboarding flow CRASHES with an uncaught TypeError when advancing from screen 8 (Inspiration) to screen 12 (Ancrage), because stepMeta is undefined for the newly-added screens 12/13/14/15. This blocks the entire new-chapter onboarding path.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Onboarding.jsx", "issue": "TypeError: Cannot read properties of undefined (reading 'tag'). The stepMeta lookup (lines 246-254) only defines entries for screens {4,5,7,8,9,10,11}. New screens 12 (Ancrage), 13 (Bien-être), 14 (Action), 15 (Document) are missing, so `stepMeta` is undefined and `stepMeta.tag`/`stepMeta.n` throw as soon as user reaches screen 12. Overlay is replaced by the CRA error overlay. Bloque tout le chapitre Ancrage et suivants.", "selector": "[data-testid=\"onboarding-overlay\"] then screen===12", "priority": "CRITICAL"},
+      {"component": "Header ambiance-toggle-btn", "issue": "Race condition on the FIRST click after login: html.dark class does not toggle on the first click (icon stays Moon, class stays 'dark'). Second and subsequent clicks work correctly. Likely due to prefsApi.get() finishing asynchronously post-login and overwriting the state set by the first click, OR the useCallback closure capturing initial DEFAULTS state. Reproduced consistently over 2 runs.", "selector": "[data-testid=\"ambiance-toggle-btn\"]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [
+      {"flow": "Onboarding new chapters (12→15)", "issue": "Because of the stepMeta crash, none of the new chapters (Ancrez votre vision / Bien-être / 3 premières actions / Premier document) could be reached or validated. The screen 8 Nav points to setScreen(12) which triggers the crash.", "affected_selectors": ["[data-testid=\"ob-ancrage-quotidien\"]", "[data-testid=\"ob-ancrage-hebdo\"]", "[data-testid=\"ob-ancrage-aucun\"]", "[data-testid=\"ob-energie-1..5\"]", "[data-testid=\"ob-action-0..2\"]", "[data-testid=\"ob-document-preview\"]", "[data-testid=\"ob-document-download\"]", "[data-testid=\"ob-document-drive\"]"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "CRITICAL: In /app/frontend/src/components/Onboarding.jsx, add stepMeta entries for screens 12, 13, 14, 15 (e.g. 12:{tag:'ANCRAGE',n:5.5}, 13:{tag:'BIEN-ÊTRE',n:5.7}, 14:{tag:'PREMIÈRES ACTIONS',n:8}, 15:{tag:'VOTRE DOCUMENT',n:9}) OR guard the render with `if (!stepMeta) return null;` and pick a fallback header. Without this fix, ANY user reaching Inspiration → Ancrage sees the CRA red 'Uncaught runtime errors' overlay and the onboarding is unfinishable.",
+    "MEDIUM: Fix first-click theme toggle race after login. Options: (a) memoize toggleTheme via functional setter reading fresh prefs (setPrefs(prev => ({...prev, theme: prev.theme === 'light' ? 'dark' : 'light'}))), or (b) delay enabling the button until `loaded === true` from PrefsContext, or (c) do not re-set theme from server response once user has interacted. Observed: click #1 no-op, click #2 flips, click #3 flips."
+  ],
+  "critical_code_review_comments": [
+    "Onboarding.jsx stepMeta is a fragile lookup; adding new screens requires manual sync — consider deriving from a single ordered array of screen definitions to prevent this class of bug.",
+    "PrefsContext.setPref uses `useCallback` with an empty dependency array — safe because setPrefs uses functional form, but Header.toggleTheme reads `isDark` from stale closure prefs. A functional patch (setPref((prev)=>...)) would eliminate the first-click race.",
+    "Onboarding.jsx exceeds 690 lines and mixes 15+ screens; would benefit from a router-per-screen split.",
+    "React StrictMode may amplify the toggle race since effects and callbacks are invoked twice in dev; also verify in prod build."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped per request)", "frontend": "40% — theme sync core fix verified working (2/3 toggle clicks OK); onboarding new chapters 0/4 reachable due to crash"},
+  "test_credentials": "Magic-link with any new @example.com email (dev_link exposed since ALLOW_GUEST_LOGIN=true). Thomas via login-guest-btn for the theme portion.",
+  "seed_data_creation": "None; used unique emails test_ob_<timestamp>@example.com per run.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Once E1 fixes the stepMeta gap (screens 12,13,14,15), re-run the onboarding flow with a NEW email. All new-chapter selectors (ob-ancrage-*, ob-energie-1..5, ob-action-0..2, ob-document-preview, ob-document-download, ob-document-drive) were confirmed to exist in the source but never rendered due to the crash. Also verify the theme first-click race is fixed by clicking the ambiance-toggle-btn immediately after login and asserting document.documentElement.classList.contains('dark') flips on the FIRST click. Settings modal opened successfully and rendered — visual dark theme applied to overlay because .dark is now on <html> (see screenshot). Console had only 403/404 for static resources (unrelated).",
+  "rca of the issue": "screen===12 rendered path enters the return() at line 258 which unconditionally accesses stepMeta.tag (l.265) and stepMeta.n (l.276, 280). The stepMeta lookup dict does not include keys 12/13/14/15, so lookup returns undefined -> TypeError. Reproduction: Fresh onboarding until screen 8 → click Sens ambiance → click ob-next (which calls setScreen(12)) → crash. Mitigation: add missing keys OR early-return null / add optional-chaining and fallback rendering for the new chapters (they don't need the 'ETAPE n/5' header)."
+}

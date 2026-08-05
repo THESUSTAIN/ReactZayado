@@ -1,0 +1,46 @@
+{
+  "summary": "Full e2e test of Zayado Cockpit (dark/light theme readability, magic-link login, GA production-only, CORS). All required checks pass: login works, /api/auth/me and /api/dashboard return 200, no CORS errors, Cockpit renders greeting + KPIs + Vision + Mentor IA, theme toggle works and both themes are readable, GA is NOT loaded in preview (correct).",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "tests_executed": [
+    "POST /api/auth/request-link -> 200 (dev_link returned)",
+    "POST /api/auth/verify-link -> 200 (access_token + user)",
+    "GET /api/auth/me (Bearer) -> 200",
+    "GET /api/dashboard (Bearer) -> 200",
+    "GET /api/public/config -> 200",
+    "GET /api/prefs -> 200 (theme persistence verified: dark<->light round-trip via toggle click)",
+    "UI: cockpit-greeting-title visible with 'Bonjour, Thomas 👋'",
+    "UI: KPI labels 'CA du mois', 'Trésorerie', 'Prospects', 'Score bien-être' all present",
+    "UI: Vision block + Mentor IA panel rendered",
+    "UI: ambiance-toggle-btn switches .App class ambiance-clarte <-> ambiance-sens and persists to backend prefs (theme: dark|light)",
+    "UI: Light mode contrast — Boutique btn 4.68 (AA passes), title 15.97, chips 15.97",
+    "UI: Dark mode visual check — gold/white text on dark navy background, all elements readable (Bonjour Thomas, chips, Boutique badge 'Nouveau', KPIs, Vision, Mentor)",
+    "GA: window.gtag/dataLayer NOT present on preview hostname (only loads for *.zayado.net)",
+    "Console: 0 CORS errors, 0 blocking JS errors (only Cloudflare cdn-cgi/rum 403s which are external, unrelated)"
+  ],
+  "test_report_links": [
+    "/app/test_reports/dark_confirmed.png",
+    "/app/test_reports/cockpit_dark.png",
+    "/app/test_reports/cockpit_light.png"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "PrefsContext initial load has a subtle race: setPref writes state immediately then prefsApi.save fires async. If the FIRST prefsApi.get() from mount completes AFTER a very early user click on the toggle, the click can be overwritten. Observed once when clicking within ~1s of navigation; disappears with a 2-3s wait. Consider guarding setPref during 'loaded=false' phase.",
+    "The 'Cockpit — mode d'emploi' modal covers the header/toggle on first arrival even after clicking 'Commencer ma journée'. It is dismissible but E2E tests should either close it first or the toggle click may target the modal backdrop. Not a bug, just a testability note.",
+    "public/index.html GA snippet: production-only gating via hostname regex /(^|\\.)zayado\\.net$/i is correct and verified (GA absent in preview). Good.",
+    "CORS: backend correctly restricts to CORS_ORIGINS=https://admin-panel-416.preview.emergentagent.com — verified via Authorization Bearer requests from browser context, no preflight failures.",
+    "CockpitGreeting uses var(--gold-strong) / var(--glass-soft) — light mode Boutique btn contrast is 4.68:1 (WCAG AA for normal text = 4.5) — just above threshold. Consider bumping --gold-strong slightly darker for extra margin on smaller screens."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "100%", "frontend": "100%" },
+  "test_credentials": "thomas@zayado.fr via magic-link (POST /api/auth/request-link -> extract token from dev_link -> POST /api/auth/verify-link -> access_token & user.id -> localStorage zayado_token/zayado_uid)",
+  "seed_data_creation": "None (used existing Thomas seed)",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Preview URL: https://admin-panel-416.preview.emergentagent.com. Programmatic login works reliably; clicking the magic-link button in dev may fail due to StrictMode double-invocation. To test theme, wait 2-3s after navigation before clicking ambiance-toggle-btn to avoid the initial prefsApi.get() race. First arrival shows an Inspiration full-screen (button 'Commencer ma journée') then an onboarding modal ('Cockpit — mode d'emploi') — dismiss both before interacting with header. Dark/light both readable; toggle persists to backend via /api/prefs.",
+  "rca_of_the_issue": "No blocking issue found. CORS fix (exact origin instead of '*') working. GA conditional loading working. Theme readability contrast checks pass in both modes."
+}
