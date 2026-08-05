@@ -5,6 +5,177 @@
       "to_name": "",
       "subject": "Votre lien de connexion \u2014 MyExtension-ai by Zayado",
       "brand": "myextension",
+      "status": "sent",
+      "message_id": "<202608052327.34935333790@smtp-relay.mailin.fr>",
+      "sent_at": "2026-08-05T23:27:37.351638+00:00"
+    },
+    {
+      "to": "thomas@zayado.fr",
+      "to_name": "",
+      "subject": "Votre lien de connexion \u2014 MyExtension-ai by Zayado",
+      "brand": "myextension",
+      "status": "sent",
+      "message_id": "<202608052326.96038129250@smtp-relay.mailin.fr>",
+      "sent_at": "2026-08-05T23:26:31.016997+00:00"
+    },
+    {
+      "to": "test_ob_1785949393@example.com",
+      "to_name": "test_ob_1785949393",
+      "subject": "Votre analyse SWOT mensuelle \u2014 MyExtension AI",
+      "brand": "zayado",
+      "status": "sent",
+      "message_id": "<202608052325.38254829781@smtp-relay.mailin.fr>",
+      "sent_at": "2026-08-05T23:25:56.278923+00:00"
+    },
+    {
+      "to": "test_ob_1785949345@example.com",
+      "to_name": "test_ob_1785949345",
+      "subject": "Votre analyse SWOT mensuelle \u2014 MyExtension AI",
+      "brand": "zayado",
+      "status": "sent",
+      "message_id": "<202608052325.67076706440@smtp-relay.mailin.fr>",
+      "sent_at": "2026-08-05T23:25:47.327024+00:00"
+    },
+    {
+      "to": "test_ob_v2_1785948849@example.com",
+      "to_name": "test_ob_v2_1785948849",
+      "subject": "Votre analyse SWOT mensuelle \u2014 MyExtension AI",
+      "brand": "zayado",
+      "status": "sent",
+      "message_id": "<202608052325.66254605806@smtp-relay.mailin.fr>",
+      "sent_at": "2026-08-05T23:25:38.555150+00:00"
+    },
+    {
+      "to": "test_ob_1785948757@example.com",
+      "to_name": "test_ob_1785948757",
+      "subject": "Votre analyse SWOT mensuelle \u2014 MyExtension AI",
+      "brand": "zayado",
+      "status": "sent",
+      "message_id": "<202608052325.39776662808@smtp-relay.mailin.fr>",
+      "sent_at": "2026-08-05T23:25:30.327507+00:00"
+    },
+    {
+      "to": "onbtest2+1785946884sens@example.com",
+      "to_name": "onbtest2+1785946884sens",
+      "subject": "Votre analyse SWOT mensuelle \u2014 MyExtension AI",
+      "brand": "zayado",
+      "status": "sent",
+      "message_id": "<202608052319.64964293021@smtp-relay.mailin.fr>",
+      "sent_at": "2026-08-05T23:19:08.278541+00:00"
+    },
+    {
+      "to": "onbtest2+1785946853foi@example.com",
+      "to_name": "onbtest2+1785946853foi",
+      "subject": "Votre analyse SWOT mensuelle \u2014 MyExtension AI",
+      "brand": "zayado",
+      "status": "sent",
+      "message_id": "<202608052318.84684714068@smtp-relay.mailin.fr>",
+      "sent_at": "2026-08-05T23:18:59.157359+00:00"
+    },
+    {
+      "to": "onbtest2+1785946758@example.com",
+      "to_name": "onbtest2+1785946758",
+      "subject": "Votre analyse SWOT mensuelle \u2014 MyExtension AI",
+      "brand": "zayado",
+      "status": "sent",
+      "message_id": "<202608052318.85802563847@smtp-relay.mailin.fr>",
+      "sent_at": "2026-08-05T23:18:50.099457+00:00"
+    },
+    {
+      "to": "onbtest2+1785946685@example.com",
+      "to_name": "onbtest2+1785946685",
+      "subject": "Votre analyse SWOT mensuelle \u2014 MyExtension AI",
+      "brand": "zayado",
+      "status": "sent",
+      "message_id": "<202608052318.16828191436@smtp-relay.mailin.fr>",
+      "sent_at": "2026-08-05T23:18:41.596266+00:00"
+    },
+    {
+      "to": "onbtest+sens1785945460@example.com",
+      "to_name": "onbtest+sens1785945460",
+      "subject": "Votre analyse SWOT mensuelle \u2014 MyExtension AI",
+      "brand": "zayado",
+      "status": "sent",
+      "message_id": "<202608052318.83696800405@smtp-relay.mailin.fr>",
+      "sent_at": "2026-08-05T23:18:32.417580+00:00"
+    },
+    {
+      "to": "onbtest+1785945399@example.com",
+      "to_name": "onbtest+1785945399",
+      "subject": "Votre analyse SWOT mensuelle \u2014 MyExtension AI",
+      "brand": "zayado",
+      "status": "sent",
+      "message_id": "<202608052318.13474267327@smtp-relay.mailin.fr>",
+      "sent_at": "2026-08-05T23:18:23.093550+00:00"
+    },
+    {
+      "to": "onbtest+1785945355@example.com",
+      "to_name": "onbtest+1785945355",
+      "subject": "Votre analyse SWOT mensuelle \u2014 MyExtension AI",
+      "brand": "zayado",
+      "status": "sent",
+      "message_id": "<202608052318.51887892433@smtp-relay.mailin.fr>",
+      "sent_at": "2026-08-05T23:18:13.894161+00:00"
+    },
+    {
+      "to": "noaudit2fa+1785877542@example.com",
+      "to_name": "No 2FA",
+      "subject": "Votre analyse SWOT mensuelle \u2014 MyExtension AI",
+      "brand": "zayado",
+      "status": "sent",
+      "message_id": "<202608052318.90292883559@smtp-relay.mailin.fr>",
+      "sent_at": "2026-08-05T23:18:04.894067+00:00"
+    },
+    {
+      "to": "thomas@zayado.fr",
+      "to_name": "",
+      "subject": "Votre lien de connexion \u2014 MyExtension-ai by Zayado",
+      "brand": "myextension",
+      "status": "sent",
+      "message_id": "<202608052317.19853639402@smtp-relay.mailin.fr>",
+      "sent_at": "2026-08-05T23:17:58.814228+00:00"
+    },
+    {
+      "to": "audit2fa@example.com",
+      "to_name": "Audit 2FA",
+      "subject": "Votre analyse SWOT mensuelle \u2014 MyExtension AI",
+      "brand": "zayado",
+      "status": "sent",
+      "message_id": "<202608052317.23689844559@smtp-relay.mailin.fr>",
+      "sent_at": "2026-08-05T23:17:54.711074+00:00"
+    },
+    {
+      "to": "membre@thesustain.net",
+      "to_name": "membre",
+      "subject": "Votre analyse SWOT mensuelle \u2014 MyExtension AI",
+      "brand": "zayado",
+      "status": "sent",
+      "message_id": "<202608052317.30681230459@smtp-relay.mailin.fr>",
+      "sent_at": "2026-08-05T23:17:44.617448+00:00"
+    },
+    {
+      "to": "thomas@zayado.fr",
+      "to_name": "Thomas",
+      "subject": "Votre analyse SWOT mensuelle \u2014 MyExtension AI",
+      "brand": "zayado",
+      "status": "sent",
+      "message_id": "<202608052317.98687007123@smtp-relay.mailin.fr>",
+      "sent_at": "2026-08-05T23:17:36.045491+00:00"
+    },
+    {
+      "to": "thomas@zayado.fr",
+      "to_name": "",
+      "subject": "Votre lien de connexion \u2014 MyExtension-ai by Zayado",
+      "brand": "myextension",
+      "status": "sent",
+      "message_id": "<202608052316.94051952855@smtp-relay.mailin.fr>",
+      "sent_at": "2026-08-05T23:16:39.163129+00:00"
+    },
+    {
+      "to": "thomas@zayado.fr",
+      "to_name": "",
+      "subject": "Votre lien de connexion \u2014 MyExtension-ai by Zayado",
+      "brand": "myextension",
       "status": "error",
       "error": "(401)\nReason: Unauthorized\nHTTP response headers: HTTPHeaderDict({'Date': 'Wed, 05 Aug 2026 23:09:04 GMT', 'Content-Type': 'application/json', 'Content-Length': '72', 'Connection': 'keep-alive', 'access-control-allow-credentials': 'true', 'sib-request-id': '7593550c-4886-9a16-a21c-7cd02617323e', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'PUT, POST, GET, DELETE, PATCH, OPTIONS', 'x-envoy-upstream-service-time': '2', 'server': 'cloudflare', 'cf-cache-status': 'DYNAMIC', 'Cf-Apo-Via': 'origin,noget', 'CF-RAY': 'a26977a6480722b4-CDG'})\nHTTP response body: {\"message\":\"authentication not found in headers\",\"code\":\"unauthorized\"}\n\n",
       "sent_at": "2026-08-05T23:09:04.448381+00:00"
@@ -1628,177 +1799,6 @@
       "status": "error",
       "error": "(401)\nReason: Unauthorized\nHTTP response headers: HTTPHeaderDict({'Date': 'Tue, 04 Aug 2026 07:46:43 GMT', 'Content-Type': 'application/json', 'Content-Length': '72', 'Connection': 'keep-alive', 'access-control-allow-credentials': 'true', 'sib-request-id': '04a75608-9528-9724-9ec9-3b6a8284b56f', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'PUT, POST, GET, DELETE, PATCH, OPTIONS', 'x-envoy-upstream-service-time': '1', 'server': 'cloudflare', 'cf-cache-status': 'DYNAMIC', 'Cf-Apo-Via': 'origin,noget', 'CF-RAY': 'a25bf32f6f48f0d7-CDG'})\nHTTP response body: {\"message\":\"authentication not found in headers\",\"code\":\"unauthorized\"}\n\n",
       "sent_at": "2026-08-04T07:46:43.821593+00:00"
-    },
-    {
-      "to": "thomas@zayado.fr",
-      "to_name": "Thomas",
-      "subject": "Votre analyse SWOT mensuelle \u2014 MyExtension AI",
-      "brand": "zayado",
-      "status": "error",
-      "error": "(401)\nReason: Unauthorized\nHTTP response headers: HTTPHeaderDict({'Date': 'Tue, 04 Aug 2026 07:22:44 GMT', 'Content-Type': 'application/json', 'Content-Length': '72', 'Connection': 'keep-alive', 'access-control-allow-credentials': 'true', 'sib-request-id': '0a7288a0-ae4b-9499-9543-c056e2a9d7df', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'PUT, POST, GET, DELETE, PATCH, OPTIONS', 'x-envoy-upstream-service-time': '4', 'server': 'cloudflare', 'cf-cache-status': 'DYNAMIC', 'Cf-Apo-Via': 'origin,noget', 'CF-RAY': 'a25bd00d2d373506-WAW'})\nHTTP response body: {\"message\":\"authentication not found in headers\",\"code\":\"unauthorized\"}\n\n",
-      "sent_at": "2026-08-04T07:22:44.778754+00:00"
-    },
-    {
-      "to": "thomas@zayado.fr",
-      "to_name": "",
-      "subject": "Votre lien de connexion \u2014 MyExtension-ai by Zayado",
-      "brand": "myextension",
-      "status": "error",
-      "error": "(401)\nReason: Unauthorized\nHTTP response headers: HTTPHeaderDict({'Date': 'Tue, 04 Aug 2026 04:26:56 GMT', 'Content-Type': 'application/json', 'Content-Length': '72', 'Connection': 'keep-alive', 'access-control-allow-credentials': 'true', 'sib-request-id': 'b6d2c431-9af2-9899-b81e-e4a303b628ee', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'PUT, POST, GET, DELETE, PATCH, OPTIONS', 'x-envoy-upstream-service-time': '1', 'server': 'cloudflare', 'cf-cache-status': 'DYNAMIC', 'Cf-Apo-Via': 'origin,noget', 'CF-RAY': 'a25ace887b2c3cbd-CDG'})\nHTTP response body: {\"message\":\"authentication not found in headers\",\"code\":\"unauthorized\"}\n\n",
-      "sent_at": "2026-08-04T04:26:56.788789+00:00"
-    },
-    {
-      "to": "thomas@zayado.fr",
-      "to_name": "",
-      "subject": "Votre lien de connexion \u2014 MyExtension-ai by Zayado",
-      "brand": "myextension",
-      "status": "error",
-      "error": "(401)\nReason: Unauthorized\nHTTP response headers: HTTPHeaderDict({'Date': 'Tue, 04 Aug 2026 04:25:07 GMT', 'Content-Type': 'application/json', 'Content-Length': '72', 'Connection': 'keep-alive', 'access-control-allow-credentials': 'true', 'sib-request-id': '7b237a32-65cf-9a31-94c1-f1e69ed7e029', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'PUT, POST, GET, DELETE, PATCH, OPTIONS', 'x-envoy-upstream-service-time': '5', 'server': 'cloudflare', 'cf-cache-status': 'DYNAMIC', 'Cf-Apo-Via': 'origin,noget', 'CF-RAY': 'a25acbde3eb13cbd-CDG'})\nHTTP response body: {\"message\":\"authentication not found in headers\",\"code\":\"unauthorized\"}\n\n",
-      "sent_at": "2026-08-04T04:25:07.638060+00:00"
-    },
-    {
-      "to": "thomas@zayado.fr",
-      "to_name": "",
-      "subject": "Votre lien de connexion \u2014 MyExtension-ai by Zayado",
-      "brand": "myextension",
-      "status": "error",
-      "error": "(401)\nReason: Unauthorized\nHTTP response headers: HTTPHeaderDict({'Date': 'Tue, 04 Aug 2026 04:09:08 GMT', 'Content-Type': 'application/json', 'Content-Length': '72', 'Connection': 'keep-alive', 'access-control-allow-credentials': 'true', 'sib-request-id': 'a507f387-26a4-9b0a-ba94-c06fa1320513', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'PUT, POST, GET, DELETE, PATCH, OPTIONS', 'x-envoy-upstream-service-time': '4', 'server': 'cloudflare', 'cf-cache-status': 'DYNAMIC', 'Cf-Apo-Via': 'origin,noget', 'CF-RAY': 'a25ab4748c141545-CDG'})\nHTTP response body: {\"message\":\"authentication not found in headers\",\"code\":\"unauthorized\"}\n\n",
-      "sent_at": "2026-08-04T04:09:08.634614+00:00"
-    },
-    {
-      "to": "thomas@zayado.fr",
-      "to_name": "",
-      "subject": "Votre lien de connexion \u2014 MyExtension-ai by Zayado",
-      "brand": "myextension",
-      "status": "error",
-      "error": "(401)\nReason: Unauthorized\nHTTP response headers: HTTPHeaderDict({'Date': 'Tue, 04 Aug 2026 04:09:04 GMT', 'Content-Type': 'application/json', 'Content-Length': '72', 'Connection': 'keep-alive', 'access-control-allow-credentials': 'true', 'sib-request-id': '62a7e3ef-05bd-96a8-85b9-b847250c85de', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'PUT, POST, GET, DELETE, PATCH, OPTIONS', 'x-envoy-upstream-service-time': '2', 'server': 'cloudflare', 'cf-cache-status': 'DYNAMIC', 'Cf-Apo-Via': 'origin,noget', 'CF-RAY': 'a25ab458dfae1545-CDG'})\nHTTP response body: {\"message\":\"authentication not found in headers\",\"code\":\"unauthorized\"}\n\n",
-      "sent_at": "2026-08-04T04:09:04.205317+00:00"
-    },
-    {
-      "to": "thomas@zayado.fr",
-      "to_name": "",
-      "subject": "Votre lien de connexion \u2014 MyExtension-ai by Zayado",
-      "brand": "myextension",
-      "status": "error",
-      "error": "(401)\nReason: Unauthorized\nHTTP response headers: HTTPHeaderDict({'Date': 'Tue, 04 Aug 2026 04:06:58 GMT', 'Content-Type': 'application/json', 'Content-Length': '72', 'Connection': 'keep-alive', 'access-control-allow-credentials': 'true', 'sib-request-id': '653bc495-61f9-9719-a47a-2f17f2f24f70', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'PUT, POST, GET, DELETE, PATCH, OPTIONS', 'x-envoy-upstream-service-time': '4', 'server': 'cloudflare', 'cf-cache-status': 'DYNAMIC', 'Cf-Apo-Via': 'origin,noget', 'CF-RAY': 'a25ab14a68141545-CDG'})\nHTTP response body: {\"message\":\"authentication not found in headers\",\"code\":\"unauthorized\"}\n\n",
-      "sent_at": "2026-08-04T04:06:59.021315+00:00"
-    },
-    {
-      "to": "thomas@zayado.fr",
-      "to_name": "",
-      "subject": "Votre lien de connexion \u2014 MyExtension-ai by Zayado",
-      "brand": "myextension",
-      "status": "error",
-      "error": "(401)\nReason: Unauthorized\nHTTP response headers: HTTPHeaderDict({'Date': 'Tue, 04 Aug 2026 03:52:44 GMT', 'Content-Type': 'application/json', 'Content-Length': '72', 'Connection': 'keep-alive', 'access-control-allow-credentials': 'true', 'sib-request-id': 'c0f00e6f-8a65-939c-be09-8969144c0717', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'PUT, POST, GET, DELETE, PATCH, OPTIONS', 'x-envoy-upstream-service-time': '2', 'server': 'cloudflare', 'cf-cache-status': 'DYNAMIC', 'Cf-Apo-Via': 'origin,noget', 'CF-RAY': 'a25a9c712f12040b-CDG'})\nHTTP response body: {\"message\":\"authentication not found in headers\",\"code\":\"unauthorized\"}\n\n",
-      "sent_at": "2026-08-04T03:52:45.059143+00:00"
-    },
-    {
-      "to": "thomas@zayado.fr",
-      "to_name": "",
-      "subject": "Votre lien de connexion \u2014 MyExtension-ai by Zayado",
-      "brand": "myextension",
-      "status": "error",
-      "error": "(401)\nReason: Unauthorized\nHTTP response headers: HTTPHeaderDict({'Date': 'Tue, 04 Aug 2026 03:49:01 GMT', 'Content-Type': 'application/json', 'Content-Length': '72', 'Connection': 'keep-alive', 'access-control-allow-credentials': 'true', 'sib-request-id': '8c5da2cf-55f3-94ee-a9f7-eb84a4fef0ac', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'PUT, POST, GET, DELETE, PATCH, OPTIONS', 'x-envoy-upstream-service-time': '2', 'server': 'cloudflare', 'cf-cache-status': 'DYNAMIC', 'Cf-Apo-Via': 'origin,noget', 'CF-RAY': 'a25a96fa1f6e040b-CDG'})\nHTTP response body: {\"message\":\"authentication not found in headers\",\"code\":\"unauthorized\"}\n\n",
-      "sent_at": "2026-08-04T03:49:01.211711+00:00"
-    },
-    {
-      "to": "thomas@zayado.fr",
-      "to_name": "",
-      "subject": "Votre lien de connexion \u2014 MyExtension-ai by Zayado",
-      "brand": "myextension",
-      "status": "error",
-      "error": "(401)\nReason: Unauthorized\nHTTP response headers: HTTPHeaderDict({'Date': 'Tue, 04 Aug 2026 03:44:10 GMT', 'Content-Type': 'application/json', 'Content-Length': '72', 'Connection': 'keep-alive', 'access-control-allow-credentials': 'true', 'sib-request-id': '0ba5a7ee-c74d-996b-aaef-79db3cdac210', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'PUT, POST, GET, DELETE, PATCH, OPTIONS', 'x-envoy-upstream-service-time': '4', 'server': 'cloudflare', 'cf-cache-status': 'DYNAMIC', 'Cf-Apo-Via': 'origin,noget', 'CF-RAY': 'a25a8fe1da48040b-CDG'})\nHTTP response body: {\"message\":\"authentication not found in headers\",\"code\":\"unauthorized\"}\n\n",
-      "sent_at": "2026-08-04T03:44:10.613200+00:00"
-    },
-    {
-      "to": "thomas@zayado.fr",
-      "to_name": "Thomas",
-      "subject": "Votre analyse SWOT mensuelle \u2014 MyExtension AI",
-      "brand": "zayado",
-      "status": "error",
-      "error": "(401)\nReason: Unauthorized\nHTTP response headers: HTTPHeaderDict({'Date': 'Tue, 04 Aug 2026 03:43:42 GMT', 'Content-Type': 'application/json', 'Content-Length': '72', 'Connection': 'keep-alive', 'access-control-allow-credentials': 'true', 'sib-request-id': '837c9f56-4e9c-9174-86eb-3d5e013a2380', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'PUT, POST, GET, DELETE, PATCH, OPTIONS', 'x-envoy-upstream-service-time': '4', 'server': 'cloudflare', 'cf-cache-status': 'DYNAMIC', 'Cf-Apo-Via': 'origin,noget', 'CF-RAY': 'a25a8f359b4b040b-CDG'})\nHTTP response body: {\"message\":\"authentication not found in headers\",\"code\":\"unauthorized\"}\n\n",
-      "sent_at": "2026-08-04T03:43:43.053383+00:00"
-    },
-    {
-      "to": "thomas@zayado.fr",
-      "to_name": "",
-      "subject": "Votre lien de connexion \u2014 MyExtension-ai by Zayado",
-      "brand": "myextension",
-      "status": "error",
-      "error": "(401)\nReason: Unauthorized\nHTTP response headers: HTTPHeaderDict({'Date': 'Tue, 04 Aug 2026 03:42:45 GMT', 'Content-Type': 'application/json', 'Content-Length': '72', 'Connection': 'keep-alive', 'access-control-allow-credentials': 'true', 'sib-request-id': '3cd7263c-a897-9e8d-935d-3dd58970a497', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'PUT, POST, GET, DELETE, PATCH, OPTIONS', 'x-envoy-upstream-service-time': '2', 'server': 'cloudflare', 'cf-cache-status': 'DYNAMIC', 'Cf-Apo-Via': 'origin,noget', 'CF-RAY': 'a25a8dd01aaa040b-CDG'})\nHTTP response body: {\"message\":\"authentication not found in headers\",\"code\":\"unauthorized\"}\n\n",
-      "sent_at": "2026-08-04T03:42:45.846992+00:00"
-    },
-    {
-      "to": "thomas@zayado.fr",
-      "to_name": "",
-      "subject": "Votre lien de connexion \u2014 MyExtension-ai by Zayado",
-      "brand": "myextension",
-      "status": "error",
-      "error": "(401)\nReason: Unauthorized\nHTTP response headers: HTTPHeaderDict({'Date': 'Mon, 03 Aug 2026 23:19:13 GMT', 'Content-Type': 'application/json', 'Content-Length': '72', 'Connection': 'keep-alive', 'access-control-allow-credentials': 'true', 'sib-request-id': '8ce904ac-6960-92d6-96eb-ba181d852243', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'PUT, POST, GET, DELETE, PATCH, OPTIONS', 'x-envoy-upstream-service-time': '4', 'server': 'cloudflare', 'cf-cache-status': 'DYNAMIC', 'Cf-Apo-Via': 'origin,noget', 'CF-RAY': 'a2590bc758e3355e-WAW'})\nHTTP response body: {\"message\":\"authentication not found in headers\",\"code\":\"unauthorized\"}\n\n",
-      "sent_at": "2026-08-03T23:19:13.934981+00:00"
-    },
-    {
-      "to": "thomas@zayado.fr",
-      "to_name": "",
-      "subject": "Votre lien de connexion \u2014 MyExtension-ai by Zayado",
-      "brand": "myextension",
-      "status": "error",
-      "error": "(401)\nReason: Unauthorized\nHTTP response headers: HTTPHeaderDict({'Date': 'Mon, 03 Aug 2026 23:18:37 GMT', 'Content-Type': 'application/json', 'Content-Length': '72', 'Connection': 'keep-alive', 'access-control-allow-credentials': 'true', 'sib-request-id': 'b6ba0b3d-5211-9c02-b3ab-c609d01d4147', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'PUT, POST, GET, DELETE, PATCH, OPTIONS', 'x-envoy-upstream-service-time': '2', 'server': 'cloudflare', 'cf-cache-status': 'DYNAMIC', 'Cf-Apo-Via': 'origin,noget', 'CF-RAY': 'a2590ae41806355e-WAW'})\nHTTP response body: {\"message\":\"authentication not found in headers\",\"code\":\"unauthorized\"}\n\n",
-      "sent_at": "2026-08-03T23:18:37.559145+00:00"
-    },
-    {
-      "to": "thomas@zayado.fr",
-      "to_name": "",
-      "subject": "Votre lien de connexion \u2014 MyExtension-ai by Zayado",
-      "brand": "myextension",
-      "status": "error",
-      "error": "(401)\nReason: Unauthorized\nHTTP response headers: HTTPHeaderDict({'Date': 'Mon, 03 Aug 2026 23:17:27 GMT', 'Content-Type': 'application/json', 'Content-Length': '72', 'Connection': 'keep-alive', 'access-control-allow-credentials': 'true', 'sib-request-id': 'a2e7adf8-9c84-967b-8eb1-dfeab420feaf', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'PUT, POST, GET, DELETE, PATCH, OPTIONS', 'x-envoy-upstream-service-time': '4', 'server': 'cloudflare', 'cf-cache-status': 'DYNAMIC', 'Cf-Apo-Via': 'origin,noget', 'CF-RAY': 'a259092f8e4a355e-WAW'})\nHTTP response body: {\"message\":\"authentication not found in headers\",\"code\":\"unauthorized\"}\n\n",
-      "sent_at": "2026-08-03T23:17:27.715067+00:00"
-    },
-    {
-      "to": "thomas@zayado.fr",
-      "to_name": "",
-      "subject": "Votre lien de connexion \u2014 MyExtension-ai by Zayado",
-      "brand": "myextension",
-      "status": "error",
-      "error": "(401)\nReason: Unauthorized\nHTTP response headers: HTTPHeaderDict({'Date': 'Mon, 03 Aug 2026 23:13:51 GMT', 'Content-Type': 'application/json', 'Content-Length': '72', 'Connection': 'keep-alive', 'access-control-allow-credentials': 'true', 'sib-request-id': '4c79e77c-e31e-9d14-b5ce-33fd1340acff', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'PUT, POST, GET, DELETE, PATCH, OPTIONS', 'x-envoy-upstream-service-time': '4', 'server': 'cloudflare', 'cf-cache-status': 'DYNAMIC', 'Cf-Apo-Via': 'origin,noget', 'CF-RAY': 'a25903e70856355e-WAW'})\nHTTP response body: {\"message\":\"authentication not found in headers\",\"code\":\"unauthorized\"}\n\n",
-      "sent_at": "2026-08-03T23:13:51.324733+00:00"
-    },
-    {
-      "to": "thomas@zayado.fr",
-      "to_name": "",
-      "subject": "Votre lien de connexion \u2014 MyExtension-ai by Zayado",
-      "brand": "myextension",
-      "status": "error",
-      "error": "(401)\nReason: Unauthorized\nHTTP response headers: HTTPHeaderDict({'Date': 'Mon, 03 Aug 2026 23:13:02 GMT', 'Content-Type': 'application/json', 'Content-Length': '72', 'Connection': 'keep-alive', 'access-control-allow-credentials': 'true', 'sib-request-id': '812ff355-294f-92d0-883f-9b4c19f66d89', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'PUT, POST, GET, DELETE, PATCH, OPTIONS', 'x-envoy-upstream-service-time': '5', 'server': 'cloudflare', 'cf-cache-status': 'DYNAMIC', 'Cf-Apo-Via': 'origin,noget', 'CF-RAY': 'a25902b41b54355e-WAW'})\nHTTP response body: {\"message\":\"authentication not found in headers\",\"code\":\"unauthorized\"}\n\n",
-      "sent_at": "2026-08-03T23:13:02.213391+00:00"
-    },
-    {
-      "to": "thomas@zayado.fr",
-      "to_name": "Thomas",
-      "subject": "Votre analyse SWOT mensuelle \u2014 MyExtension AI",
-      "brand": "zayado",
-      "status": "error",
-      "error": "(401)\nReason: Unauthorized\nHTTP response headers: HTTPHeaderDict({'Date': 'Mon, 03 Aug 2026 23:04:55 GMT', 'Content-Type': 'application/json', 'Content-Length': '72', 'Connection': 'keep-alive', 'access-control-allow-credentials': 'true', 'sib-request-id': 'fd04b095-083c-9fd3-9ca9-962a793bf66e', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'PUT, POST, GET, DELETE, PATCH, OPTIONS', 'x-envoy-upstream-service-time': '4', 'server': 'cloudflare', 'cf-cache-status': 'DYNAMIC', 'Cf-Apo-Via': 'origin,noget', 'CF-RAY': 'a258f6d1ea47ef93-WAW'})\nHTTP response body: {\"message\":\"authentication not found in headers\",\"code\":\"unauthorized\"}\n\n",
-      "sent_at": "2026-08-03T23:04:55.447175+00:00"
-    },
-    {
-      "to": "thomas@zayado.fr",
-      "to_name": "Thomas",
-      "subject": "Votre analyse SWOT mensuelle \u2014 MyExtension AI",
-      "brand": "zayado",
-      "status": "error",
-      "error": "(401)\nReason: Unauthorized\nHTTP response headers: HTTPHeaderDict({'Date': 'Mon, 03 Aug 2026 22:09:01 GMT', 'Content-Type': 'application/json', 'Content-Length': '72', 'Connection': 'keep-alive', 'access-control-allow-credentials': 'true', 'sib-request-id': '73749d15-b085-9bc0-864e-3a16de60a806', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'PUT, POST, GET, DELETE, PATCH, OPTIONS', 'x-envoy-upstream-service-time': '4', 'server': 'cloudflare', 'cf-cache-status': 'DYNAMIC', 'Cf-Apo-Via': 'origin,noget', 'CF-RAY': 'a258a4f06dfbecc6-WAW'})\nHTTP response body: {\"message\":\"authentication not found in headers\",\"code\":\"unauthorized\"}\n\n",
-      "sent_at": "2026-08-03T22:09:01.616414+00:00"
-    },
-    {
-      "to": "thomas@zayado.fr",
-      "to_name": "Thomas",
-      "subject": "Votre analyse SWOT mensuelle \u2014 MyExtension AI",
-      "brand": "zayado",
-      "status": "error",
-      "error": "(401)\nReason: Unauthorized\nHTTP response headers: HTTPHeaderDict({'Date': 'Mon, 03 Aug 2026 21:21:35 GMT', 'Content-Type': 'application/json', 'Content-Length': '72', 'Connection': 'keep-alive', 'access-control-allow-credentials': 'true', 'sib-request-id': '8ea5420f-ed48-97f1-a3c1-2db5ba5d97fe', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'PUT, POST, GET, DELETE, PATCH, OPTIONS', 'x-envoy-upstream-service-time': '3', 'server': 'cloudflare', 'cf-cache-status': 'DYNAMIC', 'Cf-Apo-Via': 'origin,noget', 'CF-RAY': 'a2585f757f15bc8a-AMS'})\nHTTP response body: {\"message\":\"authentication not found in headers\",\"code\":\"unauthorized\"}\n\n",
-      "sent_at": "2026-08-03T21:21:35.685550+00:00"
     }
   ],
   "workflow_notifs_8c40b413-34e9-49fc-b509-682874536131": [
@@ -1991,6 +1991,20 @@
     }
   },
   "admin_log": [
+    {
+      "action": "server_start",
+      "detail": "Zayado API v2.5.0 d\u00e9marr\u00e9e",
+      "level": "info",
+      "timestamp": "2026-08-05T23:24:25.898833+00:00",
+      "by": "system"
+    },
+    {
+      "action": "server_start",
+      "detail": "Zayado API v2.5.0 d\u00e9marr\u00e9e",
+      "level": "info",
+      "timestamp": "2026-08-05T23:16:31.456849+00:00",
+      "by": "system"
+    },
     {
       "action": "server_start",
       "detail": "Zayado API v2.5.0 d\u00e9marr\u00e9e",
@@ -5475,20 +5489,6 @@
       "detail": "Zayado API v2.5.0 d\u00e9marr\u00e9e",
       "level": "info",
       "timestamp": "2026-06-09T23:01:18.270828+00:00",
-      "by": "system"
-    },
-    {
-      "action": "server_start",
-      "detail": "Zayado API v2.5.0 d\u00e9marr\u00e9e",
-      "level": "info",
-      "timestamp": "2026-06-09T22:39:57.803339+00:00",
-      "by": "system"
-    },
-    {
-      "action": "server_start",
-      "detail": "Zayado API v2.5.0 d\u00e9marr\u00e9e",
-      "level": "info",
-      "timestamp": "2026-06-09T22:39:45.842244+00:00",
       "by": "system"
     }
   ],
