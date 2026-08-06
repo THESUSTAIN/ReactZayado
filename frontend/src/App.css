@@ -1055,7 +1055,13 @@ html, body {
 
 /* hide some icons on very small screens */
 @media (max-width: 620px) {
-  .header-icon-btn:nth-child(-n+2) { display: none; }
+  /* On masque les actions secondaires (Écosystème + Messages) pour gagner de la
+     place sur mobile, MAIS on garde toujours visibles le toggle thème et les
+     notifications. Correctif : l'ancienne règle :nth-child(-n+2) masquait par
+     erreur le toggle thème quand les badges qui le précèdent étaient absents. */
+  .header-actions [data-testid="header-apps-btn"],
+  .header-actions [data-testid="header-mail-btn"] { display: none; }
+  .header-actions [data-testid="ambiance-toggle-btn"] { display: inline-flex; }
   .header-profile-info { display: none; }
 }
 

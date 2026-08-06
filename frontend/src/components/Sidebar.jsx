@@ -4,12 +4,14 @@ import { Home, Compass, TrendingUp, Activity, HeartPulse, Gem, Briefcase, Messag
 import { usePrefs } from "@/context/PrefsContext";
 
 // Architecture V1 : un seul projet actif
+// 5 piliers : Cockpit · Vision · Croissance · Espace de travail · DAF IA (+ Co-pilote)
+// "Moi" (bien-être) est accessible via l'avatar/profil (menu Header).
 const ITEMS = [
   { id: "cockpit",    tkey: "nav_cockpit",    Icon: Home,          path: "/" },
   { id: "vision",     tkey: "nav_vision",     Icon: Compass,       path: "/vision-board" },
+  { id: "croissance", tkey: "nav_croissance", Icon: TrendingUp,    path: "/croissance" },
   { id: "travail",    tkey: "nav_travail",    Icon: Briefcase,     path: "/travail" },
-  { id: "pilotage",   tkey: "nav_pilotage",   Icon: Activity,      path: "/pilotage" },
-  { id: "bienetre",   tkey: "nav_bienetre",   Icon: User,    path: "/bien-etre" },
+  { id: "dafia",      tkey: "nav_dafia",      Icon: Activity,      path: "/pilotage" },
   { id: "copilote",   tkey: "nav_copilote",   Icon: MessageCircle, action: "open-cockpit-chat" },
 ];
 

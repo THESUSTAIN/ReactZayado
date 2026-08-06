@@ -5,7 +5,7 @@ export const T = {
   fr: {
     search: "Rechercher...",
     nav_cockpit: "Cockpit", nav_valider: "Valider projet", nav_vision: "Vision",
-    nav_croissance: "Croissance", nav_bureau: "Mon Bureau", nav_travail: "Travail", nav_pilotage: "Pilotage", nav_bienetre: "Moi", nav_copilote: "Co-pilote",
+    nav_croissance: "Croissance", nav_bureau: "Mon Bureau", nav_travail: "Espace de travail", nav_pilotage: "Pilotage", nav_dafia: "DAF IA", nav_bienetre: "Moi", nav_copilote: "Co-pilote",
     soon: "page bientôt disponible",
     settings: "Paramètres", help: "Aide & support", logout: "Déconnexion", language: "Langue",
     role: "Solopreneur",
@@ -22,7 +22,7 @@ export const T = {
   en: {
     search: "Search...",
     nav_cockpit: "Cockpit", nav_valider: "Validate", nav_vision: "Vision",
-    nav_croissance: "Growth", nav_bureau: "My Office", nav_travail: "Work", nav_pilotage: "Finances", nav_bienetre: "Me", nav_copilote: "Co-pilot",
+    nav_croissance: "Growth", nav_bureau: "My Office", nav_travail: "Workspace", nav_pilotage: "Finances", nav_dafia: "AI CFO", nav_bienetre: "Me", nav_copilote: "Co-pilot",
     soon: "page coming soon",
     settings: "Settings", help: "Help & support", logout: "Log out", language: "Language",
     role: "Solopreneur",

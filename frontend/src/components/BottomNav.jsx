@@ -4,12 +4,14 @@ import { Home, LineChart as LineIcon, TrendingUp, HeartPulse, Compass, Briefcase
 import { usePrefs } from "@/context/PrefsContext";
 
 // Architecture V1 : un seul projet actif, pas de nav dédiée à "Valider"
+// 5 piliers : Cockpit · Vision · Croissance · Espace de travail · DAF IA (+ Co-pilote)
+// "Moi" (bien-être) est accessible via l'avatar/profil (menu Header).
 const ITEMS = [
   { key: "cockpit",   tkey: "nav_cockpit",   Icon: Home,          path: "/" },
   { key: "vision",    tkey: "nav_vision",    Icon: Compass,       path: "/vision-board" },
+  { key: "croissance",tkey: "nav_croissance",Icon: TrendingUp,    path: "/croissance" },
   { key: "travail",   tkey: "nav_travail",   Icon: Briefcase,     path: "/travail" },
-  { key: "pilotage",  tkey: "nav_pilotage",  Icon: LineIcon,      path: "/pilotage" },
-  { key: "bienetre",  tkey: "nav_bienetre",  Icon: User,    path: "/bien-etre" },
+  { key: "dafia",     tkey: "nav_dafia",     Icon: LineIcon,      path: "/pilotage" },
   { key: "copilote",  tkey: "nav_copilote",  Icon: MessageCircle, action: "open-cockpit-chat" },
 ];
 

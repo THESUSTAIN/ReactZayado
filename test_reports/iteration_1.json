@@ -1,0 +1,26 @@
+{
+  "summary": "Frontend-only testing of the 5-pillar navigation reorg + mobile ambiance-toggle fix on MyExtension AI (Zayado). Login via 'Ouvrir le compte test (Thomas)' works. All 5 sidebar items (Cockpit, Vision, Croissance, Espace de travail, DAF IA) + Co-pilote present with correct data-testid; side-bienetre absent. Same for mobile bottom-nav (nav-cockpit/vision/croissance/travail/dafia present, nav-bienetre absent). /croissance loads (Dashboard/Pipeline/Leads tabs visible). /pilotage shows title 'DAF IA — Pilotage financier' and daf-supervision-btn. Profile menu shows profile-moi navigating to /bien-etre. /travail no longer has CRM tab; Documents tab shows documents-connect-info banner + documents-connect-btn. Mobile ambiance-toggle-btn visible on both Cockpit (/) and /travail, and toggling actually flips light/dark class on <html>. No console errors bloquants on /vision-board, /, /travail. Note: two onboarding modals ('mode d'emploi' Cockpit) appear post-login on desktop and intercept clicks until dismissed (button 'Compris' / 'Fermer'); this is expected per agent-to-agent note but worth verifying UX (see minor).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Cockpit /", "issues": ["A 'Cockpit — mode d'emploi' onboarding modal appears repeatedly (clicking 'Compris' had to be done 3x during session) and its overlay intercepts sidebar clicks until closed. Consider making 'Compris, ne plus afficher' persistent so returning users don't hit it again."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Verify persistence of 'Compris, ne plus afficher' for Cockpit onboarding modal — during a single test session it re-appeared multiple times after navigation, blocking sidebar interactions until dismissed."
+  ],
+  "critical_code_review_comments": [
+    "Sidebar buttons use w-10 h-10 icons only with tooltips on hover; when an overlay (onboarding modal) is active, click-through is blocked as expected — no code bug, but the repeated re-open of the onboarding modal should be investigated in OnboardingModal / Cockpit page."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "100% (all 9 requested scenarios pass)"},
+  "seed_data_creation": "None — used compte test Thomas (thomas@zayado.fr) via magic-link button on /login.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "Bouton 'Ouvrir le compte test (Thomas)' sur /login (thomas@zayado.fr, magic-link dev).",
+  "context_for_next_testing_agent": "After login on desktop, up to two overlays may appear: the 'Cockpit — mode d'emploi' modal (dismiss with button 'Compris' or 'Fermer') and an InspirationScreen (click anywhere in the page area to dismiss). Both intercept pointer events on the sidebar. On mobile viewport (390x844) the onboarding modals do not appear the same way; ambiance-toggle-btn is visible on both Cockpit and internal pages (fix verified). Bottom-nav data-testids: nav-{cockpit|vision|croissance|travail|dafia|copilote}; Sidebar: side-{same}. No side-bienetre / nav-bienetre.",
+  "rca_of_the_issue": "No functional bug found. Only observation: onboarding modal for the Cockpit re-triggers on Cockpit revisits within the same session — likely because state to hide it is set only after clicking 'Compris, ne plus afficher' (bouton doré), whereas the tester used 'Fermer'/× / 'Compris'. To be confirmed by dev."
+}

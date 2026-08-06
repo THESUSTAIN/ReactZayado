@@ -67,10 +67,11 @@ export default function Pilotage() {
       initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Pilotage financier</h1>
-          <p className="page-sub">Ta santé financière en un coup d'œil, sans jargon comptable.</p>
+          <h1 className="page-title">DAF IA — Pilotage financier</h1>
+          <p className="page-sub">Ta santé financière en un coup d'œil. Un tableau de bord, pas un logiciel de compta — tu visualises, et Zayado peut superviser.</p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => window.dispatchEvent(new Event("zayado:open-cockpit-chat"))} className="zbtn" data-testid="daf-supervision-btn" title="Faire superviser mes chiffres par Zayado (comptabilité, optimisation)"><ShieldCheck size={16} /> Faire superviser par Zayado</button>
           <button onClick={() => exportComptable(ov)} className="zbtn" data-testid="export-comptable-btn"><Download size={16} /> Export comptable</button>
           <button onClick={() => setShowForm((v) => !v)} className="zbtn zbtn-primary" data-testid="add-entry-btn"><Plus size={16} /> Ajouter une entrée</button>
         </div>

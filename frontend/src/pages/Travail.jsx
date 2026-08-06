@@ -4,7 +4,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   Briefcase, Plus, CheckCircle2, Circle, Clock, Calendar, Users, Euro,
   TrendingUp, TrendingDown, FileText, Lightbulb, ChevronRight, Loader2,
-  Target, Trash2, X, BarChart3, ArrowRight,
+  Target, Trash2, X, BarChart3, ArrowRight, Info,
 } from "lucide-react";
 import { toast } from "sonner";
 import { travailApi, tasksApi, projectsApi, documentsApi } from "@/lib/api";
@@ -23,7 +23,6 @@ const STAGES = ["nouveau", "contacte", "proposition", "negociation", "gagne", "p
 
 const TABS = [
   { id: "overview", label: "Vue d'ensemble" },
-  { id: "crm", label: "CRM" },
   { id: "projets", label: "Projets" },
   { id: "documents", label: "Documents" },
   { id: "dafia", label: "DAF IA" },
@@ -480,6 +479,20 @@ export default function Travail() {
           {/* ══════════ DOCUMENTS ══════════ */}
           {tab === "documents" && (
             <div data-testid="documents-tab">
+              <div className="glass-card" style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 12, borderLeft: "3px solid var(--gold, #C9A449)" }} data-testid="documents-connect-info">
+                <Info size={16} style={{ color: "var(--gold, #C9A449)", marginTop: 2, flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 13.5, color: "var(--txt)", margin: "0 0 4px" }}>
+                    Vos documents restent chez vous. Cet espace se <strong>connecte à votre Drive</strong> (Google Drive / OneDrive) — on ne remplace pas votre outil.
+                  </p>
+                  <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+                    Pas encore d'espace ? On vous propose Google Drive ou OneDrive en un clic.
+                  </p>
+                </div>
+                <button onClick={() => navigate("/parametres")} className="zbtn" style={{ height: 34, flexShrink: 0 }} data-testid="documents-connect-btn">
+                  Connecter mon espace
+                </button>
+              </div>
               {docs.length === 0 ? (
                 <div className="glass-card" style={{ textAlign: "center", padding: "40px 20px" }}>
                   <FileText size={34} style={{ opacity: 0.3, marginBottom: 12 }} />

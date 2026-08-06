@@ -298,6 +298,9 @@ export default function Header({ onSettingsOpen }) {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem className="cursor-pointer" data-testid="profile-moi" onClick={() => navigate("/bien-etre")}>
+              <Heart className="w-4 h-4 mr-2" /> {t("nav_bienetre")}
+            </DropdownMenuItem>
             <DropdownMenuItem className="cursor-pointer" data-testid="profile-parametres" onClick={onSettingsOpen}>
               <SettingsIcon className="w-4 h-4 mr-2" /> {t("settings")}
             </DropdownMenuItem>
