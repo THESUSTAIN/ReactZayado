@@ -53,3 +53,13 @@ Structure validée par l'utilisateur : 5 piliers + "Moi" sous l'avatar.
 - P2 DAF IA : fusion complète Pilotage->DAF IA + sync bancaire/Stripe + prévisionnel trésorerie.
 - P2 Cockpit immersif : 3e barre de nav (Vision Board/CRM/DAF IA/Growth Agent/Boutique) à aligner sur les 5 piliers.
 - P3 Landings LP1-4 + suppression ~21 pages legacy ; pricing unifié ; Campus (ex-Simulation) ; Indice d'Alignement.
+
+## 2026-06 — Sprint 2 : 5 tâches (validé testing_agent, 6/6 testables)
+- PWA complète : service worker (frontend/public/service-worker.js) + registerServiceWorker (lib/pwa.js) dans index.js + helper subscribeToPush (backend push VAPID déjà présent). SW enregistré confirmé.
+- Extension navigateur MV3 : dossier backend/chrome-extension (manifest v3, popup, background contextmenu, content, icônes) -> endpoint /api/extension/download renvoie un vrai zip (200). Capture prospect -> /croissance?capture_*.
+- Onboarding persistant : App.js onClose écrit localStorage zayado_onboarding_seen_<path> -> ne réapparaît plus (bug testeur corrigé).
+- Sync CRM externe : POST /api/growth/leads/{id}/push-crm (Brevo/HubSpot, creds Fernet) + growthExtApi.pushLeadToCrm + bouton "CRM" (data-testid lead-crm-<id>) sur chaque carte lead. On POUSSE dans le CRM de l'user (pas de concurrence).
+- Barre Cockpit immersif (InspirationScreen DOCK) alignée sur les 5 piliers : Cockpit/Vision/Croissance/Espace de travail/DAF IA/Boutique (fin de la 3e nav divergente ; /bureau -> /travail).
+- Config : AI_PROVIDER=mammouth ajouté au .env.
+
+### Reste (prochain sprint) : WhatsApp/IA multi-canal (déjà déployé Railway via micro-service + WA_SERVICE_SECRET) — construire l'ÉCRAN de gestion Agent IA + conversations ; réseaux sociaux (Instagram/Messenger) "à venir" ; seed d'un lead démo pour tester le push CRM en UI.
