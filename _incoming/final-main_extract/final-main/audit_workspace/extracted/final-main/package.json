@@ -1,7 +1,0 @@
-{
-  "name": "zayado-root-dev",
-  "private": true,
-  "scripts": {
-    "dev": "cd frontend && yarn start"
-  }
-}

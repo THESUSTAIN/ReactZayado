@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   Bot, Plus, Send, Trash2, Settings2, Radio, X, Loader2, Bell, MessageCircle,
-  CheckCircle2, Copy, QrCode,
+  CheckCircle2, Copy, QrCode, Inbox, ArrowLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 import { agentsApi, getUid } from "@/lib/api";
@@ -25,6 +25,7 @@ export default function Agents() {
   const [loading, setLoading] = useState(true);
   const [chatAgent, setChatAgent] = useState(null);
   const [deployAgent, setDeployAgent] = useState(null);
+  const [convAgent, setConvAgent] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -134,6 +135,7 @@ export default function Agents() {
               <div style={{ display: "flex", gap: 6 }}>
                 <button onClick={() => setChatAgent(a)} className="zbtn" style={{ flex: 1, height: 30, fontSize: 12, justifyContent: "center" }} data-testid={`agent-test-${a.id}`}><MessageCircle size={13} /> Tester</button>
                 <button onClick={() => setDeployAgent(a)} className="zbtn" style={{ flex: 1, height: 30, fontSize: 12, justifyContent: "center" }} data-testid={`agent-channels-${a.id}`}><Radio size={13} /> Canaux</button>
+                <button onClick={() => setConvAgent(a)} className="zbtn" style={{ flex: 1, height: 30, fontSize: 12, justifyContent: "center" }} data-testid={`agent-conversations-${a.id}`}><Inbox size={13} /> Conversations</button>
                 <button onClick={() => removeAgent(a)} className="zbtn" style={{ height: 30, fontSize: 12 }} data-testid={`agent-delete-${a.id}`}><Trash2 size={13} /></button>
               </div>
             </motion.div>
@@ -143,6 +145,121 @@ export default function Agents() {
 
       {chatAgent && <ChatModal agent={chatAgent} onClose={() => setChatAgent(null)} />}
       {deployAgent && <DeployModal agent={deployAgent} onClose={() => { setDeployAgent(null); load(); }} />}
+      {convAgent && <ConversationsModal agent={convAgent} onClose={() => setConvAgent(null)} />}
+    </div>
+  );
+}
+
+// ─── CONVERSATIONS (WhatsApp / Telegram / Web) ──────────────────
+const CHANNEL_DOT = { whatsapp: "#25D366", whatsapp_web: "#25D366", telegram: "#229ED9", web: "#8B5CF6" };
+
+function ConversationsModal({ agent, onClose }) {
+  const [list, setList] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [thread, setThread] = useState(null);
+  const [threadLoading, setThreadLoading] = useState(false);
+  const [reply, setReply] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const loadList = useCallback(async () => {
+    setLoading(true);
+    try { setList(await agentsApi.conversations(agent.id)); }
+    catch { toast.error("Impossible de charger les conversations"); setList([]); }
+    setLoading(false);
+  }, [agent.id]);
+
+  useEffect(() => { loadList(); }, [loadList]);
+
+  const openThread = async (conv) => {
+    setThreadLoading(true);
+    setThread({ contact: conv.contact, channel: conv.channel, messages: [] });
+    try {
+      const res = await agentsApi.conversationThread(agent.id, conv.contact);
+      setThread({ contact: conv.contact, channel: conv.channel, messages: res.messages || [] });
+    } catch { toast.error("Impossible de charger ce fil"); }
+    setThreadLoading(false);
+  };
+
+  const sendReply = async () => {
+    const m = reply.trim();
+    if (!m || !thread) return;
+    setSending(true);
+    try {
+      const res = await agentsApi.replyConversation(agent.id, thread.contact, m);
+      setThread((t) => ({ ...t, messages: [...t.messages, { role: "assistant", content: m, created_at: new Date().toISOString() }] }));
+      setReply("");
+      if (res?.sent) toast.success("Message envoyé ✓");
+      else toast.error(res?.error || "Message enregistré mais pas envoyé (vérifiez la connexion du canal)");
+    } catch {
+      toast.error("Échec de l'envoi");
+    }
+    setSending(false);
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose} style={overlay}>
+      <div className="glass-card" onClick={(e) => e.stopPropagation()} style={{ ...modal, maxWidth: 560, maxHeight: "86vh", display: "flex", flexDirection: "column" }} data-testid="agent-conversations-modal">
+        <div style={modalHead}>
+          <b>{thread ? <><button onClick={() => setThread(null)} className="zbtn" style={{ height: 26, marginRight: 6 }}><ArrowLeft size={13} /></button>{thread.contact}</> : `Conversations : ${agent.name}`}</b>
+          <button onClick={onClose} className="zbtn" style={{ height: 28 }}><X size={14} /></button>
+        </div>
+
+        {!thread && (
+          <>
+            <p className="muted" style={{ fontSize: 12, margin: "0 0 10px" }}>Échanges réels avec vos clients sur WhatsApp, Telegram et le widget web — séparés de votre fil de test.</p>
+            <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
+              {loading ? (
+                <p className="muted" style={{ fontSize: 13 }}><Loader2 size={14} className="spin" /> Chargement…</p>
+              ) : list && list.length > 0 ? (
+                list.map((c) => (
+                  <button key={`${c.channel}-${c.contact}`} onClick={() => openThread(c)} data-testid={`conv-item-${c.contact}`}
+                    style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10, border: "1px solid var(--glass-border)", background: "var(--glass-bg)", textAlign: "left", cursor: "pointer" }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: CHANNEL_DOT[c.channel] || GOLD, flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600 }}>{c.contact}</span>
+                        <span className="zchip" style={{ fontSize: 9 }}>{c.channel_label}</span>
+                      </div>
+                      <p className="muted" style={{ fontSize: 12, margin: "2px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {c.last_role === "assistant" ? "Vous/Agent : " : ""}{c.last_message || "—"}
+                      </p>
+                    </div>
+                    <span className="muted" style={{ fontSize: 10, flexShrink: 0 }}>{c.message_count} msg</span>
+                  </button>
+                ))
+              ) : (
+                <div style={{ textAlign: "center", padding: "30px 10px" }}>
+                  <Inbox size={28} style={{ opacity: 0.3, marginBottom: 8 }} />
+                  <p className="muted" style={{ fontSize: 13 }}>Aucune conversation client pour le moment.</p>
+                  <p className="muted" style={{ fontSize: 11, marginTop: 4 }}>Déployez cet agent sur un canal (bouton « Canaux ») pour que vos clients puissent lui écrire.</p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {thread && (
+          <>
+            <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8, padding: "8px 0" }}>
+              {threadLoading ? (
+                <p className="muted" style={{ fontSize: 13 }}><Loader2 size={14} className="spin" /> Chargement…</p>
+              ) : thread.messages.length === 0 ? (
+                <p className="muted" style={{ fontSize: 13 }}>Aucun message dans ce fil.</p>
+              ) : thread.messages.map((m, i) => (
+                <div key={i} style={{ alignSelf: m.role === "user" ? "flex-start" : "flex-end", maxWidth: "80%", background: m.role === "user" ? "var(--glass-bg)" : `${GOLD}22`, padding: "8px 12px", borderRadius: 12, fontSize: 13, whiteSpace: "pre-wrap" }}>
+                  {m.content}
+                </div>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+              <input value={reply} onChange={(e) => setReply(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendReply()}
+                placeholder="Répondre manuellement au client…" data-testid="conv-reply-input"
+                style={{ flex: 1, border: "1px solid var(--glass-border)", borderRadius: 10, padding: "9px 12px", fontSize: 13, background: "var(--glass-bg)", color: "var(--txt)" }} />
+              <button onClick={sendReply} disabled={sending} className="zbtn zbtn-primary" data-testid="conv-reply-send"><Send size={15} /></button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

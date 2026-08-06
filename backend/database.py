@@ -261,6 +261,20 @@ async def init_db():
                                 logger.info(f"Added column custom_agents.{col}")
                             except Exception as ae:
                                 logger.warning(f"Could not add custom_agents.{col}: {ae}")
+                # Agent messages — distinction conversation client externe (WhatsApp/Telegram/Web) vs test propriétaire
+                if "agent_messages" in insp.get_table_names():
+                    existing = {c["name"] for c in insp.get_columns("agent_messages")}
+                    am_migrations = {
+                        "contact": "VARCHAR(64)",
+                        "channel": "VARCHAR(20)",
+                    }
+                    for col, typedef in am_migrations.items():
+                        if col not in existing:
+                            try:
+                                connection.execute(sa_text(f"ALTER TABLE agent_messages ADD COLUMN {col} {typedef}"))
+                                logger.info(f"Added column agent_messages.{col}")
+                            except Exception as ae:
+                                logger.warning(f"Could not add agent_messages.{col}: {ae}")
                 # User connections — ensure all columns exist
                 if "user_connections" in insp.get_table_names():
                     existing = {c["name"] for c in insp.get_columns("user_connections")}

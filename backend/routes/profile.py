@@ -13,7 +13,7 @@ import uuid
 import httpx
 
 from database import get_db
-from models import User, Conversation, Transaction, TeamMember
+from models import User, Conversation, Transaction, TeamMember, UserData
 from deps import get_current_user
 from utils import (
     MAMMOTH_BASE_URL, CONFIG_PATH,
@@ -383,15 +383,49 @@ async def export_conversation_multi(conv_id: str, fmt: str, user: User = Depends
         from fastapi.responses import StreamingResponse
         return StreamingResponse(buf, media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation", headers={"Content-Disposition": f'attachment; filename="{title[:30]}.pptx"'})
 
+async def _get_notifs_last_read(db: AsyncSession, user_id: str):
+    r = await db.execute(select(UserData).where(UserData.user_id == user_id, UserData.key == "notifications_last_read"))
+    row = r.scalar_one_or_none()
+    if not row or not row.value:
+        return None
+    try:
+        return json.loads(row.value).get("last_read_at")
+    except Exception:
+        return None
+
+
 @profile_router.get("/notifications")
-async def get_smart_notifications(user: User = Depends(get_current_user)):
-    """Smart notifications for the user."""
-    notifications = []
-    if user.credits < 100:
-        notifications.append({"id": "smart_low_credits", "type": "warning", "title": "Credits faibles", "message": f"Il vous reste {user.credits} credits.", "action_url": "/pricing"})
+async def get_smart_notifications(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Notifications personnelles affichées dans la cloche du header.
+    Contrat attendu par le frontend (Header.jsx) : {"items": [{id, icon, title, text, time, unread}]}."""
+    raw = []
+    if (user.credits or 0) < 100:
+        raw.append({"id": "smart_low_credits", "icon": "CreditCard", "title": "Crédits faibles",
+                     "text": f"Il vous reste {user.credits} crédits.", "action_url": "/pricing"})
     if user.plan == "free" and (user.credits or 0) < 200:
-        notifications.append({"id": "smart_upgrade", "type": "info", "title": "Passez a Premium", "message": "Debloquez plus de credits et les modes avances.", "action_url": "/pricing"})
-    return {"notifications": notifications, "count": len(notifications)}
+        raw.append({"id": "smart_upgrade", "icon": "Sparkles", "title": "Passez à Premium",
+                     "text": "Débloquez plus de crédits et les modes avancés.", "action_url": "/pricing"})
+    if not user.openai_key and user.plan == "free":
+        raw.append({"id": "smart_api_key", "icon": "FileCheck", "title": "Configurez votre clé API",
+                     "text": "Ajoutez votre clé OpenAI pour le mode BYOK gratuit.", "action_url": "/settings"})
+
+    last_read = await _get_notifs_last_read(db, user.id)
+    items = [{**n, "time": "à l'instant", "unread": last_read is None} for n in raw]
+    return {"items": items, "count": len(items)}
+
+
+@profile_router.post("/notifications/read")
+async def mark_notifications_read(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Marque les notifications de la cloche comme lues (fait disparaître le badge)."""
+    now_iso = datetime.now(timezone.utc).isoformat()
+    r = await db.execute(select(UserData).where(UserData.user_id == user.id, UserData.key == "notifications_last_read"))
+    row = r.scalar_one_or_none()
+    if row:
+        row.value = json.dumps({"last_read_at": now_iso})
+    else:
+        db.add(UserData(user_id=user.id, key="notifications_last_read", value=json.dumps({"last_read_at": now_iso})))
+    await db.commit()
+    return {"ok": True}
 
 @profile_router.post("/slash/summarize")
 async def slash_summarize(data: Dict[str, Any], user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):

@@ -376,6 +376,28 @@ function PipelineTab() {
     catch { toast.error("Erreur de déplacement"); }
   };
 
+  const [seeding, setSeeding] = useState(false);
+  const seedDemoLead = async () => {
+    setSeeding(true);
+    try {
+      const names = ["Camille Durand", "Yanis Belkacem", "Léa Fontaine", "Marc Ossorio"];
+      const name = names[Math.floor(Math.random() * names.length)];
+      await growthExtApi.createLead({
+        name,
+        email: `${name.split(" ")[0].toLowerCase()}@exemple.fr`,
+        sub: "Lead de démo",
+        source: "demo",
+        snippet: "Je cherche un outil pour structurer mon activité sans y passer mes soirées.",
+        stage: "detected",
+      });
+      toast.success(`Lead de démo « ${name} » créé — testez le bouton CRM ci-dessous ✓`);
+      load();
+    } catch {
+      toast.error("Impossible de créer le lead de démo");
+    }
+    setSeeding(false);
+  };
+
   const pushToCrm = async (lead) => {
     const tid = toast.loading("Envoi vers ton CRM…");
     try {
@@ -396,7 +418,10 @@ function PipelineTab() {
       {engageLead && <EngageModal lead={engageLead} onClose={() => setEngageLead(null)} />}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <p className="muted" style={{ fontSize: 14 }}>Glissez-déposez les leads entre les étapes.</p>
-        <div style={{ display: "flex", gap: 16, fontSize: 13 }}>
+        <div style={{ display: "flex", gap: 16, fontSize: 13, alignItems: "center" }}>
+          <button onClick={seedDemoLead} disabled={seeding} className="zbtn" style={{ height: 34, fontSize: 12, gap: 6 }} data-testid="seed-demo-lead-btn" title="Créer un lead fictif pour tester le bouton CRM">
+            {seeding ? <Loader2 size={13} className="spin" /> : <Sparkles size={13} />} Lead de démo
+          </button>
           <span className="muted">Total leads : <strong style={{ color: "var(--txt)" }}>{pipeline?.reduce((a, s) => a + s.leads.length, 0)}</strong></span>
           {totalValue > 0 && <span className="muted">CA potentiel : <strong style={{ color: C.sage }}>{totalValue}€</strong></span>}
         </div>
@@ -1129,6 +1154,8 @@ export default function Croissance() {
       window.history.replaceState({}, "", "/croissance");
     }).catch(() => toast.error("Impossible d'ajouter le lead capturé"));
   }, []); // eslint-disable-line
+
+  const handleDetect = async () => {
     setDetecting(true);
     try {
       const res = await growthExtApi.detect();

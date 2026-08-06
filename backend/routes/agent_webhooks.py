@@ -38,8 +38,20 @@ async def _get_agent_by_token(token: str, db: AsyncSession) -> CustomAgent:
     return agent
 
 
-async def _agent_respond(agent: CustomAgent, user: User, message: str, db: AsyncSession) -> str:
-    """Generate agent response using Mammoth IA API (unified Claude/GPT/Gemini)."""
+async def _agent_respond(
+    agent: CustomAgent,
+    user: User,
+    message: str,
+    db: AsyncSession,
+    contact: str | None = None,
+    channel: str = "test",
+) -> str:
+    """Generate agent response using Mammoth IA API (unified Claude/GPT/Gemini).
+
+    `contact` identifie le client externe (numéro WhatsApp, chat_id Telegram,
+    session_id du widget web) — chaque contact a son propre fil de conversation.
+    `contact=None` = conversation de test du propriétaire dans l'app (comportement historique).
+    """
     # Utilise MAMMOTH_API_KEY (la clé unifiée du projet Zayado)
     mammoth_key = os.environ.get("MAMMOTH_API_KEY", "")
     if not mammoth_key:
@@ -56,13 +68,13 @@ async def _agent_respond(agent: CustomAgent, user: User, message: str, db: Async
     system = agent.system_prompt or "Tu es un assistant IA utile et professionnel."
     system += "\n\nTu reponds de maniere concise et utile. Reponds sans markdown excessif (pas de **bold**, pas de #headers)."
 
-    # Load last 10 messages for context
-    history = await db.execute(
-        select(AgentMessage)
-        .where(AgentMessage.agent_id == agent.id, AgentMessage.user_id == user.id)
-        .order_by(AgentMessage.created_at.desc())
-        .limit(10)
-    )
+    # Load last 10 messages for context — isolé par contact (chaque client externe a son propre fil)
+    history_q = select(AgentMessage).where(AgentMessage.agent_id == agent.id)
+    if contact:
+        history_q = history_q.where(AgentMessage.contact == contact)
+    else:
+        history_q = history_q.where(AgentMessage.contact.is_(None))
+    history = await db.execute(history_q.order_by(AgentMessage.created_at.desc()).limit(10))
     msgs = list(reversed(list(history.scalars().all())))
 
     messages = []
@@ -131,9 +143,9 @@ async def _agent_respond(agent: CustomAgent, user: User, message: str, db: Async
     if reply is None:
         reply = last_error_reply
 
-    # Save messages
-    db.add(AgentMessage(agent_id=agent.id, user_id=user.id, role="user", content=message))
-    db.add(AgentMessage(agent_id=agent.id, user_id=user.id, role="assistant", content=reply))
+    # Save messages — tagués par contact/canal pour l'écran de gestion des conversations
+    db.add(AgentMessage(agent_id=agent.id, user_id=user.id, role="user", content=message, contact=contact, channel=channel))
+    db.add(AgentMessage(agent_id=agent.id, user_id=user.id, role="assistant", content=reply, contact=contact, channel=channel))
     agent.usage_count = (agent.usage_count or 0) + 1
     await db.commit()
 
@@ -164,7 +176,7 @@ async def telegram_webhook(token: str, request: Request, db: AsyncSession = Depe
     if not user:
         return {"ok": True}
 
-    reply = await _agent_respond(agent, user, text, db)
+    reply = await _agent_respond(agent, user, text, db, contact=str(chat_id), channel="telegram")
 
     # Send reply via Telegram
     from routes.connections import _decrypt
@@ -253,7 +265,7 @@ async def whatsapp_webhook(token: str, request: Request, db: AsyncSession = Depe
                 if not user:
                     continue
 
-                reply = await _agent_respond(agent, user, text, db)
+                reply = await _agent_respond(agent, user, text, db, contact=from_number, channel="whatsapp")
 
                 # Send reply via WhatsApp
                 from models import UserConnection
@@ -345,7 +357,7 @@ async def whatsapp_web_message(token: str, request: Request, db: AsyncSession = 
         return {"reply": "Agent non disponible."}
 
     # Générer la réponse via l'agent IA
-    reply = await _agent_respond(agent, user, message, db)
+    reply = await _agent_respond(agent, user, message, db, contact=from_number, channel="whatsapp_web")
     
     return {"reply": reply}
 
@@ -456,6 +468,7 @@ async def agent_public_message(token: str, request: Request, db: AsyncSession = 
     agent = await _get_agent_by_token(token, db)
     body = await request.json()
     message = body.get("message", "").strip()
+    session_id = (body.get("session_id") or "").strip() or "web_anonyme"
     if not message:
         return {"reply": "Message vide."}
 
@@ -465,5 +478,5 @@ async def agent_public_message(token: str, request: Request, db: AsyncSession = 
     if not user:
         return {"reply": "Agent non configure."}
 
-    reply = await _agent_respond(agent, user, message, db)
+    reply = await _agent_respond(agent, user, message, db, contact=session_id, channel="web")
     return {"reply": reply}

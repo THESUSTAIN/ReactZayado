@@ -284,6 +284,10 @@ export const agentsApi = {
   history:      (id)        => axios.get(`${API}/custom-agents/${id}/history`, withUser()).then(r => r.data),
   waConnect:    (id)        => axios.post(`${API}/custom-agents/${id}/whatsapp-web-connect`, {}, withUser()).then(r => r.data),
   waStatus:     (id)        => axios.get(`${API}/custom-agents/${id}/whatsapp-web-status`, withUser()).then(r => r.data),
+  // Conversations clients (WhatsApp / Telegram / Web) — écran de gestion
+  conversations:       (id)               => axios.get(`${API}/custom-agents/${id}/conversations`, withUser()).then(r => r.data),
+  conversationThread:  (id, contact)      => axios.get(`${API}/custom-agents/${id}/conversations/${encodeURIComponent(contact)}`, withUser()).then(r => r.data),
+  replyConversation:   (id, contact, msg) => axios.post(`${API}/custom-agents/${id}/conversations/${encodeURIComponent(contact)}/reply`, { message: msg }, withUser()).then(r => r.data),
 };
 
 // ─── TASKS (Mon Bureau — Missions) ────────────────────────────

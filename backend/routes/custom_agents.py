@@ -501,7 +501,7 @@ async def chat_with_agent(agent_id: str, data: AgentChatRequest, user: User = De
         messages = [{"role": "system", "content": system}]
         history_result = await db.execute(
             select(AgentMessage)
-            .where(AgentMessage.agent_id == agent_id, AgentMessage.user_id == user.id)
+            .where(AgentMessage.agent_id == agent_id, AgentMessage.user_id == user.id, AgentMessage.contact.is_(None))
             .order_by(AgentMessage.created_at.desc())
             .limit(20)
         )
@@ -557,9 +557,9 @@ async def chat_with_agent(agent_id: str, data: AgentChatRequest, user: User = De
     # Increment usage count
     await db.execute(update(CustomAgent).where(CustomAgent.id == agent_id).values(usage_count=CustomAgent.usage_count + 1))
 
-    # Save messages to persistent memory
-    db.add(AgentMessage(agent_id=agent_id, user_id=user.id, role="user", content=message))
-    db.add(AgentMessage(agent_id=agent_id, user_id=user.id, role="assistant", content=result))
+    # Save messages to persistent memory (contact=NULL = fil de test du propriétaire)
+    db.add(AgentMessage(agent_id=agent_id, user_id=user.id, role="user", content=message, channel="test"))
+    db.add(AgentMessage(agent_id=agent_id, user_id=user.id, role="assistant", content=result, channel="test"))
     await db.commit()
 
     return {
@@ -573,10 +573,10 @@ async def chat_with_agent(agent_id: str, data: AgentChatRequest, user: User = De
 
 @custom_agents_router.get("/{agent_id}/history")
 async def get_agent_history(agent_id: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """Recuperer l'historique des messages avec un agent."""
+    """Recuperer l'historique du fil de TEST du propriétaire (pas les conversations clients)."""
     result = await db.execute(
         select(AgentMessage)
-        .where(AgentMessage.agent_id == agent_id, AgentMessage.user_id == user.id)
+        .where(AgentMessage.agent_id == agent_id, AgentMessage.user_id == user.id, AgentMessage.contact.is_(None))
         .order_by(AgentMessage.created_at.asc())
         .limit(50)
     )
@@ -586,10 +586,156 @@ async def get_agent_history(agent_id: str, user: User = Depends(get_current_user
 
 @custom_agents_router.delete("/{agent_id}/history")
 async def clear_agent_history(agent_id: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """Effacer l'historique des messages avec un agent."""
-    await db.execute(delete(AgentMessage).where(AgentMessage.agent_id == agent_id, AgentMessage.user_id == user.id))
+    """Effacer uniquement le fil de TEST du propriétaire (les conversations clients sont préservées)."""
+    await db.execute(delete(AgentMessage).where(AgentMessage.agent_id == agent_id, AgentMessage.user_id == user.id, AgentMessage.contact.is_(None)))
     await db.commit()
     return {"status": "ok"}
+
+
+# ── Conversations clients (WhatsApp / Telegram / Web) — écran de gestion ──
+CHANNEL_LABELS = {
+    "whatsapp": "WhatsApp", "whatsapp_web": "WhatsApp (QR)",
+    "telegram": "Telegram", "web": "Widget Web", "test": "Test",
+}
+
+
+@custom_agents_router.get("/{agent_id}/conversations")
+async def list_agent_conversations(agent_id: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Liste les fils de conversation avec de vrais clients (WhatsApp/Telegram/Web) — regroupés par contact."""
+    agent = await _get_user_agent(agent_id, user.id, db)
+
+    grouped = await db.execute(
+        select(
+            AgentMessage.contact,
+            AgentMessage.channel,
+            func.max(AgentMessage.created_at).label("last_at"),
+            func.count(AgentMessage.id).label("cnt"),
+        )
+        .where(AgentMessage.agent_id == agent.id, AgentMessage.contact.is_not(None))
+        .group_by(AgentMessage.contact, AgentMessage.channel)
+        .order_by(func.max(AgentMessage.created_at).desc())
+    )
+    rows = grouped.all()
+
+    conversations = []
+    for contact, channel, last_at, cnt in rows:
+        last_msg_result = await db.execute(
+            select(AgentMessage)
+            .where(AgentMessage.agent_id == agent.id, AgentMessage.contact == contact)
+            .order_by(AgentMessage.created_at.desc())
+            .limit(1)
+        )
+        last_msg = last_msg_result.scalar_one_or_none()
+        conversations.append({
+            "contact": contact,
+            "channel": channel or "whatsapp",
+            "channel_label": CHANNEL_LABELS.get(channel or "whatsapp", channel or "whatsapp"),
+            "message_count": cnt,
+            "last_message": (last_msg.content[:160] if last_msg else ""),
+            "last_role": last_msg.role if last_msg else None,
+            "last_at": last_at.isoformat() if last_at else None,
+        })
+    return conversations
+
+
+@custom_agents_router.get("/{agent_id}/conversations/{contact}")
+async def get_agent_conversation(agent_id: str, contact: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Récupère le fil complet d'un contact (client) donné."""
+    agent = await _get_user_agent(agent_id, user.id, db)
+    result = await db.execute(
+        select(AgentMessage)
+        .where(AgentMessage.agent_id == agent.id, AgentMessage.contact == contact)
+        .order_by(AgentMessage.created_at.asc())
+        .limit(300)
+    )
+    msgs = result.scalars().all()
+    return {
+        "contact": contact,
+        "messages": [
+            {"role": m.role, "content": m.content, "channel": m.channel, "created_at": m.created_at.isoformat() if m.created_at else None}
+            for m in msgs
+        ],
+    }
+
+
+class ManualReplyIn(BaseModel):
+    message: str
+
+
+@custom_agents_router.post("/{agent_id}/conversations/{contact}/reply")
+async def reply_to_conversation(agent_id: str, contact: str, data: ManualReplyIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Répondre manuellement (sans passer par l'IA) à un client sur WhatsApp/Telegram depuis l'app."""
+    agent = await _get_user_agent(agent_id, user.id, db)
+    message = (data.message or "").strip()
+    if not message:
+        raise HTTPException(400, "Message requis")
+
+    last_result = await db.execute(
+        select(AgentMessage)
+        .where(AgentMessage.agent_id == agent.id, AgentMessage.contact == contact)
+        .order_by(AgentMessage.created_at.desc())
+        .limit(1)
+    )
+    last_msg = last_result.scalar_one_or_none()
+    channel = (last_msg.channel if last_msg else "whatsapp") or "whatsapp"
+
+    sent = False
+    error = None
+    try:
+        if channel == "whatsapp":
+            conn_result = await db.execute(
+                select(UserConnection).where(UserConnection.user_id == agent.user_id, UserConnection.provider == "whatsapp")
+            )
+            wa_conn = conn_result.scalar_one_or_none()
+            if wa_conn and wa_conn.credentials:
+                creds = json.loads(_decrypt(wa_conn.credentials))
+                phone_id = creds.get("phone_number_id", "")
+                access_token = creds.get("access_token", "")
+                if phone_id and access_token:
+                    async with httpx.AsyncClient(timeout=15) as client:
+                        r = await client.post(
+                            f"https://graph.facebook.com/v18.0/{phone_id}/messages",
+                            headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
+                            json={"messaging_product": "whatsapp", "to": contact, "type": "text", "text": {"body": message}},
+                        )
+                        sent = r.status_code == 200
+                        if not sent:
+                            error = f"WhatsApp a refusé l'envoi ({r.status_code})"
+                else:
+                    error = "Identifiants WhatsApp incomplets (Connexions > WhatsApp Business)."
+            else:
+                error = "WhatsApp non connecté (Connexions > WhatsApp Business)."
+        elif channel == "telegram":
+            conn_result = await db.execute(
+                select(UserConnection).where(UserConnection.user_id == agent.user_id, UserConnection.provider == "telegram")
+            )
+            tg_conn = conn_result.scalar_one_or_none()
+            if tg_conn and tg_conn.credentials:
+                creds = json.loads(_decrypt(tg_conn.credentials))
+                bot_token = creds.get("bot_token", "")
+                if bot_token:
+                    async with httpx.AsyncClient(timeout=15) as client:
+                        r = await client.post(
+                            f"https://api.telegram.org/bot{bot_token}/sendMessage",
+                            json={"chat_id": contact, "text": message},
+                        )
+                        sent = r.status_code == 200
+                        if not sent:
+                            error = f"Telegram a refusé l'envoi ({r.status_code})"
+                else:
+                    error = "Bot Telegram non configuré (Connexions > Telegram)."
+            else:
+                error = "Telegram non connecté (Connexions > Telegram)."
+        else:
+            error = f"Réponse manuelle non supportée pour le canal '{channel}'."
+    except Exception as e:
+        logger.error(f"[reply_to_conversation] {e}")
+        error = "Erreur d'envoi. Réessayez."
+
+    db.add(AgentMessage(agent_id=agent.id, user_id=user.id, role="assistant", content=message, contact=contact, channel=channel))
+    await db.commit()
+
+    return {"ok": True, "sent": sent, "error": error}
 
 
 def _serialize_agent(a: CustomAgent, shared: bool = False) -> dict:
