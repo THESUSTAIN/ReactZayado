@@ -373,7 +373,10 @@ function AppShell() {
 
       {/* Modale onboarding première visite */}
       {onboardingModal && (
-        <PageOnboardingModal path={location.pathname} onClose={() => setOnboardingModal(false)} />
+        <PageOnboardingModal path={location.pathname} onClose={() => {
+          try { localStorage.setItem(`zayado_onboarding_seen_${location.pathname.replace(/\//g, "_")}`, "1"); } catch (e) { /* noop */ }
+          setOnboardingModal(false);
+        }} />
       )}
 
       {/* Modale "Configure ton cockpit X/8" — après connexion */}

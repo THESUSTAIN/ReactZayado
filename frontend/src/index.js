@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "@/index.css";
 import App from "@/App";
+import { registerServiceWorker } from "@/lib/pwa";
 
 // ── Google Analytics — chargé UNIQUEMENT sur les domaines de production
 //    (zayado.net / app.zayado.net / www.zayado.net). Jamais en preview/local,
@@ -44,3 +45,6 @@ root.render(
     </QueryClientProvider>
   </React.StrictMode>,
 );
+
+// PWA : enregistre le service worker (installable, hors-ligne, push).
+registerServiceWorker();

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Zap, TrendingUp, Heart, Target, ArrowRight, Sun, Moon, Compass,
+  Zap, TrendingUp, Heart, Target, ArrowRight, Sun, Moon, Compass, Home,
   Users, BarChart3, Sparkles, FolderOpen, ShoppingBag, Quote, CheckCircle2, Download, PartyPopper, Loader2,
 } from "lucide-react";
 import axios from "axios";
@@ -16,12 +16,11 @@ const DEFAULT_BG = "https://images.unsplash.com/photo-1560146500-e52ca6764fc0?cr
 // fix : chaque item mène désormais vraiment quelque part (path interne) au lieu
 // de se contenter de fermer l'écran — cohérent avec les libellés affichés.
 const DOCK = [
-  { icon: Compass,    label: "Vision Board",     path: "/vision-board" },
-  { icon: Users,      label: "CRM",              path: "/croissance" },
+  { icon: Home,       label: "Cockpit",           path: "/", center: true },
+  { icon: Compass,    label: "Vision",            path: "/vision-board" },
+  { icon: TrendingUp, label: "Croissance",        path: "/croissance" },
+  { icon: FolderOpen, label: "Espace de travail", path: "/travail" },
   { icon: BarChart3,  label: "DAF IA",            path: "/pilotage" },
-  { icon: Sparkles,   label: "Mon énergie",       path: "/", center: true },
-  { icon: FolderOpen, label: "Espace de travail", path: "/bureau" },
-  { icon: TrendingUp, label: "Growth Agent",      path: "/croissance" },
   { icon: ShoppingBag,label: "Boutique",          path: "https://zayado.net/boutique" },
 ];
 

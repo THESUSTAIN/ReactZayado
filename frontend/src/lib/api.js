@@ -262,6 +262,9 @@ export const growthExtApi = {
   // WhatsApp / Telegram webhooks
   saveChannelConfig: (channel, config) => axios.put(`${API}/growth/channels/${channel}`, config, withUser()).then(r => r.data),
   getChannelConfig: (channel) => axios.get(`${API}/growth/channels/${channel}`, withUser()).then(r => r.data),
+
+  // Sync CRM externe (on pousse le lead dans le CRM de l'user : Brevo / HubSpot)
+  pushLeadToCrm: (id, provider) => axios.post(`${API}/growth/leads/${id}/push-crm`, { provider: provider || null }, withUser()).then(r => r.data),
 };
 
 // ─── TASKS (Mon Bureau — Missions) ────────────────────────────

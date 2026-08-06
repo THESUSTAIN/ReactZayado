@@ -20,19 +20,22 @@ import csv
 import json
 import uuid
 import re
+import os
 import logging
+from typing import Optional
 from datetime import datetime, timezone
 
 import httpx
+from cryptography.fernet import Fernet
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from sqlalchemy import text
+from sqlalchemy import text, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from deps import get_current_user
-from models import User
+from models import User, UserConnection
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/growth", tags=["growth"])
@@ -464,6 +467,118 @@ async def move_lead(lead_id: str, body: StageIn, user: User = Depends(get_curren
     )
     await db.commit()
     return {"ok": True, "stage": body.stage}
+
+
+# ─────────────────────────────────────────────────────────────────
+# Sync CRM externe — on NE remplace PAS ton CRM, on y POUSSE le lead.
+# (Brevo / HubSpot connectés dans Intégrations.)
+# ─────────────────────────────────────────────────────────────────
+_FK = os.environ.get("FERNET_KEY", "")
+_FERNET_CRM = Fernet(_FK.encode()) if _FK else None
+
+
+def _crm_decrypt(v: str) -> str:
+    if not _FERNET_CRM or not v:
+        return v or ""
+    try:
+        return _FERNET_CRM.decrypt(v.encode()).decode()
+    except Exception:
+        return v
+
+
+async def _get_connection(db: AsyncSession, user_id: str, provider: str):
+    res = await db.execute(
+        select(UserConnection).where(
+            UserConnection.user_id == user_id,
+            UserConnection.provider == provider,
+        )
+    )
+    return res.scalar_one_or_none()
+
+
+async def _push_brevo(creds: dict, lead: dict) -> dict:
+    email = lead.get("email") or lead.get("contact_email")
+    if not email:
+        return {"ok": False, "error": "Ce lead n'a pas d'email — impossible de l'envoyer à Brevo."}
+    api_key = creds.get("api_key", "")
+    async with httpx.AsyncClient(timeout=15.0) as c:
+        r = await c.post(
+            "https://api.brevo.com/v3/contacts",
+            headers={"api-key": api_key, "Content-Type": "application/json"},
+            json={"email": email, "attributes": {"FIRSTNAME": lead.get("name") or ""}, "updateEnabled": True},
+        )
+    if r.status_code in (200, 201, 204):
+        return {"ok": True, "provider": "brevo"}
+    return {"ok": False, "error": f"Brevo a refusé la requête ({r.status_code})"}
+
+
+async def _push_hubspot(creds: dict, lead: dict) -> dict:
+    token = creds.get("api_key") or creds.get("access_token") or ""
+    props = {"firstname": lead.get("name") or "", "company": lead.get("company") or lead.get("sub") or ""}
+    if lead.get("email"):
+        props["email"] = lead["email"]
+    async with httpx.AsyncClient(timeout=15.0) as c:
+        r = await c.post(
+            "https://api.hubapi.com/crm/v3/objects/contacts",
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            json={"properties": props},
+        )
+    if r.status_code in (200, 201):
+        return {"ok": True, "provider": "hubspot"}
+    return {"ok": False, "error": f"HubSpot a refusé la requête ({r.status_code})"}
+
+
+class CrmPushIn(BaseModel):
+    provider: Optional[str] = None  # brevo | hubspot | None (auto)
+
+
+@router.post("/leads/{lead_id}/push-crm")
+async def push_lead_to_crm(
+    lead_id: str,
+    body: CrmPushIn = CrmPushIn(),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    user_id = user.id
+    await _ensure_leads_table(db)
+    r = await db.execute(
+        text("SELECT data FROM user_leads WHERE id = :id AND user_id = :uid"),
+        {"id": lead_id, "uid": user_id},
+    )
+    row = r.fetchone()
+    if not row:
+        return {"ok": False, "error": "Lead introuvable"}
+    data = row[0]
+    if isinstance(data, str):
+        data = json.loads(data)
+    data = data or {}
+
+    providers = [body.provider] if body.provider else ["brevo", "hubspot"]
+    conn = None
+    provider = None
+    for p in providers:
+        conn = await _get_connection(db, user_id, p)
+        if conn:
+            provider = p
+            break
+    if not conn:
+        return {"ok": False, "error": "Aucun CRM connecté. Connecte Brevo ou HubSpot dans Intégrations."}
+
+    try:
+        creds = json.loads(_crm_decrypt(conn.credentials)) if conn.credentials else {}
+    except Exception:
+        creds = {}
+
+    result = await (_push_brevo(creds, data) if provider == "brevo" else _push_hubspot(creds, data))
+    if result.get("ok"):
+        data["crm_synced"] = provider
+        data["crm_synced_at"] = datetime.now(timezone.utc).isoformat()
+        await db.execute(
+            text("UPDATE user_leads SET data = :d WHERE id = :id AND user_id = :uid"),
+            {"d": json.dumps(data), "id": lead_id, "uid": user_id},
+        )
+        await db.commit()
+    return result
 
 
 # ─────────────────────────────────────────────────────────────────

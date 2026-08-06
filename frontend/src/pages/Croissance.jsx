@@ -376,6 +376,17 @@ function PipelineTab() {
     catch { toast.error("Erreur de déplacement"); }
   };
 
+  const pushToCrm = async (lead) => {
+    const tid = toast.loading("Envoi vers ton CRM…");
+    try {
+      const res = await growthExtApi.pushLeadToCrm(lead.id);
+      if (res?.ok) toast.success(`Lead envoyé dans ${res.provider === "hubspot" ? "HubSpot" : "Brevo"} ✓`, { id: tid });
+      else toast.error(res?.error || "Échec de l'envoi au CRM", { id: tid });
+    } catch {
+      toast.error("Échec de l'envoi au CRM", { id: tid });
+    }
+  };
+
   if (loading) return <p className="muted">Chargement du pipeline…</p>;
 
   const totalValue = pipeline?.reduce((acc, s) => acc + s.leads.length * (s.id === "signed" ? 500 : 0), 0);
@@ -412,9 +423,14 @@ function PipelineTab() {
                   </div>
                   <p className="muted" style={{ fontSize: 11, margin: "0 0 6px" }}>{lead.sub}</p>
                   <p style={{ fontSize: 12, color: "var(--txt)", margin: "0 0 8px", fontStyle: "italic" }}>« {lead.snippet?.slice(0, 60)}… »</p>
-                  <button onClick={() => setEngageLead(lead)} className="zbtn" style={{ height: 26, fontSize: 11, width: "100%", justifyContent: "center", gap: 4 }}>
-                    <Bot size={11} /> Engager
-                  </button>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button onClick={() => setEngageLead(lead)} className="zbtn" style={{ height: 26, fontSize: 11, flex: 1, justifyContent: "center", gap: 4 }}>
+                      <Bot size={11} /> Engager
+                    </button>
+                    <button onClick={() => pushToCrm(lead)} title="Envoyer ce lead dans mon CRM (Brevo / HubSpot)" className="zbtn" style={{ height: 26, fontSize: 11, justifyContent: "center", gap: 4 }} data-testid={`lead-crm-${lead.id}`}>
+                      <ArrowRight size={11} /> CRM
+                    </button>
+                  </div>
                 </div>
               ))}
               {stage.leads.length === 0 && (
