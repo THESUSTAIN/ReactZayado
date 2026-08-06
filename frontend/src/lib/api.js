@@ -265,6 +265,25 @@ export const growthExtApi = {
 
   // Sync CRM externe (on pousse le lead dans le CRM de l'user : Brevo / HubSpot)
   pushLeadToCrm: (id, provider) => axios.post(`${API}/growth/leads/${id}/push-crm`, { provider: provider || null }, withUser()).then(r => r.data),
+
+  // Création manuelle / capture (extension) d'un lead
+  createLead: (data) => axios.post(`${API}/growth/leads`, data, withUser()).then(r => r.data),
+};
+
+// ─── AGENTS IA (custom-agents) ────────────────────────────────
+export const agentsApi = {
+  list:         ()          => axios.get(`${API}/custom-agents`, withUser()).then(r => r.data),
+  templates:    ()          => axios.get(`${API}/custom-agents/templates`, withUser()).then(r => r.data),
+  tools:        ()          => axios.get(`${API}/custom-agents/tools`, withUser()).then(r => r.data),
+  create:       (data)      => axios.post(`${API}/custom-agents`, data, withUser()).then(r => r.data),
+  fromTemplate: (id)        => axios.post(`${API}/custom-agents/from-template`, { template_id: id }, withUser()).then(r => r.data),
+  update:       (id, data)  => axios.put(`${API}/custom-agents/${id}`, data, withUser()).then(r => r.data),
+  remove:       (id)        => axios.delete(`${API}/custom-agents/${id}`, withUser()).then(r => r.data),
+  deploy:       (id, ch)    => axios.post(`${API}/custom-agents/${id}/deploy`, { channels: ch }, withUser()).then(r => r.data),
+  chat:         (id, message) => axios.post(`${API}/custom-agents/${id}/chat`, { message }, withUser()).then(r => r.data),
+  history:      (id)        => axios.get(`${API}/custom-agents/${id}/history`, withUser()).then(r => r.data),
+  waConnect:    (id)        => axios.post(`${API}/custom-agents/${id}/whatsapp-web-connect`, {}, withUser()).then(r => r.data),
+  waStatus:     (id)        => axios.get(`${API}/custom-agents/${id}/whatsapp-web-status`, withUser()).then(r => r.data),
 };
 
 // ─── TASKS (Mon Bureau — Missions) ────────────────────────────

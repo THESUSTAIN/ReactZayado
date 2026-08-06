@@ -11,6 +11,7 @@ import Onboarding from "@/components/Onboarding";
 import InspirationScreen from "@/components/InspirationScreen";
 import Dashboard from "@/components/Dashboard";
 import Croissance from "@/pages/Croissance";
+import Agents from "@/pages/Agents";
 import BienEtre from "@/pages/BienEtre";
 import Travail from "@/pages/Travail";
 import SimulationModule from "@/pages/SimulationModule";
@@ -506,6 +507,7 @@ function AppRoutes() {
       <Route element={<RequireAuth><AppShell /></RequireAuth>}>
         <Route path="/" element={<DashboardPage />} />
         <Route path="/croissance" element={<Croissance />} />        {/* Fusionnées dans Vision Board (onglet Analyse & validation de projet) */}
+        <Route path="/agents" element={<Agents />} />
         <Route path="/validation" element={<Navigate to="/vision-board?tab=swot" replace />} />
         <Route path="/validation/new" element={<Navigate to="/vision-board?tab=swot" replace />} />
         <Route path="/validation/compare" element={<Navigate to="/vision-board?tab=swot" replace />} />

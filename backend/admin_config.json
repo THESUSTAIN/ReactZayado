@@ -6,6 +6,15 @@
       "subject": "Votre lien de connexion \u2014 MyExtension-ai by Zayado",
       "brand": "myextension",
       "status": "sent",
+      "message_id": "<202608060951.62174265965@smtp-relay.mailin.fr>",
+      "sent_at": "2026-08-06T09:51:13.983429+00:00"
+    },
+    {
+      "to": "thomas@zayado.fr",
+      "to_name": "",
+      "subject": "Votre lien de connexion \u2014 MyExtension-ai by Zayado",
+      "brand": "myextension",
+      "status": "sent",
       "message_id": "<202608060936.12886970389@smtp-relay.mailin.fr>",
       "sent_at": "2026-08-06T09:36:50.356314+00:00"
     },
@@ -1790,15 +1799,6 @@
       "status": "error",
       "error": "(401)\nReason: Unauthorized\nHTTP response headers: HTTPHeaderDict({'Date': 'Tue, 04 Aug 2026 10:01:22 GMT', 'Content-Type': 'application/json', 'Content-Length': '72', 'Connection': 'keep-alive', 'access-control-allow-credentials': 'true', 'sib-request-id': 'dab9e189-3973-9749-a599-92d970332baf', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'PUT, POST, GET, DELETE, PATCH, OPTIONS', 'x-envoy-upstream-service-time': '5', 'server': 'cloudflare', 'cf-cache-status': 'DYNAMIC', 'Cf-Apo-Via': 'origin,noget', 'CF-RAY': 'a25cb86daa890636-CDG'})\nHTTP response body: {\"message\":\"authentication not found in headers\",\"code\":\"unauthorized\"}\n\n",
       "sent_at": "2026-08-04T10:01:22.911580+00:00"
-    },
-    {
-      "to": "thomas@zayado.fr",
-      "to_name": "",
-      "subject": "Votre lien de connexion \u2014 MyExtension-ai by Zayado",
-      "brand": "myextension",
-      "status": "error",
-      "error": "(401)\nReason: Unauthorized\nHTTP response headers: HTTPHeaderDict({'Date': 'Tue, 04 Aug 2026 10:01:18 GMT', 'Content-Type': 'application/json', 'Content-Length': '72', 'Connection': 'keep-alive', 'access-control-allow-credentials': 'true', 'sib-request-id': '5c282dc3-edc4-9fe8-985f-ac7601392c8c', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'PUT, POST, GET, DELETE, PATCH, OPTIONS', 'x-envoy-upstream-service-time': '3', 'server': 'cloudflare', 'cf-cache-status': 'DYNAMIC', 'Cf-Apo-Via': 'origin,noget', 'CF-RAY': 'a25cb8520b6b0636-CDG'})\nHTTP response body: {\"message\":\"authentication not found in headers\",\"code\":\"unauthorized\"}\n\n",
-      "sent_at": "2026-08-04T10:01:18.483469+00:00"
     }
   ],
   "workflow_notifs_8c40b413-34e9-49fc-b509-682874536131": [
@@ -1991,6 +1991,20 @@
     }
   },
   "admin_log": [
+    {
+      "action": "server_start",
+      "detail": "Zayado API v2.5.0 d\u00e9marr\u00e9e",
+      "level": "info",
+      "timestamp": "2026-08-06T09:51:05.227942+00:00",
+      "by": "system"
+    },
+    {
+      "action": "server_start",
+      "detail": "Zayado API v2.5.0 d\u00e9marr\u00e9e",
+      "level": "info",
+      "timestamp": "2026-08-06T09:48:47.431044+00:00",
+      "by": "system"
+    },
     {
       "action": "server_start",
       "detail": "Zayado API v2.5.0 d\u00e9marr\u00e9e",
@@ -5475,20 +5489,6 @@
       "detail": "Zayado API v2.5.0 d\u00e9marr\u00e9e",
       "level": "info",
       "timestamp": "2026-06-10T00:41:35.706607+00:00",
-      "by": "system"
-    },
-    {
-      "action": "server_start",
-      "detail": "Zayado API v2.5.0 d\u00e9marr\u00e9e",
-      "level": "info",
-      "timestamp": "2026-06-10T00:41:19.693184+00:00",
-      "by": "system"
-    },
-    {
-      "action": "server_start",
-      "detail": "Zayado API v2.5.0 d\u00e9marr\u00e9e",
-      "level": "info",
-      "timestamp": "2026-06-10T00:38:20.565510+00:00",
       "by": "system"
     }
   ],

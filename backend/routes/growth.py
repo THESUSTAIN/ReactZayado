@@ -153,6 +153,35 @@ async def _save_lead(db: AsyncSession, user_id: str, lead: dict):
     await db.commit()
 
 
+class LeadCreateIn(BaseModel):
+    name: str
+    email: Optional[str] = None
+    company: Optional[str] = None
+    sub: Optional[str] = None
+    snippet: Optional[str] = None
+    source: Optional[str] = None
+    stage: Optional[str] = "detected"
+
+
+@router.post("/leads")
+async def create_lead(body: LeadCreateIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Créer un lead manuellement (ex: capture depuis l'extension navigateur)."""
+    lead = {
+        "id": uuid.uuid4().hex,
+        "name": body.name or "Lead",
+        "email": body.email,
+        "company": body.company,
+        "sub": body.sub or body.source or "Ajouté manuellement",
+        "snippet": body.snippet or "",
+        "score": 50,
+        "stage": body.stage or "detected",
+        "source": body.source or "manual",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await _save_lead(db, user.id, lead)
+    return {"ok": True, "lead": lead}
+
+
 # ─────────── Détection de leads (Reddit public JSON) ───────────
 _INTENT_PATTERNS = [
     r"looking for", r"recommend", r"suggestion", r"any(one)? (know|use|tried)",

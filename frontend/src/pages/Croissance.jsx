@@ -1113,7 +1113,22 @@ export default function Croissance() {
 
   useEffect(() => { reload(); }, [reload]);
 
-  const handleDetect = async () => {
+  // Capture depuis l'extension navigateur : /croissance?capture_name=&capture_url=&capture_note=
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const name = p.get("capture_name");
+    if (!name) return;
+    growthExtApi.createLead({
+      name,
+      source: p.get("capture_url") || "Extension",
+      snippet: p.get("capture_note") || "",
+      stage: "detected",
+    }).then(() => {
+      toast.success(`Lead « ${name.slice(0, 40)} » ajouté depuis l'extension ✓`);
+      setTab("pipeline");
+      window.history.replaceState({}, "", "/croissance");
+    }).catch(() => toast.error("Impossible d'ajouter le lead capturé"));
+  }, []); // eslint-disable-line
     setDetecting(true);
     try {
       const res = await growthExtApi.detect();

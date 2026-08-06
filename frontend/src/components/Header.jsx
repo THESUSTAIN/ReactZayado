@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Bot as BotIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   Search, Moon, Sun, Mail, LayoutGrid, Bell, ChevronDown,
@@ -298,6 +299,9 @@ export default function Header({ onSettingsOpen }) {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem className="cursor-pointer" data-testid="profile-agents" onClick={() => navigate("/agents")}>
+              <BotIcon className="w-4 h-4 mr-2" /> Agents IA
+            </DropdownMenuItem>
             <DropdownMenuItem className="cursor-pointer" data-testid="profile-moi" onClick={() => navigate("/bien-etre")}>
               <Heart className="w-4 h-4 mr-2" /> {t("nav_bienetre")}
             </DropdownMenuItem>
