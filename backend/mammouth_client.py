@@ -28,9 +28,43 @@ EMERGENT_TEXT_MODEL = os.environ.get("EMERGENT_TEXT_MODEL", "claude-haiku-4-5-20
 EMERGENT_IMAGE_MODEL = os.environ.get("EMERGENT_IMAGE_MODEL", "gemini-3.1-flash-image-preview")
 
 # auto | mammouth | emergent (valeur par défaut via env, surchargée par la config admin)
-AI_PROVIDER = os.environ.get("AI_PROVIDER", "auto").lower()
+# Défaut = "mammouth" : Emergent n'est JAMAIS appelé (donc jamais crédité) tant que
+# l'admin ne bascule pas explicitement sur "auto" (repli) ou "emergent" dans l'admin.
+AI_PROVIDER = os.environ.get("AI_PROVIDER", "mammouth").lower()
 
 _CONFIG_PATH = os.path.join(os.path.dirname(__file__), "admin_config.json")
+
+# Anti-spam : n'envoie l'alerte "crédit Mammouth épuisé" qu'une fois toutes les N secondes.
+_LAST_ALERT_TS = 0.0
+_ALERT_COOLDOWN = float(os.environ.get("LLM_ALERT_COOLDOWN_SECONDS", "3600"))
+
+
+def _alert_llm_problem(kind: str, detail: str = "") -> None:
+    """Prévient l'admin par email quand Mammouth est indisponible (crédit épuisé / clé invalide).
+    Throttlé pour éviter le spam. Ne lève jamais d'exception (best-effort)."""
+    global _LAST_ALERT_TS
+    import time as _time
+    now = _time.time()
+    if now - _LAST_ALERT_TS < _ALERT_COOLDOWN:
+        return
+    _LAST_ALERT_TS = now
+    try:
+        recipient = os.environ.get("LLM_ALERT_EMAIL") or os.environ.get("BREVO_SENDER_EMAIL") or "contact@zayado.net"
+        subject = "⚠️ IA Mammouth indisponible — action requise"
+        body = f"""<p>Bonjour,</p>
+<p>Le fournisseur IA <strong>Mammouth</strong> a renvoyé une erreur : <strong>{kind}</strong>.</p>
+<p>Les fonctionnalités IA (copilote, génération, simulation) sont donc <strong>interrompues</strong> jusqu'à résolution.</p>
+<ul>
+  <li>Vérifiez le solde / la clé Mammouth (MAMMOUTH_API_KEY).</li>
+  <li>Ou activez temporairement le repli dans <em>Admin → IA</em> (provider = "auto" ou "emergent").</li>
+</ul>
+<p style="color:#777;font-size:12px">Détail technique : {detail[:300]}</p>
+<p style="color:#777;font-size:12px">— Alerte automatique MyExtension AI</p>"""
+        from utils import send_brevo_email
+        send_brevo_email(to_email=recipient, subject=subject, html_content=body, brand="myextension")
+        logger.warning("[LLM ALERT] Email d'alerte envoyé à %s (%s)", recipient, kind)
+    except Exception as e:
+        logger.error("[LLM ALERT] Échec envoi email d'alerte: %s", e)
 
 
 def get_ai_provider() -> str:
@@ -145,8 +179,10 @@ async def _mammouth_chat(messages, *, model, max_tokens, temperature, timeout) -
         body = resp.text[:500]
         logger.error("Mammouth HTTP %s — %s", resp.status_code, body)
         if resp.status_code == 401:
+            _alert_llm_problem("Clé Mammouth invalide (401)", body)
             raise MammouthError("Clé Mammouth invalide")
         if resp.status_code in (402, 429):
+            _alert_llm_problem("Quota / crédit Mammouth dépassé", body)
             raise MammouthError("Quota Mammouth dépassé")
         raise MammouthError(f"Mammouth indisponible ({resp.status_code})")
     data = resp.json()
