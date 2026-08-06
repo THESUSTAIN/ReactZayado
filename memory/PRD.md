@@ -35,3 +35,21 @@ l'environnement local SANS casser la prod, puis fusionner `corrections.zip`, pui
 - Confirmer les vraies clés/env pour tester OAuth, email, paiement, IA.
 - Décider du sort de emergentintegrations (aligner openai, ou supprimer l'import lazy).
 - Tester les webhooks WhatsApp (signature) une fois WA_APP_SECRET fourni.
+
+## 2026-06 — Sprint 1 : Réorganisation navigation (validé par testing_agent, 100%)
+Structure validée par l'utilisateur : 5 piliers + "Moi" sous l'avatar.
+- Nav (Sidebar + BottomNav) = **Cockpit · Vision · Croissance · Espace de travail · DAF IA** (+ Co-pilote). "Bien-être" retiré du menu.
+- **Croissance** réintégrée au menu (était orpheline).
+- **DAF IA** : /pilotage relabellisé "DAF IA — Pilotage financier" + CTA "Faire superviser par Zayado" (l'app = visualisation, pas compta ; supervision humaine Zayado).
+- **Moi** (bien-être) accessible via menu profil/avatar (profile-moi -> /bien-etre). Check-in énergie reste surfacé dans le Cockpit.
+- **Espace de travail** : onglet CRM retiré (CRM reste dans Croissance) ; onglet Documents = bannière "connexion à votre Drive (Google/OneDrive), on ne remplace pas votre outil" + bouton Connecter.
+- Backend : provider LLM par défaut = **mammouth** (Emergent jamais crédité sauf bascule admin) + **alerte email Brevo** si crédit Mammouth épuisé / clé invalide (throttlé).
+
+## Backlog priorisé (reste à faire, global)
+- P1 Onboarding : modale "mode d'emploi" se ré-affiche -> rendre "ne plus afficher" persistant + un seul tour au 1er login + pré-remplir le Cockpit à l'inscription (fin du "0%").
+- P1 Extension navigateur MV3 : ABSENTE (dossier backend/chrome-extension manquant, endpoint 404) alors que le produit s'appelle "MyExtension".
+- P1 CRM : brancher la synchro réelle des leads vers HubSpot/Brevo/Pipedrive (aujourd'hui: connexion + test token seulement, pas de sync).
+- P2 PWA : service worker manquant (offline + push VAPID KO) — manifest OK.
+- P2 DAF IA : fusion complète Pilotage->DAF IA + sync bancaire/Stripe + prévisionnel trésorerie.
+- P2 Cockpit immersif : 3e barre de nav (Vision Board/CRM/DAF IA/Growth Agent/Boutique) à aligner sur les 5 piliers.
+- P3 Landings LP1-4 + suppression ~21 pages legacy ; pricing unifié ; Campus (ex-Simulation) ; Indice d'Alignement.
