@@ -102,6 +102,46 @@ async def delete_notif(nid: str, admin=Depends(get_admin_user), db: AsyncSession
     return {"status": "deleted"}
 
 
+# ───────────── Gel global des notifications (maintenance / correction) ─────────────
+class GateIn(BaseModel):
+    hold: bool
+
+
+@notif_router.get("/admin/notifications/gate")
+async def get_notif_gate(admin=Depends(get_admin_user)):
+    from notif_gate import get_state
+    return get_state()
+
+
+@notif_router.post("/admin/notifications/gate")
+async def set_notif_gate(body: GateIn, admin=Depends(get_admin_user), db: AsyncSession = Depends(get_db)):
+    """Active/désactive le gel global. À la réactivation (hold=false), la DERNIÈRE
+    notification bloquée est renvoyée (une seule, pas d'avalanche)."""
+    from notif_gate import set_hold, pop_last
+    resent = None
+    if body.hold:
+        state = set_hold(True)
+        return {**state, "message": "Notifications gelées — seule la dernière sera renvoyée à la réactivation."}
+    # Réactivation
+    state = set_hold(False)
+    last = pop_last()
+    if last and last.get("kind") == "push":
+        p = last.get("payload", {})
+        try:
+            from routes.push import send_push_to_user
+            ok = await send_push_to_user(
+                db, p.get("user_id"), p.get("title", "MyExtension AI"),
+                p.get("body", ""), image=p.get("image"), url=p.get("url", "/"),
+                family=p.get("family", "ai_tasks"),
+            )
+            resent = {"kind": "push", "sent": ok, "title": p.get("title")}
+        except Exception as e:
+            logger.warning(f"gate resend push KO: {e}")
+            resent = {"kind": "push", "sent": False, "error": str(e)}
+    return {**state, "resent": resent,
+            "message": "Notifications réactivées." + (" Dernière notification renvoyée." if resent else "")}
+
+
 # ───────────── Public endpoint (user/shop visitor) ─────────────
 @notif_router.get("/broadcast-notifications/active")
 async def get_active_notif(
@@ -111,6 +151,13 @@ async def get_active_notif(
 ):
     """Retourne la 1ère notif active correspondant à la surface + audience.
     Le frontend filtre l'affichage via localStorage (1 fois par notif id)."""
+    # Gel global (correction en cours) : on ne montre AUCUNE modale/bandeau.
+    try:
+        from notif_gate import is_held
+        if is_held():
+            return None
+    except Exception:
+        pass
     now = datetime.now(timezone.utc)
     q = select(BroadcastNotification).where(
         BroadcastNotification.active == True,  # noqa: E712

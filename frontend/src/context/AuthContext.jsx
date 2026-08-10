@@ -142,8 +142,16 @@ export function AuthProvider({ children }) {
     window.location.href = "/login";
   };
 
+  // Connexion directe au compte de démo (Thomas) — fiable en preview ET prod.
+  const demoLogin = async (email) => {
+    const session = await authApi.demoLogin(email);
+    localStorage.removeItem("zayado_guest");
+    applySession(session);
+    return session;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, guest, login, loginMicrosoft, completeOAuth, logout, continueAsGuest, applyUser, setLoading }}>
+    <AuthContext.Provider value={{ user, loading, guest, login, loginMicrosoft, completeOAuth, logout, continueAsGuest, applyUser, demoLogin, setLoading }}>
       {children}
     </AuthContext.Provider>
   );

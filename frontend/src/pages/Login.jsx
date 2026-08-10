@@ -86,7 +86,7 @@ const LAST_EMAIL_KEY = "zayado_last_email";
 const LAST_METHOD_KEY = "zayado_last_login_method";
 
 export default function Login() {
-  const { login, loginMicrosoft } = useAuth();
+  const { login, loginMicrosoft, demoLogin } = useAuth();
   const prefs = usePrefs();
   const [lang, setLang] = useState(() => (typeof window !== "undefined" && localStorage.getItem("zayado_lang")) || prefs?.prefs?.language || "fr");
   const t = STR[lang] || STR.fr;
@@ -127,8 +127,14 @@ export default function Login() {
   const doLogin = () => { rememberMethod("google"); setOauthProvider("Google"); login(); };
   const doLoginMicrosoft = () => { rememberMethod("microsoft"); setOauthProvider("Microsoft"); loginMicrosoft(); };
 
-  // Preview : ouvre directement le compte test Thomas (via lien magique dev, jamais en prod)
+  // Preview & prod : ouvre directement le compte test Thomas.
+  // 1) demo-login direct (fiable partout) ; 2) repli lien magique dev.
   const openTestAccount = async () => {
+    try {
+      await demoLogin("thomas@zayado.fr");
+      window.location.href = "/";
+      return;
+    } catch (e) { /* repli ci-dessous */ }
     try {
       const res = await sendMagicLink("thomas@zayado.fr");
       const link = res?.dev_link;

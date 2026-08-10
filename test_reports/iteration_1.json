@@ -1,26 +1,32 @@
 {
-  "summary": "Frontend-only testing of the 5-pillar navigation reorg + mobile ambiance-toggle fix on MyExtension AI (Zayado). Login via 'Ouvrir le compte test (Thomas)' works. All 5 sidebar items (Cockpit, Vision, Croissance, Espace de travail, DAF IA) + Co-pilote present with correct data-testid; side-bienetre absent. Same for mobile bottom-nav (nav-cockpit/vision/croissance/travail/dafia present, nav-bienetre absent). /croissance loads (Dashboard/Pipeline/Leads tabs visible). /pilotage shows title 'DAF IA — Pilotage financier' and daf-supervision-btn. Profile menu shows profile-moi navigating to /bien-etre. /travail no longer has CRM tab; Documents tab shows documents-connect-info banner + documents-connect-btn. Mobile ambiance-toggle-btn visible on both Cockpit (/) and /travail, and toggling actually flips light/dark class on <html>. No console errors bloquants on /vision-board, /, /travail. Note: two onboarding modals ('mode d'emploi' Cockpit) appear post-login on desktop and intercept clicks until dismissed (button 'Compris' / 'Fermer'); this is expected per agent-to-agent note but worth verifying UX (see minor).",
-  "backend_issues": {"critical": [], "minor": []},
+  "summary": "Backend-only testing of Zayado auth + admin panel flows used by the WordPress 'Zayado Admin' plugin. 11/11 pytest tests passed against the public REACT_APP_BACKEND_URL. Verified: health, admin JWT login, demo login, unauthenticated admin endpoint returns 401/403, /api/admin/stats non-empty, /api/admin/users listing + plan filter, /api/admin/config, POST /api/admin/users/{id}/credits with both {amount} (the main fix) and {credits} (backcompat), and PUT /api/admin/users/{id}/plan.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
   "frontend_issues": {
     "ui_bugs": [],
     "integration_issues": [],
-    "design_issues": [
-      {"screen": "Cockpit /", "issues": ["A 'Cockpit — mode d'emploi' onboarding modal appears repeatedly (clicking 'Compris' had to be done 3x during session) and its overlay intercepts sidebar clicks until closed. Consider making 'Compris, ne plus afficher' persistent so returning users don't hit it again."]}
-    ]
+    "design_issues": []
   },
-  "test_report_links": [],
-  "action_items": [
-    "Verify persistence of 'Compris, ne plus afficher' for Cockpit onboarding modal — during a single test session it re-appeared multiple times after navigation, blocking sidebar interactions until dismissed."
+  "test_report_links": [
+    "/app/backend/tests/test_iter_admin_plugin.py",
+    "/app/test_reports/pytest/iter_admin_plugin.xml"
   ],
+  "action_items": [],
   "critical_code_review_comments": [
-    "Sidebar buttons use w-10 h-10 icons only with tooltips on hover; when an overlay (onboarding modal) is active, click-through is blocked as expected — no code bug, but the repeated re-open of the onboarding modal should be investigated in OnboardingModal / Cockpit page."
+    "admin_routes.py is large (1000+ lines) — could be split into stats/users/credits/plans submodules for maintainability.",
+    "gift_credits accepts both {amount} and {credits}; consider marking one as deprecated in OpenAPI schema so plugin authors converge on {amount}.",
+    "test_admin_users_filter_by_plan_free passed but returned users list may be empty in this env — filter correctness only asserted on returned rows; if a stricter test is desired seed at least one free user."
   ],
-  "updated_files": [],
-  "success_rate": {"backend": "N/A (skipped)", "frontend": "100% (all 9 requested scenarios pass)"},
-  "seed_data_creation": "None — used compte test Thomas (thomas@zayado.fr) via magic-link button on /login.",
-  "should_call_test_agent_after_fix": false,
-  "should_main_agent_self_test": true,
-  "test_credentials": "Bouton 'Ouvrir le compte test (Thomas)' sur /login (thomas@zayado.fr, magic-link dev).",
-  "context_for_next_testing_agent": "After login on desktop, up to two overlays may appear: the 'Cockpit — mode d'emploi' modal (dismiss with button 'Compris' or 'Fermer') and an InspirationScreen (click anywhere in the page area to dismiss). Both intercept pointer events on the sidebar. On mobile viewport (390x844) the onboarding modals do not appear the same way; ambiance-toggle-btn is visible on both Cockpit and internal pages (fix verified). Bottom-nav data-testids: nav-{cockpit|vision|croissance|travail|dafia|copilote}; Sidebar: side-{same}. No side-bienetre / nav-bienetre.",
-  "rca_of_the_issue": "No functional bug found. Only observation: onboarding modal for the Cockpit re-triggers on Cockpit revisits within the same session — likely because state to hide it is set only after clicking 'Compris, ne plus afficher' (bouton doré), whereas the tester used 'Fermer'/× / 'Compris'. To be confirmed by dev."
+  "updated_files": [
+    "/app/backend/tests/test_iter_admin_plugin.py"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "N/A (skipped per request)"},
+  "test_credentials": "admin@zayado.net / ZayadoAdmin2026! ; thomas@zayado.fr / Thomas2026! (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "None. Test mutates credits/plan of an existing non-admin seed user (acceptable per request).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Only auth + admin panel WP-plugin flows were tested per scope. Other routers (Mollie, OAuth, Brevo, activite, agents, etc.) intentionally skipped. Reuse /app/backend/tests/test_iter_admin_plugin.py as regression for the WP plugin contract.",
+  "rca of the issue": "N/A — the reported fix (accepting {amount} in POST /api/admin/users/{id}/credits) is verified working and backwards-compatible with {credits}."
 }

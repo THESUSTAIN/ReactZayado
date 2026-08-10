@@ -1,0 +1,102 @@
+{
+  "project_name": "MyExtension AI",
+  "theme_strategy": "dark",
+  "archetype": "ARCHETYPE 5: LUXURY mixed with ARCHETYPE 4: SWISS & HIGH-CONTRAST",
+  "typography": {
+    "headings": "Outfit",
+    "body": "Inter",
+    "data_and_mono": "JetBrains Mono",
+    "rules": [
+      "Never use Inter, Roboto, Open Sans, or Lato for headings.",
+      "Never use Space Grotesk.",
+      "Headings over 32px must use tracking-tight.",
+      "Data labels, sources, and micro-copy must be uppercase, tiny, with wide spacing (tracking-[0.2em]).",
+      "Use JetBrains Mono for metrics, percentages (like the 82% alignment score), and Perplexity-style reference tags."
+    ]
+  },
+  "colors": {
+    "background": {
+      "base": "#09090B",
+      "surface": "#121217",
+      "elevated": "#1A1A21",
+      "canvas": "#050507"
+    },
+    "text": {
+      "primary": "#F8F8F8",
+      "secondary": "#A1A1AA",
+      "muted": "#71717A"
+    },
+    "accents": {
+      "ai_violet": "#9333EA",
+      "kairos_amber": "#F59E0B",
+      "finance_emerald": "#10B981",
+      "border": "rgba(255,255,255,0.08)"
+    },
+    "forbidden_colors": [
+      "#7351B7",
+      "#1B93A4"
+    ]
+  },
+  "visual_enhancers": {
+    "glassmorphism": "Use backdrop-blur-xl bg-black/60 with a strict 1px inner border (border-white/10) for the persistent Right AI Panel and headers.",
+    "borders": "Expose the grid skeleton. Use 1px solid border-white/10 for cards instead of heavy shadows. Gives a tactical, high-end terminal feel.",
+    "textures": "The Vision Board canvas should have a subtle dotted grid background pattern (radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px)).",
+    "kairos_mode": "When the spiritual/values Kairos filter is active, relevant cards should gently pulse with an amber glow (shadow-[0_0_15px_rgba(245,158,11,0.15)])."
+  },
+  "layouts": {
+    "global_structure": "h-screen w-full flex overflow-hidden. A left/top slim nav, a main expansive center area (the Canvas or Vision Dashboard), and a STRICTLY persistent fixed Right AI Panel (w-80 or w-96).",
+    "vision_home": "High-density 'Bento' grid. Gap-6. Hero cell (span 8) showing alignment score, Circular Score cell (span 4), and smaller cells for KPIs and fast actions.",
+    "vision_board_canvas": "Infinite pan/zoom layout. Cards are absolutely positioned. Connected via SVG paths. Cursor should be grab/grabbing.",
+    "right_ai_panel": "Always on the right. flex-col layout. Top section for Live Alignment Score, middle for scrolling 'Proactive Discovery' feed, bottom for the Perplexity-style chat input."
+  },
+  "components": {
+    "intelligent_cards": "Cardless or flat rectangular styling. bg-[#121217], border-white/10. On hover: -translate-y-1, border-[#9333EA]/50, shadow-lg shadow-[#9333EA]/10.",
+    "ai_badges": "Small pill tags on cards to indicate AI updates. bg-[#9333EA]/15 text-[#D8B4FE] border border-[#9333EA]/30. text-xs tracking-widest.",
+    "perplexity_sources": "Inline small rounded squares in the AI Chat. bg-white/10 hover:bg-white/20 text-xs font-mono px-1.5 py-0.5 rounded cursor-pointer transition-colors.",
+    "circular_business_score": "SVG-based segmented ring chart or radar chart highlighting 6 pillars: Vision, Execution, Finance, Impact, Energy, Growth."
+  },
+  "motion": {
+    "micro_interactions": "transition: transform 0.2s ease, opacity 0.2s ease, border-color 0.2s ease. Never use 'transition: all'.",
+    "feed_entrance": "Staggered entrance for the AI Activity Feed and Hub Chat messages.",
+    "canvas_connections": "Use subtle animated dashed lines (stroke-dasharray) for data flowing between connected canvas cards."
+  },
+  "accessibility": {
+    "contrast": "Ensure all text meets 4.5:1 ratio against #09090B. Use text-shadow if layered over gradients.",
+    "testing": "All interactive and key informational elements MUST include a 'data-testid' attribute (e.g., data-testid='ai-chat-input')."
+  },
+  "media": {
+    "icons": "lucide-react",
+    "image_urls": [
+      {
+        "url": "https://images.unsplash.com/photo-1638864616275-9f0b291a2eb6?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA3MDB8MHwxfHNlYXJjaHwzfHxkYXJrJTIwYWJzdHJhY3QlMjBnZW9tZXRyaWMlMjB0ZXh0dXJlfGVufDB8fHx8MTc4NjE0MzQ2Nnww&ixlib=rb-4.1.0&q=85",
+        "category": "background_texture",
+        "description": "Deep black subtle geometric texture. Use as a very low opacity overlay (5%) on the Vision Home hero card."
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1622737133809-d95047b9e673?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MTJ8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMGdsb3dpbmclMjBzcGhlcmUlMjBkYXJrfGVufDB8fHx8MTc4NjE0MzQ2Nnww&ixlib=rb-4.1.0&q=85",
+        "category": "circular_score_inspiration",
+        "description": "Abstract glowing sphere. Use as a background visual inside the Circular Business Score widget."
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1745060594679-61578eb592f7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTN8MHwxfHNlYXJjaHwxfHxlbnRyZXByZW5ldXIlMjBwb3J0cmFpdCUyMGRhcmslMjBiYWNrZ3JvdW5kfGVufDB8fHx8MTc4NjE0MzQ3N3ww&ixlib=rb-4.1.0&q=85",
+        "category": "user_avatar",
+        "description": "Premium entrepreneur portrait for the user profile badge in the top navigation or right panel."
+      }
+    ]
+  },
+  "3d_libraries": {
+    "recommended": "Visx or Recharts for the Circular Business Score. ReactFlow for the Infinite Canvas (Vision Board).",
+    "canvas_rules": "The canvas is a 2D infinite workspace, but it must feel premium with smooth scrolling and high-fidelity card rendering."
+  },
+  "instructions_to_main_agent": {
+    "1": "You MUST NOT center align the app container, i.e. do not add '.App { text-align: center; }'. Keep everything left-aligned to mimic a technical terminal.",
+    "2": "Create depth through layered design elements with z-index hierarchy and crisp 1px borders. Do NOT use soft, muddy drop shadows.",
+    "3": "Every interaction needs micro-animations. Connect the cards in the canvas visually.",
+    "4": "The layout must strictly incorporate the Persistent Right AI Panel on ALL pages. Do not hide it behind a hamburger menu on desktop.",
+    "5": "Do NOT use AI assistant Emoji characters (🤖🧠💭💡) for icons. Use precise Lucide icons.",
+    "6": "Add 'data-testid' to all interactive elements to support rigorous testing.",
+    "7": "Do not use complete transparent background in headers, overlays, or dropdowns. ALWAYS apply bg-black/60 with backdrop-blur-xl if seeing through is desired.",
+    "8": "Generate .js/.jsx files for React components, not .tsx files."
+  },
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": "Prioritize using pre-existing components from src/components/ui. Create depth through layered design elements. Use glass-morphism effects with backdrop filters (12-24px blur). Never apply universal 'transition: all'. Do not center align the app container. Use Sonner for toasts. Emulate a luxury investor-demo ready interface."
+}

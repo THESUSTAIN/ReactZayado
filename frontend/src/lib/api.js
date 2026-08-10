@@ -51,6 +51,10 @@ export const authApi = {
   verifyLink: (token) =>
     axios.post(`${API}/auth/verify-link`, { token }).then((r) => r.data),
 
+  // Connexion directe au compte de DÉMO whitelisté (bouton « compte test »).
+  demoLogin: (email) =>
+    axios.post(`${API}/auth/demo-login`, { email }).then((r) => r.data),
+
   logout: () => {
     // Authentification stateless (JWT) : la déconnexion est purement locale.
     setAuthToken(null);

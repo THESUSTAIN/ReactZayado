@@ -222,8 +222,38 @@ async def login(credentials: UserLoginSchema, request: Request = None, db: Async
         ip_address=client_ip, details={'plan': user.plan}))
     return TokenResponse(access_token=token, user=user_to_response(user))
 
+@auth_router.post("/demo-login", response_model=TokenResponse)
+async def demo_login(data: Dict[str, str], request: Request = None, db: AsyncSession = Depends(get_db)):
+    """Connexion directe (sans mot de passe) réservée aux comptes de DÉMO whitelistés.
+
+    Sert au bouton « Ouvrir le compte test (Thomas) » : garantit l'accès à la
+    démo en preview ET en prod, sans dépendre d'un email/dev_link. Restreint à
+    la liste blanche `DEMO_LOGIN_EMAILS` (par défaut : thomas + membre thesustain)."""
+    client_ip = request.client.host if request else "unknown"
+    if rate_limiter.is_rate_limited(f"demologin:{client_ip}", max_attempts=20, window_seconds=300):
+        raise HTTPException(status_code=429, detail="Trop de tentatives. Reessayez dans quelques minutes.")
+    email = (data.get("email") or "").strip().lower()
+    whitelist = [e.strip().lower() for e in os.environ.get(
+        "DEMO_LOGIN_EMAILS", "thomas@zayado.fr,membre@thesustain.net"
+    ).split(",") if e.strip()]
+    if email not in whitelist:
+        raise HTTPException(status_code=403, detail="Compte de démo non autorisé.")
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="Compte de démo introuvable.")
+    try:
+        await db.execute(update(User).where(User.id == user.id).values(last_login_at=datetime.now(timezone.utc)))
+        await db.commit()
+    except Exception:
+        await db.rollback()
+    token = create_access_token({"sub": user.id})
+    return TokenResponse(access_token=token, user=user_to_response(user))
+
+
 @auth_router.post("/login/verify-2fa", response_model=TokenResponse)
 async def login_verify_2fa(data: Dict[str, str], request: Request = None, db: AsyncSession = Depends(get_db)):
+    """Étape 2 du login quand la 2FA est activée : échange (challenge_token + code) → JWT de session."""
     """Étape 2 du login quand la 2FA est activée : échange (challenge_token + code) → JWT de session."""
     client_ip = request.client.host if request else "unknown"
     if rate_limiter.is_rate_limited(f"login2fa:{client_ip}", max_attempts=10, window_seconds=300):
@@ -889,17 +919,40 @@ async def verify_magic_link(body: _VerifyReq, db: AsyncSession = Depends(get_db)
     if not user:
         raise HTTPException(status_code=404, detail="Utilisateur introuvable.")
 
-    # Anti-rejeu : un lien magique est à usage unique (correction audit).
+    # Anti-rejeu idempotent (fix #5 — React.StrictMode).
+    # Avant : le 2e appel (StrictMode monte/démonte le composant, ou refresh)
+    # trouvait le jti déjà consommé et renvoyait 401 → le front affichait
+    # ?error=link_failed alors que la 1re vérification avait réussi.
+    # Maintenant : on mémorise l'instant de 1re consommation par jti ; toute
+    # reprise dans une courte fenêtre de grâce ré-émet la session SANS erreur
+    # (idempotent), au-delà on rejette réellement (anti-rejeu conservé).
     token_jti = payload.get("jti", "")
-    used = (user.settings or {}).get("used_magic_jti", [])
-    if not isinstance(used, list):
-        used = []
+    settings = user.settings or {}
+    used = settings.get("used_magic_jti", {})
+    if isinstance(used, list):  # backcompat ancien format (liste de jti)
+        used = {j: None for j in used}
+    if not isinstance(used, dict):
+        used = {}
+    now = datetime.now(timezone.utc)
+    GRACE_SECONDS = 120
     if token_jti and token_jti in used:
-        raise HTTPException(status_code=401, detail="Ce lien a déjà été utilisé.")
-    if token_jti:
-        new_used = (used + [token_jti])[-20:]  # garde les 20 derniers
+        first_iso = used.get(token_jti)
+        within_grace = False
+        if first_iso:
+            try:
+                within_grace = (now - datetime.fromisoformat(first_iso)).total_seconds() <= GRACE_SECONDS
+            except Exception:
+                within_grace = False
+        if not within_grace:
+            raise HTTPException(status_code=401, detail="Ce lien a déjà été utilisé.")
+        # Fenêtre de grâce → idempotent : on continue et ré-émet une session.
+    elif token_jti:
+        used[token_jti] = now.isoformat()
+        if len(used) > 20:  # garde les 20 derniers
+            for k in list(used.keys())[:-20]:
+                used.pop(k, None)
         await db.execute(update(User).where(User.id == user.id).values(
-            settings={**(user.settings or {}), "used_magic_jti": new_used}
+            settings={**settings, "used_magic_jti": used}
         ))
         await db.commit()
 

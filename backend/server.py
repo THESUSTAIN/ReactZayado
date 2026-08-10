@@ -92,6 +92,10 @@ from routes.travail import travail_router
 from routes.pilotage_bank import pilotage_bank_router
 from routes.collab_queue import queue_router
 from routes.vision_weekly_email import vision_weekly_email_loop
+from routes.heygen_routes import heygen_router
+from routes.news_reprise import news_reprise_router
+from routes.inspiration import inspiration_router
+from routes.demo import demo_router
 
 # ── Config ────────────────────────────────────────────────────────────
 ROOT_DIR = Path(__file__).parent
@@ -302,6 +306,10 @@ app.include_router(pilotage_bank_router, prefix="/api", tags=["pilotage-bank"])
 app.include_router(queue_router, prefix="/api")
 app.include_router(queue_router, prefix="/api", tags=["ia-queue"])
 app.include_router(agent_webhook_router,  prefix="/api")
+app.include_router(heygen_router,          prefix="/api")
+app.include_router(news_reprise_router,    prefix="/api")
+app.include_router(inspiration_router,     prefix="/api")
+app.include_router(demo_router,            prefix="/api")
 
 # ── Static uploads (Studio images/videos + user uploads) ─────────
 try:

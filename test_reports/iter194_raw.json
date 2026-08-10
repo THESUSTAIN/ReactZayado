@@ -1,0 +1,195 @@
+{
+  "results": [
+    {
+      "name": "deep-link /travail",
+      "ok": true,
+      "extra": "has_travail_text=True inspiration_visible=False url=https://strategy-brain-2.preview.emergentagent.com/travail"
+    },
+    {
+      "name": "deep-link /vision-board",
+      "ok": true,
+      "extra": "has_accueil=True inspiration_visible=False"
+    },
+    {
+      "name": "deep-link / (home)",
+      "ok": true,
+      "extra": "inspiration_visible_on_home=True (allowed)"
+    },
+    {
+      "name": "vision-ai-panel visible on mobile",
+      "ok": false,
+      "extra": "element_present=False"
+    },
+    {
+      "name": "accueil-score-business visible on mobile",
+      "ok": false,
+      "extra": ""
+    },
+    {
+      "name": "accueil-linked-cards visible on mobile",
+      "ok": false,
+      "extra": ""
+    },
+    {
+      "name": "accueil-mirror on desktop",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "mirror-node-stripe presence",
+      "ok": true,
+      "extra": "Mollie / Finance connect\u00e921 600 \u20ac encaiss\u00e9s ce mois\u2193"
+    },
+    {
+      "name": "vision-ai-panel on desktop 1280",
+      "ok": true,
+      "extra": ""
+    }
+  ],
+  "overflow_report": [
+    {
+      "bp": "mobile",
+      "path": "/",
+      "sw": 390,
+      "cw": 390,
+      "overflow": 0,
+      "culprits": []
+    },
+    {
+      "bp": "mobile",
+      "path": "/vision-board",
+      "sw": 390,
+      "cw": 390,
+      "overflow": 0,
+      "culprits": []
+    },
+    {
+      "bp": "mobile",
+      "path": "/travail",
+      "sw": 390,
+      "cw": 390,
+      "overflow": 0,
+      "culprits": []
+    },
+    {
+      "bp": "mobile",
+      "path": "/croissance",
+      "sw": 390,
+      "cw": 390,
+      "overflow": 0,
+      "culprits": []
+    },
+    {
+      "bp": "mobile",
+      "path": "/pilotage",
+      "sw": 390,
+      "cw": 390,
+      "overflow": 0,
+      "culprits": []
+    },
+    {
+      "bp": "mobile",
+      "path": "/parametres",
+      "sw": 390,
+      "cw": 390,
+      "overflow": 0,
+      "culprits": []
+    },
+    {
+      "bp": "tablet",
+      "path": "/",
+      "sw": 768,
+      "cw": 768,
+      "overflow": 0,
+      "culprits": []
+    },
+    {
+      "bp": "tablet",
+      "path": "/vision-board",
+      "sw": 768,
+      "cw": 768,
+      "overflow": 0,
+      "culprits": []
+    },
+    {
+      "bp": "tablet",
+      "path": "/travail",
+      "sw": 768,
+      "cw": 768,
+      "overflow": 0,
+      "culprits": []
+    },
+    {
+      "bp": "tablet",
+      "path": "/croissance",
+      "sw": 768,
+      "cw": 768,
+      "overflow": 0,
+      "culprits": []
+    },
+    {
+      "bp": "tablet",
+      "path": "/pilotage",
+      "sw": 768,
+      "cw": 768,
+      "overflow": 0,
+      "culprits": []
+    },
+    {
+      "bp": "tablet",
+      "path": "/parametres",
+      "sw": 768,
+      "cw": 768,
+      "overflow": 0,
+      "culprits": []
+    },
+    {
+      "bp": "desktop",
+      "path": "/",
+      "sw": 1280,
+      "cw": 1280,
+      "overflow": 0,
+      "culprits": []
+    },
+    {
+      "bp": "desktop",
+      "path": "/vision-board",
+      "sw": 1280,
+      "cw": 1280,
+      "overflow": 0,
+      "culprits": []
+    },
+    {
+      "bp": "desktop",
+      "path": "/travail",
+      "sw": 1280,
+      "cw": 1280,
+      "overflow": 0,
+      "culprits": []
+    },
+    {
+      "bp": "desktop",
+      "path": "/croissance",
+      "sw": 1280,
+      "cw": 1280,
+      "overflow": 0,
+      "culprits": []
+    },
+    {
+      "bp": "desktop",
+      "path": "/pilotage",
+      "sw": 1280,
+      "cw": 1280,
+      "overflow": 0,
+      "culprits": []
+    },
+    {
+      "bp": "desktop",
+      "path": "/parametres",
+      "sw": 1280,
+      "cw": 1280,
+      "overflow": 0,
+      "culprits": []
+    }
+  ]
+}

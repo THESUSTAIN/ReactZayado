@@ -1,0 +1,48 @@
+{
+  "summary": "Iter 196 — Validation du FIX 'Réinitialiser l'app relance l'onboarding'. Backend + Frontend testés end-to-end sur https://strategy-brain-2.preview.emergentagent.com avec le compte test thomas@zayado.fr (bouton 'Ouvrir le compte test'). RÉSULTAT : bug corrigé, comportement conforme au review.",
+  "backend_tests": {
+    "POST /api/onboarding/reset": "200 → {status:'ok', onboarding_done:false} ✓",
+    "GET /api/auth/me après reset": "onboarding_done=false ✓",
+    "GET /api/prefs après reset": "onboarded=false ✓",
+    "POST /api/onboarding (complete)": "200 → onboarding_done=true (pré-condition setup) ✓"
+  },
+  "frontend_tests": {
+    "Bug principal — reset relance l'onboarding": "PASS. Login Thomas → cockpit (onboarding_done=true) → debug-menu-toggle → debug-reset → dialog.accept() → reload → l'écran [data-testid='onboarding-overlay'] plein écran RÉAPPARAÎT avec label 'BIENVENUE', bouton 'Commencer', progression, sur fond navy dégradé (bbox 0,0,1440,900).",
+    "Visuel restylé navy/or": "PASS. Screenshot confirme fond navy sombre uniforme (RGB proche #0B1F3A), label 'BIENVENUE' en or, bouton pilule doré 'Commencer', points de progression or. Aucune fuite du dashboard derrière (l'overlay couvre 100% du viewport).",
+    "Non-régression 'Aide en texte'": "PASS. debug-replay-onboarding ouvre la modale PageOnboardingModal (titre 'Cockpit — mode d'emploi'), PAS l'onboarding plein écran. Vérifié: [data-testid='onboarding-overlay'] absent après le clic.",
+    "Non-régression aide vs inspiration": "Non re-testé explicitement (garde-fou déjà présent dans App.js L336). Comportement inchangé par le fix."
+  },
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Réinitialiser l'app (debug menu)",
+        "issue": "Pendant la fenêtre entre onboardingApi.reset() et window.location.href='/', 3 erreurs console '404 Failed to load resource' apparaissent (probablement des requêtes en vol qui échouent après invalidation côté serveur — non bloquant, la page se recharge et l'onboarding s'affiche correctement).",
+        "affected_selectors": ["[data-testid='debug-reset']"],
+        "priority": "LOW"
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/onboarding_after_reset.png"
+  ],
+  "action_items": [
+    "Optionnel: annuler / catch les requêtes axios en vol lors du resetAll pour éviter les 3 404 console (cosmétique, non bloquant).",
+    "Optionnel: capturer explicitement les erreurs de onboardingApi.reset() côté UI (aujourd'hui best-effort try/catch silencieux — OK)."
+  ],
+  "critical_code_review_comments": [
+    "L'implémentation est solide : source de vérité serveur (3 flags : settings.onboarding_completed + UserOnboarding.completed + user_prefs.onboarded) tous remis à false par l'endpoint POST /api/onboarding/reset, puis storage local nettoyé (avec préservation des clés zayado_token/zayado_uid/zayado_guest pour ne pas forcer une reconnexion), enfin reload. Le pattern 'attends la réponse serveur AVANT de vider le storage et recharger' est correct.",
+    "App.js L306 : `onboarded = !!(user?.onboarding_done) || !!prefs.onboarded` — le OU logique implique que les DEUX doivent être à false pour relancer l'onboarding. C'est bien ce que fait /api/onboarding/reset (les 3 sources). ✓",
+    "PrefsContext doit re-fetch /api/prefs après reload — cela dépend du refresh complet (window.location.href = '/'), ce qui est le cas ici. ✓"
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "100% (3/3 endpoints)", "frontend": "100% (2/2 scénarios critiques)" },
+  "test_credentials": "thomas@zayado.fr via bouton 'Ouvrir le compte test (Thomas)' sur /login (ALLOW_GUEST_LOGIN=true, magic link dev renvoyé dans la réponse).",
+  "seed_data_creation": "Aucune. Onboarding de Thomas remis à completed=true en pré-condition via POST /api/onboarding (setup), puis reset via UI pour validation.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Le fix 'Réinitialiser l'app relance l'onboarding' est PLEINEMENT FONCTIONNEL. Backend endpoint POST /api/onboarding/reset répond correctement, remet les 3 flags à false. Frontend: le bouton debug-reset (avec confirm accepté) déclenche l'endpoint reset puis reload, et l'onboarding plein écran (navy/or, testid 'onboarding-overlay') réapparaît. Non-régression Aide en texte OK (modale PageOnboardingModal). Seul point cosmétique : 3 console.error 404 pendant la transition reset (non bloquant).",
+  "rca_of_the_issue": "Bug initial : 'Réinitialiser l'app' ne vidait que le localStorage, mais la vérité onboarding est côté serveur (App.js L306). Après reload, /api/auth/me renvoyait toujours onboarding_done=true → showOnboarding=false → l'onboarding ne réapparaissait pas. Fix appliqué : nouvel endpoint POST /api/onboarding/reset dans routes/features.py qui remet les 3 sources (settings.onboarding_completed, UserOnboarding.completed, user_prefs.onboarded) à false ; App.js resetAll() est passé async et appelle onboardingApi.reset() AVANT de vider le storage et de recharger. Validé end-to-end."
+}

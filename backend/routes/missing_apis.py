@@ -305,8 +305,37 @@ async def generate_tasks(user: User = Depends(get_current_user), db: AsyncSessio
 async def patch_task(tid: str, body: TaskPatch, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     res = await _update_row(db, "user_tasks", user.id, tid, body.dict(exclude_unset=True))
     if not res:
-        raise HTTPException(404, "Tâche introuvable")
+        # Upsert idempotent : si la tâche n'existe pas (id transitoire après reset,
+        # priorité générée côté client…), on la crée avec cet id pour que l'action
+        # (cocher / reporter) réussisse toujours et persiste. Évite tout 404 en UX.
+        data = {k: v for k, v in body.dict(exclude_unset=True).items() if v is not None}
+        data["id"] = tid
+        data.setdefault("label", data.get("label") or "Priorité")
+        res = await _insert_row(db, "user_tasks", user.id, data)
     return res
+
+
+@missing_router.get("/roadmap")
+async def get_roadmap():
+    """Feuille de route publique (évite le 404 côté /roadmap). Statique + auditable."""
+    return {
+        "shipped": [
+            {"title": "Cockpit temps réel + Vision Board", "date": "2026-Q1"},
+            {"title": "Extension navigateur (miroir Gmail/Agenda)", "date": "2026-Q1"},
+            {"title": "Agents IA (analyse, prospection, livraison)", "date": "2026-Q2"},
+            {"title": "Back-office WordPress + rôles", "date": "2026-Q2"},
+        ],
+        "in_progress": [
+            {"title": "Gouvernance du coût IA (routing + cache + budgets)"},
+            {"title": "Observabilité prod (logs, alerting)"},
+            {"title": "News-Reprise éditoriale (IA + Brevo)"},
+        ],
+        "planned": [
+            {"title": "Publication Chrome Web Store"},
+            {"title": "Timeline & KPI Vision avancés"},
+            {"title": "Packs IA (Startup, Investisseur 360°, Freelance)"},
+        ],
+    }
 
 
 @missing_router.delete("/tasks/{tid}")

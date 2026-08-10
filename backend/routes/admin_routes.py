@@ -298,7 +298,8 @@ async def get_admin_users(
 
 @admin_router.post("/users/{user_id}/credits")
 async def gift_credits(user_id: str, data: Dict[str, Any], admin: User = Depends(get_admin_user), db: AsyncSession = Depends(get_db)):
-    credits = int(data.get("credits", 0))
+    credits = int(data.get("credits", data.get("amount", 0)) or 0)
+    reason = data.get("reason") or f"Admin {admin.email} offert {credits} credits"
     if credits <= 0:
         raise HTTPException(status_code=400, detail="Credits must be positive")
     result = await db.execute(
@@ -316,7 +317,7 @@ async def gift_credits(user_id: str, data: Dict[str, Any], admin: User = Depends
         user_id=user_id,
         amount=credits,
         log_type="gift",
-        description=f"Admin {admin.email} offert {credits} credits"
+        description=reason
     ))
     await db.commit()
     _append_admin_log({

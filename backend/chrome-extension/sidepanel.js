@@ -51,10 +51,69 @@ async function refreshAuthUI() {
     $("authed").classList.remove("hidden");
     $("loginForm").classList.add("hidden");
     $("authedEmail").textContent = email || "Session active";
+    connectLiveStream();       // fix E5 : ouvre le flux temps réel dès qu'on est connecté
   } else {
     $("authed").classList.add("hidden");
     $("loginForm").classList.remove("hidden");
+    disconnectLiveStream();
   }
+}
+
+// ── Cockpit en direct (SSE — fix E5) ─────────────────────────────────
+// Le side-panel reflète en direct les changements du cockpit (Business OS)
+// via le flux SSE déjà exposé par le backend (/api/vision/events/stream).
+// EventSource ne peut pas envoyer de header Authorization → le JWT passe en
+// query string (usage standard SSE, cf. backend vision_events.py). À chaque
+// event (card_update / tick), on ré-interroge /vision/brain/panel pour
+// rafraîchir le score et l'horodatage, avec un petit "flash" visuel.
+let _liveSource = null;
+
+function disconnectLiveStream() {
+  if (_liveSource) { try { _liveSource.close(); } catch (e) {} _liveSource = null; }
+  $("liveCard").classList.add("hidden");
+}
+
+async function connectLiveStream() {
+  const { apiBase, token } = await getConfig();
+  if (!token) return;
+  if (_liveSource) return; // déjà connecté
+  $("liveCard").classList.remove("hidden");
+  await refreshLive(); // premier rendu immédiat
+  try {
+    const url = `${apiBase}/api/vision/events/stream?token=${encodeURIComponent(token)}`;
+    _liveSource = new EventSource(url);
+    const onEvt = () => { flashLive(); refreshLive(); };
+    _liveSource.addEventListener("card_update", onEvt);
+    _liveSource.addEventListener("tick", onEvt);
+    _liveSource.onerror = () => {
+      // EventSource se reconnecte tout seul ; on signale juste l'état.
+      $("liveDot").textContent = "● reconnexion…";
+      $("liveDot").style.color = "#fbbf24";
+    };
+    _liveSource.onopen = () => {
+      $("liveDot").textContent = "● live";
+      $("liveDot").style.color = "#6ee7b7";
+    };
+  } catch (e) { /* environnement sans EventSource : silencieux */ }
+}
+
+function flashLive() {
+  const el = $("liveScore");
+  el.style.transition = "none";
+  el.style.textShadow = "0 0 14px rgba(201,164,73,.9)";
+  setTimeout(() => { el.style.transition = "text-shadow .6s"; el.style.textShadow = "none"; }, 60);
+}
+
+async function refreshLive() {
+  const { token } = await getConfig();
+  if (!token) return;
+  try {
+    const panel = await api("/vision/brain/panel", { token });
+    if (typeof panel.alignment_score === "number") $("liveScore").textContent = panel.alignment_score;
+    if (panel.live_analysis && panel.live_analysis.label) $("liveLabel").textContent = panel.live_analysis.label;
+    const t = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    $("liveUpdated").textContent = "Mis à jour à " + t;
+  } catch (e) { /* token expiré / hors-ligne : le prochain tick réessaiera */ }
 }
 
 async function login() {

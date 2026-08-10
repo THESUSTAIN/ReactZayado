@@ -143,6 +143,19 @@ async def send_push_to_user(
       4. Les préférences utilisateur locales
     Retourne True si envoyé, False sinon.
     """
+    # 0-bis. Gel global (maintenance/correction) — bloque TOUT et ne garde que la dernière.
+    try:
+        from notif_gate import is_held, record_blocked
+        if is_held():
+            record_blocked("push", {
+                "user_id": user_id, "title": title, "body": body,
+                "image": image, "url": url, "family": family,
+            })
+            logger.info(f"Push gelé (gate actif) — user={user_id}")
+            return False
+    except Exception as _ge:
+        logger.debug(f"notif_gate check skipped: {_ge}")
+
     # 0. Vérifier la config WordPress (kill-switch admin)
     wp_config = await _get_wp_notifications_config()
     if wp_config:

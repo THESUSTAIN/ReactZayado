@@ -9,6 +9,7 @@ import Sidebar from "@/components/Sidebar";
 import CockpitChat from "@/components/CockpitChat";
 import Onboarding from "@/components/Onboarding";
 import InspirationScreen from "@/components/InspirationScreen";
+import InvestorDemoButton from "@/components/InvestorDemoButton";
 import Dashboard from "@/components/Dashboard";
 import Croissance from "@/pages/Croissance";
 import Agents from "@/pages/Agents";
@@ -331,6 +332,8 @@ function AppShell() {
   // prefs.page_tours_seen, pour ne pas réapparaître sur un nouvel appareil/session).
   useEffect(() => {
     if (!onboarded || guest) return;
+    // Démo investisseur : pas de modale tuto qui pollue la 1re impression sur Thomas/admin.
+    if (user && (user.email === "thomas@zayado.fr" || ["admin", "super_admin"].includes(user.role))) return;
     // Ne pas ouvrir l'aide de page par-dessus un écran interstitiel (inspiration,
     // pricing, onboarding) : le cockpit n'est pas encore visible dessous.
     if (showOnboarding || showInspiration || showPricing) return;
@@ -340,12 +343,14 @@ function AppShell() {
     if (!localStorage.getItem(key)) {
       setOnboardingModal(true);
     }
-  }, [location.pathname, onboarded, guest, prefs.page_tours_seen, showOnboarding, showInspiration, showPricing]);
+  }, [location.pathname, onboarded, guest, prefs.page_tours_seen, showOnboarding, showInspiration, showPricing, user]);
 
   // ── Modale "Configure ton cockpit X/8" — s'ouvre après connexion (une fois par session)
   //    tant que la checklist n'est pas complétée et que l'utilisateur ne l'a pas dismiss.
   useEffect(() => {
     if (!loaded || !user || guest || !onboarded) return;
+    // Démo investisseur : pas de checklist auto sur Thomas/admin.
+    if (user.email === "thomas@zayado.fr" || ["admin", "super_admin"].includes(user.role)) return;
     if (prefs.cockpit_checklist_dismissed) return;
     if (showOnboarding || showInspiration) return;
     // Une seule fois par session (localStorage : effacé à la déconnexion via clear)
@@ -380,6 +385,9 @@ function AppShell() {
 
       {/* Cockpit — chat co-pilote (panneau à droite) */}
       <CockpitChat />
+
+      {/* Bouton flottant Démo Investisseur (bas-gauche) — Thomas / admin */}
+      {isHome && <InvestorDemoButton user={user} />}
 
       {/* Modale Paramètres */}
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />

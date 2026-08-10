@@ -284,9 +284,76 @@ async def _compute_dashboard(db, user_id, user=None):
 
     insights = insights[:3]
 
+    # ── Énergie (dernier check-in) → energy_score 0-100 (fix #8) ──────────
+    energy_score = None
+    try:
+        r = (await db.execute(text(
+            "SELECT level FROM user_energy WHERE user_id = :uid AND level > 0 ORDER BY date DESC LIMIT 1"
+        ), {"uid": user_id})).fetchone()
+        if r and r[0]:
+            energy_score = min(100, int(r[0]) * 20)
+    except Exception:
+        energy_score = None
+
+    # ── Label équilibre depuis le score bien-être (fix #8) ────────────────
+    bien_etre_label = None
+    if isinstance(bien_etre_score, (int, float)):
+        if bien_etre_score >= 75:
+            bien_etre_label = "Bon équilibre"
+        elif bien_etre_score >= 45:
+            bien_etre_label = "Équilibre correct"
+        else:
+            bien_etre_label = "À surveiller"
+
+    # ── Delta CA hebdo (semaine courante vs précédente) → ca_delta_pct ────
+    ca_delta_pct = None
+    try:
+        _n = datetime.datetime.utcnow()
+        _w0 = (_n - datetime.timedelta(days=7)).isoformat()
+        _w1 = (_n - datetime.timedelta(days=14)).isoformat()
+        cur_w = (await db.execute(text(
+            "SELECT COALESCE(SUM(amount),0) FROM finance_entries WHERE user_id=:uid AND type='revenu' AND date >= :w0"
+        ), {"uid": user_id, "w0": _w0})).scalar() or 0
+        prev_w = (await db.execute(text(
+            "SELECT COALESCE(SUM(amount),0) FROM finance_entries WHERE user_id=:uid AND type='revenu' AND date >= :w1 AND date < :w0"
+        ), {"uid": user_id, "w1": _w1, "w0": _w0})).scalar() or 0
+        if prev_w > 0:
+            ca_delta_pct = round((float(cur_w) - float(prev_w)) / float(prev_w) * 100)
+            # Garde-fou : en début de mois le dénominateur hebdo est petit et
+            # produit des % aberrants (+1000%). On borne l'affichage.
+            ca_delta_pct = max(-95, min(95, ca_delta_pct))
+        elif cur_w > 0:
+            ca_delta_pct = 20
+    except Exception:
+        ca_delta_pct = None
+
+    # ── Score Business (composite honnête sur données réelles) → project_score ──
+    project_score = None
+    try:
+        _vision_align = 0
+        if isinstance(settings, dict):
+            _vision_align = int(settings.get("vision_alignment") or 0)
+        _has_ca = bool(pilotage.get("ca_month_eur"))
+        _task_ratio = (tasks_done / tasks_total) if tasks_total else 0
+        if _vision_align or _has_ca or energy_score or bien_etre_score:
+            ca_pts = min(30, round((pilotage.get("ca_month_eur", 0) / 20000) * 30)) if _has_ca else 0
+            project_score = round(
+                _vision_align * 0.30
+                + ca_pts
+                + _task_ratio * 20
+                + (energy_score or 0) * 0.10
+                + (bien_etre_score or 0) * 0.10
+            )
+            project_score = max(0, min(100, project_score))
+    except Exception:
+        project_score = None
+
     return {
         "ca_month": pilotage["ca_month_eur"],
         "ca_objective": ca_objective,
+        "energy_score": energy_score,
+        "project_score": project_score,
+        "ca_delta_pct": ca_delta_pct,
         "insights": insights,
         "greeting_stats": greeting_stats,
         "value_generated": value_generated,
@@ -295,7 +362,7 @@ async def _compute_dashboard(db, user_id, user=None):
         "prospects_active": prospects_total,
         "prospects_to_relaunch": 0,
         "bien_etre_score": bien_etre_score,
-        "bien_etre_label": None,
+        "bien_etre_label": bien_etre_label,
         "user": {
             "first_name": first_name,
             "sector": getattr(user, "sector", None) if user is not None else settings.get("sector"),

@@ -1,0 +1,49 @@
+{
+  "summary": "Iter 195 — Validation E2E de l'export 'zayado-corrige-final'. 11/11 tests backend pytest PASSENT (auth magic-link, cartes Vision unifiées, live-data avec CA=21 600 € réel, SSE text/event-stream avec 'retry: 4000' initial, news digest, gamification passport, analytics admin funnel+retention en 200, dashboard, vision brain panel, /api/vision/brain/analyze). Frontend: login via bouton 'Ouvrir le compte test (Thomas)' OK, /vision-board rend Accueil Vision avec les 3 data-testids clés (vision-ai-panel, accueil-score-business, accueil-linked-cards), Score Business 6 piliers (Vision 40, Exécution 0, Finance 100, Impact 32, Énergie 75, Croissance 72), cartes reliées VISION→OBJECTIF→CA(21 600€/10 000€ objectif atteint)→IMPACT(3 248/10 000)→CLIENT(4 en pipeline), Cerveau IA à droite avec opportunités/actions/modules. Les 3 onglets Vision Canvas / Piliers stratégiques / Analyse & Validation s'ouvrent sans crash. Croissance>Pipeline: .cr-kanban rendu, pas d'overflow horizontal (sw=cw=860, body overflow=0). Travail: onglet 'Finances' présent (le libellé 'DAF IA' subsiste toujours quelque part dans la page — mention textuelle probable, à vérifier). VisionPublic: fallback propre 'Ce board n'est plus partagé' sur slug inexistant, pas d'error boundary. BUG TROUVÉ ET CORRIGÉ: authApi.updateSettings appelait PUT /api/settings (404) alors que le vrai endpoint FastAPI est /api/auth/settings (routeur auth, prefix /auth). Corrigé dans /app/frontend/src/lib/api.js L60. Après correction: Kairos toggle ON + sélection valeur 'Famille' sans erreur.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "KairosCard (via authApi.updateSettings)",
+        "issue": "Endpoint PUT /api/settings n'existe pas côté backend (404). Le vrai endpoint est /api/auth/settings (déclaré dans routes/auth.py L444 avec 'kairos' dans ALLOWED_KEYS). La note review dit 'sauvegarde via /api/settings' mais c'est incorrect. J'ai corrigé le path dans lib/api.js et vérifié end-to-end.",
+        "selector": "[data-testid='kairos-value-Famille']",
+        "priority": "MEDIUM (corrigé par testeur)"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Vision Board / Accueil Vision",
+        "issues": [
+          "Warning React répété (3x) 'Encountered two children with the same key' — probablement dans une des listes des Cartes intelligentes reliées / Cerveau IA. Non bloquant mais à corriger (perte d'identité de composants React)."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter195_zayado_export.py",
+    "/app/test_reports/pytest/iter195.xml"
+  ],
+  "action_items": [
+    "Vérifier le doublon de 'key' React dans AccueilVision (LinkedCards ou VisionBrainPanel opportunités/actions). Ajouter un identifiant unique par item pour éviter le warning.",
+    "Décider si la mention 'DAF IA' résiduelle dans /travail doit être remplacée par 'Finances' (le nouvel onglet est bien nommé 'Finances', mais 'DAF IA' apparaît encore une fois dans la page — probablement un titre de carte ou une description).",
+    "Optionnel: exposer un alias /api/settings côté backend (ou clarifier la doc que /api/auth/settings est le vrai chemin) — j'ai corrigé côté frontend pour débloquer Kairos."
+  ],
+  "critical_code_review_comments": [
+    "Aucun problème d'import résiduel (le fix 'Field' dans vision_brain.py fonctionne : /api/vision/brain/panel et /api/vision/brain/analyze répondent 200).",
+    "SSE /api/vision/events/stream: content-type text/event-stream OK, envoie bien un 'retry: 4000' initial. Le stream reste ouvert (comportement attendu), timeout côté client normal.",
+    "GET /api/vision/cards renvoie {cards: []} (le modèle unifié attend des cartes créées via POST). Le rendu Vision Board provient de /api/vision/board/live-data qui agrège les données réelles (CA/Bien-être/Prospects). Cohérent avec le design.",
+    "authApi.updateSettings pointait vers un endpoint inexistant — la note agent-to-agent affirmait à tort que /api/settings existait comme endpoint générique. À l'avenir, ajouter un test d'intégration frontend→backend pour ce type de mismatch."
+  ],
+  "updated_files": [
+    "/app/frontend/src/lib/api.js (L60: /settings → /auth/settings)",
+    "/app/backend/tests/test_iter195_zayado_export.py (nouveau)"
+  ],
+  "success_rate": { "backend": "100% (11/11)", "frontend": "~95% (bug Kairos corrigé, warning key à traiter)" },
+  "test_credentials": "thomas@zayado.fr — magic link (ALLOW_GUEST_LOGIN=true renvoie dev_link dans la réponse) ou bouton 'Ouvrir le compte test (Thomas)' sur /login.",
+  "seed_data_creation": "Aucune (données existantes : CA 21 600 €, bien-être 75/100, 4 prospects).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "L'export 'zayado-corrige-final' est fonctionnel. Un seul bug corrigé (Kairos: PUT /api/settings → /api/auth/settings dans lib/api.js). Reste 1 warning React ('duplicate key' sur Vision Board Accueil) à investiguer côté main agent — non bloquant. SSE fonctionne correctement (initial 'retry: 4000'). Toutes les routes du review passent 200/attendu.",
+  "rca of the issue": "KairosCard.jsx L36 appelle authApi.updateSettings → PUT ${API}/settings. Le vrai endpoint FastAPI est déclaré dans routes/auth.py L444 sous auth_router (prefix='/auth'), donc /api/auth/settings. Le routeur kairos.py mentionné dans server.py n'est PAS inclus (helper), et aucun autre routeur ne monte /api/settings. Mitigation appliquée: changement de path dans /app/frontend/src/lib/api.js L60 vers /auth/settings. Alternative: ajouter un alias @app.put('/api/settings') qui délègue à update_settings dans server.py."
+}

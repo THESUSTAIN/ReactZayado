@@ -1,23 +1,36 @@
 {
-  "summary": "Sprint 2 frontend-only validation: login via 'Ouvrir le compte test (Thomas)', PWA service worker, onboarding persistence, InspirationScreen dock (5 piliers + Boutique), CRM push button in Croissance, sidebar non-regression and multi-route load. 6/7 test scenarios PASS; CRM sync not testable (empty pipeline).",
-  "backend_issues": { "critical": [], "minor": [] },
+  "summary": "Backend testing pour News-Reprise, HeyGen connecteur machine-to-machine, Vision SSE stream et regressions auth (magic link idempotent + Brevo). 14/14 tests passent.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
   "frontend_issues": {
     "ui_bugs": [],
     "integration_issues": [],
     "design_issues": []
   },
-  "test_report_links": [],
+  "test_report_links": [
+    "/app/backend/tests/test_iter_news_reprise_heygen_sse.py",
+    "/app/test_reports/pytest/iter_news_reprise.xml"
+  ],
   "action_items": [],
   "critical_code_review_comments": [
-    "InspirationScreen dock reveals only after ~3.1s delay; consider a data attribute or aria-live so E2E tests can wait deterministically instead of a hard timeout.",
-    "CRM sync flow could not be validated end-to-end because the pipeline is empty in the Thomas test account; recommend seeding at least one lead in dev seed data for automated regression."
+    "news_reprise.py _rewrite_email: fallback silencieux à un template si l'IA échoue — comportement OK mais logguer plus explicitement quand Mammouth n'est pas configuré aiderait le debug.",
+    "vision_events.py utilise le JWT en query-string (nécessité de SSE) : bien signalé, mais penser à filtrer ce paramètre des logs d'accès pour éviter fuite de token.",
+    "heygen_routes.py: verify_wp_secret est bien via hmac.compare_digest — bien. La logique retourne 500 propre quand HEYGEN_API_KEY absente, comme attendu.",
+    "auth.py request-link: dev_link est exposé sur le host preview car ALLOW_GUEST_LOGIN=true et l'host n'est pas dans PROD_HOSTNAMES — à surveiller côté prod (bien protégé par la liste par défaut)."
   ],
-  "updated_files": [],
-  "success_rate": { "backend": "N/A (skipped per request)", "frontend": "100% of testable scenarios (6/6 pass, 1 not testable)" },
-  "seed_data_creation": "None",
-  "should_call_test_agent_after_fix": false,
-  "should_main_agent_self_test": true,
-  "test_credentials": "Compte test Thomas via bouton 'Ouvrir le compte test (Thomas)' (thomas@zayado.fr, magic-link dev)",
-  "context_for_next_testing_agent": "Login is via green button on /login (no email input). InspirationScreen appears on load and its dock (data-testid=insp-dock) becomes visible only after ~3s (SEQUENCE delay 3.1s); wait 4-6s before asserting dock content. Dock item testids follow pattern insp-dock-<label lowercased with '-'> (e.g., insp-dock-espace-de-travail, insp-dock-croissance). Onboarding persistence uses localStorage keys prefixed 'zayado_onboarding_seen_<path>'. Pipeline in Croissance is empty in the Thomas seed data so 'lead-crm-<id>' button is present in code but not renderable; to test the CRM push flow, either seed a lead first or hit backend /api/growth/leads/{id}/push-crm directly. profile-moi is inside DropdownMenu opened by data-testid=header-profile-btn.",
-  "rca_of_the_issue": "N/A — no blocking issues found. Verified: (1) service worker registered (getRegistrations().length=1, /service-worker.js HTTP 200); (2) After closing Cockpit onboarding modal and navigating away and back to /, the modal did NOT reappear (persistence via localStorage OK); (3) InspirationScreen dock displays exactly Cockpit / Vision / Croissance / Espace de travail / DAF IA / Boutique, with NO 'CRM', 'Growth Agent', 'Mon énergie' or 'Vision Board' labels present; clicking Croissance navigates to /croissance; code path for 'Espace de travail' maps to /travail (verified in InspirationScreen.jsx line 22); (4) Sidebar exposes all 5 pillar testids side-cockpit/side-vision/side-croissance/side-travail/side-dafia; profile-moi is reachable via header-profile-btn dropdown; (5) Routes /, /croissance, /travail, /vision-board, /pilotage all load with no page errors and non-empty body. CRM 'push-crm' button (data-testid lead-crm-<id>) could not be exercised because the Kanban pipeline is empty for the Thomas account — reported as NOT_TESTABLE, not a failure."
+  "updated_files": [
+    "/app/backend/tests/test_iter_news_reprise_heygen_sse.py"
+  ],
+  "success_rate": {
+    "backend": "100% (14/14)",
+    "frontend": "not tested (skipped par la demande)"
+  },
+  "test_credentials": "admin@zayado.net / ZayadoAdmin2026! (JWT via POST /api/auth/login) + WP_CONNECTOR_SECRET header",
+  "seed_data_creation": "2 brouillons news-reprise via /submit (1 approved, 1 rejected) + 1 via /inbound — table news_reprise_drafts auto-créée. Peut être nettoyé si besoin.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Tests couvrent : /api/news-reprise/{submit,list,approve,reject,inbound}, /api/heygen/avatars (500 propre + 401), /api/vision/events/stream (SSE retry:, 401 sur bad token), /api/auth/request-link (delivered_via_email:true via Brevo), /api/auth/verify-link (idempotent avec même token). Le fichier tests/test_iter_news_reprise_heygen_sse.py est réutilisable en régression.",
+  "rca of the issue": "N/A — toutes les fonctionnalités demandées passent les vérifications de contrat (status codes, structure de réponse, garde d'auth, valeurs métier comme delay_hours=72 et scheduled_at ~ +72h)."
 }
