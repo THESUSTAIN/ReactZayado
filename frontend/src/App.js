@@ -18,6 +18,7 @@ import SimulationModule from "@/pages/SimulationModule";
 import Pilotage from "@/pages/Pilotage";
 import VisionBoard from "@/pages/VisionBoardModule";
 import MonBureau from "@/pages/MonBureau";
+import Extension from "@/pages/Extension";
 import Settings, { SettingsModal, PageOnboardingModal } from "@/pages/Settings";
 import GuidedTour from "@/components/GuidedTour";
 import { TOURS, hasSeenTour, resetTour } from "@/constants/tours";
@@ -25,10 +26,11 @@ import NotFound from "@/pages/NotFound";
 import CockpitChecklist from "@/components/CockpitChecklist";
 import PricingScreen from "@/components/PricingScreen";
 import Roadmap from "@/pages/Roadmap";
-import { currentUser, API, getUid, wellnessApi } from "@/lib/api";
+import { currentUser, API, getUid, wellnessApi, onboardingApi } from "@/lib/api";
 import { PrefsProvider, usePrefs } from "@/context/PrefsContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import Login from "@/pages/Login";
+import VisionPublic from "@/pages/VisionPublic";
 import { Navigate } from "react-router-dom";
 import useIsMobile from "@/hooks/useIsMobile";
 
@@ -102,10 +104,13 @@ function DebugMenu({ onStartTour, hasTour, onReplayOnboarding }) {
   const startTour = () => { setOpen(false); onStartTour?.(); };
   const replay = () => { setOpen(false); onReplayOnboarding(); };
 
-  const resetAll = () => {
-    if (!window.confirm("Réinitialiser l'app ? Ceci efface les préférences locales (onboarding vu, checklist, etc.) puis recharge la page. Ton compte n'est pas supprimé.")) return;
+  const resetAll = async () => {
+    if (!window.confirm("Réinitialiser l'app ? Ceci relance l'onboarding et efface les préférences locales (checklist, visites de page…) puis recharge la page. Ton compte n'est pas supprimé.")) return;
+    // 1) Reset serveur : remet l'utilisateur en 'non onboardé' (sinon le refresh ne
+    //    relance jamais l'onboarding, car la source de vérité est côté serveur).
+    try { await onboardingApi.reset(); } catch { /* best-effort */ }
     try {
-      // Efface toutes les clés zayado_* du storage local + session, sans toucher au token/uid
+      // 2) Efface toutes les clés zayado_* du storage local + session, sans toucher au token/uid
       const preserve = new Set(["zayado_token", "zayado_uid", "zayado_guest"]);
       Object.keys(localStorage).forEach((k) => { if (k.startsWith("zayado_") && !preserve.has(k)) localStorage.removeItem(k); });
       Object.keys(sessionStorage).forEach((k) => { if (k.startsWith("zayado_")) sessionStorage.removeItem(k); });
@@ -302,7 +307,11 @@ function AppShell() {
   const showOnboarding = loaded && !guest && (!onboarded || replayOnboarding);
   const daysSinceShown = lastShown ? (Date.now() - new Date(lastShown).getTime()) / 86400000 : Infinity;
   const dueNaturally = frequency !== "never" && daysSinceShown >= (FREQ_DAYS[frequency] ?? 1);
-  const showInspiration = loaded && !guest && onboarded && !showOnboarding && (forceShow || dueNaturally);
+  // L'écran d'inspiration ne doit s'afficher que sur l'accueil ("/") : sinon il
+  // se superpose aux pages ouvertes en lien direct / refresh / notif PWA
+  // (l'utilisateur voit alors l'inspiration au lieu de la page demandée).
+  const isHome = location.pathname === "/";
+  const showInspiration = loaded && !guest && onboarded && !showOnboarding && isHome && (forceShow || dueNaturally);
 
   const dismissInspiration = () => {
     const nowIso = new Date().toISOString();
@@ -315,20 +324,23 @@ function AppShell() {
   // puis accessible depuis Paramètres → Facturation. Toujours fermable.
   const planFree = (user?.plan || "free") === "free";
   const [pricingDismissed, setPricingDismissed] = useState(() => !!localStorage.getItem("zayado_pricing_seen"));
-  const showPricing = loaded && !guest && onboarded && !showOnboarding && !showInspiration && planFree && !pricingDismissed;
+  const showPricing = loaded && !guest && onboarded && !showOnboarding && !showInspiration && isHome && planFree && !pricingDismissed;
   const dismissPricing = () => { localStorage.setItem("zayado_pricing_seen", "1"); setPricingDismissed(true); };
 
   // Modale d'onboarding page — première visite (persistée côté serveur via
   // prefs.page_tours_seen, pour ne pas réapparaître sur un nouvel appareil/session).
   useEffect(() => {
     if (!onboarded || guest) return;
+    // Ne pas ouvrir l'aide de page par-dessus un écran interstitiel (inspiration,
+    // pricing, onboarding) : le cockpit n'est pas encore visible dessous.
+    if (showOnboarding || showInspiration || showPricing) return;
     const seen = prefs.page_tours_seen || [];
     if (seen.includes(location.pathname)) return;
     const key = `zayado_onboarding_seen_${location.pathname.replace(/\//g, "_")}`;
     if (!localStorage.getItem(key)) {
       setOnboardingModal(true);
     }
-  }, [location.pathname, onboarded, guest, prefs.page_tours_seen]);
+  }, [location.pathname, onboarded, guest, prefs.page_tours_seen, showOnboarding, showInspiration, showPricing]);
 
   // ── Modale "Configure ton cockpit X/8" — s'ouvre après connexion (une fois par session)
   //    tant que la checklist n'est pas complétée et que l'utilisateur ne l'a pas dismiss.
@@ -495,6 +507,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/vision-public/:slug" element={<VisionPublic />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
       {/* Admin unifié dans le plugin WordPress cms.zayado.net — /admin ne sert plus l'ancien panneau */}
       <Route path="/admin" element={
@@ -514,6 +527,7 @@ function AppRoutes() {
         <Route path="/validation/:id" element={<Navigate to="/vision-board?tab=swot" replace />} />
         <Route path="/bien-etre" element={<BienEtre />} />
         <Route path="/travail" element={<Travail />} />
+        <Route path="/extension" element={<Extension />} />
         <Route path="/simulation" element={<SimulationModule />} />
         <Route path="/pilotage" element={<Pilotage />} />
         <Route path="/vision-board" element={<div className="vision-page-wrapper" data-testid="vision-board-page"><VisionBoard /></div>} />

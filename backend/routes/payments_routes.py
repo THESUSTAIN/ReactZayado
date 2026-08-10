@@ -481,6 +481,8 @@ async def mollie_webhook(request: Request, db: AsyncSession = Depends(get_db)):
                                 bonus_credits=new_bonus
                             )
                         )
+                        from routes.analytics import track_event_standalone
+                        await track_event_standalone(user_id, "subscription_upgraded", {"plan": plan_id})
             elif payment_type == 'credits' and user_id and credits_to_add > 0:
                 # Credit pack purchase - add to plan credits
                 await db.execute(

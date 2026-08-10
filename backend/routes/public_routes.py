@@ -502,7 +502,7 @@ async def save_timer_session(data: dict, user: User = Depends(get_current_user),
                 "CREATE TABLE IF NOT EXISTS timer_sessions ("
                 "id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36) NOT NULL, "
                 "duration_minutes INT DEFAULT 0, mode VARCHAR(20) DEFAULT 'focus', "
-                "source VARCHAR(20) DEFAULT 'web', created_at DATETIME)"
+                "source VARCHAR(20) DEFAULT 'web', created_at TIMESTAMP)"
             ))
             await db.execute(sa_text(
                 "INSERT INTO timer_sessions (id, user_id, duration_minutes, mode, source, created_at) "

@@ -131,8 +131,8 @@ async def init_db():
                         "hourly_rate": "FLOAT DEFAULT 0",
                         "total_time_seconds": "INTEGER DEFAULT 0",
                         "is_running": "BOOLEAN DEFAULT 0",
-                        "timer_started_at": "DATETIME",
-                        "updated_at": "DATETIME",
+                        "timer_started_at": "TIMESTAMP",
+                        "updated_at": "TIMESTAMP",
                     }
                     for col, typedef in proj_migrations.items():
                         if col not in existing:
@@ -185,6 +185,8 @@ async def init_db():
             def _ensure_app_logs(connection):
                 insp = sa_inspect(connection)
                 if "app_logs" not in insp.get_table_names():
+                    # Schéma portable SQLite/Postgres : pas de DATETIME(6) ni INDEX inline
+                    # ni ENGINE/CHARSET (syntaxe MySQL uniquement).
                     connection.execute(sa_text("""
                         CREATE TABLE IF NOT EXISTS app_logs (
                             id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -197,13 +199,13 @@ async def init_db():
                             details TEXT,
                             ip_address VARCHAR(50),
                             duration_ms INTEGER,
-                            created_at DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6),
-                            INDEX idx_app_logs_level (level),
-                            INDEX idx_app_logs_feature (feature),
-                            INDEX idx_app_logs_created_at (created_at),
-                            INDEX idx_app_logs_user_id (user_id)
-                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
                     """))
+                    connection.execute(sa_text("CREATE INDEX IF NOT EXISTS idx_app_logs_level ON app_logs (level)"))
+                    connection.execute(sa_text("CREATE INDEX IF NOT EXISTS idx_app_logs_feature ON app_logs (feature)"))
+                    connection.execute(sa_text("CREATE INDEX IF NOT EXISTS idx_app_logs_created_at ON app_logs (created_at)"))
+                    connection.execute(sa_text("CREATE INDEX IF NOT EXISTS idx_app_logs_user_id ON app_logs (user_id)"))
                     logger.info("Created table app_logs")
             await conn.run_sync(_ensure_app_logs)
     except Exception as e:

@@ -56,7 +56,7 @@ def _gen_password(length: int = 8) -> str:
 
 async def _get_kv(db: AsyncSession, user_id: str, key: str) -> dict | None:
     r = await db.execute(
-        text("SELECT value FROM user_data WHERE user_id = :uid AND `key` = :k LIMIT 1"),
+        text("SELECT value FROM user_data WHERE user_id = :uid AND \"key\" = :k LIMIT 1"),
         {"uid": user_id, "k": key},
     )
     row = r.fetchone()
@@ -72,17 +72,17 @@ async def _save_kv(db: AsyncSession, user_id: str, key: str, data: dict):
     value = json.dumps(data)
     now = _utc_now()
     existing = (await db.execute(
-        text("SELECT id FROM user_data WHERE user_id = :uid AND `key` = :k"),
+        text("SELECT id FROM user_data WHERE user_id = :uid AND \"key\" = :k"),
         {"uid": user_id, "k": key},
     )).fetchone()
     if existing:
         await db.execute(
-            text("UPDATE user_data SET value = :v, updated_at = :ts WHERE user_id = :uid AND `key` = :k"),
+            text("UPDATE user_data SET value = :v, updated_at = :ts WHERE user_id = :uid AND \"key\" = :k"),
             {"v": value, "ts": now, "uid": user_id, "k": key},
         )
     else:
         await db.execute(
-            text("INSERT INTO user_data (id, user_id, `key`, value, updated_at) VALUES (:id, :uid, :k, :v, :ts)"),
+            text("INSERT INTO user_data (id, user_id, \"key\", value, updated_at) VALUES (:id, :uid, :k, :v, :ts)"),
             {"id": str(uuid.uuid4()), "uid": user_id, "k": key, "v": value, "ts": now},
         )
     await db.commit()
@@ -117,6 +117,24 @@ async def _get_live_metrics(db: AsyncSession, user_id: str) -> dict:
             ca_month_eur = round((row[0] or 0) / 100, 2)
     except Exception:
         pass
+    # Fallback (cohérent avec /api/dashboard) : si aucune transaction bancaire,
+    # on alimente le CA du mois avec les entrées manuelles du Pilotage
+    # (finance_entries, type=revenu) du mois courant. Sans cela la carte
+    # "CA du mois" reste à 0 alors que des revenus existent → board non-vivant.
+    if not ca_month_eur:
+        try:
+            import datetime as _dt2
+            _mstart = _dt2.datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            rev = (await db.execute(
+                text(
+                    "SELECT COALESCE(SUM(amount),0) FROM finance_entries "
+                    "WHERE user_id = :uid AND type = 'revenu' AND date >= :ms"
+                ),
+                {"uid": user_id, "ms": _mstart},
+            )).scalar() or 0
+            ca_month_eur = round(float(rev), 2)
+        except Exception:
+            pass
     try:
         goal = (await db.execute(
             text("SELECT amount FROM budget_goals WHERE user_id = :uid AND category IN ('ca', 'revenu', 'chiffre_affaires') ORDER BY id DESC LIMIT 1"),
@@ -1167,7 +1185,7 @@ async def delete_flipbook(
 ):
     """Supprime le flipbook en DB (Heyzine ne propose pas de delete API)."""
     await db.execute(
-        text("DELETE FROM user_data WHERE user_id = :uid AND `key` = 'vision_board_flipbook'"),
+        text("DELETE FROM user_data WHERE user_id = :uid AND \"key\" = 'vision_board_flipbook'"),
         {"uid": user.id},
     )
     await db.commit()

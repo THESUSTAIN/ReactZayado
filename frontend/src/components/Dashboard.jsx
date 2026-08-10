@@ -99,7 +99,7 @@ export default function Dashboard({ data }) {
 
             {/* Insights clés pour vous (pleine largeur, 3 cartes de front sur PC) */}
             <motion.div variants={item} className="ck-insights">
-              <KeyInsights />
+              <KeyInsights data={data} />
             </motion.div>
 
             {/* Bandeau citation */}

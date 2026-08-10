@@ -42,7 +42,7 @@ async def _get_collab_table(db):
             "CREATE TABLE IF NOT EXISTS collab_memory ("
             "  user_id  VARCHAR(36) PRIMARY KEY,"
             "  messages JSON NOT NULL,"
-            "  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP"
+            "  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
             ")"
         ))
         await db.commit()

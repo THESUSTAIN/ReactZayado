@@ -2,6 +2,8 @@ import React, { useMemo, useRef, useState, useCallback } from "react";
 import StudioModal from "./StudioModal";
 import DocumentsDrawer from "./DocumentsDrawer";
 import LiveCardsStrip from "./LiveCardsStrip";
+import AccueilVision from "./AccueilVision";
+import VisionBrainPanel from "./VisionBrainPanel";
 import {
   Type, Image as ImageIcon, ListChecks, Link2, Palette, Sparkles,
   Plus, Minus, RotateCcw, Send, MousePointer2, Hand, Maximize2, Minimize2,
@@ -28,6 +30,7 @@ import "./vision.css";
 
 // ─── TABS ────────────────────────────────────────────────────────────────────
 const TABS = [
+  { id: "accueil",  labelFr: "Accueil Vision",        labelEn: "Vision Home" },
   { id: "canvas",   labelFr: "Vision Canvas",         labelEn: "Vision Canvas" },
   { id: "pillars",  labelFr: "Piliers stratégiques",  labelEn: "Strategic Pillars" },
   { id: "swot",     labelFr: "Analyse & Validation",  labelEn: "Analysis & Validation" },
@@ -1240,6 +1243,30 @@ function TabPillars() {
     }
   };
 
+  // Fix — bouton "+ Ajouter un pilier" n'avait aucun handler (audit fichier par fichier).
+  const PILLAR_COLORS = ["#C9A449", "#1B2A4A", "#3E7C59", "#8A4FFF"];
+  const addPillar = () => {
+    const title = (window.prompt("Nom du nouveau pilier stratégique ?") || "").trim();
+    if (!title) return;
+    const newPillar = {
+      id: `pillar-${Date.now()}`,
+      title,
+      description: "",
+      category: view === "personnel" ? "personnel" : "business",
+      color: PILLAR_COLORS[pillars.length % PILLAR_COLORS.length],
+      icon: Object.keys(PILLAR_ICONS)[pillars.length % Object.keys(PILLAR_ICONS).length],
+      progress: 0,
+      objectives: [],
+      pinned_dashboard: false,
+    };
+    setPillars(prev => {
+      const next = [...prev, newPillar];
+      autosave(next);
+      return next;
+    });
+    toast.success(`Pilier "${title}" ajouté ✦`);
+  };
+
   const filteredPillars = view === "all" ? pillars : pillars.filter(p => (p.category || "business") === view);
 
   return (
@@ -1255,7 +1282,8 @@ function TabPillars() {
             <Ring value={globalScore} color="#C9A449" />
             <span className="text-xs text-[var(--app-text-muted)]">Vision réalisée</span>
           </div>
-          <button className="flex items-center gap-2 rounded-full border border-dashed border-[var(--app-accent)] px-4 py-2 text-sm font-medium text-[var(--app-accent)] hover:bg-[var(--app-accent-soft)]">
+          <button onClick={addPillar} data-testid="add-pillar-btn"
+            className="flex items-center gap-2 rounded-full border border-dashed border-[var(--app-accent)] px-4 py-2 text-sm font-medium text-[var(--app-accent)] hover:bg-[var(--app-accent-soft)]">
             <Plus size={16} /> {t("pillars.add")}
           </button>
         </div>
@@ -2181,7 +2209,7 @@ function VisionBoardDesktop() {
   const { tv } = useApp();
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get("tab");
-  const [activeTab, setActiveTab] = useState(TABS.some(t => t.id === initialTab) ? initialTab : "canvas");
+  const [activeTab, setActiveTab] = useState(TABS.some(t => t.id === initialTab) ? initialTab : "accueil");
   const [menuOpen, setMenuOpen] = useState(false);
   const [bgImage, setBgImage] = useState(null);
   const [canvaModal, setCanvaModal] = useState(false);
@@ -2222,10 +2250,11 @@ function VisionBoardDesktop() {
 
   const renderTab = () => {
     switch (activeTab) {
+      case "accueil":   return <AccueilVision onGoCanvas={() => setActiveTab("canvas")} />;
       case "canvas":    return <TabCanvas bgImage={bgImage} />;
       case "pillars":   return <TabPillars />;
       case "swot":      return <TabSwot />;
-      default:          return <TabCanvas bgImage={bgImage} />;
+      default:          return <AccueilVision onGoCanvas={() => setActiveTab("canvas")} />;
     }
   };
 
@@ -2283,9 +2312,14 @@ function VisionBoardDesktop() {
       {/* #4 Live Cards — données live des modules (CA, bien-être, prospects) */}
       {activeTab === "canvas" && <div className="hidden md:block"><LiveCardsStrip /></div>}
 
-      {/* Tab content */}
-      <div className="animate-fade-up">
-        {renderTab()}
+      {/* Tab content + Panneau IA persistant à droite */}
+      <div className="vb-main-row">
+        <div className="vb-main-content animate-fade-up">
+          {renderTab()}
+        </div>
+        <div className="vb-side-panel">
+          <VisionBrainPanel />
+        </div>
       </div>
     </div>
   );

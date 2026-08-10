@@ -5,6 +5,7 @@ import VisionCarousel from "@/components/VisionCarousel";
 import VisionHeroPanel from "@/components/VisionHeroPanel";
 import { visionApi } from "@/lib/api";
 import { usePrefs } from "@/context/PrefsContext";
+import useVisionEvents from "@/hooks/useVisionEvents";
 
 // Icônes utilisées pour le sélecteur (Lucide n'exporte pas "ImageIcon" par défaut,
 // mais expose "Image" que l'on renomme).
@@ -109,9 +110,17 @@ export default function VisionDisplay({ data }) {
   const { prefs, setPref } = usePrefs();
   const [board, setBoard] = useState(null);
 
-  useEffect(() => {
+  const loadBoard = React.useCallback(() => {
     visionApi.getBoard().then(setBoard).catch(() => setBoard({}));
   }, []);
+
+  useEffect(() => { loadBoard(); }, [loadBoard]);
+
+  // backlog #2 (SSE, tranche 2) : ce composant appelait getBoard() une seule
+  // fois au montage et ne se rafraîchissait plus jamais ensuite, même après
+  // une modification faite ailleurs (Canvas, autre onglet). On le branche
+  // désormais sur le même bus d'événements que le Canvas et le Panneau IA.
+  useVisionEvents({ onTick: loadBoard, onCardUpdate: loadBoard });
 
   const mode = prefs.vision_display || "carousel";
   const change = (m) => setPref({ vision_display: m });

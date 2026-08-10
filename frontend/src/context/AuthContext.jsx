@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { authApi, setAuthToken } from "@/lib/api";
+import { notifyExtensionOfSession, notifyExtensionOfLogout } from "@/lib/extensionBridge";
 
 const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
@@ -19,10 +20,16 @@ export function AuthProvider({ children }) {
 
   const applySession = (session) => {
     // session = { token | access_token, user }
-    setAuthToken(session?.token || session?.access_token || null);
+    const token = session?.token || session?.access_token || null;
+    setAuthToken(token);
     applyUser(session?.user);
     localStorage.removeItem("zayado_guest");
     setGuest(false);
+    // Fix E2 (audit) : transmet la session à l'extension Chrome si installée,
+    // pour tous les flux de connexion (lien magique + OAuth) puisqu'ils
+    // passent tous par applySession(). Silencieux si l'extension n'est pas
+    // installée — jamais bloquant pour la connexion web.
+    if (token) notifyExtensionOfSession(token, session?.user?.email);
   };
 
   const checkAuth = useCallback(async () => {
@@ -131,6 +138,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("zayado_uid");
     localStorage.removeItem("zayado_guest");
     setUser(null); setGuest(false);
+    notifyExtensionOfLogout(); // fix E2 : vide aussi la session côté extension
     window.location.href = "/login";
   };
 

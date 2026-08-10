@@ -9,6 +9,20 @@ export function registerServiceWorker() {
   window.addEventListener("load", () => {
     navigator.serviceWorker
       .register("/service-worker.js")
+      .then((reg) => {
+        // Recharge automatiquement quand une NOUVELLE version du SW est installée
+        // alors qu'une version tournait déjà (déploiement) → l'utilisateur récupère
+        // le code/les couleurs à jour sans avoir à vider le cache manuellement.
+        reg.addEventListener("updatefound", () => {
+          const nw = reg.installing;
+          if (!nw) return;
+          nw.addEventListener("statechange", () => {
+            if (nw.state === "installed" && navigator.serviceWorker.controller) {
+              window.location.reload();
+            }
+          });
+        });
+      })
       .catch((err) => console.warn("[PWA] SW registration failed:", err));
   });
 }

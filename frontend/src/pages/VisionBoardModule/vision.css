@@ -141,3 +141,47 @@
 
 @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 .vb-scroll::-webkit-scrollbar { width: 0; height: 0; }
+
+/* ── Layout : contenu + panneau IA persistant à droite ── */
+.vb-root {
+  position: relative;
+  z-index: 2;
+  background: var(--app-bg, #0B1F3A);
+  border-radius: 18px;
+  padding: 16px 18px 24px;
+  min-height: calc(100vh - 48px);
+}
+.vb-main-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  width: 100%;
+}
+.vb-main-content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.vb-side-panel {
+  flex: 0 0 360px;
+  width: 360px;
+}
+.vbrain-panel {
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 90px);
+  overflow-y: auto;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(14, 16, 24, 0.72);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  padding: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+.vbrain-panel::-webkit-scrollbar { width: 6px; }
+.vbrain-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+@media (max-width: 1023px) {
+  .vb-main-row { flex-direction: column; }
+  .vb-side-panel { flex: 1 1 auto; width: 100%; }
+  .vbrain-panel { position: static; max-height: none; }
+}

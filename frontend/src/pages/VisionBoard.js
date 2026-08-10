@@ -7,21 +7,25 @@ import EspacePanel from "@/components/panels/EspacePanel";
 import EnergiePanel from "@/components/panels/EnergiePanel";
 import CollaborateurPanel from "@/components/panels/CollaborateurPanel";
 import { useAuth } from "@/context/AuthContext";
-import { visionApi, dashboardApi, tasksApi } from "@/lib/api";
+import { visionApi, visionCardsApi, visionBrainApi, dashboardApi, tasksApi } from "@/lib/api";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import useVisionEvents from "@/hooks/useVisionEvents";
 import usePageTitle from "@/hooks/usePageTitle";
 import useWelcomeModal from "@/hooks/useWelcomeModal";
 import WelcomeModal from "@/components/WelcomeModal";
+import { toast } from "sonner";
 import {
   Eye, Target, TrendingUp, Star, Heart, Quote, Sparkles,
   Plus, Image as ImageIcon, PieChart, ArrowRight, X, Loader2, Pencil, CheckCircle2,
   PenSquare, Type as TypeIcon, Square, Circle as CircleIcon, Trash2, ChevronUp, ChevronDown,
-  Upload,
+  Upload, Wand2, RefreshCw, AlertTriangle, Link2, Unlink, BarChart3, History, Share2, Copy,
 } from "lucide-react";
 
 const TABS = [
   { id: "vision",        label: "Vision",        icon: Eye },
   { id: "objectifs",     label: "Objectifs",     icon: Target },
   { id: "trajectoire",   label: "Trajectoire",   icon: TrendingUp },
+  { id: "kpi",           label: "KPI Vision",    icon: BarChart3 },
   { id: "canvas",        label: "Canvas",        icon: PenSquare },
   { id: "flipbook",      label: "Vision Board IA", icon: Sparkles },
 ];
@@ -120,6 +124,9 @@ export default function VisionBoard() {
           )}
           {tab === "trajectoire" && (
             <TrajectoireTab vision={vision} summary={summary} />
+          )}
+          {tab === "kpi" && (
+            <KpiVisionTab />
           )}
           {tab === "canvas" && (
             <CanvasTab />
@@ -367,6 +374,73 @@ function TrajectoireTab({ vision, summary }) {
           </li>
         ))}
       </ol>
+    </div>
+  );
+}
+
+/* ─────────────────── KPI Vision — historique + prévision (backlog #21) ───────────────────
+   La prévision (pointillés) est une simple régression linéaire côté backend
+   sur les points d'historique existants — présentée explicitement comme une
+   projection, jamais comme une donnée réelle (légende dédiée, style visuel
+   différent). Aucune projection tant qu'il y a moins de 3 points d'historique. */
+function KpiVisionTab() {
+  const [state, setState] = useState({ loading: true, history: [], forecast: [], has_data: false });
+
+  useEffect(() => {
+    let alive = true;
+    visionBrainApi.scoreHistory(90)
+      .then((d) => { if (alive) setState({ loading: false, ...d }); })
+      .catch(() => { if (alive) setState({ loading: false, history: [], forecast: [], has_data: false }); });
+    return () => { alive = false; };
+  }, []);
+
+  if (state.loading) {
+    return <div className="card-cream p-7" data-testid="kpi-vision-loading"><p className="text-ink-soft text-[13px]">Chargement…</p></div>;
+  }
+
+  if (!state.has_data) {
+    return (
+      <div className="card-cream p-7" data-testid="kpi-vision-empty">
+        <Eyebrow icon={BarChart3} label="KPI Vision" />
+        <p className="text-[13px] text-ink-soft mt-4">
+          Pas encore assez d'historique pour un graphe. Votre Score Business est
+          enregistré une fois par jour à chaque visite du Panneau IA — revenez
+          dans quelques jours pour voir votre courbe se dessiner.
+        </p>
+      </div>
+    );
+  }
+
+  const chartData = [
+    ...state.history.map((h) => ({ date: h.date, réel: h.score })),
+    ...(state.forecast || []).map((f) => ({ date: f.date, projection: f.score })),
+  ];
+  if (state.forecast?.length && state.history.length) {
+    const last = state.history[state.history.length - 1];
+    const anchorIdx = chartData.findIndex((d) => d.date === last.date);
+    if (anchorIdx >= 0) chartData[anchorIdx].projection = last.score;
+  }
+
+  return (
+    <div className="card-cream p-7" data-testid="kpi-vision-tab">
+      <Eyebrow icon={BarChart3} label="KPI Vision" />
+      <p className="text-[13px] text-ink-soft mt-2 mb-6">
+        Évolution de votre Score Business sur {state.history.length} jour{state.history.length > 1 ? "s" : ""} d'historique
+        {state.forecast?.length ? ", avec une projection à 30 jours (tendance linéaire, pas une garantie)." : "."}
+      </p>
+      <div style={{ width: "100%", height: 320 }}>
+        <ResponsiveContainer>
+          <LineChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#EFE8D7" />
+            <XAxis dataKey="date" tick={{ fontSize: 10.5 }} minTickGap={30} />
+            <YAxis domain={[0, 100]} tick={{ fontSize: 10.5 }} />
+            <Tooltip />
+            <Legend wrapperStyle={{ fontSize: 12 }} />
+            <Line type="monotone" dataKey="réel" name="Score réel" stroke="#1A3A6E" strokeWidth={2} dot={false} connectNulls />
+            <Line type="monotone" dataKey="projection" name="Projection" stroke="#C9A449" strokeWidth={2} strokeDasharray="6 4" dot={false} connectNulls />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
@@ -741,65 +815,223 @@ function BoardEditorActive({ initial, onSave, onCancel, onReload }) {
    Remplace la simple grille d'upload par un vrai éditeur repositionnable.
    ───────────────────────────────────────────────────────────────── */
 
-function uid() { return Math.random().toString(36).slice(2, 10); }
+// Cartes "aggregate" du modèle unifié (backend: routes/vision_cards.py) → module
+// cible au clic. Même mapping que LiveCardsStrip.jsx (routage cohérent).
+const AGGREGATE_MODULE = { ca_month: "pilotage", wellness_latest: "bien-etre", prospects_count: "croissance" };
 
+/**
+ * Trouve un emplacement libre (sans chevauchement) pour une carte de taille
+ * (w × h) sur le canvas, en balayant une grille et en testant contre les
+ * rectangles des éléments déjà posés. Fallback : empile sous le plus bas
+ * élément existant plutôt que d'échouer silencieusement.
+ */
+function findFreeSlot(existingRects, w, h, canvasW = 900, canvasH = 620, step = 24) {
+  const overlaps = (x, y) =>
+    existingRects.some((r) => x < r.x + r.w && x + w > r.x && y < r.y + r.h && y + h > r.y);
+  for (let y = 20; y + h <= canvasH - 10; y += step) {
+    for (let x = 20; x + w <= canvasW - 20; x += step) {
+      if (!overlaps(x, y)) return { x, y };
+    }
+  }
+  const maxY = existingRects.length ? Math.max(...existingRects.map((r) => r.y + r.h)) : 0;
+  return { x: 20, y: maxY + 20 };
+}
+
+/* Traduit une VisionCard (backend) en élément canvas plat pour le rendu. */
+function cardToElement(c) {
+  const style = c.style || {};
+  return {
+    id: c.id, entity_type: c.entity_type || null, entity_id: c.entity_id || null,
+    card_type: c.card_type, title: c.title, content: c.manual_content,
+    live: !!c.live, orphan: !!c.orphan,
+    label: c.label, value: c.value, sub: c.sub, progress: c.progress,
+    x: c.x ?? 40, y: c.y ?? 40, width: c.width ?? 180, height: c.height ?? 180,
+    rotation: c.rotation || 0, z: c.z || 0,
+    connections: Array.isArray(c.connections) ? c.connections : [],
+    color: style.color, font_size: style.font_size, font_family: style.font_family,
+    src: style.src, shape: style.shape, fill: style.fill, stroke: style.stroke,
+  };
+}
+
+// Positions par défaut posées par migrate-legacy pour les 3 cartes agrégées —
+// sert à détecter si l'utilisateur les a déjà déplacées (voir autoPoseCards).
+const DEFAULT_AGG_POS = { ca_month: { x: 40, y: 40 }, wellness_latest: { x: 300, y: 40 }, prospects_count: { x: 560, y: 40 } };
+
+/* ─────────────────────────────────────────────────────────────────
+   CanvasTab — persistance : modèle unifié par carte (backlog #1 → #3).
+   Chaque élément du canvas EST une ligne `vision_cards` en base (plus de
+   blob JSON global `/vision/board/canvas` pour les éléments — cet ancien
+   endpoint reste utilisé UNIQUEMENT pour la couleur de fond, qui n'a pas
+   encore sa propre colonne). Conséquences :
+     - create/update/delete individuels via visionCardsApi, plus de PUT
+       global à chaque frappe : moins de risque d'écraser une modif faite
+       depuis un autre onglet/appareil entre-temps.
+     - les cartes "aggregate" (CA/Bien-être/Prospects) sont résolues en
+       direct par le backend à chaque `list()` : plus besoin d'un type
+       `smart_card` séparé côté client, une carte "live" est juste une
+       VisionCard avec `entity_type` renseigné.
+     - rafraîchissement multi-onglets via SSE (`useVisionEvents`) : les
+       valeurs live (label/value/sub/progress) se mettent à jour toutes
+       seules sans toucher aux positions en cours d'édition locale.
+   ───────────────────────────────────────────────────────────────── */
 function CanvasTab() {
   const [elements, setElements] = useState([]);
   const [background, setBackground] = useState("#FAF8F3");
   const [selected, setSelected] = useState(null);
+  const [linking, setLinking] = useState(null); // id de la carte source en cours de liaison
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [autoPosing, setAutoPosing] = useState(false);
+  const [resyncing, setResyncing] = useState(false);
+  // Historique / versioning (backlog #22)
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [snapshots, setSnapshots] = useState([]);
+  const [savingSnapshot, setSavingSnapshot] = useState(false);
+  const [restoringId, setRestoringId] = useState(null);
+  // Partage public (backlog #23)
+  const [shareOpen, setShareOpen] = useState(false);
+  const [publicStatus, setPublicStatus] = useState({ enabled: false, slug: null });
+  const [togglingShare, setTogglingShare] = useState(false);
   const dragRef = React.useRef(null); // { id, offsetX, offsetY, mode: "move"|"resize" }
   const fileInputRef = React.useRef(null);
-  const saveTimer = React.useRef(null);
+  const surfaceRef = React.useRef(null);
+  const patchTimers = React.useRef({});   // id -> timeout du debounce d'update
+  const pendingPatch = React.useRef({});  // id -> patch backend accumulé en attente d'envoi
+  const activeSaves = React.useRef(0);
+  const bgSaveTimer = React.useRef(null);
+
+  const beginSave = () => { activeSaves.current += 1; setSaving(true); };
+  const endSave = () => { activeSaves.current = Math.max(0, activeSaves.current - 1); if (activeSaves.current === 0) setSaving(false); };
 
   useEffect(() => {
-    visionApi.canvasGet()
-      .then((d) => { setElements(d?.elements || []); setBackground(d?.background || "#FAF8F3"); })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    let alive = true;
+    (async () => {
+      setLoading(true);
+      try {
+        // Idempotent : ne recrée rien si ce board a déjà des vision_cards.
+        await visionCardsApi.migrateLegacy().catch(() => {});
+        const [cardsRes, boardMeta] = await Promise.all([
+          visionCardsApi.list().catch(() => ({ cards: [] })),
+          visionApi.canvasGet().catch(() => ({})),
+        ]);
+        if (!alive) return;
+        setElements((cardsRes.cards || []).map(cardToElement));
+        setBackground(boardMeta?.background || "#FAF8F3");
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => { alive = false; };
   }, []);
 
-  const scheduleSave = useCallback((els, bg) => {
-    clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(async () => {
-      setSaving(true);
-      try { await visionApi.canvasSave({ elements: els, background: bg }); }
-      catch {} finally { setSaving(false); }
-    }, 700);
+  /* Rafraîchit uniquement les valeurs live (label/value/sub/progress/orphan)
+     des cartes liées à une entité — jamais x/y/width/height, pour ne jamais
+     entrer en conflit avec un drag/resize en cours localement. Appelé au
+     clic sur "Rafraîchir" ET automatiquement via SSE (tick / card_update). */
+  const refreshLive = useCallback(async () => {
+    try {
+      const { cards = [] } = await visionCardsApi.list();
+      const byId = new Map(cards.map((c) => [c.id, c]));
+      setElements((prev) => prev.map((el) => {
+        const c = byId.get(el.id);
+        if (!c) return el; // supprimée côté serveur entre-temps : nettoyée au prochain montage
+        return { ...el, live: !!c.live, orphan: !!c.orphan, label: c.label, value: c.value, sub: c.sub, progress: c.progress };
+      }));
+    } catch { /* silencieux : ce n'est qu'un rafraîchissement best-effort */ }
   }, []);
 
-  const updateElements = (next) => {
-    setElements(next);
-    scheduleSave(next, background);
+  // Temps réel multi-onglets (backlog #2) : dès qu'une VisionCard change côté
+  // serveur (autre onglet, mobile...), ou toutes les 60s par sécurité.
+  useVisionEvents({ onTick: refreshLive, onCardUpdate: refreshLive });
+
+  const scheduleBackgroundSave = (bg) => {
+    clearTimeout(bgSaveTimer.current);
+    bgSaveTimer.current = setTimeout(async () => {
+      beginSave();
+      try { await visionApi.canvasSave({ elements: [], background: bg }); }
+      catch {} finally { endSave(); }
+    }, 600);
   };
 
-  const addElement = (partial) => {
-    const el = { id: uid(), x: 60, y: 60, width: 180, height: 180, rotation: 0, z: elements.length, ...partial };
-    updateElements([...elements, el]);
-    setSelected(el.id);
+  /* Débounce l'écriture backend d'un patch déjà en champs `vision_cards`
+     (x/y/width/height/rotation/z/manual_content/style — jamais de champs
+     UI bruts). `style` doit toujours être envoyé complet : le backend
+     remplace la colonne entière, il ne fusionne pas. */
+  const schedulePatch = (id, backendPatch) => {
+    pendingPatch.current[id] = { ...(pendingPatch.current[id] || {}), ...backendPatch };
+    clearTimeout(patchTimers.current[id]);
+    patchTimers.current[id] = setTimeout(async () => {
+      const p = pendingPatch.current[id];
+      delete pendingPatch.current[id];
+      if (!p) return;
+      beginSave();
+      try { await visionCardsApi.update(id, p); }
+      catch {} finally { endSave(); }
+    }, 600);
   };
 
-  const addText = () => addElement({ type: "text", content: "Votre texte…", width: 220, height: 60, font_size: 20, color: "#1A3A6E" });
-  const addShape = (shape) => addElement({ type: "shape", shape, width: 140, height: shape === "line" ? 4 : 140, fill: "#EFE8D7", stroke: "#1A3A6E" });
+  const fullStyleOf = (el) => ({
+    color: el.color, font_size: el.font_size, font_family: el.font_family,
+    src: el.src, shape: el.shape, fill: el.fill, stroke: el.stroke,
+  });
+
+  const STYLE_KEYS = ["color", "font_size", "font_family", "src", "shape", "fill", "stroke"];
+  const POS_KEYS = ["x", "y", "width", "height", "rotation", "z"];
+
+  /* Édition depuis le panneau de propriétés (couleur, taille, contenu...) :
+     mise à jour optimiste locale + patch debouncé vers le backend. */
+  const patchElement = (id, uiPatch) => {
+    setElements((prev) => {
+      const next = prev.map((el) => (el.id === id ? { ...el, ...uiPatch } : el));
+      const el = next.find((e) => e.id === id);
+      if (el) {
+        const backendPatch = {};
+        for (const k of Object.keys(uiPatch)) {
+          if (POS_KEYS.includes(k)) backendPatch[k] = el[k];
+          else if (k === "content") backendPatch.manual_content = el.content;
+          else if (k === "connections") backendPatch.connections = el.connections;
+          else if (STYLE_KEYS.includes(k)) backendPatch.style = fullStyleOf(el);
+        }
+        schedulePatch(id, backendPatch);
+      }
+      return next;
+    });
+  };
+
+  const addElement = async (partial) => {
+    const z = Math.max(0, ...elements.map((e) => e.z || 0)) + 1;
+    const payload = {
+      board_id: "main", card_type: partial.card_type, entity_type: null, entity_id: null,
+      title: null, manual_content: partial.manual_content ?? null,
+      x: 60, y: 60, width: partial.width || 180, height: partial.height || 180,
+      rotation: 0, z, style: partial.style || {}, connections: [],
+    };
+    try {
+      const card = await visionCardsApi.create(payload);
+      const el = cardToElement(card);
+      setElements((prev) => [...prev, el]);
+      setSelected(el.id);
+    } catch { /* création échouée : rien à afficher, l'utilisateur peut réessayer */ }
+  };
+
+  const addText = () => addElement({ card_type: "text", manual_content: "Votre texte…", width: 220, height: 60, style: { color: "#1A3A6E", font_size: 20 } });
+  const addShape = (shape) => addElement({ card_type: "shape", width: 140, height: shape === "line" ? 4 : 140, style: { shape, fill: "#EFE8D7", stroke: "#1A3A6E" } });
 
   const onFilePicked = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => addElement({ type: "image", src: reader.result, width: 220, height: 260 });
+    reader.onload = () => addElement({ card_type: "image", width: 220, height: 260, style: { src: reader.result } });
     reader.readAsDataURL(file);
     e.target.value = "";
   };
 
-  const patchElement = (id, patch) => {
-    const next = elements.map((el) => (el.id === id ? { ...el, ...patch } : el));
-    updateElements(next);
-  };
-
-  const deleteElement = (id) => {
-    updateElements(elements.filter((el) => el.id !== id));
+  const deleteElement = async (id) => {
+    setElements((prev) => prev.filter((el) => el.id !== id));
     if (selected === id) setSelected(null);
+    clearTimeout(patchTimers.current[id]);
+    delete pendingPatch.current[id];
+    try { await visionCardsApi.remove(id); } catch { /* la carte réapparaîtra au prochain rechargement si l'appel a échoué */ }
   };
 
   const reorder = (id, dir) => {
@@ -807,9 +1039,126 @@ function CanvasTab() {
     patchElement(id, { z: dir === "front" ? maxZ + 1 : -1 });
   };
 
+  /* ── Connecteurs entre cartes (backlog #2 — "connecteurs" jamais fait) ───
+     Mode liaison : clic sur "Lier des cartes", puis clic sur une carte
+     source, puis une carte cible → ajoute cible dans `connections` de la
+     source. Un second clic sur la même paire retire le lien (toggle).
+     Stocké directement dans la colonne `connections` de la VisionCard
+     source (déjà présente dans le modèle depuis le backlog #1, jamais
+     utilisée jusqu'ici). */
+  const toggleLinkMode = () => setLinking((cur) => (cur ? null : "picking-source"));
+
+  const handleCardClickForLink = (id) => {
+    if (!linking) return false; // pas en mode liaison : laisser le clic normal (sélection/drag) faire son travail
+    if (linking === "picking-source") {
+      setLinking(id);
+      return true;
+    }
+    if (linking === id) { setLinking(null); return true; } // reclique la même carte : annule
+    const source = elements.find((e) => e.id === linking);
+    if (!source) { setLinking(null); return true; }
+    const already = (source.connections || []).includes(id);
+    const nextConnections = already
+      ? source.connections.filter((cid) => cid !== id)
+      : [...(source.connections || []), id];
+    patchElement(source.id, { connections: nextConnections });
+    setLinking(null);
+    return true;
+  };
+
+  const removeConnection = (sourceId, targetId) => {
+    const source = elements.find((e) => e.id === sourceId);
+    if (!source) return;
+    patchElement(sourceId, { connections: (source.connections || []).filter((cid) => cid !== targetId) });
+  };
+
+  /* ── Auto-pose des cartes agrégées (backlog #3, migration complète) ──────
+     Les 3 cartes CA / Bien-être / Prospects existent déjà en base dès le
+     premier `migrate-legacy` (avec une position par défaut fixe). Ce bouton
+     ne les CRÉE plus (elles existent déjà et s'affichent automatiquement) —
+     il repère celles encore à leur position d'usine (= jamais déplacées par
+     l'utilisateur) et leur trouve une place sans chevauchement, en persistant
+     directement la nouvelle position sur la ligne `vision_cards`. */
+  const autoPoseCards = async () => {
+    setAutoPosing(true);
+    try {
+      const untouched = elements.filter((e) => {
+        const d = e.entity_type === "aggregate" && DEFAULT_AGG_POS[e.entity_id];
+        return d && e.x === DEFAULT_AGG_POS[e.entity_id].x && e.y === DEFAULT_AGG_POS[e.entity_id].y;
+      });
+      if (!untouched.length) return;
+      const canvasW = surfaceRef.current?.clientWidth || 900;
+      const canvasH = surfaceRef.current?.clientHeight || 620;
+      const placedRects = elements.filter((e) => !untouched.includes(e)).map((e) => ({ x: e.x, y: e.y, w: e.width, h: e.height }));
+      for (const el of untouched) {
+        const { x, y } = findFreeSlot(placedRects, el.width, el.height, canvasW, canvasH);
+        placedRects.push({ x, y, w: el.width, h: el.height });
+        setElements((prev) => prev.map((e) => (e.id === el.id ? { ...e, x, y } : e)));
+        try { await visionCardsApi.update(el.id, { x, y }); } catch { /* best-effort, la carte reste visible localement */ }
+      }
+    } finally {
+      setAutoPosing(false);
+    }
+  };
+
+  /* Rafraîchit les valeurs live (bouton manuel) — même logique que le
+     rafraîchissement automatique SSE, avec un spinner visible. */
+  const resyncSmartCards = async () => {
+    if (!elements.some((e) => e.entity_type)) return;
+    setResyncing(true);
+    try { await refreshLive(); } finally { setResyncing(false); }
+  };
+
+  /* ── Historique / versioning (backlog #22) ── */
+  const loadSnapshots = async () => {
+    try { const { snapshots: s } = await visionCardsApi.listSnapshots(); setSnapshots(s || []); } catch { /* liste vide, pas bloquant */ }
+  };
+  const openHistory = () => { setHistoryOpen(true); loadSnapshots(); };
+  const saveSnapshot = async () => {
+    setSavingSnapshot(true);
+    try {
+      const label = window.prompt("Nom de cette version (optionnel) :", "");
+      await visionCardsApi.createSnapshot(label || undefined);
+      await loadSnapshots();
+    } catch { /* échec silencieux : l'utilisateur peut réessayer */ }
+    finally { setSavingSnapshot(false); }
+  };
+  const restoreSnapshot = async (id) => {
+    if (!window.confirm("Restaurer cette version ? L'état actuel du canvas sera remplacé.")) return;
+    setRestoringId(id);
+    try {
+      await visionCardsApi.restoreSnapshot(id);
+      const { cards = [] } = await visionCardsApi.list();
+      setElements(cards.map(cardToElement));
+      setHistoryOpen(false);
+    } catch { /* best-effort */ }
+    finally { setRestoringId(null); }
+  };
+  const removeSnapshot = async (id) => {
+    try { await visionCardsApi.deleteSnapshot(id); await loadSnapshots(); } catch { /* best-effort */ }
+  };
+
+  /* ── Partage public (backlog #23) ── */
+  const openShare = async () => {
+    setShareOpen(true);
+    try { setPublicStatus(await visionCardsApi.getPublicStatus()); } catch { /* état par défaut : désactivé */ }
+  };
+  const toggleShare = async (enabled) => {
+    setTogglingShare(true);
+    try { setPublicStatus(await visionCardsApi.setPublicStatus(enabled)); }
+    catch { /* best-effort */ }
+    finally { setTogglingShare(false); }
+  };
+  const publicUrl = publicStatus.slug ? `${window.location.origin}/vision-public/${publicStatus.slug}` : null;
+  const copyPublicUrl = () => {
+    if (!publicUrl) return;
+    navigator.clipboard?.writeText(publicUrl).then(() => toast.success("Lien copié")).catch(() => toast.error("Impossible de copier le lien"));
+  };
+
   // ── Drag & resize (pointer events, sans lib externe) ──
   const onPointerDownMove = (e, el) => {
     e.stopPropagation();
+    if (handleCardClickForLink(el.id)) return; // en mode liaison : ne pas démarrer un drag
     setSelected(el.id);
     dragRef.current = { id: el.id, mode: "move", startX: e.clientX, startY: e.clientY, origX: el.x, origY: el.y };
     window.addEventListener("pointermove", onPointerMove);
@@ -836,11 +1185,19 @@ function CanvasTab() {
     }
   };
 
+  // Le déplacement/redimensionnement n'est envoyé au backend qu'UNE fois,
+  // au relâchement — pas à chaque pixel — pour ne pas saturer l'API.
   const onPointerUp = () => {
     window.removeEventListener("pointermove", onPointerMove);
     window.removeEventListener("pointerup", onPointerUp);
+    const d = dragRef.current;
     dragRef.current = null;
-    setElements((prev) => { scheduleSave(prev, background); return prev; });
+    if (!d) return;
+    setElements((prev) => {
+      const el = prev.find((e) => e.id === d.id);
+      if (el) schedulePatch(d.id, d.mode === "move" ? { x: el.x, y: el.y } : { width: el.width, height: el.height });
+      return prev;
+    });
   };
 
   const selectedEl = elements.find((e) => e.id === selected);
@@ -866,22 +1223,134 @@ function CanvasTab() {
           <button onClick={() => addShape("circle")} className="inline-flex items-center gap-1.5 px-4 h-9 rounded-full bg-white border border-sand-200 text-[12.5px] font-semibold text-ink hover:border-navy/40" data-testid="canvas-add-circle">
             <CircleIcon size={13} /> Cercle
           </button>
+          <button onClick={autoPoseCards} disabled={autoPosing} data-testid="canvas-auto-pose"
+            title="Pose automatiquement les cartes CA / Bien-être / Prospects sur le canvas, sans chevauchement"
+            className="inline-flex items-center gap-1.5 px-4 h-9 rounded-full bg-navy text-white text-[12.5px] font-semibold hover:bg-navy/90 disabled:opacity-60">
+            {autoPosing ? <Loader2 size={13} className="animate-spin" /> : <Wand2 size={13} />}
+            Auto-poser mes cartes
+          </button>
+          {elements.some((e) => e.entity_type) && (
+            <button onClick={resyncSmartCards} disabled={resyncing} data-testid="canvas-resync-cards"
+              title="Recharge les valeurs live des cartes intelligentes déjà posées"
+              className="inline-flex items-center gap-1.5 px-3 h-9 rounded-full bg-white border border-sand-200 text-[12.5px] font-semibold text-ink hover:border-navy/40 disabled:opacity-60">
+              <RefreshCw size={13} className={resyncing ? "animate-spin" : ""} />
+            </button>
+          )}
+          <button onClick={toggleLinkMode} data-testid="canvas-link-mode"
+            title="Cliquez une carte source puis une carte cible pour les relier (recliquez la même paire pour retirer le lien)"
+            className={`inline-flex items-center gap-1.5 px-4 h-9 rounded-full text-[12.5px] font-semibold border ${linking ? "bg-gold-deep text-white border-gold-deep" : "bg-white border-sand-200 text-ink hover:border-navy/40"}`}>
+            <Link2 size={13} /> {linking ? "Cliquez la carte cible…" : "Lier des cartes"}
+          </button>
+          <button onClick={openHistory} data-testid="canvas-history-btn"
+            title="Sauvegarder ou restaurer une version antérieure du canvas"
+            className="inline-flex items-center gap-1.5 px-4 h-9 rounded-full bg-white border border-sand-200 text-[12.5px] font-semibold text-ink hover:border-navy/40">
+            <History size={13} /> Historique
+          </button>
+          <button onClick={openShare} data-testid="canvas-share-btn"
+            title="Partager ce board en lecture seule via un lien public"
+            className="inline-flex items-center gap-1.5 px-4 h-9 rounded-full bg-white border border-sand-200 text-[12.5px] font-semibold text-ink hover:border-navy/40">
+            <Share2 size={13} /> Partager
+          </button>
           <label className="inline-flex items-center gap-1.5 px-3 h-9 rounded-full bg-white border border-sand-200 text-[12px] text-ink-soft">
             Fond
-            <input type="color" value={background} onChange={(e) => { setBackground(e.target.value); scheduleSave(elements, e.target.value); }} className="w-6 h-6 rounded border-0 bg-transparent cursor-pointer" />
+            <input type="color" value={background} onChange={(e) => { const bg = e.target.value; setBackground(bg); scheduleBackgroundSave(bg); }} className="w-6 h-6 rounded border-0 bg-transparent cursor-pointer" />
           </label>
           <span className="text-[11px] text-ink-muted italic">{saving ? "Enregistrement…" : "Enregistré"}</span>
         </div>
       </div>
 
+      {/* ── Panneau Historique (backlog #22) ── */}
+      {historyOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setHistoryOpen(false)} data-testid="canvas-history-panel">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-display text-[18px] text-navy">Historique du canvas</h3>
+              <button onClick={() => setHistoryOpen(false)} className="text-ink-soft hover:text-navy"><X size={16} /></button>
+            </div>
+            <button onClick={saveSnapshot} disabled={savingSnapshot} data-testid="canvas-save-snapshot"
+              className="w-full inline-flex items-center justify-center gap-1.5 h-9 rounded-full bg-navy text-white text-[12.5px] font-semibold mb-4 disabled:opacity-60">
+              {savingSnapshot ? <Loader2 size={13} className="animate-spin" /> : <History size={13} />} Sauvegarder une version
+            </button>
+            {snapshots.length === 0 ? (
+              <p className="text-[12.5px] text-ink-soft italic">Aucune version sauvegardée pour l'instant.</p>
+            ) : (
+              <div className="space-y-2">
+                {snapshots.map((s) => (
+                  <div key={s.id} className="flex items-center justify-between gap-2 p-3 rounded-xl bg-sand-50 border border-sand-200" data-testid={`snapshot-${s.id}`}>
+                    <div className="min-w-0">
+                      <p className="text-[12.5px] text-ink font-semibold truncate">{s.label}</p>
+                      <p className="text-[11px] text-ink-soft">{s.card_count} carte{s.card_count > 1 ? "s" : ""}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <button onClick={() => restoreSnapshot(s.id)} disabled={restoringId === s.id}
+                        className="px-3 h-7 rounded-full bg-white border border-sand-200 text-[11px] font-semibold text-ink hover:border-navy/40 disabled:opacity-60">
+                        {restoringId === s.id ? "…" : "Restaurer"}
+                      </button>
+                      <button onClick={() => removeSnapshot(s.id)} className="text-rose-500 hover:text-rose-700"><Trash2 size={13} /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Panneau Partage (backlog #23) ── */}
+      {shareOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setShareOpen(false)} data-testid="canvas-share-panel">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-display text-[18px] text-navy">Partager ce board</h3>
+              <button onClick={() => setShareOpen(false)} className="text-ink-soft hover:text-navy"><X size={16} /></button>
+            </div>
+            <p className="text-[12.5px] text-ink-soft mb-4">
+              Un lien public affiche ce canvas en lecture seule, avec les vraies valeurs de vos cartes
+              (CA, objectifs...). N'importe qui avec le lien peut le voir, sans se connecter.
+            </p>
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-[13px] text-ink font-semibold">Lien public activé</span>
+              <button onClick={() => toggleShare(!publicStatus.enabled)} disabled={togglingShare} data-testid="canvas-share-toggle"
+                className={`w-11 h-6 rounded-full relative transition-colors ${publicStatus.enabled ? "bg-navy" : "bg-sand-200"} disabled:opacity-60`}>
+                <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${publicStatus.enabled ? "translate-x-5" : "translate-x-0.5"}`} />
+              </button>
+            </div>
+            {publicStatus.enabled && publicUrl && (
+              <div className="flex items-center gap-2">
+                <input readOnly value={publicUrl} className="zinput flex-1 text-[12px]" data-testid="canvas-public-url" />
+                <button onClick={copyPublicUrl} className="px-3 h-9 rounded-full bg-white border border-sand-200 text-ink hover:border-navy/40"><Copy size={14} /></button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-[1fr,220px] gap-5">
         <div
+          ref={surfaceRef}
           onClick={() => setSelected(null)}
           className="relative rounded-2xl border border-sand-200 shadow-soft overflow-hidden"
           style={{ background, height: "620px" }}
           data-testid="canvas-surface"
         >
           {loading && <div className="absolute inset-0 grid place-items-center"><Loader2 className="animate-spin text-navy" /></div>}
+          {/* Traits de connexion entre cartes (backlog #2). Dessinés du centre
+              de la carte source vers le centre de la carte cible ; sous les
+              cartes (pointer-events désactivés) pour ne pas gêner le drag. */}
+          <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }} data-testid="canvas-connections">
+            {elements.flatMap((el) =>
+              (el.connections || []).map((targetId) => {
+                const target = elements.find((e) => e.id === targetId);
+                if (!target) return null;
+                const x1 = el.x + el.width / 2, y1 = el.y + el.height / 2;
+                const x2 = target.x + target.width / 2, y2 = target.y + target.height / 2;
+                return (
+                  <line key={`${el.id}-${targetId}`} x1={x1} y1={y1} x2={x2} y2={y2}
+                    stroke="#C9A449" strokeWidth={2} strokeDasharray="6 4" strokeOpacity={0.7} />
+                );
+              })
+            )}
+          </svg>
           {[...elements].sort((a, b) => (a.z || 0) - (b.z || 0)).map((el) => (
             <div
               key={el.id}
@@ -889,8 +1358,8 @@ function CanvasTab() {
               className={`absolute cursor-move select-none ${selected === el.id ? "ring-2 ring-navy" : ""}`}
               style={{ left: el.x, top: el.y, width: el.width, height: el.height, transform: `rotate(${el.rotation || 0}deg)`, zIndex: el.z || 0 }}
             >
-              {el.type === "image" && <img src={el.src} alt="" className="w-full h-full object-cover rounded-lg pointer-events-none" />}
-              {el.type === "text" && (
+              {el.card_type === "image" && <img src={el.src} alt="" className="w-full h-full object-cover rounded-lg pointer-events-none" />}
+              {el.card_type === "text" && (
                 <div
                   contentEditable
                   suppressContentEditableWarning
@@ -901,14 +1370,35 @@ function CanvasTab() {
                   {el.content}
                 </div>
               )}
-              {el.type === "shape" && el.shape === "rect" && (
+              {el.card_type === "shape" && el.shape === "rect" && (
                 <div className="w-full h-full rounded-md" style={{ background: el.fill, border: `2px solid ${el.stroke}` }} />
               )}
-              {el.type === "shape" && el.shape === "circle" && (
+              {el.card_type === "shape" && el.shape === "circle" && (
                 <div className="w-full h-full rounded-full" style={{ background: el.fill, border: `2px solid ${el.stroke}` }} />
               )}
-              {el.type === "shape" && el.shape === "line" && (
+              {el.card_type === "shape" && el.shape === "line" && (
                 <div className="w-full" style={{ height: 4, background: el.stroke }} />
+              )}
+              {el.entity_type === "aggregate" && (
+                <a
+                  href={AGGREGATE_MODULE[el.entity_id] ? `/${AGGREGATE_MODULE[el.entity_id]}` : "#"}
+                  onClick={(e) => { if (dragRef.current) e.preventDefault(); }}
+                  className="flex h-full w-full flex-col justify-between rounded-xl border border-navy/15 bg-white/95 p-3 no-underline shadow-soft"
+                  data-testid={`canvas-smart-card-${el.entity_id}`}
+                >
+                  <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-ink-muted">
+                    <span className={`h-1.5 w-1.5 rounded-full ${el.orphan ? "bg-rose-400" : "bg-gold-deep animate-pulse"}`} />
+                    {el.label}
+                    {el.orphan && <AlertTriangle size={11} className="text-rose-500" />}
+                  </div>
+                  <div className="text-lg font-semibold text-navy leading-tight">{el.value}</div>
+                  <div className="text-[11px] text-ink-soft">{el.sub}</div>
+                  {el.progress != null && (
+                    <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-sand-200">
+                      <div className="h-full rounded-full bg-gold-deep" style={{ width: `${Math.min(100, el.progress)}%` }} />
+                    </div>
+                  )}
+                </a>
               )}
               {selected === el.id && (
                 <div
@@ -950,6 +1440,20 @@ function CanvasTab() {
                 <button onClick={() => reorder(selectedEl.id, "front")} className="flex-1 inline-flex items-center justify-center gap-1 h-8 rounded-full bg-white border border-sand-200 text-[11.5px]"><ChevronUp size={12} />Devant</button>
                 <button onClick={() => reorder(selectedEl.id, "back")} className="flex-1 inline-flex items-center justify-center gap-1 h-8 rounded-full bg-white border border-sand-200 text-[11.5px]"><ChevronDown size={12} />Derrière</button>
               </div>
+              {(selectedEl.connections || []).length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-[11px] text-ink-soft uppercase tracking-wide">Liens sortants</p>
+                  {selectedEl.connections.map((cid) => {
+                    const t = elements.find((e) => e.id === cid);
+                    return (
+                      <div key={cid} className="flex items-center justify-between gap-2 px-2.5 h-7 rounded-full bg-sand-50 border border-sand-200 text-[11.5px] text-ink-soft">
+                        <span className="truncate">{t?.label || t?.title || t?.content || "Carte liée"}</span>
+                        <button onClick={() => removeConnection(selectedEl.id, cid)} title="Retirer ce lien" className="text-rose-500 hover:text-rose-700 flex-shrink-0"><Unlink size={12} /></button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
               <button onClick={() => deleteElement(selectedEl.id)} className="w-full inline-flex items-center justify-center gap-1.5 h-9 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-[12.5px] font-semibold"><Trash2 size={13} />Supprimer</button>
             </div>
           )}

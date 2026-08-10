@@ -6,7 +6,7 @@ import {
   ExternalLink, MessageCircle, Clock, CheckCircle2, ListPlus, Slack, Check, X, Zap,
   Youtube, Linkedin, Globe, MapPin, Download, Send, Loader2, ChevronRight,
   MessageSquare, Phone, Bot, AlertCircle, Plus, GripVertical, Target,
-  Hash, FileText, Radio,
+  Hash, FileText, Radio, Building2,
 } from "lucide-react";
 import { growthApi, growthExtApi } from "@/lib/api";
 import DecisionBanner from "@/components/DecisionBanner";
@@ -240,6 +240,14 @@ function DashboardTab({ d }) {
       </div>
       <div>
         <h3 className="sec-title" style={{ fontSize: 20, marginBottom: 10 }}>Nouveaux leads · par intention</h3>
+        {d.intent_groups.length === 0 ? (
+          <Card tid="intent-groups-empty">
+            <p className="muted" style={{ fontSize: 12.5, margin: 0, lineHeight: 1.5 }}>
+              Aucun lead pour l'instant — cliquez sur « Détecter des leads » ou « Détecter des entreprises »
+              ci-dessus pour démarrer votre pipeline.
+            </p>
+          </Card>
+        ) : (
         <div className="pgrid pgrid-3">
           {d.intent_groups.map((g) => (
             <Card key={g.key} tid={`intent-${g.key}`}>
@@ -267,65 +275,90 @@ function DashboardTab({ d }) {
             </Card>
           ))}
         </div>
+        )}
       </div>
       <div className="pgrid pgrid-2">
         <Card tid="recommended-actions">
           <Label color={C.gold}><Sparkles size={14} /> Actions recommandées</Label>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
-            {d.recommended_actions.map((a) => (
-              <div key={a.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: 12, borderRadius: 14, background: "var(--glass-soft)", border: "1px solid var(--glass-border)" }}>
-                <div style={{ minWidth: 0 }}>
-                  <p style={{ fontSize: 14, color: "var(--txt)", margin: 0 }}>{a.title}</p>
-                  <p className="muted" style={{ fontSize: 12, margin: "2px 0 0" }}>{a.reason}</p>
+          {d.recommended_actions.length === 0 ? (
+            <p className="muted" style={{ fontSize: 12.5, margin: "10px 0 0", lineHeight: 1.5 }}>
+              Pas encore de recommandation — ajoutez des leads pour que l'IA identifie des actions prioritaires.
+            </p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
+              {d.recommended_actions.map((a) => (
+                <div key={a.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: 12, borderRadius: 14, background: "var(--glass-soft)", border: "1px solid var(--glass-border)" }}>
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ fontSize: 14, color: "var(--txt)", margin: 0 }}>{a.title}</p>
+                    <p className="muted" style={{ fontSize: 12, margin: "2px 0 0" }}>{a.reason}</p>
+                  </div>
+                  <button className="zbtn zbtn-primary" style={{ height: 34, fontSize: 12, whiteSpace: "nowrap" }} onClick={() => toast.success("Action lancée")}>{a.cta}</button>
                 </div>
-                <button className="zbtn zbtn-primary" style={{ height: 34, fontSize: 12, whiteSpace: "nowrap" }} onClick={() => toast.success("Action lancée")}>{a.cta}</button>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </Card>
         <Card tid="lead-clusters">
           <Label><Users size={14} /> Lead clusters · par intention</Label>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
-            {d.lead_clusters.map((c, i) => {
-              const max = Math.max(...d.lead_clusters.map((x) => x.count));
-              return (
-                <div key={i}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}>
-                    <span style={{ color: "var(--txt)" }}>{c.label}</span><span className="muted">{c.count}</span>
+          {d.lead_clusters.length === 0 ? (
+            <p className="muted" style={{ fontSize: 12.5, margin: "12px 0 0", lineHeight: 1.5 }}>
+              Aucun lead pour l'instant — les groupes par intention apparaîtront dès la 1ère détection.
+            </p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
+              {d.lead_clusters.map((c, i) => {
+                const max = Math.max(...d.lead_clusters.map((x) => x.count));
+                return (
+                  <div key={i}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}>
+                      <span style={{ color: "var(--txt)" }}>{c.label}</span><span className="muted">{c.count}</span>
+                    </div>
+                    <div style={{ height: 8, borderRadius: 999, background: "var(--glass-soft)" }}>
+                      <div style={{ height: "100%", width: `${(c.count / max) * 100}%`, borderRadius: 999, background: c.color }} />
+                    </div>
                   </div>
-                  <div style={{ height: 8, borderRadius: 999, background: "var(--glass-soft)" }}>
-                    <div style={{ height: "100%", width: `${(c.count / max) * 100}%`, borderRadius: 999, background: c.color }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </Card>
       </div>
       <div className="pgrid pgrid-2">
         <Card tid="pain-requests">
           <Label color={C.terra}><Flame size={14} /> Douleurs & demandes détectées</Label>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
-            {d.pain_requests.map((p, i) => (
-              <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-                <span style={{ fontSize: 13, color: "var(--txt)" }}>
-                  <Chip color={p.type === "pain" ? C.terra : C.sage}>{p.type === "pain" ? "Douleur" : "Feature"}</Chip> {p.text}
-                </span>
-                <span className="muted" style={{ fontSize: 12, whiteSpace: "nowrap" }}>{p.mentions}×</span>
-              </div>
-            ))}
-          </div>
+          {d.pain_requests.length === 0 ? (
+            <p className="muted" style={{ fontSize: 12.5, margin: "10px 0 0", lineHeight: 1.5 }}>
+              Rien de détecté pour l'instant — ce bloc se remplit quand des douleurs ou demandes récurrentes ressortent de vos échanges.
+            </p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
+              {d.pain_requests.map((p, i) => (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                  <span style={{ fontSize: 13, color: "var(--txt)" }}>
+                    <Chip color={p.type === "pain" ? C.terra : C.sage}>{p.type === "pain" ? "Douleur" : "Feature"}</Chip> {p.text}
+                  </span>
+                  <span className="muted" style={{ fontSize: 12, whiteSpace: "nowrap" }}>{p.mentions}×</span>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
         <Card tid="competitor-signals">
           <Label color={C.plum}><Swords size={14} /> Signaux concurrents</Label>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
-            {d.competitor_signals.map((c, i) => (
-              <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-                <span style={{ fontSize: 13, color: "var(--txt)" }}><strong>{c.name}</strong> {c.action}</span>
-                <span className="muted" style={{ fontSize: 12, whiteSpace: "nowrap" }}>{c.time}</span>
-              </div>
-            ))}
-          </div>
+          {d.competitor_signals.length === 0 ? (
+            <p className="muted" style={{ fontSize: 12.5, margin: "10px 0 0", lineHeight: 1.5 }}>
+              Aucun signal concurrent pour l'instant — connectez une source de veille pour en voir apparaître ici.
+            </p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
+              {d.competitor_signals.map((c, i) => (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                  <span style={{ fontSize: 13, color: "var(--txt)" }}><strong>{c.name}</strong> {c.action}</span>
+                  <span className="muted" style={{ fontSize: 12, whiteSpace: "nowrap" }}>{c.time}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
       </div>
     </div>
@@ -426,7 +459,7 @@ function PipelineTab() {
           {totalValue > 0 && <span className="muted">CA potentiel : <strong style={{ color: C.sage }}>{totalValue}€</strong></span>}
         </div>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, overflowX: "auto" }}>
+      <div className="cr-kanban" style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(200px, 1fr))", gap: 12 }}>
         {pipeline?.map(stage => (
           <div key={stage.id}
             onDragOver={e => e.preventDefault()}
@@ -999,6 +1032,21 @@ function SettingsTab() {
         </div>
       </Card>
 
+      {/* Agent Prospection — entreprises réelles (Sirene/INSEE) */}
+      <Card tid="settings-sirene">
+        <Label><Building2 size={14} /> Agent Prospection — entreprises réelles</Label>
+        <p className="muted" style={{ fontSize: 12, margin: "4px 0 12px" }}>
+          Détecte des entreprises nouvellement créées dans le répertoire officiel Sirene (INSEE) —
+          aucune donnée personnelle, uniquement des informations légales publiques (SIRET, secteur, ville).
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <input className="zinput" defaultValue={s.sirene_naf} placeholder="Code NAF/APE ciblé (ex : 62.01Z)"
+            onBlur={(e) => save({ sirene_naf: e.target.value.trim() })} data-testid="settings-sirene-naf" />
+          <input className="zinput" defaultValue={s.sirene_departement} placeholder="Département (ex : 75) — vide = France entière"
+            onBlur={(e) => save({ sirene_departement: e.target.value.trim() })} data-testid="settings-sirene-departement" />
+        </div>
+      </Card>
+
       {/* Pause Agent — désactive temporairement la détection de leads */}
       <Card tid="settings-pause-agent">
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -1031,9 +1079,12 @@ function SettingsTab() {
               <span style={{ color: "var(--txt)", fontSize: 14, display: "inline-flex", alignItems: "center", gap: 8 }}>
                 <Icon size={15} /> {label} <span className="muted" style={{ fontSize: 12 }}>· {sub}</span>
               </span>
-              <button className={s[key] ? "zbtn" : "zbtn zbtn-primary"} style={{ height: 34, fontSize: 12 }}
-                onClick={() => save({ [key]: !s[key] })} data-testid={`settings-${key}`}>
-                {s[key] ? "Connecté ✓" : "Connecter"}
+              {/* Fix — ce bouton inversait juste un booléen local sans OAuth réel, affichant
+                  "Connecté ✓" sans aucune connexion existante (audit fichier par fichier).
+                  En attendant l'OAuth réel (backlog #20), on affiche l'état honnête. */}
+              <button className="zbtn" style={{ height: 34, fontSize: 12, opacity: 0.6, cursor: "not-allowed" }}
+                disabled data-testid={`settings-${key}`} title={`Connexion ${label} réelle (OAuth) bientôt disponible`}>
+                Bientôt disponible
               </button>
             </div>
           ))}
@@ -1174,6 +1225,26 @@ export default function Croissance() {
     }
   };
 
+  const [detectingCompanies, setDetectingCompanies] = useState(false);
+  const handleDetectCompanies = async () => {
+    setDetectingCompanies(true);
+    try {
+      const res = await growthExtApi.detectCompanies();
+      if (res?.new > 0) {
+        toast.success(`${res.new} nouvelle${res.new > 1 ? "s" : ""} entreprise${res.new > 1 ? "s" : ""} détectée${res.new > 1 ? "s" : ""} (Sirene) ✨`);
+      } else if (res?.error) {
+        toast.error(res.error);
+      } else {
+        toast("Aucune nouvelle entreprise pour l'instant.");
+      }
+      await reload();
+    } catch {
+      toast.error("Détection indisponible.");
+    } finally {
+      setDetectingCompanies(false);
+    }
+  };
+
   const totals = data?.dashboard?.totals;
 
   return (
@@ -1189,6 +1260,12 @@ export default function Croissance() {
             className="zbtn zbtn-primary" style={{ gap: 8, height: 40, whiteSpace: "nowrap" }}>
             {detecting ? <Loader2 size={16} className="spin" /> : <SearchIcon size={16} />}
             {detecting ? "Détection…" : "Détecter des leads"}
+          </button>
+          <button onClick={handleDetectCompanies} disabled={detectingCompanies} data-testid="growth-detect-companies-btn"
+            className="zbtn" style={{ gap: 8, height: 40, whiteSpace: "nowrap" }}
+            title="Détecte des entreprises nouvellement créées (répertoire officiel Sirene/INSEE) selon le NAF et le département ciblés dans Réglages">
+            {detectingCompanies ? <Loader2 size={16} className="spin" /> : <Building2 size={16} />}
+            {detectingCompanies ? "Détection…" : "Détecter des entreprises"}
           </button>
           {totals && (
             <div style={{ display: "flex", gap: 20 }}>

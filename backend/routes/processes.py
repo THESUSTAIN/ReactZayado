@@ -51,7 +51,7 @@ async def create_process(data: ProcessCreate, user: User = Depends(get_current_u
         await db.execute(text(
             "CREATE TABLE IF NOT EXISTS user_processes ("
             "id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36) NOT NULL, "
-            "data JSON NOT NULL, created_at DATETIME, updated_at DATETIME)"
+            "data JSON NOT NULL, created_at TIMESTAMP, updated_at TIMESTAMP)"
         ))
         process_id = data.id or str(uuid.uuid4())
         process_data = {

@@ -2,7 +2,7 @@
    - Cache "app shell" pour un démarrage rapide et un fallback hors-ligne.
    - Gestion des notifications push (Web Push / VAPID) déjà branchées côté backend.
 */
-const CACHE = "zayado-pwa-v1";
+const CACHE = "zayado-pwa-v2";
 const SHELL = ["/", "/index.html", "/manifest.json", "/logo-icon.png"];
 
 self.addEventListener("install", (event) => {
@@ -30,12 +30,15 @@ self.addEventListener("fetch", (event) => {
     );
     return;
   }
+  // Network-first pour les assets (JS/CSS/images) : on récupère TOUJOURS la version
+  // fraîche quand on est en ligne (évite de resservir un ancien bundle en cache après
+  // une mise à jour), et on ne retombe sur le cache que hors-ligne.
   event.respondWith(
-    caches.match(request).then((cached) => cached || fetch(request).then((res) => {
+    fetch(request).then((res) => {
       const copy = res.clone();
       caches.open(CACHE).then((c) => c.put(request, copy)).catch(() => {});
       return res;
-    }).catch(() => cached))
+    }).catch(() => caches.match(request))
   );
 });
 
@@ -57,9 +60,20 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const target = (event.notification.data && event.notification.data.url) || "/";
+  const targetPath = new URL(target, self.location.origin).pathname + new URL(target, self.location.origin).search;
   event.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
-      for (const client of list) { if ("focus" in client) return client.focus(); }
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(async (list) => {
+      for (const client of list) {
+        if ("focus" in client) {
+          // Un onglet est déjà ouvert : il faut le NAVIGUER vers la cible avant de le
+          // focus, sinon il reste bloqué sur la page déjà affichée (ex: Cockpit "/").
+          const clientPath = new URL(client.url).pathname;
+          if (clientPath !== targetPath.split("?")[0] && "navigate" in client) {
+            try { await client.navigate(target); } catch (e) { /* cross-origin ou non supporté */ }
+          }
+          return client.focus();
+        }
+      }
       if (self.clients.openWindow) return self.clients.openWindow(target);
     })
   );

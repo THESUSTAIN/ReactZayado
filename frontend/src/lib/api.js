@@ -56,6 +56,8 @@ export const authApi = {
     setAuthToken(null);
     return Promise.resolve({ ok: true });
   },
+  // Réglages génériques (backlog #19 — Kairos y est stocké)
+  updateSettings: (settings) => axios.put(`${API}/auth/settings`, settings, withUser()).then((r) => r.data),
 };
 
 export const paymentsApi = {
@@ -147,6 +149,34 @@ export const visionApi = {
     axios.post(`${API}/vision/board/generate-doc`, { prompt, doc_type }, withUser()).then((r) => r.data),
 };
 
+// ─── Vision Cards — modèle unifié du canvas (backlog #1) ────────────────
+export const visionCardsApi = {
+  list: (board_id = "main") => axios.get(`${API}/vision/cards`, { ...withUser(), params: { board_id } }).then((r) => r.data),
+  create: (card) => axios.post(`${API}/vision/cards`, card, withUser()).then((r) => r.data),
+  update: (id, patch) => axios.put(`${API}/vision/cards/${id}`, patch, withUser()).then((r) => r.data),
+  remove: (id) => axios.delete(`${API}/vision/cards/${id}`, withUser()).then((r) => r.data),
+  migrateLegacy: (board_id = "main") => axios.post(`${API}/vision/cards/migrate-legacy`, {}, { ...withUser(), params: { board_id } }).then((r) => r.data),
+  // Historique / versioning (backlog #22)
+  createSnapshot: (label, board_id = "main") => axios.post(`${API}/vision/cards/snapshots`, {}, { ...withUser(), params: { board_id, label } }).then((r) => r.data),
+  listSnapshots: (board_id = "main") => axios.get(`${API}/vision/cards/snapshots`, { ...withUser(), params: { board_id } }).then((r) => r.data),
+  restoreSnapshot: (id) => axios.post(`${API}/vision/cards/snapshots/${id}/restore`, {}, withUser()).then((r) => r.data),
+  deleteSnapshot: (id) => axios.delete(`${API}/vision/cards/snapshots/${id}`, withUser()).then((r) => r.data),
+  // Partage public (backlog #23)
+  getPublicStatus: (board_id = "main") => axios.get(`${API}/vision/cards/public-status`, { ...withUser(), params: { board_id } }).then((r) => r.data),
+  setPublicStatus: (enabled, board_id = "main") => axios.put(`${API}/vision/cards/public-status`, { enabled, board_id }, withUser()).then((r) => r.data),
+  getPublicBoard: (slug) => axios.get(`${API}/vision/cards/public/${slug}`).then((r) => r.data),
+};
+
+// ─── Vision Brain — cerveau stratégique (panneau IA, Accueil, Analyse) ──
+export const visionBrainApi = {
+  panel: () => axios.get(`${API}/vision/brain/panel`, withUser()).then((r) => r.data),
+  analyze: (force = false) => axios.post(`${API}/vision/brain/analyze`, { force }, withUser()).then((r) => r.data),
+  notifyExplain: (payload) => axios.post(`${API}/vision/brain/notify-explain`, payload, withUser()).then((r) => r.data),
+  connections: () => axios.get(`${API}/vision/brain/connections`, withUser()).then((r) => r.data),
+  pageContext: (payload) => axios.post(`${API}/vision/brain/page-context`, payload, withUser()).then((r) => r.data),
+  scoreHistory: (days = 90) => axios.get(`${API}/vision/brain/score-history`, withUser({ days })).then((r) => r.data),
+};
+
 // ── Studio — génération d'images (Nano Banana) & vidéos (Sora 2) ──
 export const studioApi = {
   templates: () => axios.get(`${API}/studio/templates`, withUser()).then((r) => r.data),
@@ -173,6 +203,7 @@ export const onboardingApi = {
   save: (data) => axios.post(`${API}/onboarding`, data, withUser()).then((r) => r.data),
   getDraft: () => axios.get(`${API}/onboarding/draft`, withUser()).then((r) => r.data),
   saveDraft: (data) => axios.put(`${API}/onboarding/draft`, data, withUser()).then((r) => r.data),
+  reset: () => axios.post(`${API}/onboarding/reset`, {}, withUser()).then((r) => r.data),
 };
 
 export const integrationsApi = {
@@ -244,6 +275,7 @@ export const growthExtApi = {
   // Pipeline Kanban
   getPipeline: () => axios.get(`${API}/growth/pipeline`, withUser()).then(r => r.data),
   detect: (keywords, subreddits) => axios.post(`${API}/growth/detect`, { keywords, subreddits }, withUser()).then(r => r.data),
+  detectCompanies: () => axios.post(`${API}/growth/detect-companies`, {}, withUser()).then(r => r.data),
   moveLead: (id, stage) => axios.patch(`${API}/growth/pipeline/${id}`, { stage }, withUser()).then(r => r.data),
   
   // Message IA avant envoi (Mammouth)
@@ -385,4 +417,17 @@ export const automationsApi = {
   createCustom: (description) => axios.post(`${API}/automations/custom`, { description }, withUser()).then(r => r.data),
   removeCustom: (id) => axios.delete(`${API}/automations/custom/${id}`, withUser()).then(r => r.data),
   setWellbeingConsent: (enabled) => axios.put(`${API}/automations/wellbeing-consent`, { enabled }, withUser()).then(r => r.data),
+};
+
+// ─── ACTUALITÉS — digest par marché (backlog #13) ───────────────
+export const newsApi = {
+  markets: () => axios.get(`${API}/news/markets`).then(r => r.data),
+  getMarket: () => axios.get(`${API}/news/market`, withUser()).then(r => r.data),
+  setMarket: (market) => axios.put(`${API}/news/market`, { market }, withUser()).then(r => r.data),
+  digest: () => axios.get(`${API}/news/digest`, withUser()).then(r => r.data),
+};
+
+// ─── Passeport / Gamification (backlog #17) ─────────────────────
+export const gamificationApi = {
+  passport: () => axios.get(`${API}/gamification/passport`, withUser()).then(r => r.data),
 };

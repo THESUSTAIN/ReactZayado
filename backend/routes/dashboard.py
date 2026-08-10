@@ -232,9 +232,62 @@ async def _compute_dashboard(db, user_id, user=None):
     except Exception:
         pass
 
+    # ── Insights clés (heuristiques sur données réelles, aucune valeur inventée) ──
+    # Remplace les 3 cartes codées en dur qui étaient auparavant affichées à
+    # tous les utilisateurs quel que soit leur état réel (KeyInsights ne
+    # recevait même pas `data` côté frontend). Ici : pas d'appel LLM (coût/
+    # latence inutiles pour un résumé de dashboard), uniquement des règles
+    # simples sur les métriques déjà calculées ci-dessus. Si rien de
+    # significatif à signaler, la liste reste vide → le frontend affiche un
+    # état vide honnête plutôt qu'un contenu de remplissage.
+    insights = []
+    prog = pilotage.get("progress_percent", 0)
+    if ca_objective and prog >= 80:
+        insights.append({
+            "kind": "opportunite",
+            "text": f"Vous êtes à {prog}% de votre objectif de CA du mois. Encore un effort pour l'atteindre.",
+            "cta": "Voir Pilotage", "to": "/pilotage",
+        })
+    elif not ca_objective:
+        insights.append({
+            "kind": "idee",
+            "text": "Aucun objectif de chiffre d'affaires défini pour ce mois. Fixez-en un pour suivre votre progression.",
+            "cta": "Définir un objectif", "to": "/pilotage",
+        })
+    elif ca_objective and prog < 30:
+        insights.append({
+            "kind": "attention",
+            "text": f"Vous êtes à {prog}% de votre objectif de CA du mois ({pilotage.get('ca_month_eur', 0)} € sur {int(ca_objective)} €).",
+            "cta": "Voir Pilotage", "to": "/pilotage",
+        })
+
+    if prospects_total == 0:
+        insights.append({
+            "kind": "idee",
+            "text": "Aucun prospect enregistré pour l'instant. Ajoutez vos premiers contacts pour démarrer votre pipeline commercial.",
+            "cta": "Ouvrir Croissance", "to": "/croissance",
+        })
+
+    if bien_etre_score is not None and bien_etre_score < 45:
+        insights.append({
+            "kind": "attention",
+            "text": f"Votre dernier score bien-être est bas ({bien_etre_score}/100). Pensez à souffler avant d'enchaîner.",
+            "cta": "Voir Bien-être", "to": "/bien-etre",
+        })
+
+    if tasks_total and tasks_done and (tasks_done / tasks_total) < 0.3:
+        insights.append({
+            "kind": "attention",
+            "text": f"Seulement {tasks_done} tâche(s) sur {tasks_total} terminée(s) cette semaine.",
+            "cta": "Voir mes tâches", "to": "/bureau",
+        })
+
+    insights = insights[:3]
+
     return {
         "ca_month": pilotage["ca_month_eur"],
         "ca_objective": ca_objective,
+        "insights": insights,
         "greeting_stats": greeting_stats,
         "value_generated": value_generated,
         "treasury_30d": 0,

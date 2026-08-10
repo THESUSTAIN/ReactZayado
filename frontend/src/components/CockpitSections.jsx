@@ -120,39 +120,62 @@ export function SkillsFocus({ data }) {
   );
 }
 
-/* ── Insights clés pour vous (reproduction fidèle de la maquette) ─────── */
-export function KeyInsights() {
+/* ── Insights clés pour vous ───────────────────────────────────────────
+ * Avant correction : 3 cartes 100% codées en dur ("Augmenter vos tarifs de
+ * 15%...", "Délai moyen de paiement en hausse (+4 jours)"...), affichées à
+ * tous les utilisateurs quel que soit leur état réel — le composant ne
+ * recevait même pas `data` en prop. Maintenant : consomme `data.insights`,
+ * calculé côté backend (dashboard.py::_compute_dashboard) à partir de
+ * règles simples sur les métriques réelles (CA vs objectif, prospects,
+ * bien-être, tâches). Aucune valeur inventée : si le backend n'a rien de
+ * significatif à signaler, la liste est vide et l'état vide honnête
+ * s'affiche (même logique que NightRecap ci-dessus). */
+const INSIGHT_STYLE = {
+  opportunite: { label: "Opportunité", color: SAGE, icon: TrendingUp },
+  attention: { label: "Attention", color: CORAL, icon: AlertTriangle },
+  idee: { label: "Idée du jour", color: GOLD, icon: Lightbulb },
+};
+
+export function KeyInsights({ data }) {
   const navigate = useNavigate();
-  const insights = [
-    { kind: "Opportunité", color: SAGE, icon: TrendingUp, text: "Augmenter vos tarifs de 15% pour vos offres premium.", cta: "Voir l'analyse", to: "/croissance" },
-    { kind: "Attention", color: CORAL, icon: AlertTriangle, text: "Délai moyen de paiement en hausse (+4 jours).", cta: "Agir maintenant", to: "/pilotage" },
-    { kind: "Idée du jour", color: GOLD, icon: Lightbulb, text: "Créer un pack service qui pourrait booster votre CA.", cta: "Explorer", to: "/croissance" },
-  ];
+  const raw = Array.isArray(data?.insights) ? data.insights : [];
+  const insights = raw.map((ins) => ({
+    ...INSIGHT_STYLE[ins.kind] || INSIGHT_STYLE.idee,
+    text: ins.text,
+    cta: ins.cta || "Voir",
+    to: ins.to || "/croissance",
+  }));
   return (
     <div className="glass-card" data-testid="cockpit-key-insights" style={{ padding: 20 }}>
       <SectionHead icon={Lightbulb} title="Insights clés pour vous" action="Voir tout" onAction={() => navigate("/croissance")} />
-      <p style={{ fontSize: 11.5, color: "var(--txt-muted)", margin: "-6px 0 14px" }}>Basés sur l'analyse IA (70% humain, 30% IA)</p>
-      <div className="cockpit-insights-grid">
-        {insights.map((ins, i) => {
-          const Icon = ins.icon;
-          return (
-            <div key={i} data-testid={`insight-card-${i}`} style={{
-              padding: 14, borderRadius: 14, background: "var(--glass-soft)",
-              border: `1px solid ${ins.color}33`, borderLeft: `3px solid ${ins.color}`,
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                <Icon size={14} color={ins.color} />
-                <span style={{ fontSize: 12.5, fontWeight: 700, color: ins.color }}>{ins.kind}</span>
+      {insights.length === 0 ? (
+        <p data-testid="key-insights-empty" style={{ fontSize: 12.5, color: "var(--txt-muted)", margin: 0, lineHeight: 1.5 }}>
+          Rien à signaler pour l'instant. Renseignez votre objectif de CA, vos prospects et
+          votre bien-être pour que le Cockpit vous remonte des alertes et opportunités ici.
+        </p>
+      ) : (
+        <div className="cockpit-insights-grid">
+          {insights.map((ins, i) => {
+            const Icon = ins.icon;
+            return (
+              <div key={i} data-testid={`insight-card-${i}`} style={{
+                padding: 14, borderRadius: 14, background: "var(--glass-soft)",
+                border: `1px solid ${ins.color}33`, borderLeft: `3px solid ${ins.color}`,
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                  <Icon size={14} color={ins.color} />
+                  <span style={{ fontSize: 12.5, fontWeight: 700, color: ins.color }}>{ins.label}</span>
+                </div>
+                <p style={{ fontSize: 12.5, color: "var(--txt)", margin: "0 0 10px", lineHeight: 1.5 }}>{ins.text}</p>
+                <button type="button" onClick={() => navigate(ins.to)} style={{
+                  background: "transparent", border: "none", color: "#3b5aa6", fontSize: 12,
+                  fontWeight: 600, cursor: "pointer", padding: 0,
+                }}>{ins.cta} →</button>
               </div>
-              <p style={{ fontSize: 12.5, color: "var(--txt)", margin: "0 0 10px", lineHeight: 1.5 }}>{ins.text}</p>
-              <button type="button" onClick={() => navigate(ins.to)} style={{
-                background: "transparent", border: "none", color: "#3b5aa6", fontSize: 12,
-                fontWeight: 600, cursor: "pointer", padding: 0,
-              }}>{ins.cta} →</button>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

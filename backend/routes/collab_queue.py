@@ -29,7 +29,7 @@ async def _ensure_table(db: AsyncSession):
             " title VARCHAR(255) NOT NULL,"
             " excerpt TEXT,"
             " status VARCHAR(20) NOT NULL DEFAULT 'pending',"
-            " created_at DATETIME DEFAULT CURRENT_TIMESTAMP,"
+            " created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
             " INDEX ix_queue_user_status (user_id, status)"
             ")"
         ))

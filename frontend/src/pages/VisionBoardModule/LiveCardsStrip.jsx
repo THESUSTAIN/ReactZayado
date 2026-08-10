@@ -1,22 +1,82 @@
-import React, { useEffect, useState } from "react";
-import { visionApi } from "@/lib/api";
+import React, { useEffect, useState, useCallback } from "react";
+import { visionCardsApi } from "@/lib/api";
+import useVisionEvents from "@/hooks/useVisionEvents";
 
 const MODULE_ROUTE = { pilotage: "/pilotage", "bien-etre": "/bien-etre", croissance: "/croissance" };
+// Les cartes "aggregate" du modèle unifié gardent les mêmes entity_id que l'ancien
+// système (voir backend/routes/vision_cards.py::_resolve_aggregate) → on garde le
+// même routage par module pour ne rien casser côté navigation.
+const AGGREGATE_MODULE = { ca_month: "pilotage", wellness_latest: "bien-etre", prospects_count: "croissance" };
 
 /**
  * #4 Live Cards — cartes du Vision Board reliées aux données live des autres
  * modules (CA Pilotage, streak/score Bien-être, prospects Croissance).
+ * Backend : modèle unifié /api/vision/cards (chaque carte référence une entité
+ * réelle et est résolue à chaque lecture — plus de valeur codée en dur).
  */
 export default function LiveCardsStrip() {
   const [cards, setCards] = useState([]);
 
   useEffect(() => {
     let alive = true;
-    const load = () => visionApi.liveData().then((d) => { if (alive) setCards(d.cards || []); }).catch(() => {});
+
+    const load = () =>
+      visionCardsApi
+        .migrateLegacy() // idempotent : ne fait rien si des cartes existent déjà pour ce board
+        .catch(() => {})
+        .then(() => visionCardsApi.list())
+        .then((d) => {
+          if (!alive) return;
+          const aggregateCards = (d.cards || [])
+            .filter((c) => c.entity_type === "aggregate" && AGGREGATE_MODULE[c.entity_id])
+            .map((c) => ({
+              key: c.entity_id,
+              label: c.label,
+              value: c.value,
+              sub: c.sub,
+              progress: c.progress,
+              module: AGGREGATE_MODULE[c.entity_id],
+              orphan: c.orphan,
+            }));
+          setCards(aggregateCards);
+        })
+        .catch(() => {});
+
     load();
-    const id = setInterval(load, 60000);
-    return () => { alive = false; clearInterval(id); };
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Backlog #2 — flux SSE temps réel : le strip se rafraîchit dès qu'une
+  // VisionCard est créée/modifiée/supprimée (event "card_update", poussé par
+  // le backend au moment même de l'écriture), plus un "tick" ~60s en filet
+  // pour les changements côté finance/leads/tâches non encore branchés sur le
+  // bus. Remplace l'ancien `setInterval(load, 60000)`.
+  const reload = useCallback(() => {
+    visionCardsApi
+      .list()
+      .then((d) => {
+        const aggregateCards = (d.cards || [])
+          .filter((c) => c.entity_type === "aggregate" && AGGREGATE_MODULE[c.entity_id])
+          .map((c) => ({
+            key: c.entity_id,
+            label: c.label,
+            value: c.value,
+            sub: c.sub,
+            progress: c.progress,
+            module: AGGREGATE_MODULE[c.entity_id],
+            orphan: c.orphan,
+          }));
+        setCards(aggregateCards);
+      })
+      .catch(() => {});
+  }, []);
+
+  useVisionEvents({
+    onTick: reload,
+    onCardUpdate: reload,
+    onFallbackPoll: reload,
+  });
 
   if (!cards.length) return null;
 

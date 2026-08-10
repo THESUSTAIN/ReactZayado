@@ -273,8 +273,14 @@ export default function Header({ onSettingsOpen }) {
             {notifs.length === 0 && <div className="px-3 py-6 text-center text-xs text-muted-foreground" data-testid="notifs-empty">Rien de neuf pour l'instant.</div>}
             {notifs.map((n) => {
               const Icon = NOTIF_ICONS[n.icon] || Bell;
+              const openInChat = () => {
+                markNotifsRead();
+                window.dispatchEvent(new CustomEvent("zayado:open-cockpit-chat", {
+                  detail: { notif: { title: n.title, body: n.text, kind: n.kind || n.type || n.icon } },
+                }));
+              };
               return (
-                <DropdownMenuItem key={n.id} className="flex items-start gap-3 py-3 cursor-pointer" data-testid={`notif-${n.id}`}>
+                <DropdownMenuItem key={n.id} onSelect={openInChat} className="flex items-start gap-3 py-3 cursor-pointer" data-testid={`notif-${n.id}`}>
                   <div className="w-9 h-9 rounded-lg bg-[#2952a3]/10 flex items-center justify-center flex-shrink-0"><Icon className="w-4 h-4 text-[#2952a3]" /></div>
                   <div className="flex-1 min-w-0"><p className="text-sm font-medium">{n.title}</p><p className="text-xs text-muted-foreground">{n.text} · {n.time}</p></div>
                 </DropdownMenuItem>

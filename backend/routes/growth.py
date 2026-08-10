@@ -60,6 +60,8 @@ DEFAULT_SETTINGS = {
     "vision": "",
     "keywords": [],
     "subreddits": [],
+    "sirene_naf": "",          # code NAF/APE ciblé, ex "62.01Z" (dev informatique) — vide = pas de filtre
+    "sirene_departement": "",  # ex "75" — vide = France entière
 }
 
 DEFAULT_CHANNELS = {
@@ -74,7 +76,7 @@ DEFAULT_CHANNELS = {
 async def _get_kv(db: AsyncSession, user_id: str, key: str) -> dict | None:
     try:
         r = await db.execute(
-            text("SELECT value FROM user_data WHERE user_id = :uid AND `key` = :k LIMIT 1"),
+            text("SELECT value FROM user_data WHERE user_id = :uid AND \"key\" = :k LIMIT 1"),
             {"uid": user_id, "k": key},
         )
         row = r.fetchone()
@@ -91,18 +93,18 @@ async def _save_kv(db: AsyncSession, user_id: str, key: str, data: dict):
     value = json.dumps(data)
     now = datetime.now(timezone.utc).isoformat()
     r = await db.execute(
-        text("SELECT id FROM user_data WHERE user_id = :uid AND `key` = :k"),
+        text("SELECT id FROM user_data WHERE user_id = :uid AND \"key\" = :k"),
         {"uid": user_id, "k": key},
     )
     row = r.fetchone()
     if row:
         await db.execute(
-            text("UPDATE user_data SET value = :v, updated_at = :u WHERE user_id = :uid AND `key` = :k"),
+            text("UPDATE user_data SET value = :v, updated_at = :u WHERE user_id = :uid AND \"key\" = :k"),
             {"v": value, "u": now, "uid": user_id, "k": key},
         )
     else:
         await db.execute(
-            text("INSERT INTO user_data (id, user_id, `key`, value, updated_at) VALUES (:id, :uid, :k, :v, :u)"),
+            text("INSERT INTO user_data (id, user_id, \"key\", value, updated_at) VALUES (:id, :uid, :k, :v, :u)"),
             {"id": str(uuid.uuid4()), "uid": user_id, "k": key, "v": value, "u": now},
         )
     await db.commit()
@@ -115,8 +117,8 @@ async def _ensure_leads_table(db: AsyncSession):
     await db.execute(text(
         "CREATE TABLE IF NOT EXISTS user_leads ("
         "id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36) NOT NULL, "
-        "data JSON NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, "
-        "updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)"
+        "data JSON NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
+        "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"
     ))
 
 
@@ -151,6 +153,8 @@ async def _save_lead(db: AsyncSession, user_id: str, lead: dict):
         {"id": lead["id"], "uid": user_id, "d": json.dumps(lead)},
     )
     await db.commit()
+    from routes.analytics import track_event
+    await track_event(db, user_id, "first_lead_detected", {"source": lead.get("source")})
 
 
 class LeadCreateIn(BaseModel):
@@ -334,13 +338,42 @@ async def growth_all(user: User = Depends(get_current_user), db: AsyncSession = 
         campaigns = [{"id": "all", "name": "Tous les leads", "leads": 0}]
         by_campaign = {"all": []}
 
+    # Groupes par intention (backlog: la page Croissance avait 4 cartes qui
+    # renvoyaient des tableaux vides EN PERMANENCE, pas juste pour un compte
+    # neuf — repérée pendant une correction de responsive. Calculées ici à
+    # partir des vrais leads (déjà en base), pas de valeur inventée.
+    INTENT_COLORS = ["#C9A449", "#8b6fbf", "#4a6a9e", "#5e8a5a", "#d97a4e", "#4fa3c7"]
+    intent_buckets: dict[str, list] = {}
+    for l in leads:
+        intent = l.get("intent") or "À qualifier"
+        intent_buckets.setdefault(intent, []).append(l)
+
+    intent_groups = []
+    for i, (intent, items) in enumerate(sorted(intent_buckets.items(), key=lambda kv: -len(kv[1]))[:6]):
+        color = INTENT_COLORS[i % len(INTENT_COLORS)]
+        intent_groups.append({
+            "key": intent, "label": intent, "color": color, "count": len(items),
+            "leads": [
+                {"name": it.get("name", "Lead"), "score": it.get("score") or 0,
+                 "sub": it.get("sub") or it.get("source") or "", "snippet": it.get("snippet", "")}
+                for it in sorted(items, key=lambda x: -(x.get("score") or 0))[:3]
+            ],
+        })
+    lead_clusters = [{"label": g["label"], "count": g["count"], "color": g["color"]} for g in intent_groups]
+
+    market_insights = [
+        {"title": "Leads actifs", "value": str(len(leads)), "desc": "Total dans le pipeline", "tone": "navy"},
+        {"title": "Prospects chauds", "value": str(hot), "desc": "Score ≥ 85", "tone": "terra" if hot > 0 else "gold"},
+        {"title": "Sources actives", "value": str(len(campaigns)), "desc": "Canaux de détection connectés", "tone": "sage"},
+    ]
+
     return {
         "dashboard": {
             "totals": {"leads": len(leads), "hot": hot},
-            "market_insights": [],
-            "intent_groups": [],
+            "market_insights": market_insights,
+            "intent_groups": intent_groups,
             "recommended_actions": [],
-            "lead_clusters": [],
+            "lead_clusters": lead_clusters,
             "pain_requests": [],
             "competitor_signals": [],
         },
@@ -414,6 +447,124 @@ async def detect_leads(body: DetectIn, user: User = Depends(get_current_user), d
         existing_urls.add(p["permalink"])
         new_count += 1
     return {"new": new_count, "scanned": len(posts), "keywords": keywords, "subreddits": subreddits}
+
+
+# ─────────────────────────────────────────────────────────────────
+# Agent Prospection — entreprises réelles via l'API Sirene (INSEE)
+# (backlog #9). RGPD : aucune donnée personnelle ingérée. L'API Sirene
+# expose le répertoire LÉGAL des entreprises françaises (SIREN/SIRET,
+# dénomination, code NAF, adresse, date de création) — une entité morale,
+# pas une personne physique, n'entre pas dans le champ du RGPD. On ne
+# récupère ici QUE ces données publiques officielles ; aucun email, aucun
+# téléphone, aucun contact nominatif — ce qui écarte d'office le risque de
+# conformité que poserait un scraping de réseau social ou d'annuaire de
+# contacts. Source : https://api.insee.fr (portail officiel, clé API
+# gratuite sur inscription — voir INSEE_SIRENE_API_KEY plus bas).
+#
+# Signal de prospection utilisé : entreprises nouvellement créées dans le
+# secteur (NAF) et le département ciblés par l'utilisateur — une entreprise
+# qui vient de se créer est un signal classique et légitime d'opportunité
+# commerciale (besoin d'outils, de services, de prestataires).
+INSEE_SIRENE_API_KEY = os.environ.get("INSEE_SIRENE_API_KEY", "")
+INSEE_SIRENE_BASE = "https://api.insee.fr/api-sirene/3.11"
+
+
+async def _fetch_sirene_companies(naf: str, departement: str, limit: int = 20) -> list:
+    """Interroge l'API Sirene : établissements actifs, triés par date de
+    création décroissante (les plus récents en premier). Best-effort :
+    renvoie une liste vide en cas d'erreur réseau/quota plutôt que de
+    remonter une exception (cohérent avec le reste du module : un flux
+    externe indisponible ne doit jamais casser la page)."""
+    if not INSEE_SIRENE_API_KEY:
+        return []
+    clauses = ["etatAdministratifEtablissement:A"]  # A = actif
+    if naf:
+        clauses.append(f'activitePrincipaleEtablissement:{naf}')
+    if departement:
+        clauses.append(f'codePostalEtablissement:{departement}*')
+    query = " AND ".join(clauses)
+    params = {"q": query, "nombre": str(limit), "tri": "dateCreationEtablissement desc"}
+    headers = {"X-INSEE-Api-Key-Integration": INSEE_SIRENE_API_KEY, "Accept": "application/json"}
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            r = await client.get(f"{INSEE_SIRENE_BASE}/siret", params=params, headers=headers)
+            r.raise_for_status()
+            data = r.json()
+    except Exception as e:
+        logger.warning("Sirene API indisponible: %s", e)
+        return []
+
+    out = []
+    for etab in (data.get("etablissements") or []):
+        try:
+            unite = etab.get("uniteLegale", {}) or {}
+            adresse = etab.get("adresseEtablissement", {}) or {}
+            denomination = (
+                unite.get("denominationUniteLegale")
+                or " ".join(filter(None, [unite.get("prenom1UniteLegale"), unite.get("nomUniteLegale")]))
+                or "Entreprise sans dénomination connue"
+            )
+            ville = adresse.get("libelleCommuneEtablissement", "")
+            naf_lib = etab.get("activitePrincipaleEtablissement", "")
+            date_creation = etab.get("dateCreationEtablissement", "")
+            out.append({
+                "siret": etab.get("siret", ""),
+                "name": denomination,
+                "ville": ville,
+                "naf": naf_lib,
+                "date_creation": date_creation,
+            })
+        except Exception:
+            continue
+    return out
+
+
+@router.post("/detect-companies")
+async def detect_companies(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Détecte des entreprises réelles (API Sirene) selon le NAF et le
+    département ciblés dans les Réglages, et les ajoute au pipeline comme
+    leads (source="sirene")."""
+    if not INSEE_SIRENE_API_KEY:
+        return {
+            "new": 0, "scanned": 0,
+            "error": "Agent Prospection non configuré : clé API Sirene manquante. "
+                     "Inscription gratuite sur https://api.insee.fr, variable d'environnement INSEE_SIRENE_API_KEY.",
+        }
+
+    settings = {**DEFAULT_SETTINGS, **(await _get_kv(db, user.id, "growth_settings") or {})}
+    naf = (settings.get("sirene_naf") or "").strip()
+    departement = (settings.get("sirene_departement") or "").strip()
+
+    companies = await _fetch_sirene_companies(naf, departement, limit=20)
+    if not companies:
+        return {
+            "new": 0, "scanned": 0,
+            "error": "Aucun résultat. Vérifiez le code NAF et le département dans les Réglages, "
+                     "ou l'API Sirene est temporairement indisponible.",
+        }
+
+    existing = await _list_leads(db, user.id)
+    existing_sirets = {l.get("siret") for l in existing if l.get("siret")}
+    new_count = 0
+    for c in companies:
+        if not c["siret"] or c["siret"] in existing_sirets:
+            continue
+        lead = {
+            "id": str(uuid.uuid4()),
+            "name": c["name"],
+            "company": c["name"],
+            "siret": c["siret"],
+            "sub": f"Nouvelle entreprise · {c['ville']}" if c["ville"] else "Nouvelle entreprise",
+            "source": "sirene",
+            "snippet": f"SIRET {c['siret']} · Code NAF {c['naf']} · Créée le {c['date_creation']}",
+            "date": c["date_creation"],
+            "stage": "detected",
+            "campaign": "sirene",
+        }
+        await _save_lead(db, user.id, lead)
+        existing_sirets.add(c["siret"])
+        new_count += 1
+    return {"new": new_count, "scanned": len(companies), "naf": naf, "departement": departement}
 
 
 # ─────────────────────────────────────────────────────────────────

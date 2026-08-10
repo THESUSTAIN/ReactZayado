@@ -25,7 +25,7 @@ const TABS = [
   { id: "overview", label: "Vue d'ensemble" },
   { id: "projets", label: "Projets" },
   { id: "documents", label: "Documents" },
-  { id: "dafia", label: "DAF IA" },
+  { id: "dafia", label: "Finances" },
 ];
 
 const eur = (n) => `${Math.round(n || 0).toLocaleString("fr-FR")} €`;
@@ -277,6 +277,14 @@ export default function Travail() {
       ) : (
         <div className="tv-anim" key={tab}>
           {/* ══════════ VUE D'ENSEMBLE ══════════ */}
+          {tab === "overview" && !ov && !loading && (
+            <div className="glass-card" style={{ textAlign: "center", padding: "40px 20px" }} data-testid="travail-overview-error">
+              <Info size={30} style={{ opacity: 0.4, marginBottom: 12 }} />
+              <p style={{ fontSize: 15, color: "var(--txt)", margin: "0 0 6px" }}>Impossible de charger votre activité</p>
+              <p className="muted" style={{ fontSize: 13, maxWidth: 340, margin: "0 auto 14px" }}>Un problème de connexion est survenu. Réessayez dans quelques instants.</p>
+              <button onClick={load} className="zbtn zbtn-primary" style={{ height: 36 }} data-testid="travail-overview-retry">Réessayer</button>
+            </div>
+          )}
           {tab === "overview" && ov && (<>
             <div className="grid-5-cards" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, marginBottom: 16 }}>
               <KpiCard icon={Target} value={ov.projects.active} label="Projets actifs" deltaText={ov.projects.new_this_month > 0 ? `+${ov.projects.new_this_month} ce mois` : "Aucun ce mois"} color={BLUE} testid="kpi-projects" />
@@ -348,7 +356,7 @@ export default function Travail() {
 
             <div className="tv-3col" style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr 1fr", gap: 16 }}>
               {/* Performance financière */}
-              <SectionCard title="Performance financière (ce mois)" action="Voir le DAF IA" onAction={() => setTab("dafia")} testid="section-finance">
+              <SectionCard title="Performance financière (ce mois)" action="Voir les finances" onAction={() => setTab("dafia")} testid="section-finance">
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
                   {[
                     { k: "CA", v: eur(fin.ca), d: fin.ca_delta },

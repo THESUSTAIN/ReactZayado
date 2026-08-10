@@ -912,3 +912,84 @@ class SimuResponse(Base):
     score: Mapped[int] = mapped_column(Integer, nullable=True)                   # 0-10
     ai_feedback: Mapped[dict] = mapped_column(JSON, default=dict)                # {comments, what_went_well, improvements_needed, learning_point, client_reaction}
     submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class VisionCard(Base):
+    """Carte unifiée du Vision Board (backlog #1). Une ligne = une carte posée sur le
+    canvas. Si entity_type/entity_id sont renseignés, la carte est "intelligente" :
+    sa valeur est résolue en direct depuis la table source (routes/vision_cards.py::
+    resolve_card) à chaque lecture — cache_* n'est qu'un fallback si l'entité a été
+    supprimée, jamais la source de vérité."""
+    __tablename__ = "vision_cards"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    board_id: Mapped[str] = mapped_column(String(50), default="main", index=True)
+    card_type: Mapped[str] = mapped_column(String(30), default="postit")         # postit, ca, impact, client, image, shape...
+    entity_type: Mapped[str] = mapped_column(String(30), nullable=True)          # aggregate, finance_entry, budget_goal, lead, project, ou None (carte libre)
+    entity_id: Mapped[str] = mapped_column(String(64), nullable=True)
+    title: Mapped[str] = mapped_column(String(300), nullable=True)
+    manual_content: Mapped[str] = mapped_column(Text, nullable=True)
+    x: Mapped[float] = mapped_column(Float, default=40)
+    y: Mapped[float] = mapped_column(Float, default=40)
+    width: Mapped[float] = mapped_column(Float, default=220)
+    height: Mapped[float] = mapped_column(Float, default=140)
+    rotation: Mapped[float] = mapped_column(Float, default=0)
+    z: Mapped[int] = mapped_column(Integer, default=0)
+    style: Mapped[dict] = mapped_column(JSON, default=dict)
+    connections: Mapped[list] = mapped_column(JSON, default=list)
+    # Cache de fallback (best-effort), utilisé uniquement si l'entité source est introuvable
+    cache_label: Mapped[str] = mapped_column(String(300), nullable=True)
+    cache_value: Mapped[str] = mapped_column(String(300), nullable=True)
+    cache_progress: Mapped[float] = mapped_column(Float, nullable=True)
+    cache_updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class VisionBoardSnapshot(Base):
+    """Version sauvegardée du board (backlog #22 — historique/versioning).
+    Un snapshot = une copie figée de toutes les VisionCard d'un board à un
+    instant T (JSON), restaurable. Volontairement manuel (bouton "Sauvegarder
+    une version"), pas d'auto-snapshot périodique pour ce premier jet — évite
+    d'accumuler des versions sans valeur entre deux sauvegardes explicites."""
+    __tablename__ = "vision_board_snapshots"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    board_id: Mapped[str] = mapped_column(String(50), default="main", index=True)
+    label: Mapped[str] = mapped_column(String(200), nullable=True)
+    cards_json: Mapped[list] = mapped_column(JSON, default=list)  # copie des champs persistables de chaque VisionCard
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class VisionScoreSnapshot(Base):
+    """Point d'historique du Score Business (backlog #21 — KPI Vision :
+    graphes + prévisions). Alimenté par routes/vision_brain.py::get_panel,
+    au maximum 1 point par jour et par utilisateur — remplace le simple
+    "score précédent" (vision_brain_score_prev, un seul point) par une
+    vraie série temporelle exploitable pour un graphe."""
+    __tablename__ = "vision_score_snapshots"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    score: Mapped[int] = mapped_column(Integer, nullable=False)
+    pillars: Mapped[dict] = mapped_column(JSON, default=dict)  # {vision, execution, finance, impact, energie, croissance}
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class AnalyticsEvent(Base):
+    """Événement produit (backlog #16 — métriques activation & rétention).
+    Choix technique : table interne plutôt qu'un outil tiers (Mixpanel/
+    PostHog) — aucun compte/clé externe à obtenir pour commencer à avoir
+    de vrais chiffres, migrable plus tard si un outil dédié est voulu.
+    `event_name` est un petit vocabulaire fixe (voir routes/analytics.py::
+    EVENT_NAMES) pour que les agrégations restent fiables — pas de texte
+    libre qui fragmenterait les stats en variantes orthographiques."""
+    __tablename__ = "analytics_events"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    event_name: Mapped[str] = mapped_column(String(60), nullable=False, index=True)
+    properties: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)

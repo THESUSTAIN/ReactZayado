@@ -37,7 +37,13 @@ from routes.growth_copilote import router as growth_copilote_router
 from routes.growth import router as growth_router
 from routes.prefs import router as prefs_router
 from routes.vision_board import router as vision_board_router
+from routes.vision_cards import router as vision_cards_router
+from routes.vision_events import router as vision_events_router
+from routes.news_digest import router as news_digest_router
+from routes.analytics import router as analytics_router
+from routes.gamification import router as gamification_router
 from routes.vision_ext import router as vision_ext_router
+from routes.vision_brain import vision_brain_router
 from routes.studio import router as studio_router
 from routes.simulation import simulation_router
 from routes.complexity import complexity_router
@@ -78,6 +84,7 @@ from routes.wp_sync         import wp_router
 from routes.swot_cron       import swot_router, monthly_swot_loop
 from routes.branding        import branding_router
 from routes.churn_cron      import churn_router, inactivity_alerts_loop, _gdpr_purge_loop
+from routes.agent_livraison import agent_livraison_loop
 from routes.collab_memory   import memory_router as collab_memory_router
 from routes.hot_opportunities import hot_opps_router, hot_opportunities_scan_loop
 from routes.automations import automations_router, automations_cron_loop
@@ -143,6 +150,7 @@ async def lifespan(application: FastAPI):
             inactivity_alerts_loop,
             _gdpr_purge_loop,
             hot_opportunities_scan_loop,
+            agent_livraison_loop,
             automations_cron_loop,
             vision_weekly_email_loop,
             _sync_react_to_wp_on_startup,
@@ -196,6 +204,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ── Observabilité (backlog #27, point de départ minimal) ───────────────
+# Pas de vraie stack d'observabilité (Sentry/Datadog) branchée ici — ça
+# dépend d'un choix d'infra qui n'est pas fait. Ce endpoint est le strict
+# minimum : un check santé exploitable par un load balancer / uptime
+# monitor externe (UptimeRobot, Better Uptime...) et par le smoke-test CI
+# (voir .github/workflows/ci.yml). Vérifie une vraie requête DB, pas
+# juste "le process tourne".
+@app.get("/api/health", include_in_schema=False)
+async def health_check():
+    from database import async_session_factory
+    from sqlalchemy import text as _text
+    db_ok = False
+    try:
+        async with async_session_factory() as _db:
+            await _db.execute(_text("SELECT 1"))
+            db_ok = True
+    except Exception as e:
+        logger.error(f"[HEALTH] DB check failed: {e}")
+    status_code = 200 if db_ok else 503
+    from fastapi.responses import JSONResponse
+    return JSONResponse(status_code=status_code, content={"status": "ok" if db_ok else "degraded", "db": db_ok})
+
 # ── Mount all routers under /api ───────────────────────────────────────
 app.include_router(api_router,        prefix="/api")
 app.include_router(config_router,     prefix="/api/config")
@@ -229,6 +259,12 @@ app.include_router(growth_copilote_router)
 app.include_router(growth_router)
 app.include_router(prefs_router)
 app.include_router(vision_board_router)
+app.include_router(vision_cards_router)
+app.include_router(vision_events_router)
+app.include_router(news_digest_router)
+app.include_router(analytics_router)
+app.include_router(gamification_router)
+app.include_router(vision_brain_router, prefix="/api")
 app.include_router(vision_ext_router)
 app.include_router(studio_router)
 app.include_router(simulation_router, prefix="/api")
@@ -316,17 +352,17 @@ async def _auto_migrate_on_startup():
                 "projects": [
                     ("total_time_seconds", "INT DEFAULT 0"),
                     ("is_running",        "BOOLEAN DEFAULT FALSE"),
-                    ("timer_started_at",  "DATETIME NULL"),
+                    ("timer_started_at",  "TIMESTAMP NULL"),
                     ("color",             "VARCHAR(20) DEFAULT '#1E3A8A'"),
                     ("hourly_rate",       "FLOAT DEFAULT 0"),
-                    ("updated_at",        "DATETIME NULL"),
+                    ("updated_at",        "TIMESTAMP NULL"),
                 ],
                 "users": [
                     ("purchased_credits", "INT DEFAULT 0"),
                     ("bonus_credits",     "INT DEFAULT 0"),
-                    ("credits_last_reset","DATETIME NULL"),
+                    ("credits_last_reset","TIMESTAMP NULL"),
                     ("memory",            "TEXT NULL"),
-                    ("last_login_at",     "DATETIME NULL"),
+                    ("last_login_at",     "TIMESTAMP NULL"),
                     ("oauth_provider",    "VARCHAR(20) NULL"),
                     ("oauth_id",          "VARCHAR(255) NULL"),
                     ("referral_code",     "VARCHAR(50) NULL"),
@@ -337,24 +373,24 @@ async def _auto_migrate_on_startup():
                     ("discount_percent",  "INT DEFAULT 0"),
                     ("discount_verified", "BOOLEAN DEFAULT FALSE"),
                     ("discount_doc_url",  "VARCHAR(500) NULL"),
-                    ("discount_expires_at","DATETIME NULL"),
+                    ("discount_expires_at","TIMESTAMP NULL"),
                     ("cancel_at_period_end","BOOLEAN DEFAULT FALSE"),
                     ("cancellation_reason","VARCHAR(500) NULL"),
                     ("partner_code",      "VARCHAR(50) NULL"),
                     ("partner_url",       "VARCHAR(500) NULL"),
                     ("thesustain_member", "BOOLEAN DEFAULT FALSE"),
                     ("thesustain_type",   "VARCHAR(30) NULL"),
-                    ("updated_at",        "DATETIME NULL"),
+                    ("updated_at",        "TIMESTAMP NULL"),
                 ],
                 "conversations": [
                     ("folder_id",  "VARCHAR(36) NULL"),
                     ("is_favorite","BOOLEAN DEFAULT FALSE"),
                     ("shared",     "BOOLEAN DEFAULT FALSE"),
                     ("share_id",   "VARCHAR(36) NULL"),
-                    ("updated_at", "DATETIME NULL"),
+                    ("updated_at", "TIMESTAMP NULL"),
                 ],
                 "workflows": [
-                    ("last_run_at", "DATETIME NULL"),
+                    ("last_run_at", "TIMESTAMP NULL"),
                     ("run_count",   "INT DEFAULT 0"),
                 ],
                 "custom_agents": [
@@ -373,8 +409,8 @@ async def _auto_migrate_on_startup():
                     ("is_active",           "BOOLEAN DEFAULT TRUE"),
                     ("is_verified",         "BOOLEAN DEFAULT FALSE"),
                     ("verification_token",  "VARCHAR(100) NULL"),
-                    ("last_used_at",        "DATETIME NULL"),
-                    ("revoked_at",          "DATETIME NULL"),
+                    ("last_used_at",        "TIMESTAMP NULL"),
+                    ("revoked_at",          "TIMESTAMP NULL"),
                 ],
                 "credit_logs": [
                     ("mode",            "VARCHAR(20) NULL"),

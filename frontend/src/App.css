@@ -1227,7 +1227,7 @@ textarea.zinput { height: auto; padding: 12px 14px; resize: vertical; line-heigh
 .pgrid-4 { grid-template-columns: 1fr; }
 .pgrid-2 { grid-template-columns: 1fr; }
 .pgrid-3 { grid-template-columns: 1fr; }
-@media (min-width: 640px) { .pgrid-4 { grid-template-columns: 1fr 1fr; } .pgrid-3 { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 640px) { .pgrid-4 { grid-template-columns: 1fr 1fr; } .pgrid-3 { grid-template-columns: 1fr 1fr; } .pgrid-2 { grid-template-columns: 1fr 1fr; } }
 @media (min-width: 1000px) {
   .pgrid-4 { grid-template-columns: repeat(4, 1fr); }
   .pgrid-3 { grid-template-columns: repeat(3, 1fr); }
@@ -1963,7 +1963,11 @@ textarea.zinput { height: auto; padding: 12px 14px; resize: vertical; line-heigh
 /* ===== Onboarding v2 ===== */
 .ob-spin { animation: obspin 1s linear infinite; }
 @keyframes obspin { to { transform: rotate(360deg); } }
-.ob-overlay { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.ob-overlay { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px;
+  background:
+    radial-gradient(90% 70% at 14% 6%, rgba(201,164,73,0.12) 0%, rgba(201,164,73,0) 46%),
+    linear-gradient(180deg, #1b2942 0%, #101d33 55%, #0b1626 100%);
+}
 .ob-tag { display: inline-block; font-family: 'Manrope', sans-serif; font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 600; color: #C9A449; margin-bottom: 16px; }
 .ob-tag-gold { color: #C9A449; }
 .ob-title { font-family: 'Manrope', sans-serif; font-weight: 600; letter-spacing: -0.02em; font-size: 26px; line-height: 1.12; color: var(--txt); margin: 0 0 6px; }
@@ -1971,11 +1975,15 @@ textarea.zinput { height: auto; padding: 12px 14px; resize: vertical; line-heigh
 @media (min-width: 768px) { .ob-title-lg { font-size: 52px; } }
 .ob-sub { font-family: 'Manrope', sans-serif; font-size: 14px; color: var(--txt-muted); margin: 0 0 22px; line-height: 1.5; }
 
-/* Phase 1 — éditorial fond crème */
-.ob-editorial { background: #F5EFE2; }
+/* Phase 1 — éditorial plein écran navy (aligné sur la référence onboarding) */
+.ob-editorial {
+  background:
+    radial-gradient(90% 70% at 14% 6%, rgba(201,164,73,0.12) 0%, rgba(201,164,73,0) 46%),
+    linear-gradient(180deg, #1b2942 0%, #101d33 55%, #0b1626 100%);
+}
 .ob-slide { max-width: 640px; text-align: left; }
-.ob-editorial .ob-title { color: #1a2233; }
-.ob-editorial-sub { font-family: 'Manrope', sans-serif; font-size: 17px; line-height: 1.6; color: #5b6270; margin: 0 0 32px; max-width: 560px; }
+.ob-editorial .ob-title { color: #F6F2EA; }
+.ob-editorial-sub { font-family: 'Manrope', sans-serif; font-size: 17px; line-height: 1.6; color: rgba(246,242,234,0.66); margin: 0 0 32px; max-width: 560px; }
 .ob-cta {
   display: inline-flex; align-items: center; gap: 10px; cursor: pointer;
   font-family: 'Manrope', sans-serif; font-weight: 600; font-size: 15px;
@@ -1986,7 +1994,7 @@ textarea.zinput { height: auto; padding: 12px 14px; resize: vertical; line-heigh
 .ob-cta:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(201,164,73,0.4); }
 .ob-cta:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
 .ob-dots { display: flex; gap: 8px; margin-top: 34px; }
-.ob-dots span { width: 8px; height: 8px; border-radius: 999px; background: rgba(26,34,51,0.18); transition: all 0.3s; }
+.ob-dots span { width: 8px; height: 8px; border-radius: 999px; background: rgba(255,255,255,0.20); transition: all 0.3s; }
 .ob-dots span.on { width: 26px; background: #C9A449; }
 
 /* Chargement IA */
@@ -1998,13 +2006,16 @@ textarea.zinput { height: auto; padding: 12px 14px; resize: vertical; line-heigh
 .ob-msg-dot { width: 7px; height: 7px; border-radius: 50%; background: #C9A449; flex-shrink: 0; }
 .ob-msg-check { color: #6ee7b7; flex-shrink: 0; }
 
-/* Cartes glassmorphism (étapes 1-5, synthèse, mémoire) */
+/* Étapes 1-5, synthèse, mémoire — plein écran aéré (plus de "boîte" : le contenu
+   repose directement sur le fond navy, façon référence onboarding). */
 .ob-modal {
-  width: 100%; max-width: 620px; max-height: 90vh; overflow-y: auto;
-  background: rgba(16,26,52,0.96); border: 1px solid rgba(255,255,255,0.14);
-  border-radius: 28px; padding: 34px; box-shadow: 0 30px 80px rgba(0,0,0,0.5);
-  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto;
+  background: transparent; border: none;
+  border-radius: 0; padding: 28px 22px; box-shadow: none;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  text-align: center;
 }
+.ob-modal .ob-field, .ob-modal .ob-chips, .ob-modal .ob-loading-list { text-align: left; }
 .ob-modal .ob-title, .ob-modal .ob-sub { color: #fff; }
 .ob-modal .ob-sub { color: rgba(255,255,255,0.65); }
 /* Overlays d'onboarding TOUJOURS sombres (ob-modal / ob-loading) : forcer un
@@ -2261,8 +2272,14 @@ textarea.zinput { height: auto; padding: 12px 14px; resize: vertical; line-heigh
   /* Tableaux responsive */
   .zayado-table-wrap { overflow-x: auto; }
   .zayado-table { min-width: 600px; }
+}
 
-  /* Header — évite le débordement (badge d'essai + avatar coupés) */
+/* Header — le mode "bottom nav" (mobile) démarre à 900px partout ailleurs
+   dans ce fichier ; cette règle était restée à 640px, ce qui laissait une
+   zone 641-900px (tablette, petit laptop) où la barre de recherche + badge
+   + icônes se retrouvaient tassés sans place pour respirer — repéré sur
+   une capture à ~960px de large montrant un header écrasé. */
+@media (max-width: 900px) {
   .app-header { padding: 8px 10px; gap: 6px; }
   .header-search { display: none; }
   .header-logo { flex-shrink: 0; }
@@ -2271,6 +2288,10 @@ textarea.zinput { height: auto; padding: 12px 14px; resize: vertical; line-heigh
   .header-icon-btn { width: 36px; height: 36px; flex-shrink: 0; }
   .header-profile { padding: 4px; flex-shrink: 0; }
   .header-profile-info, .header-profile-chevron { display: none; }
+}
+
+/* Fix overflow horizontal + décoration mobile (bottom nav, tableaux, tabs…) */
+@media (max-width: 640px) {
 
   /* Bottom nav mobile — pleine largeur, icônes seules (7 items ne tiennent pas avec le texte) */
   .bottom-nav {
@@ -2518,9 +2539,11 @@ textarea.zinput { height: auto; padding: 12px 14px; resize: vertical; line-heigh
 @keyframes tvFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @media (max-width: 1000px) {
   .tv-3col { grid-template-columns: 1fr !important; }
+  .cr-kanban { grid-template-columns: repeat(2, 1fr) !important; }
 }
 @media (max-width: 640px) {
   .grid-5-cards { grid-template-columns: repeat(2, 1fr) !important; }
   .tv-kanban { grid-template-columns: 1fr !important; }
+  .cr-kanban { grid-template-columns: 1fr !important; }
 }
 @media (prefers-reduced-motion: reduce) { .tv-anim { animation: none; } }

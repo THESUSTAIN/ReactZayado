@@ -58,8 +58,8 @@ async def _ensure_table(db: AsyncSession):
             "label VARCHAR(255) DEFAULT NULL, "
             "category VARCHAR(64) DEFAULT NULL, "
             "counterparty VARCHAR(128) DEFAULT NULL, "
-            "booked_at DATETIME DEFAULT NULL, "
-            "created_at DATETIME DEFAULT CURRENT_TIMESTAMP, "
+            "booked_at TIMESTAMP DEFAULT NULL, "
+            "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
             "UNIQUE (user_id, source, external_id))"
         ))
         await db.execute(text(
@@ -78,8 +78,8 @@ async def _ensure_table(db: AsyncSession):
             "label VARCHAR(255) DEFAULT NULL, "
             "category VARCHAR(64) DEFAULT NULL, "
             "counterparty VARCHAR(128) DEFAULT NULL, "
-            "booked_at DATETIME DEFAULT NULL, "
-            "created_at DATETIME DEFAULT CURRENT_TIMESTAMP, "
+            "booked_at TIMESTAMP DEFAULT NULL, "
+            "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
             "INDEX idx_user_booked (user_id, booked_at), "
             "UNIQUE KEY unique_external (user_id, source, external_id))"
         ))

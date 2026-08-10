@@ -51,7 +51,7 @@ async def _ensure_branding_table(db: AsyncSession):
     await db.execute(text(
         "CREATE TABLE IF NOT EXISTS app_branding ("
         "id VARCHAR(36) PRIMARY KEY, data JSON NOT NULL, "
-        "updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)"
+        "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"
     ))
 
 
@@ -101,7 +101,7 @@ async def branding_update(body: BrandingIn, admin=Depends(get_admin_user), db: A
     r = await db.execute(text("SELECT id FROM app_branding WHERE id = 'global' LIMIT 1"))
     if r.fetchone():
         await db.execute(
-            text("UPDATE app_branding SET data = :d WHERE id = 'global'"),
+            text("UPDATE app_branding SET data = :d, updated_at = CURRENT_TIMESTAMP WHERE id = 'global'"),
             {"d": json.dumps(new)},
         )
     else:

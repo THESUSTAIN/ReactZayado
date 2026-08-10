@@ -399,6 +399,8 @@ async def complete_onboarding(body: OnboardingData, user=Depends(get_current_use
     settings["onboarding_completed"] = True
     user.settings = settings
     await db.commit()
+    from routes.analytics import track_event
+    await track_event(db, user.id, "onboarding_completed", {"sector": body.sector})
     return {"status": "ok", "message": "Onboarding complete"}
 
 @features_router.get("/onboarding/status")
@@ -568,6 +570,32 @@ async def complete_onboarding_simple(
         "first_mission": first_mission,
         "summary": f"{first_name or 'Votre'} cockpit est prêt — l'IA a préparé votre 1ère mission.",
     }
+
+
+@onboarding_alias_router.post("/onboarding/reset")
+async def reset_onboarding(user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Preview/dev : remet l'utilisateur en état 'non onboardé' pour rejouer l'onboarding.
+    Réinitialise les 3 sources de vérité : settings.onboarding_completed,
+    UserOnboarding.completed, et la préférence KV user_prefs.onboarded."""
+    settings = dict(user.settings or {})
+    settings["onboarding_completed"] = False
+    user.settings = settings
+
+    result = await db.execute(select(UserOnboarding).where(UserOnboarding.user_id == user.id))
+    ob = result.scalar_one_or_none()
+    if ob:
+        ob.completed = False
+
+    try:
+        from routes.growth import _get_kv, _save_kv
+        prefs = (await _get_kv(db, user.id, "user_prefs")) or {}
+        prefs["onboarded"] = False
+        await _save_kv(db, user.id, "user_prefs", prefs)
+    except Exception:
+        pass
+
+    await db.commit()
+    return {"status": "ok", "onboarding_done": False}
 
 
 

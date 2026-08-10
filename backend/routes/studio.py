@@ -80,7 +80,7 @@ async def _ensure_table(db: AsyncSession):
         "year INT NOT NULL, "
         "month INT NOT NULL, "
         "count INT NOT NULL DEFAULT 0, "
-        "updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, "
+        "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
         "PRIMARY KEY (user_id, kind, year, month))"
     ))
 

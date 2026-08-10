@@ -19,6 +19,9 @@ import { useAuth } from "@/context/AuthContext";
 import { growthApi, integrationsApi, visionExtApi, sendMagicLink, accountApi, paymentsApi } from "@/lib/api";
 import { toast } from "sonner";
 import BusinessIdentityCard from "@/components/BusinessIdentityCard";
+import NewsDigest from "@/components/NewsDigest";
+import KairosCard from "@/components/KairosCard";
+import PassportBadge from "@/components/PassportBadge";
 import AutomatisationSettings from "@/components/AutomatisationSettings";
 import PricingScreen from "@/components/PricingScreen";
 
@@ -124,6 +127,9 @@ function MemoireSection() {
         Ces informations alimentent votre Co-pilote pour des conseils personnalisés.
       </p>
       <BusinessIdentityCard vision={vision} />
+      <NewsDigest />
+      <PassportBadge />
+      <KairosCard />
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {[
           { key: "why", label: "Pourquoi (votre raison d'être)", placeholder: "Pourquoi faites-vous ce que vous faites ?" },

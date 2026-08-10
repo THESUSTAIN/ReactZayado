@@ -1,5 +1,6 @@
 """Authentication routes for Extension IA by Zayado API."""
 import asyncio
+import hmac
 from fastapi import APIRouter, HTTPException, Depends, Request
 from sqlalchemy import select, update, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -71,6 +72,9 @@ async def register(user_data: UserCreateSchema, request: Request = None, db: Asy
     db.add(user)
     await db.commit()
     await db.refresh(user)
+
+    from routes.analytics import track_event
+    await track_event(db, user.id, "signup", {"has_referrer": bool(referrer)})
 
     # Créditer le parrain si parrainage valide
     if referrer:
@@ -182,6 +186,8 @@ async def login(credentials: UserLoginSchema, request: Request = None, db: Async
     try:
         await db.execute(update(User).where(User.id == user.id).values(last_login_at=datetime.now(timezone.utc)))
         await db.commit()
+        from routes.analytics import track_event
+        await track_event(db, user.id, "login")
     except Exception:
         await db.rollback()
     # ── 2FA réellement appliquée (correction audit) ──────────────────────────
@@ -231,6 +237,11 @@ async def login_verify_2fa(data: Dict[str, str], request: Request = None, db: As
     if payload.get("scope") != "login_2fa":
         raise HTTPException(status_code=401, detail="Jeton de vérification invalide")
     user_id = payload.get("sub")
+    # Audit sécurité : ce code à 6 chiffres n'avait aucune limite de tentatives
+    # (contrairement à login/reset/emergency-reset juste au-dessus) — brute-forçable
+    # en quelques secondes sans throttle. Même fenêtre que les autres endpoints sensibles.
+    if rate_limiter.is_rate_limited(f"2fa-verify:{user_id}", max_attempts=8, window_seconds=600):
+        raise HTTPException(status_code=429, detail="Trop de tentatives. Reconnectez-vous.")
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
@@ -238,7 +249,7 @@ async def login_verify_2fa(data: Dict[str, str], request: Request = None, db: As
     settings = user.settings or {}
     stored_code = settings.get("pending_2fa_code", "")
     stored_time = settings.get("pending_2fa_time", "")
-    if not stored_code or code != stored_code:
+    if not stored_code or not hmac.compare_digest(code, stored_code):
         raise HTTPException(status_code=400, detail="Code invalide")
     if stored_time and (datetime.now(timezone.utc) - datetime.fromisoformat(stored_time)).total_seconds() > 600:
         raise HTTPException(status_code=400, detail="Code expiré")
@@ -369,7 +380,7 @@ async def emergency_reset(data: Dict[str, str], request: Request = None, db: Asy
     if not admin_secret:
         raise HTTPException(status_code=503, detail="Réinitialisation d'urgence non configurée")
     client_ip = request.client.host if request else "unknown"
-    if secret != admin_secret:
+    if not hmac.compare_digest(secret, admin_secret):
         logger.warning(f"Emergency reset FAILED attempt for {email} from {client_ip}")
         raise HTTPException(status_code=403, detail="Accès interdit")
     if not email or not new_password:
@@ -406,10 +417,12 @@ async def send_2fa_code(user: User = Depends(get_current_user), db: AsyncSession
 @auth_router.post("/2fa/verify")
 async def verify_2fa_code(data: Dict[str, str], user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     code = data.get("code", "")
+    if rate_limiter.is_rate_limited(f"2fa-verify-settings:{user.id}", max_attempts=8, window_seconds=600):
+        raise HTTPException(status_code=429, detail="Trop de tentatives. Réessayez plus tard.")
     settings = user.settings or {}
     stored_code = settings.get("pending_2fa_code", "")
     stored_time = settings.get("pending_2fa_time", "")
-    if not stored_code or code != stored_code:
+    if not stored_code or not hmac.compare_digest(code, stored_code):
         raise HTTPException(status_code=400, detail="Code invalide")
     if stored_time:
         code_time = datetime.fromisoformat(stored_time)
@@ -433,7 +446,7 @@ async def update_settings(settings: Dict[str, Any], user: User = Depends(get_cur
     ALLOWED_KEYS = {
         "default_mode", "language", "theme", "notifications", "timer_alert_hours",
         "creditAlert", "mode_switch_behavior", "dismissed_notifications",
-        "bubble_position", "font_size", "auto_execute_agent"
+        "bubble_position", "font_size", "auto_execute_agent", "kairos", "market",
     }
     current = dict(user.settings or {})
     for k, v in settings.items():

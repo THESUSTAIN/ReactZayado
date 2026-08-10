@@ -25,8 +25,8 @@ async def _ensure_table(db: AsyncSession):
     await db.execute(text(
         "CREATE TABLE IF NOT EXISTS user_data ("
         "id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(255) NOT NULL, "
-        "`key` VARCHAR(255) NOT NULL, value JSON, "
-        "updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)"
+        "\"key\" VARCHAR(255) NOT NULL, value JSON, "
+        "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"
     ))
 
 

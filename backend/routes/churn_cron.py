@@ -240,6 +240,17 @@ async def _send_inactivity_alert(db, user: User, tier: dict, branding: dict) -> 
     """
     Envoie un email de relance pour un tier donné.
     Retourne (success, variant_index).
+
+    Fix "Web Push VAPID branché — envoi réel" (audit) : le code d'envoi push
+    (routes/push.py::send_push_to_user) existait déjà, complet, mais n'était
+    appelé nulle part sauf par l'endpoint /push/test. Ce cron de relance
+    d'inactivité est le point d'accroche naturel le plus évident : on a déjà
+    la boucle, les préférences utilisateur, le contenu du message — il ne
+    manquait que l'appel. Le push est envoyé EN PLUS de l'email (pas à sa
+    place), respecte les mêmes préférences (family="reminders"), et pointe
+    vers le Hub IA au tap comme demandé. Volontairement exclu du tier RGPD
+    (335j) : c'est un avertissement légal de suppression de compte, pas une
+    relance d'engagement — un push dessus serait maladroit, pas informatif.
     """
     try:
         from utils import send_brevo_email
@@ -265,6 +276,19 @@ async def _send_inactivity_alert(db, user: User, tier: dict, branding: dict) -> 
                 extra_headers=extra_headers,
             ),
         )
+
+        if tier["key"] != "tier_335":
+            try:
+                from routes.push import send_push_to_user
+                push_title = tier.get("title_tpl", "{name}, on vous attend").format(name=name)
+                await send_push_to_user(
+                    db=db, user_id=user.id, title=push_title,
+                    body="Votre cockpit a bougé pendant votre absence — un coup d'œil ?",
+                    url="/vision-board", family="reminders",
+                )
+            except Exception as pe:
+                logger.warning(f"[CHURN_CRON] Push relance échoué pour {user.id} (non bloquant, email déjà tenté) : {pe}")
+
         return bool(ok), variant_idx
     except Exception as e:
         logger.exception(f"[CHURN_CRON] Send failed for {user.email} tier {tier['key']}: {e}")

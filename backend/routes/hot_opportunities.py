@@ -96,7 +96,7 @@ class HotOppManualIn(BaseModel):
 
 async def _get_opps(db: AsyncSession, user_id: str) -> list:
     r = await db.execute(
-        text("SELECT value FROM user_data WHERE user_id = :uid AND `key` = 'hot_opportunities' LIMIT 1"),
+        text("SELECT value FROM user_data WHERE user_id = :uid AND \"key\" = 'hot_opportunities' LIMIT 1"),
         {"uid": user_id},
     )
     row = r.fetchone()
@@ -113,18 +113,18 @@ async def _save_opps(db: AsyncSession, user_id: str, items: list):
     import json
     data = json.dumps({"items": items, "last_scan": datetime.now(timezone.utc).isoformat()})
     existing = (await db.execute(
-        text("SELECT id FROM user_data WHERE user_id = :uid AND `key` = 'hot_opportunities'"),
+        text("SELECT id FROM user_data WHERE user_id = :uid AND \"key\" = 'hot_opportunities'"),
         {"uid": user_id},
     )).fetchone()
     if existing:
         await db.execute(
-            text("UPDATE user_data SET value = :d WHERE user_id = :uid AND `key` = 'hot_opportunities'"),
+            text("UPDATE user_data SET value = :d WHERE user_id = :uid AND \"key\" = 'hot_opportunities'"),
             {"d": data, "uid": user_id},
         )
     else:
         import uuid
         await db.execute(
-            text("INSERT INTO user_data (id, user_id, `key`, value) VALUES (:id, :uid, 'hot_opportunities', :d)"),
+            text("INSERT INTO user_data (id, user_id, \"key\", value) VALUES (:id, :uid, 'hot_opportunities', :d)"),
             {"id": str(uuid.uuid4()), "uid": user_id, "d": data},
         )
     await db.commit()
@@ -323,7 +323,7 @@ async def hot_opportunities_scan_loop():
                 # Récupérer les users avec Growth Agent actif
                 from sqlalchemy import text as t
                 rows = (await db.execute(
-                    t("SELECT user_id, value FROM user_data WHERE `key` = 'growth_config'")
+                    t("SELECT user_id, value FROM user_data WHERE \"key\" = 'growth_config'")
                 )).fetchall()
 
                 async with httpx.AsyncClient() as session:
@@ -360,6 +360,26 @@ async def hot_opportunities_scan_loop():
                             merged = sorted(merged, key=lambda x: x["score"], reverse=True)[:50]
                             await _save_opps(db, user_id, merged)
                             logger.info(f"[HOT_OPP] User {user_id}: {len(new_opps)} new opps")
+
+                            # Fix "Web Push VAPID branché — envoi réel" (audit) : les
+                            # opportunités étaient détectées et sauvegardées mais
+                            # personne n'était jamais notifié — l'utilisateur ne les
+                            # découvrait qu'en rouvrant l'app. On notifie uniquement
+                            # les opportunités à score élevé (>=70) pour ne pas spammer,
+                            # et seulement la meilleure du lot si plusieurs arrivent
+                            # dans le même cycle de scan.
+                            best_new = max(new_opps, key=lambda x: x["score"], default=None)
+                            if best_new and best_new["score"] >= 70:
+                                try:
+                                    from routes.push import send_push_to_user
+                                    await send_push_to_user(
+                                        db=db, user_id=user_id,
+                                        title="Opportunité chaude détectée",
+                                        body=best_new["title"][:120],
+                                        url="/croissance", family="business",
+                                    )
+                                except Exception as pe:
+                                    logger.warning(f"[HOT_OPP] Push échoué pour {user_id} (non bloquant) : {pe}")
                     except Exception as e:
                         logger.warning(f"[HOT_OPP] User {user_id} error: {e}")
 

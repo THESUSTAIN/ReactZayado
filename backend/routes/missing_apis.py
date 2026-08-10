@@ -45,8 +45,8 @@ async def _ensure_table(db: AsyncSession, table: str):
     await db.execute(text(
         f"CREATE TABLE IF NOT EXISTS {table} ("
         f"id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36) NOT NULL, "
-        f"data JSON NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, "
-        f"updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)"
+        f"data JSON NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
+        f"updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"
     ))
 
 
@@ -152,7 +152,10 @@ async def create_task(body: TaskIn, user: User = Depends(get_current_user), db: 
     data = body.dict()
     data["done"] = False
     data["in_progress"] = False
-    return await _insert_row(db, "user_tasks", user.id, data)
+    result = await _insert_row(db, "user_tasks", user.id, data)
+    from routes.analytics import track_event
+    await track_event(db, user.id, "first_task_created")
+    return result
 
 
 @missing_router.post("/tasks/generate")
@@ -1057,13 +1060,13 @@ async def wellness_state(user=Depends(get_current_user)):
         from database import async_session_factory
         from datetime import datetime, timezone, timedelta
         async with async_session_factory() as s:
-            r = await s.execute(text("SELECT value FROM user_data WHERE user_id = :uid AND `key` = 'wellness_today'"), {"uid": uid})
+            r = await s.execute(text("SELECT value FROM user_data WHERE user_id = :uid AND \"key\" = 'wellness_today'"), {"uid": uid})
             row = r.fetchone()
             if row and row[0]:
                 import json
                 try: today = {**today, **json.loads(row[0])}
                 except Exception: pass
-            r = await s.execute(text("SELECT value FROM user_data WHERE user_id = :uid AND `key` = 'wellness_history_30d'"), {"uid": uid})
+            r = await s.execute(text("SELECT value FROM user_data WHERE user_id = :uid AND \"key\" = 'wellness_history_30d'"), {"uid": uid})
             row2 = r.fetchone()
             history = []
             if row2 and row2[0]:

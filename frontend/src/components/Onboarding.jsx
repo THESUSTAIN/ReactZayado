@@ -155,8 +155,8 @@ export default function Onboarding({ onDone, replay = false }) {
             position: "absolute", top: 18, right: 18, zIndex: 5,
             width: 38, height: 38, borderRadius: 999,
             display: "flex", alignItems: "center", justifyContent: "center",
-            background: "rgba(26,34,51,0.06)", border: "1px solid rgba(26,34,51,0.15)",
-            color: "#1a2233", cursor: "pointer",
+            background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)",
+            color: "#F6F2EA", cursor: "pointer",
           }}
         >
           {isDark ? <Moon size={16} /> : <Sun size={16} />}

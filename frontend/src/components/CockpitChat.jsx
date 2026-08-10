@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { MessageCircle, X, Send, Loader2, Sparkles, Handshake, ExternalLink, Newspaper } from "lucide-react";
-import { copiloteApi, dailyBriefApi, API } from "@/lib/api";
+import { copiloteApi, dailyBriefApi, visionBrainApi, API } from "@/lib/api";
 
 const SUGGESTIONS = [
   "Quelles sont mes priorités aujourd'hui ?",
@@ -52,6 +52,23 @@ export default function CockpitChat() {
           localStorage.setItem(dayKey, "1");
           return [...m, { role: "assistant", text: brief.chat_intro, brief: true }];
         });
+      }
+      // Notification → l'IA explique en langage naturel (sources conditionnelles)
+      const notif = e?.detail?.notif;
+      if (notif) {
+        setMessages((m) => [...m, { role: "user", text: `📣 ${notif.title || "Nouvelle notification"}` }]);
+        setLoading(true);
+        visionBrainApi.notifyExplain({
+          title: notif.title || "", body: notif.body || notif.text || "", kind: notif.kind || notif.type || "",
+        })
+          .then((res) => {
+            setMessages((m) => [...m, {
+              role: "assistant", text: res.explanation || "Voici l'explication de cette notification.",
+              sources: res.sources || [],
+            }]);
+          })
+          .catch(() => setMessages((m) => [...m, { role: "assistant", text: "Je n'ai pas pu détailler cette notification pour le moment." }]))
+          .finally(() => setLoading(false));
       }
     };
     window.addEventListener("zayado:open-cockpit-chat", handler);
@@ -134,6 +151,22 @@ export default function CockpitChat() {
             <div key={i} className={`cockpit-msg ${m.role}`} data-testid={`cockpit-msg-${m.role}`}
               style={{ whiteSpace: "pre-wrap" }}>
               {m.text}
+              {/* Sources (style Perplexity) — uniquement pour les actualités liées à l'état de l'user */}
+              {m.sources?.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }} data-testid={`cockpit-msg-${i}-sources`}>
+                  {m.sources.map((s, j) => (
+                    <a key={j} href={s.url} target="_blank" rel="noopener noreferrer"
+                      data-testid={`cockpit-source-${j}`}
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11,
+                        padding: "2px 8px", borderRadius: 8, textDecoration: "none",
+                        border: "1px solid rgba(245,158,11,0.35)", background: "rgba(245,158,11,0.12)", color: "#fbbf24",
+                      }}>
+                      <Newspaper size={11} /> {s.label}
+                    </a>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
           {loading && <div className="cockpit-msg assistant"><Loader2 size={15} className="spin" /> Réflexion…</div>}

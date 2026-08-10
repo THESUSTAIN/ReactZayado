@@ -112,7 +112,7 @@ DEFAULT_AUTOMATIONS = [
 
 async def _get_automations(db: AsyncSession, user_id: str) -> list:
     r = await db.execute(
-        text("SELECT value FROM user_data WHERE user_id = :uid AND `key` = 'automations' LIMIT 1"),
+        text("SELECT value FROM user_data WHERE user_id = :uid AND \"key\" = 'automations' LIMIT 1"),
         {"uid": user_id},
     )
     row = r.fetchone()
@@ -139,17 +139,17 @@ async def _get_automations(db: AsyncSession, user_id: str) -> list:
 async def _save_automations(db: AsyncSession, user_id: str, automations: list):
     data = json.dumps(automations)
     existing = (await db.execute(
-        text("SELECT id FROM user_data WHERE user_id = :uid AND `key` = 'automations'"),
+        text("SELECT id FROM user_data WHERE user_id = :uid AND \"key\" = 'automations'"),
         {"uid": user_id},
     )).fetchone()
     if existing:
         await db.execute(
-            text("UPDATE user_data SET value = :d WHERE user_id = :uid AND `key` = 'automations'"),
+            text("UPDATE user_data SET value = :d WHERE user_id = :uid AND \"key\" = 'automations'"),
             {"d": data, "uid": user_id},
         )
     else:
         await db.execute(
-            text("INSERT INTO user_data (id, user_id, `key`, value, updated_at) VALUES (:id, :uid, 'automations', :d, CURRENT_TIMESTAMP)"),
+            text("INSERT INTO user_data (id, user_id, \"key\", value, updated_at) VALUES (:id, :uid, 'automations', :d, CURRENT_TIMESTAMP)"),
             {"id": str(uuid.uuid4()), "uid": user_id, "d": data},
         )
     await db.commit()
@@ -170,9 +170,9 @@ async def _run_a1(db: AsyncSession, user: User, payload: dict) -> str:
     try:
         from sqlalchemy import text as t
         await db.execute(t(
-            "INSERT INTO user_data (id, user_id, `key`, value) "
+            "INSERT INTO user_data (id, user_id, \"key\", value) "
             "SELECT :id, :uid, 'leads', JSON_ARRAY_APPEND(COALESCE("
-            "(SELECT value FROM user_data WHERE user_id = :uid AND `key` = 'leads'), '[]'), "
+            "(SELECT value FROM user_data WHERE user_id = :uid AND \"key\" = 'leads'), '[]'), "
             "'$', CAST(:lead AS JSON)) ON DUPLICATE KEY UPDATE data = "
             "JSON_ARRAY_APPEND(COALESCE(data, '[]'), '$', CAST(:lead AS JSON))"
         ), {
@@ -237,7 +237,7 @@ async def _run_a2(db: AsyncSession, user: User, payload: dict) -> str:
         # Stocker le brouillon en user_data
         drafts_key = "yt_comment_drafts"
         r = await db.execute(
-            text("SELECT value FROM user_data WHERE user_id = :uid AND `key` = :k LIMIT 1"),
+            text("SELECT value FROM user_data WHERE user_id = :uid AND \"key\" = :k LIMIT 1"),
             {"uid": user.id, "k": drafts_key},
         )
         row = r.fetchone()
@@ -254,17 +254,17 @@ async def _run_a2(db: AsyncSession, user: User, payload: dict) -> str:
 
         data = json.dumps(drafts)
         existing = (await db.execute(
-            text("SELECT id FROM user_data WHERE user_id = :uid AND `key` = :k"),
+            text("SELECT id FROM user_data WHERE user_id = :uid AND \"key\" = :k"),
             {"uid": user.id, "k": drafts_key},
         )).fetchone()
         if existing:
             await db.execute(
-                text("UPDATE user_data SET value = :d WHERE user_id = :uid AND `key` = :k"),
+                text("UPDATE user_data SET value = :d WHERE user_id = :uid AND \"key\" = :k"),
                 {"d": data, "uid": user.id, "k": drafts_key},
             )
         else:
             await db.execute(
-                text("INSERT INTO user_data (id, user_id, `key`, value) VALUES (:id, :uid, :k, :d)"),
+                text("INSERT INTO user_data (id, user_id, \"key\", value) VALUES (:id, :uid, :k, :d)"),
                 {"id": str(uuid.uuid4()), "uid": user.id, "k": drafts_key, "d": data},
             )
         await db.commit()
@@ -358,7 +358,7 @@ async def _run_a5(db: AsyncSession, user: User) -> str:
 
         # Stocker en user_data
         await db.execute(text(
-            "INSERT INTO user_data (id, user_id, `key`, value) VALUES (:id, :uid, 'weekly_recap_latest', :d) "
+            "INSERT INTO user_data (id, user_id, \"key\", value) VALUES (:id, :uid, 'weekly_recap_latest', :d) "
             "ON DUPLICATE KEY UPDATE data = :d"
         ), {
             "id": str(uuid.uuid4()),
@@ -430,7 +430,7 @@ class WellbeingConsentIn(BaseModel):
 
 async def _get_automation_prefs(db: AsyncSession, user_id: str) -> dict:
     r = await db.execute(
-        text("SELECT value FROM user_data WHERE user_id = :uid AND `key` = 'automation_prefs' LIMIT 1"),
+        text("SELECT value FROM user_data WHERE user_id = :uid AND \"key\" = 'automation_prefs' LIMIT 1"),
         {"uid": user_id},
     )
     row = r.fetchone()
@@ -445,13 +445,13 @@ async def _get_automation_prefs(db: AsyncSession, user_id: str) -> dict:
 async def _save_automation_prefs(db: AsyncSession, user_id: str, prefs: dict):
     data = json.dumps(prefs)
     existing = (await db.execute(
-        text("SELECT id FROM user_data WHERE user_id = :uid AND `key` = 'automation_prefs'"),
+        text("SELECT id FROM user_data WHERE user_id = :uid AND \"key\" = 'automation_prefs'"),
         {"uid": user_id},
     )).fetchone()
     if existing:
-        await db.execute(text("UPDATE user_data SET value = :d WHERE user_id = :uid AND `key` = 'automation_prefs'"), {"d": data, "uid": user_id})
+        await db.execute(text("UPDATE user_data SET value = :d WHERE user_id = :uid AND \"key\" = 'automation_prefs'"), {"d": data, "uid": user_id})
     else:
-        await db.execute(text("INSERT INTO user_data (id, user_id, `key`, value, updated_at) VALUES (:id, :uid, 'automation_prefs', :d, CURRENT_TIMESTAMP)"), {"id": str(uuid.uuid4()), "uid": user_id, "d": data})
+        await db.execute(text("INSERT INTO user_data (id, user_id, \"key\", value, updated_at) VALUES (:id, :uid, 'automation_prefs', :d, CURRENT_TIMESTAMP)"), {"id": str(uuid.uuid4()), "uid": user_id, "d": data})
     await db.commit()
 
 
@@ -617,7 +617,7 @@ async def automations_cron_loop():
             async with async_session_factory() as db:
                 # Récupérer tous les users avec automations activées
                 rows = (await db.execute(
-                    text("SELECT user_id, value FROM user_data WHERE `key` = 'automations'")
+                    text("SELECT user_id, value FROM user_data WHERE \"key\" = 'automations'")
                 )).fetchall()
 
                 for row in rows:
@@ -662,7 +662,7 @@ async def automations_cron_loop():
 
                         # Persister les run_count / last_run mis à jour
                         await db.execute(
-                            text("UPDATE user_data SET value = :d WHERE user_id = :uid AND `key` = 'automations'"),
+                            text("UPDATE user_data SET value = :d WHERE user_id = :uid AND \"key\" = 'automations'"),
                             {"d": json.dumps(automations), "uid": user_id},
                         )
                         await db.commit()

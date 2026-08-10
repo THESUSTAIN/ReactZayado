@@ -241,6 +241,11 @@ async def create_agent(data: AgentCreate, user: User = Depends(get_current_user)
     plan = user.plan or "free"
     max_agents = AGENT_LIMITS.get(plan, 0)
 
+    # Passeport / Gamification (backlog #17) : bonus additif au plan, jamais
+    # un remplacement — voir routes/gamification.py pour la logique des paliers.
+    from routes.gamification import get_bonus_agent_slots
+    max_agents += await get_bonus_agent_slots(db, user.id)
+
     # Admin override
     if user.role == "admin":
         max_agents = 100
@@ -332,6 +337,8 @@ async def create_from_template(data: dict, user: User = Depends(get_current_user
     AGENT_LIMITS = {"free": 0, "starter": 0, "student": 0, "pro": 5, "business": 999, "team": 999, "admin": 999}
     plan = user.plan or "free"
     max_agents = AGENT_LIMITS.get(plan, 1)
+    from routes.gamification import get_bonus_agent_slots
+    max_agents += await get_bonus_agent_slots(db, user.id)
     if user.role == "admin": max_agents = 100
     count = (await db.execute(select(func.count(CustomAgent.id)).where(CustomAgent.user_id == user.id))).scalar() or 0
     if count >= max_agents:

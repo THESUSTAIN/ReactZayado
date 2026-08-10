@@ -215,6 +215,8 @@ async def google_oauth(request: OAuthLoginRequest, db: AsyncSession = Depends(ge
             try:
                 await db.execute(update(User).where(User.id == user.id).values(last_login_at=datetime.now(timezone.utc)))
                 await db.commit()
+                from routes.analytics import track_event
+                await track_event(db, user.id, "login", {"via": "google"})
             except Exception:
                 await db.rollback()
             token = create_access_token({"sub": user.id})
@@ -289,6 +291,8 @@ async def microsoft_oauth(request: OAuthLoginRequest, db: AsyncSession = Depends
         try:
             await db.execute(update(User).where(User.id == user.id).values(last_login_at=datetime.now(timezone.utc)))
             await db.commit()
+            from routes.analytics import track_event
+            await track_event(db, user.id, "login", {"via": "microsoft"})
         except Exception:
             await db.rollback()
         token = create_access_token({"sub": user.id})

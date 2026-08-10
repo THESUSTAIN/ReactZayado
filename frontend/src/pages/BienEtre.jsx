@@ -643,7 +643,8 @@ export default function BienEtre() {
           <div style={{ marginBottom: 16 }} data-testid="boutique-recos">
             <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 12 }}>
               <h2 className="sec-title" style={{ fontSize: 20 }}>Ce que votre score suggère</h2>
-              <button className="zbtn" style={{ height: 34, fontSize: 12 }} data-testid="visit-shop-btn">
+              <button className="zbtn" style={{ height: 34, fontSize: 12 }} data-testid="visit-shop-btn"
+                onClick={() => toast.info("La boutique Zayado arrive bientôt — elle est en préparation.")}>
                 <ShoppingBag size={13} /> Visiter la boutique
               </button>
             </div>
@@ -665,7 +666,8 @@ export default function BienEtre() {
                       <p className="muted" style={{ fontSize: 12, fontStyle: "italic", margin: "4px 0 10px" }}>{pwhy}</p>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <span style={{ fontSize: 17, color: "var(--txt)", fontWeight: 300 }}>{p.price}</span>
-                        <button className="zbtn zbtn-primary" style={{ height: 32, fontSize: 12 }}>Découvrir</button>
+                        <button className="zbtn zbtn-primary" style={{ height: 32, fontSize: 12 }}
+                          onClick={() => toast.info(`"${pname}" sera disponible à l'ouverture de la boutique.`)}>Découvrir</button>
                       </div>
                     </div>
                   </div>

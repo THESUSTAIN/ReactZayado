@@ -427,7 +427,9 @@ function DocumentsTab() {
     const load = async () => {
       try {
         const data = await documentsApi.list();
-        setDocs(Array.isArray(data) ? data : data.documents || []);
+        // Fix — le backend renvoie { items: [...] }, pas { documents: [...] } :
+        // sans ça, les vrais documents de l'utilisateur ne s'affichaient jamais.
+        setDocs(Array.isArray(data) ? data : data.items || data.documents || []);
       } catch {
         setDocs([
           { id: "d1", title: "Email de bienvenue client — template", type: "email", created_at: "2026-07-01", source: "ai" },
@@ -496,26 +498,44 @@ function DocumentsTab() {
           {connecting === "onedrive" ? <Loader2 size={14} className="spin" /> : cloud.onedrive ? <Check size={14} /> : <FolderOpen size={14} />}
           OneDrive{cloud.onedrive ? " · connecté" : ""}
         </button>
-        <button className="zbtn" style={{ gap: 6, height: 36, fontSize: 12 }}>
+        <button className="zbtn" style={{ gap: 6, height: 36, fontSize: 12 }}
+          onClick={() => toast.info("Connexion Notion bientôt disponible ici.")}>
           <Link2 size={14} /> Notion
         </button>
       </div>
 
       {loading ? <p className="muted"><Loader2 size={14} className="spin" style={{ display: "inline" }} /> Chargement…</p> : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {docs.map(doc => (
-            <div key={doc.id} className="glass-card" style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px" }} data-testid={`doc-${doc.id}`}>
-              <span style={{ fontSize: 22 }}>{typeEmoji[doc.type] || typeEmoji.default}</span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 14, fontWeight: 500, color: "var(--txt)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.title}</p>
-                <p className="muted" style={{ fontSize: 11, margin: "2px 0 0" }}>{doc.created_at} {doc.source === "ai" && "· généré par IA"}</p>
+          {docs.map(doc => {
+            const docTitle = doc.title || doc.name || "Document sans titre";
+            const downloadDoc = () => {
+              const blob = new Blob([doc.content || "(document vide)"], { type: "text/markdown;charset=utf-8" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url; a.download = `${docTitle}.md`;
+              document.body.appendChild(a); a.click(); a.remove();
+              URL.revokeObjectURL(url);
+            };
+            const openDoc = () => {
+              const w = window.open("", "_blank");
+              if (!w) { toast.error("Le navigateur a bloqué l'ouverture de l'onglet."); return; }
+              w.document.write(`<title>${docTitle}</title><pre style="white-space:pre-wrap;font-family:ui-sans-serif,system-ui;padding:24px;max-width:800px;margin:0 auto;">${(doc.content || "(document vide)").replace(/</g, "&lt;")}</pre>`);
+              w.document.close();
+            };
+            return (
+              <div key={doc.id} className="glass-card" style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px" }} data-testid={`doc-${doc.id}`}>
+                <span style={{ fontSize: 22 }}>{typeEmoji[doc.type] || typeEmoji.default}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 14, fontWeight: 500, color: "var(--txt)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{docTitle}</p>
+                  <p className="muted" style={{ fontSize: 11, margin: "2px 0 0" }}>{doc.created_at} {doc.source === "ai" && "· généré par IA"}</p>
+                </div>
+                <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                  <button onClick={downloadDoc} className="zbtn" style={{ height: 30, padding: "0 10px", fontSize: 11 }}><Download size={12} /> Télécharger</button>
+                  <button onClick={openDoc} className="zbtn" style={{ height: 30, padding: "0 10px", fontSize: 11 }}><ExternalLink size={12} /> Ouvrir</button>
+                </div>
               </div>
-              <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                <button className="zbtn" style={{ height: 30, padding: "0 10px", fontSize: 11 }}><Download size={12} /> Télécharger</button>
-                <button className="zbtn" style={{ height: 30, padding: "0 10px", fontSize: 11 }}><ExternalLink size={12} /> Ouvrir</button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
