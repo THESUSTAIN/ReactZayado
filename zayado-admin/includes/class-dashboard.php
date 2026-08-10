@@ -4,7 +4,16 @@ defined('ABSPATH') || exit;
 class Zayado_Dashboard {
 
     public static function render(): void {
-        $res   = Zayado_API::get('/admin/stats');
+        // Statut de connexion — indépendant du reste de la page, toujours affiché,
+        // pour voir en un coup d'œil si WordPress ↔ backend fonctionne, même si
+        // /admin/stats plante ou renvoie quelque chose d'inattendu.
+        // Timeout volontairement court (8s) : si le backend est lent/HS, la page
+        // doit quand même se charger et afficher un statut rouge, au lieu de rester
+        // bloquée jusqu'au max_execution_time du serveur (page blanche).
+        $conn_res = Zayado_API::get('/admin/config', 8);
+        $conn_ok  = $conn_res['success'];
+
+        $res   = $conn_ok ? Zayado_API::get('/admin/stats', 10) : ['success' => false, 'error' => 'Ignoré : la connexion a déjà échoué ci-dessus.'];
         $stats = $res['success'] ? $res['data'] : null;
         $error = $res['success'] ? null : $res['error'];
         ?>
@@ -14,7 +23,25 @@ class Zayado_Dashboard {
                 <p class="zayado-subtitle">Données en temps réel depuis le backend Zayado.</p>
             </div>
 
-            <?php if ($error): ?>
+            <!-- Statut de connexion -->
+            <div class="zayado-alert <?php echo $conn_ok ? 'zayado-alert-success' : 'zayado-alert-error'; ?>"
+                 style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+                <span>
+                    <?php if ($conn_ok): ?>
+                        🟢 <strong>Connexion backend : OK</strong> — le plugin WordPress communique correctement avec l'API FastAPI et le token admin est valide.
+                    <?php else: ?>
+                        🔴 <strong>Connexion backend : ÉCHEC</strong> — <?php echo esc_html($conn_res['error']); ?>
+                    <?php endif; ?>
+                </span>
+                <a href="<?php echo admin_url('admin.php?page=zayado-dashboard'); ?>" class="zayado-btn">🔄 Retester maintenant</a>
+                <?php if (!$conn_ok): ?>
+                <a href="<?php echo admin_url('admin.php?page=zayado-config'); ?>" class="zayado-btn zayado-btn-gold">⚙️ Aller à la configuration</a>
+                <?php endif; ?>
+            </div>
+
+            <?php if (!$conn_ok): ?>
+                <!-- La connexion a déjà échoué (bandeau rouge ci-dessus) : inutile de dupliquer le message. -->
+            <?php elseif ($error): ?>
                 <div class="zayado-alert zayado-alert-error">
                     ⚠️ <?php echo esc_html($error); ?>
                     <br><a href="<?php echo admin_url('admin.php?page=zayado-config'); ?>">→ Configurer la connexion</a>
@@ -87,6 +114,11 @@ class Zayado_Dashboard {
             </div>
             <?php endif; ?>
 
+            <?php elseif ($res['success']): ?>
+                <div class="zayado-alert zayado-alert-error">
+                    ⚠️ Le backend a répondu mais sans données exploitables (réponse vide ou format inattendu).
+                    <br>Vérifiez les logs du backend FastAPI (endpoint <code>/admin/stats</code>) et que la base de données contient bien des enregistrements.
+                </div>
             <?php endif; ?>
         </div>
         <?php

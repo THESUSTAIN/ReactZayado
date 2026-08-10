@@ -20,9 +20,13 @@ class Zayado_API {
      * @param string $method  GET | POST | PUT | DELETE
      * @param string $endpoint  ex: /admin/stats
      * @param array|null $body  données JSON
+     * @param int $timeout  délai max en secondes (défaut 30). Mettre une valeur basse
+     *                      (ex: 8) pour les appels de statut/santé afin d'éviter que la
+     *                      page WordPress ne dépasse le max_execution_time du serveur
+     *                      si le backend est lent ou hors service.
      * @return array  ['success' => bool, 'data' => mixed, 'error' => string]
      */
-    public static function request(string $method, string $endpoint, ?array $body = null): array {
+    public static function request(string $method, string $endpoint, ?array $body = null, int $timeout = 30): array {
         $url   = self::get_base_url() . $endpoint;
         $token = self::get_token();
 
@@ -32,7 +36,7 @@ class Zayado_API {
 
         $args = [
             'method'  => $method,
-            'timeout' => 30,
+            'timeout' => $timeout,
             'headers' => [
                 'Authorization' => 'Bearer ' . $token,
                 'Content-Type'  => 'application/json',
@@ -63,15 +67,15 @@ class Zayado_API {
         return ['success' => true, 'data' => $data];
     }
 
-    public static function get(string $endpoint): array {
-        return self::request('GET', $endpoint);
+    public static function get(string $endpoint, int $timeout = 30): array {
+        return self::request('GET', $endpoint, null, $timeout);
     }
 
-    public static function post(string $endpoint, array $body = []): array {
-        return self::request('POST', $endpoint, $body);
+    public static function post(string $endpoint, array $body = [], int $timeout = 30): array {
+        return self::request('POST', $endpoint, $body, $timeout);
     }
 
-    public static function put(string $endpoint, array $body = []): array {
-        return self::request('PUT', $endpoint, $body);
+    public static function put(string $endpoint, array $body = [], int $timeout = 30): array {
+        return self::request('PUT', $endpoint, $body, $timeout);
     }
 }
