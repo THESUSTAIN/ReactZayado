@@ -6,9 +6,11 @@ const TOKEN_KEY = "zayado_token";
  * useVisionEvents — Remplace le polling `setInterval` par un flux SSE
  * (backend: /api/vision/events/stream, correction backlog #2).
  *
- * EventSource ne permet pas d'ajouter un header Authorization : le token JWT
- * est donc passé en query string, comme le fait le backend (voir
- * routes/vision_events.py::_user_from_token).
+ * EventSource ne permet pas d'ajouter un header Authorization : au lieu d'y
+ * passer directement le token de session (long-vécu), on demande d'abord un
+ * ticket court (45s, usage unique) via POST /vision/events/ticket, et c'est
+ * ce ticket qui voyage dans l'URL du flux SSE — portée réduite au strict
+ * nécessaire (voir routes/vision_events.py::issue_sse_ticket).
  *
  * Reconnexion : EventSource se reconnecte déjà nativement sur coupure réseau,
  * mais avec un délai fixe. On ajoute un backoff exponentiel manuel (2s → 30s
@@ -64,11 +66,29 @@ export default function useVisionEvents({
       }
     };
 
-    const connect = () => {
+    const connect = async () => {
+      if (closedRef.current) return;
+      let ticket;
+      try {
+        // Ticket court-vécu (45s, usage unique) au lieu du vrai token de
+        // session dans l'URL — voir routes/vision_events.py::issue_sse_ticket.
+        const r = await fetch(`${base}/vision/events/ticket`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!r.ok) throw new Error(`ticket ${r.status}`);
+        ticket = (await r.json()).ticket;
+      } catch {
+        if (!everConnectedRef.current) startFallback();
+        const delay = retryRef.current;
+        retryRef.current = Math.min(delay * 2, 30000);
+        reconnectTimerRef.current = setTimeout(connect, delay);
+        return;
+      }
       if (closedRef.current) return;
       let es;
       try {
-        es = new EventSource(`${base}/vision/events/stream?token=${encodeURIComponent(token)}`);
+        es = new EventSource(`${base}/vision/events/stream?token=${encodeURIComponent(ticket)}`);
       } catch {
         startFallback();
         return;

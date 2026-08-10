@@ -386,8 +386,12 @@ function AppShell() {
       {/* Cockpit — chat co-pilote (panneau à droite) */}
       <CockpitChat />
 
-      {/* Bouton flottant Démo Investisseur (bas-gauche) — Thomas / admin */}
-      {isHome && <InvestorDemoButton user={user} />}
+      {/* Bouton flottant Démo Investisseur (bas-gauche) — Thomas / admin, preview uniquement.
+          Jamais en production : montrer un outil de démo devant de vrais visiteurs
+          serait à la fois un risque (remplit/écrase les vraies données du cockpit)
+          et un signal peu pro. Repoussé au-dessus du DebugMenu (même colonne bas-gauche,
+          z-index 300) pour ne pas se superposer avec son menu déroulant quand il est ouvert. */}
+      {isHome && isPreview && <InvestorDemoButton user={user} />}
 
       {/* Modale Paramètres */}
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />

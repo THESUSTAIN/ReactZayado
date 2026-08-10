@@ -141,6 +141,7 @@ export function KeyInsights({ data }) {
   const raw = Array.isArray(data?.insights) ? data.insights : [];
   const insights = raw.map((ins) => ({
     ...INSIGHT_STYLE[ins.kind] || INSIGHT_STYLE.idee,
+    label: ins.label || (INSIGHT_STYLE[ins.kind] || INSIGHT_STYLE.idee).label,
     text: ins.text,
     cta: ins.cta || "Voir",
     to: ins.to || "/croissance",

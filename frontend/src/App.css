@@ -1763,6 +1763,9 @@ textarea.zinput { height: auto; padding: 12px 14px; resize: vertical; line-heigh
   align-items: center;
   transition: transform 320ms cubic-bezier(.2,.9,.3,1.2);
   will-change: transform;
+  overflow: visible; /* l'infobulle au survol d'une icone deborde volontairement
+                        hors des 96px du rail — ne jamais la clipper ici (bug
+                        signale en QA : "Croissance" tronque en "roissance"). */
   pointer-events: none; /* on ré-active sur les enfants pour laisser passer
                            les clics vers le contenu à travers le vide */
 }

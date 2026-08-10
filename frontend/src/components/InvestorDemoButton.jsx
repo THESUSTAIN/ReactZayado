@@ -46,7 +46,7 @@ export default function InvestorDemoButton({ user }) {
 
   return (
     <div
-      style={{ position: "fixed", left: 18, bottom: 92, zIndex: 60, display: "flex", flexDirection: "column", gap: 8 }}
+      style={{ position: "fixed", left: 18, bottom: 300, zIndex: 250, display: "flex", flexDirection: "column", gap: 8 }}
       data-testid="investor-demo-widget"
     >
       <button

@@ -140,7 +140,7 @@ export default function CockpitGreeting({ data = {}, expressMode, setExpressMode
           title="Decouvrir la Boutique Zayado"
           style={{
             position: "relative", display: "inline-flex", alignItems: "center", gap: 7,
-            height: 38, padding: "0 16px", borderRadius: 999,
+            height: 38, padding: "0 34px 0 16px", borderRadius: 999,
             border: "1px solid rgba(201,164,73,0.55)",
             background: "rgba(201,164,73,0.16)", color: "var(--gold-strong, #B8860B)",
             fontSize: 13, fontWeight: 700, cursor: "pointer",

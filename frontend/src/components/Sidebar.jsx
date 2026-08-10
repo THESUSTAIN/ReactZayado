@@ -152,7 +152,7 @@ export default function Sidebar({ onSettingsOpen }) {
                     className={`menu-link group relative w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 ${active ? "active" : ""} ${item.action ? "menu-link-action" : ""}`}
                   >
                     <Icon size={17} strokeWidth={1.9} />
-                    <span className="menu-tooltip pointer-events-none absolute left-[60px] top-1/2 -translate-y-1/2 whitespace-nowrap rounded-md text-white text-xs px-2.5 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-50">
+                    <span className="menu-tooltip pointer-events-none absolute left-full ml-3 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-md text-white text-xs px-2.5 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-50">
                       {t(item.tkey)}
                     </span>
                   </button>

@@ -49,13 +49,13 @@ function Card({ icon: Icon, label, value, sub, progress, chart, chartColor, delt
         </div>
       ) : null}
 
-      {delta !== undefined && (
+      {delta !== undefined && delta !== null && (
         <p style={{
           fontSize: 11.5, color: "#8fa876", fontWeight: 500,
           marginTop: 8, display: "flex", alignItems: "center", gap: 4,
         }}>
           <TrendingUp size={12} />
-          +{delta}% vs mois dernier
+          {delta >= 0 ? "+" : ""}{delta}% vs mois dernier
         </p>
       )}
     </div>

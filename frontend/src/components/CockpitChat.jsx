@@ -9,6 +9,55 @@ const SUGGESTIONS = [
   "Comment améliorer ma trésorerie ?",
 ];
 
+// ── Rendu Markdown minimal, sans dépendance ─────────────────────────────
+// QA a signalé que le chat affichait du Markdown brut ("##", "**texte**")
+// non interprété. Pas de lib markdown installée dans ce projet — plutôt que
+// d'en ajouter une (risque de build/bundle non testé ici), un petit
+// convertisseur ciblé sur les patterns réellement vus dans les réponses IA
+// (titres ##/###, **gras**, *italique*, listes à puces -/*). Construit en
+// JSX (pas dangerouslySetInnerHTML) pour rester safe même si le texte
+// contient du contenu non fiable.
+function renderMarkdownLite(text) {
+  if (!text) return text;
+  const lines = String(text).split("\n");
+  const out = [];
+  let listBuf = [];
+  const flushList = (key) => {
+    if (listBuf.length) {
+      out.push(<ul key={`ul-${key}`} style={{ margin: "4px 0", paddingLeft: 18 }}>{listBuf}</ul>);
+      listBuf = [];
+    }
+  };
+  const inline = (s) => {
+    // **gras** puis *italique* — split successif, pas de regex imbriquée risquée
+    const parts = s.split(/(\*\*[^*]+\*\*)/g);
+    return parts.map((p, i) => {
+      if (/^\*\*[^*]+\*\*$/.test(p)) return <strong key={i}>{p.slice(2, -2)}</strong>;
+      const sub = p.split(/(\*[^*]+\*)/g);
+      return sub.map((q, j) => (/^\*[^*]+\*$/.test(q) ? <em key={`${i}-${j}`}>{q.slice(1, -1)}</em> : q));
+    });
+  };
+  lines.forEach((line, i) => {
+    const h = line.match(/^(#{1,3})\s+(.*)$/);
+    const li = line.match(/^\s*[-*]\s+(.*)$/);
+    if (h) {
+      flushList(i);
+      const Tag = h[1].length === 1 ? "strong" : "span";
+      out.push(<div key={i} style={{ fontWeight: 700, marginTop: i > 0 ? 8 : 0 }}><Tag>{inline(h[2])}</Tag></div>);
+    } else if (li) {
+      listBuf.push(<li key={i}>{inline(li[1])}</li>);
+    } else if (line.trim() === "") {
+      flushList(i);
+      out.push(<br key={i} />);
+    } else {
+      flushList(i);
+      out.push(<span key={i}>{inline(line)}{i < lines.length - 1 ? <br /> : null}</span>);
+    }
+  });
+  flushList("end");
+  return out;
+}
+
 export default function CockpitChat() {
   // Historique partagé avec le Co-pilote de Mon Bureau — une seule conversation,
   // peu importe où l'utilisateur l'ouvre (bulle flottante ou onglet dédié).
@@ -150,7 +199,7 @@ export default function CockpitChat() {
           {messages.map((m, i) => (
             <div key={i} className={`cockpit-msg ${m.role}`} data-testid={`cockpit-msg-${m.role}`}
               style={{ whiteSpace: "pre-wrap" }}>
-              {m.text}
+              {m.role === "assistant" ? renderMarkdownLite(m.text) : m.text}
               {/* Sources (style Perplexity) — uniquement pour les actualités liées à l'état de l'user */}
               {m.sources?.length > 0 && (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }} data-testid={`cockpit-msg-${i}-sources`}>

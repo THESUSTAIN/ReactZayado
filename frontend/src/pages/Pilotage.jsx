@@ -149,7 +149,9 @@ export default function Pilotage() {
       <div className="pgrid pgrid-3" style={{ marginBottom: 16 }}>
         <div className="glass-card" data-testid="coach-card">
           <div className="card-label" style={{ color: TONE.gold }}><Sparkles size={14} /> Coach IA du jour</div>
-          <p style={{ fontSize: 14, color: "var(--txt)", marginTop: 8, lineHeight: 1.5 }}>{ov?.coach?.message}</p>
+          <p style={{ fontSize: 14, color: "var(--txt)", marginTop: 8, lineHeight: 1.5 }}>
+            {ov?.coach?.message || <span className="muted">— Pas encore de message du jour. Revenez après votre prochain check-in.</span>}
+          </p>
         </div>
         <div className="glass-card" data-testid="verdict-card">
           <div className="card-label"><Gauge size={14} /> Verdict hebdo IA</div>
