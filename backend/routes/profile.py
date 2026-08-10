@@ -409,15 +409,18 @@ async def get_smart_notifications(user: User = Depends(get_current_user), db: As
         raw.append({"id": "smart_api_key", "icon": "FileCheck", "title": "Configurez votre clé API",
                      "text": "Ajoutez votre clé OpenAI pour le mode BYOK gratuit.", "action_url": "/settings"})
 
-    # Notifications de démonstration (investor-ready) : garantissent que la cloche
-    # a du contenu et que le flux "tap notif → Chat → l'IA explique (+ sources pour
-    # les actualités liées à l'état de l'utilisateur)" est réellement démontrable.
-    raw.append({"id": "news_urssaf", "icon": "Newspaper", "kind": "news",
-                "title": "Barème URSSAF mis à jour",
-                "text": "Le taux de cotisation prestations de services a été actualisé pour les micro-entrepreneurs."})
-    raw.append({"id": "prospect_hot", "icon": "Sparkles", "kind": "prospect",
-                "title": "Prospect chaud détecté",
-                "text": "Un lead à fort potentiel est prêt à être relancé dans votre pipeline."})
+    # Notifications de démo investisseur : affichées UNIQUEMENT quand le mode
+    # démo a été activé pour ce compte (flag posé par POST /api/demo/investor-fill).
+    # Avant ce correctif elles étaient ajoutées pour TOUT le monde, sans
+    # condition — un utilisateur réel avec un pipeline à 0 voyait "un lead à
+    # fort potentiel" qui n'existait pas (signalé en QA comme trompeur).
+    if (user.settings or {}).get("_demo_investor"):
+        raw.append({"id": "news_urssaf", "icon": "Newspaper", "kind": "news",
+                    "title": "Barème URSSAF mis à jour",
+                    "text": "Le taux de cotisation prestations de services a été actualisé pour les micro-entrepreneurs."})
+        raw.append({"id": "prospect_hot", "icon": "Sparkles", "kind": "prospect",
+                    "title": "Prospect chaud détecté",
+                    "text": "Un lead à fort potentiel est prêt à être relancé dans votre pipeline."})
 
     last_read = await _get_notifs_last_read(db, user.id)
     items = [{**n, "time": "à l'instant", "unread": last_read is None} for n in raw]

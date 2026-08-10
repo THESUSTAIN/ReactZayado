@@ -250,7 +250,7 @@ async def _compute_dashboard(db, user_id, user=None):
         })
     elif not ca_objective:
         insights.append({
-            "kind": "idee",
+            "kind": "idee", "label": "Objectif CA",
             "text": "Aucun objectif de chiffre d'affaires défini pour ce mois. Fixez-en un pour suivre votre progression.",
             "cta": "Définir un objectif", "to": "/pilotage",
         })
@@ -263,7 +263,7 @@ async def _compute_dashboard(db, user_id, user=None):
 
     if prospects_total == 0:
         insights.append({
-            "kind": "idee",
+            "kind": "idee", "label": "Prospection",
             "text": "Aucun prospect enregistré pour l'instant. Ajoutez vos premiers contacts pour démarrer votre pipeline commercial.",
             "cta": "Ouvrir Croissance", "to": "/croissance",
         })

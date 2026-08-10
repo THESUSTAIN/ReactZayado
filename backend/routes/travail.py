@@ -11,7 +11,7 @@ import logging
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -168,51 +168,68 @@ def _pct_delta(cur: float, prev: float):
 @travail_router.get("/overview")
 async def travail_overview(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     uid = user.id
-    now = _utc_now()
-    today = _today_str()
+    try:
+        now = _utc_now()
+        today = _today_str()
 
-    # ── Projets ──
-    r = await db.execute(select(Project).where(Project.user_id == uid))
-    projects = list(r.scalars().all())
-    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    new_this_month = sum(1 for p in projects if p.created_at and _ensure_tz(p.created_at) >= month_start)
+        # ── Projets ──
+        r = await db.execute(select(Project).where(Project.user_id == uid))
+        projects = list(r.scalars().all())
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        new_this_month = sum(1 for p in projects if p.created_at and _ensure_tz(p.created_at) >= month_start)
 
-    # ── Tâches ──
-    tasks = await _list_rows(db, "user_tasks", uid)
-    pending = [t for t in tasks if not t.get("done")]
-    created_today = sum(1 for t in tasks if (t.get("created_at") or "")[:10] == today)
+        # ── Tâches ──
+        tasks = await _list_rows(db, "user_tasks", uid)
+        pending = [t for t in tasks if not t.get("done")]
+        created_today = sum(1 for t in tasks if (t.get("created_at") or "")[:10] == today)
 
-    # ── Agenda (aujourd'hui) ──
-    events = await _list_rows(db, "crm_events", uid)
-    events_today = [e for e in events if e.get("date") == today]
+        # ── Agenda (aujourd'hui) ──
+        events = await _list_rows(db, "crm_events", uid)
+        events_today = [e for e in events if e.get("date") == today]
 
-    # ── CRM ──
-    leads = await _list_rows(db, "crm_leads", uid)
-    pipeline = _pipeline(leads)
+        # ── CRM ──
+        leads = await _list_rows(db, "crm_leads", uid)
+        pipeline = _pipeline(leads)
 
-    # ── Finances (mois courant vs mois précédent) ──
-    prev_end = month_start
-    prev_start = (month_start - timedelta(days=1)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    next_month = (month_start + timedelta(days=32)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    ca, dep = await _finance_month(db, uid, month_start, next_month)
-    ca_prev, dep_prev = await _finance_month(db, uid, prev_start, prev_end)
-    net = ca - dep
-    net_prev = ca_prev - dep_prev
-    marge = round(net / ca * 100, 1) if ca > 0 else 0
-    marge_prev = round(net_prev / ca_prev * 100, 1) if ca_prev > 0 else 0
+        # ── Finances (mois courant vs mois précédent) ──
+        prev_end = month_start
+        prev_start = (month_start - timedelta(days=1)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        next_month = (month_start + timedelta(days=32)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        ca, dep = await _finance_month(db, uid, month_start, next_month)
+        ca_prev, dep_prev = await _finance_month(db, uid, prev_start, prev_end)
+        net = ca - dep
+        net_prev = ca_prev - dep_prev
+        marge = round(net / ca * 100, 1) if ca > 0 else 0
+        marge_prev = round(net_prev / ca_prev * 100, 1) if ca_prev > 0 else 0
 
-    return {
-        "projects": {"active": len(projects), "new_this_month": new_this_month},
-        "tasks": {"pending": len(pending), "created_today": created_today},
-        "appointments": {"today": len(events_today)},
-        "crm": {"total": len(leads), "pipeline": pipeline},
-        "finance": {
-            "ca": round(ca, 2), "ca_delta": _pct_delta(ca, ca_prev),
-            "depenses": round(dep, 2), "depenses_delta": _pct_delta(dep, dep_prev),
-            "net": round(net, 2), "net_delta": _pct_delta(net, net_prev),
-            "marge": marge, "marge_delta": round(marge - marge_prev, 1) if ca_prev > 0 else None,
-        },
-    }
+        return {
+            "projects": {"active": len(projects), "new_this_month": new_this_month},
+            "tasks": {"pending": len(pending), "created_today": created_today},
+            "appointments": {"today": len(events_today)},
+            "crm": {"total": len(leads), "pipeline": pipeline},
+            "finance": {
+                "ca": round(ca, 2), "ca_delta": _pct_delta(ca, ca_prev),
+                "depenses": round(dep, 2), "depenses_delta": _pct_delta(dep, dep_prev),
+                "net": round(net, 2), "net_delta": _pct_delta(net, net_prev),
+                "marge": marge, "marge_delta": round(marge - marge_prev, 1) if ca_prev > 0 else None,
+            },
+        }
+    except Exception as e:
+        # QA a signalé un 500 permanent ici ("Impossible de charger votre
+        # activité", même après Réessayer). Cause exacte non reproductible
+        # sans les logs prod — en attendant, on renvoie un état vide bien
+        # formé (comme le reste de l'app le fait déjà pour les flux
+        # externes indisponibles) plutôt que de casser toute la page, et on
+        # logge l'erreur réelle côté serveur.
+        logger.error(f"travail_overview failed for user {uid}: {e}", exc_info=True)
+        return {
+            "projects": {"active": 0, "new_this_month": 0},
+            "tasks": {"pending": 0, "created_today": 0},
+            "appointments": {"today": 0},
+            "crm": {"total": 0, "pipeline": _pipeline([])},
+            "finance": {"ca": 0, "ca_delta": None, "depenses": 0, "depenses_delta": None, "net": 0, "net_delta": None, "marge": 0, "marge_delta": None},
+            "error": "temporairement indisponible",
+        }
 
 
 # ============================================================
@@ -223,63 +240,66 @@ async def travail_recommendations(user: User = Depends(get_current_user), db: As
     uid = user.id
     now = _utc_now()
     recos = []
+    try:
+        leads = await _list_rows(db, "crm_leads", uid)
 
-    leads = await _list_rows(db, "crm_leads", uid)
+        # 1) Relances : devis (proposition/négociation) en attente > 7 jours
+        def _age_days(it):
+            ts = it.get("updated_at") or it.get("created_at")
+            if not ts:
+                return 0
+            try:
+                d = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                return (now - _ensure_tz(d)).days
+            except Exception:
+                return 0
 
-    # 1) Relances : devis (proposition/négociation) en attente > 7 jours
-    def _age_days(it):
-        ts = it.get("updated_at") or it.get("created_at")
-        if not ts:
-            return 0
-        try:
-            d = datetime.fromisoformat(ts.replace("Z", "+00:00"))
-            return (now - _ensure_tz(d)).days
-        except Exception:
-            return 0
+        stale = [l for l in leads if l.get("stage") in ("proposition", "negociation") and _age_days(l) >= 7]
+        if stale:
+            recos.append({
+                "id": "relances", "icon": "clock", "tone": "gold",
+                "title": "Priorisez les relances",
+                "desc": f"{len(stale)} devis en attente depuis plus de 7 jours",
+                "route": "/travail?tab=crm",
+            })
 
-    stale = [l for l in leads if l.get("stage") in ("proposition", "negociation") and _age_days(l) >= 7]
-    if stale:
-        recos.append({
-            "id": "relances", "icon": "clock", "tone": "gold",
-            "title": "Priorisez les relances",
-            "desc": f"{len(stale)} devis en attente depuis plus de 7 jours",
-            "route": "/travail?tab=crm",
-        })
+        # 2) Opportunité : lead en négociation le plus récent
+        nego = [l for l in leads if l.get("stage") == "negociation"]
+        if nego:
+            top = sorted(nego, key=lambda l: l.get("value") or 0, reverse=True)[0]
+            recos.append({
+                "id": "opportunite", "icon": "lightbulb", "tone": "sage",
+                "title": "Opportunité détectée",
+                "desc": f"{top.get('name', 'Un prospect')} est en phase de négociation — closez cette semaine",
+                "route": "/travail?tab=crm",
+            })
 
-    # 2) Opportunité : lead en négociation le plus récent
-    nego = [l for l in leads if l.get("stage") == "negociation"]
-    if nego:
-        top = sorted(nego, key=lambda l: l.get("value") or 0, reverse=True)[0]
-        recos.append({
-            "id": "opportunite", "icon": "lightbulb", "tone": "sage",
-            "title": "Opportunité détectée",
-            "desc": f"{top.get('name', 'Un prospect')} est en phase de négociation — closez cette semaine",
-            "route": "/travail?tab=crm",
-        })
+        # 3) Optimisation financière : dépenses récurrentes
+        r = await db.execute(
+            select(FinanceEntryDB).where(FinanceEntryDB.user_id == uid, FinanceEntryDB.type == "depense", FinanceEntryDB.recurring == True)  # noqa: E712
+        )
+        rec_dep = list(r.scalars().all())
+        if rec_dep:
+            total = sum(e.amount for e in rec_dep)
+            recos.append({
+                "id": "finance", "icon": "trending-down", "tone": "coral",
+                "title": "Optimisation financière",
+                "desc": f"{len(rec_dep)} dépenses récurrentes ({round(total)} €/mois) — passez-les en revue",
+                "route": "/pilotage",
+            })
 
-    # 3) Optimisation financière : dépenses récurrentes
-    r = await db.execute(
-        select(FinanceEntryDB).where(FinanceEntryDB.user_id == uid, FinanceEntryDB.type == "depense", FinanceEntryDB.recurring == True)  # noqa: E712
-    )
-    rec_dep = list(r.scalars().all())
-    if rec_dep:
-        total = sum(e.amount for e in rec_dep)
-        recos.append({
-            "id": "finance", "icon": "trending-down", "tone": "coral",
-            "title": "Optimisation financière",
-            "desc": f"{len(rec_dep)} dépenses récurrentes ({round(total)} €/mois) — passez-les en revue",
-            "route": "/pilotage",
-        })
+        # 4) Tâches du jour en attente
+        tasks = await _list_rows(db, "user_tasks", uid)
+        pending = [t for t in tasks if not t.get("done")]
+        if len(pending) >= 3:
+            recos.append({
+                "id": "taches", "icon": "check", "tone": "plum",
+                "title": "Concentrez-vous sur l'essentiel",
+                "desc": f"{len(pending)} tâches ouvertes — traitez d'abord les 3 priorités du jour",
+                "route": "/",
+            })
 
-    # 4) Tâches du jour en attente
-    tasks = await _list_rows(db, "user_tasks", uid)
-    pending = [t for t in tasks if not t.get("done")]
-    if len(pending) >= 3:
-        recos.append({
-            "id": "taches", "icon": "check", "tone": "plum",
-            "title": "Concentrez-vous sur l'essentiel",
-            "desc": f"{len(pending)} tâches ouvertes — traitez d'abord les 3 priorités du jour",
-            "route": "/",
-        })
-
-    return {"items": recos}
+        return {"items": recos}
+    except Exception as e:
+        logger.error(f"travail_recommendations failed for user {uid}: {e}", exc_info=True)
+        return {"items": []}

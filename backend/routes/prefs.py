@@ -32,12 +32,19 @@ async def _ensure_table(db: AsyncSession):
 
 @router.get("")
 async def get_prefs(user_id: str = Query("default"), user=Depends(get_current_user_optional), db: AsyncSession = Depends(get_db)):
-    await _ensure_table(db)
-    # Si un token JWT valide est présent, on scope sur l'utilisateur authentifié
-    # (évite de renvoyer le bucket partagé "default" d'un autre compte). Sinon on
-    # retombe sur le user_id en query param (compatibilité mode invité).
-    uid = user.id if user else user_id
-    return (await _get_kv(db, uid, _KEY)) or {}
+    try:
+        await _ensure_table(db)
+        # Si un token JWT valide est présent, on scope sur l'utilisateur authentifié
+        # (évite de renvoyer le bucket partagé "default" d'un autre compte). Sinon on
+        # retombe sur le user_id en query param (compatibilité mode invité).
+        uid = user.id if user else user_id
+        return (await _get_kv(db, uid, _KEY)) or {}
+    except Exception as e:
+        # QA a signalé un 500 silencieux ici au chargement de l'accueil.
+        # On degrade en préférences vides plutôt que de casser le chargement
+        # de la page pour un souci de persistance non bloquant.
+        logger.error(f"get_prefs failed for user_id={user_id}: {e}", exc_info=True)
+        return {}
 
 
 @router.put("")
