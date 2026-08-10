@@ -35,7 +35,9 @@ class Zayado_Config {
             if ($action === 'save_platform') {
                 $res = Zayado_API::post('/admin/config', [
                     'maintenance_mode' => isset($_POST['maintenance_mode']),
-                    'max_credits'      => intval($_POST['max_credits'] ?? 1000),
+                    'credits_start'    => intval($_POST['credits_start'] ?? 3000),
+                    'credits_grow'     => intval($_POST['credits_grow'] ?? 10000),
+                    'credits_serenity' => intval($_POST['credits_serenity'] ?? 25000),
                     'default_plan'     => sanitize_text_field($_POST['default_plan'] ?? 'free'),
                 ]);
                 $message = $res['success'] ? '✅ Configuration plateforme enregistrée !' : '❌ ' . $res['error'];
