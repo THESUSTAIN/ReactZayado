@@ -114,7 +114,7 @@ export default function Header({ onSettingsOpen }) {
   const SEARCH_TARGETS = [
     { label: "Dashboard", path: "/" }, { label: "Vision Board", path: "/vision-board" },
     { label: "Croissance", path: "/croissance" }, { label: "Cockpit", path: "/bureau" },
-    { label: "Pilotage", path: "/pilotage" }, { label: "Moi", path: "/bien-etre" },
+    { label: "Finances", path: "/travail?tab=dafia" }, { label: "Moi", path: "/bien-etre" },
     { label: "Paramètres", path: "/parametres" },
   ];
   const [searchQuery, setSearchQuery] = useState("");

@@ -370,7 +370,7 @@ export const accountApi = {
 
 // ─── Cockpit (co-pilote IA) ────────────────────────────────────
 export const copiloteApi = {
-  ask: (message) => axios.post(`${API}/growth/copilote`, { message }, withUser()).then(r => r.data),
+  ask: (message, history = []) => axios.post(`${API}/growth/copilote`, { message, history }, withUser()).then(r => r.data),
 };
 
 // ─── « Le Point du jour » — brief proactif + demande de collab ──

@@ -602,7 +602,7 @@ function CanauxTab() {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { load(activeChannel); }, [activeChannel]); // eslint-disable-line
+  useEffect(() => { load(activeChannel); }, [activeChannel]);  
 
   const items = data[activeChannel] || [];
 
@@ -1204,7 +1204,7 @@ export default function Croissance() {
       setTab("pipeline");
       window.history.replaceState({}, "", "/croissance");
     }).catch(() => toast.error("Impossible d'ajouter le lead capturé"));
-  }, []); // eslint-disable-line
+  }, []);  
 
   const handleDetect = async () => {
     setDetecting(true);

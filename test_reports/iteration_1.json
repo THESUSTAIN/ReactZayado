@@ -1,32 +1,34 @@
 {
-  "summary": "Backend-only testing of Zayado auth + admin panel flows used by the WordPress 'Zayado Admin' plugin. 11/11 pytest tests passed against the public REACT_APP_BACKEND_URL. Verified: health, admin JWT login, demo login, unauthenticated admin endpoint returns 401/403, /api/admin/stats non-empty, /api/admin/users listing + plan filter, /api/admin/config, POST /api/admin/users/{id}/credits with both {amount} (the main fix) and {credits} (backcompat), and PUT /api/admin/users/{id}/plan.",
+  "summary": "End-to-end backend + frontend testing of MyExtension Business (Pilotage/Vision/Bien-être + Kairos AI). Backend: 10/10 pytest tests pass (seed, KPIs recompute on facture add/delete, full CRUD for factures/depenses/objectifs/rituels/humeur, vision set/persist, rituel toggle+streak, Kairos streaming chat + history). Frontend: All critical UI flows work — KPI cards render, evolution chart displays, add/delete facture updates list, add depense works, Vision text edit+save persists, add/edit/delete objectif works, check-in updates energy gauge to submitted value, rituel add/toggle/delete works, affirmation cycles, sidebar nav switches all 3 pages, Kairos panel streams a French response (verified: 'Relance aujourd'hui tes 3 200 € de factures en retard...'). No critical bugs found.",
   "backend_issues": {
     "critical": [],
-    "minor": []
+    "minor": [
+      {"endpoint": "/api/rituels/{id}/toggle", "issue": "Streak logic increments on toggle-on but does NOT decrement on toggle-off (see server.py L245: streak += 1 if new_done else -1 if doc.done else 0). Since doc.done was True when toggling off, streak decrements. But then future toggle-on adds +1 again → potentially double-counts. Consider spec review: normally streak should only accumulate consecutive days, not toggle."}
+    ]
   },
   "frontend_issues": {
     "ui_bugs": [],
     "integration_issues": [],
-    "design_issues": []
+    "design_issues": [
+      {"screen": "All dialogs", "issues": ["React a11y console warning: Missing `Description` or `aria-describedby` for DialogContent. Non-blocking but should add DialogDescription for accessibility."]}
+    ]
   },
-  "test_report_links": [
-    "/app/backend/tests/test_iter_admin_plugin.py",
-    "/app/test_reports/pytest/iter_admin_plugin.xml"
+  "test_report_links": ["/app/backend/tests/backend_test.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "(Optional) Add DialogDescription to each Dialog to remove a11y warnings.",
+    "(Optional) Review rituel streak semantics — currently toggling off decrements streak (could yield unexpected behavior on toggle churn)."
   ],
-  "action_items": [],
   "critical_code_review_comments": [
-    "admin_routes.py is large (1000+ lines) — could be split into stats/users/credits/plans submodules for maintainability.",
-    "gift_credits accepts both {amount} and {credits}; consider marking one as deprecated in OpenAPI schema so plugin authors converge on {amount}.",
-    "test_admin_users_filter_by_plan_free passed but returned users list may be empty in this env — filter correctness only asserted on returned rows; if a stricter test is desired seed at least one free user."
+    "server.py uses os.environ['MONGO_URL'] directly (good, fails fast). ObjectId is properly excluded via {\"_id\": 0} projection everywhere.",
+    "streamKairos in api.js does not handle non-200 response — if backend errors out with 4xx/5xx, res.body.getReader() will still attempt to read, causing confusing errors. Consider adding `if (!res.ok) throw...`",
+    "Pilotage buildTrend() uses Math.sin with no seed → chart shape stable per render but not tied to real historical data (as documented, synthetic).",
+    "Rituel toggle streak calculation is questionable (see backend minor issue above)."
   ],
-  "updated_files": [
-    "/app/backend/tests/test_iter_admin_plugin.py"
-  ],
-  "success_rate": {"backend": "100%", "frontend": "N/A (skipped per request)"},
-  "test_credentials": "admin@zayado.net / ZayadoAdmin2026! ; thomas@zayado.fr / Thomas2026! (from /app/memory/test_credentials.md)",
-  "seed_data_creation": "None. Test mutates credits/plan of an existing non-admin seed user (acceptable per request).",
+  "updated_files": ["/app/backend/tests/backend_test.py", "/app/test_reports/iteration_1.json"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "No auth required.",
+  "seed_data_creation": "Backend /api/seed was called by both pytest fixture and UI. Test-created data with UI_TEST_ prefix was cleaned up in Playwright script. One UI_TEST_Dep depense may remain (added during checkin gauge failed-then-retried run) — harmless.",
   "retest_needed": false,
-  "should_main_agent_self_test": false,
-  "context_for_next_testing_agent": "Only auth + admin panel WP-plugin flows were tested per scope. Other routers (Mollie, OAuth, Brevo, activite, agents, etc.) intentionally skipped. Reuse /app/backend/tests/test_iter_admin_plugin.py as regression for the WP plugin contract.",
-  "rca of the issue": "N/A — the reported fix (accepting {amount} in POST /api/admin/users/{id}/credits) is verified working and backwards-compatible with {credits}."
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend tests are in /app/backend/tests/backend_test.py. Run with `pytest -o addopts='' backend/tests/backend_test.py -v` — do NOT use pytest-xdist parallel mode as seed fixture races cause KPI assertion failures (workers reseed independently). All 10 tests pass sequentially. Kairos streaming via emergentintegrations gpt-5.4 confirmed working, response takes ~5-10s. Frontend fully functional at REACT_APP_BACKEND_URL. Note the nav testid uses accents: `nav-bien-être` (must use locator, not selector string with quotes)."
 }

@@ -44,7 +44,7 @@ export default function LiveCardsStrip() {
 
     load();
     return () => { alive = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   // Backlog #2 — flux SSE temps réel : le strip se rafraîchit dès qu'une

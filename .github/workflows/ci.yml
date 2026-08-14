@@ -1,42 +1,68 @@
 name: CI
 
+# Backlog #28. Périmètre volontairement honnête : la suite `backend/tests/`
+# (~150 fichiers) est écrite pour tourner contre un environnement preview
+# externe déjà seedé (BASE_URL par défaut = une URL preview Emergent, login
+# avec des comptes de test qui n'existent que là-bas) — elle n'est PAS
+# exécutable telle quelle dans un runner GitHub Actions isolé sans compte
+# de test ni service externes (Mollie, Brevo, OpenAI...) réels ou mockés.
+# Ce que ce workflow fait réellement, et qui a une vraie valeur :
+#   1. Installe les dépendances (détecte un requirements.txt cassé/obsolète)
+#   2. Vérifie que chaque fichier Python du backend est syntaxiquement valide
+#   3. Démarre le serveur avec une base SQLite locale et vérifie que
+#      /api/health répond 200 (détecte les erreurs d'import/de démarrage —
+#      la classe de bug la plus fréquente et la plus bête à laisser passer)
+#   4. Build du frontend (détecte les erreurs de syntaxe JS/JSX)
+# Faire tourner la vraie suite de tests fonctionnels en CI est un chantier
+# séparé, plus lourd : il faudrait la réécrire pour qu'elle boote son propre
+# environnement (DB de test + comptes seedés + mocks des services externes)
+# au lieu de dépendre d'un environnement preview partagé.
+
 on:
   push:
-    branches: [ main, master ]
+    branches: [main]
   pull_request:
-    branches: [ main, master ]
+    branches: [main]
 
 jobs:
-  backend-tests:
+  backend-smoke-test:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: backend
-    env:
-      NODE_ENV: development          # force le fallback SQLite (pas de MySQL en CI)
-      JWT_SECRET: ci-test-secret-please-change
-      FERNET_KEY: ci-fernet-key-placeholder
-      ALLOW_GUEST_LOGIN: "true"
-      RUN_CRONS: "false"
-      DEMO_LOGIN_EMAILS: thomas@zayado.fr
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: pip
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt || pip install fastapi uvicorn sqlalchemy aiosqlite pydantic httpx pytest pytest-asyncio bcrypt pyjwt python-dotenv
+        run: pip install -r requirements.txt --break-system-packages || pip install -r requirements.txt
 
-      - name: Run backend tests
+      - name: Syntax check (every .py file compiles)
         run: |
-          pip install pytest pytest-asyncio
-          pytest -q --maxfail=5 --disable-warnings || (echo "::warning::Some backend tests failed" && exit 1)
+          find . -name "*.py" -not -path "./tests/*" -print0 | xargs -0 -n1 python -m py_compile
+
+      - name: Boot server against local SQLite + check /api/health
+        env:
+          JWT_SECRET: ci-only-not-a-real-secret-0123456789abcdef
+          DATABASE_URL: "sqlite+aiosqlite:///./ci_test.db"
+          CORS_ORIGINS: "http://localhost:3000"
+        run: |
+          uvicorn server:app --host 0.0.0.0 --port 8000 &
+          SERVER_PID=$!
+          for i in $(seq 1 20); do
+            if curl -sf http://localhost:8000/api/health; then
+              echo "Server healthy."
+              kill $SERVER_PID
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Server did not become healthy in time."
+          kill $SERVER_PID || true
+          exit 1
 
   frontend-build:
     runs-on: ubuntu-latest
@@ -46,18 +72,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: yarn
-          cache-dependency-path: frontend/yarn.lock
 
-      - name: Install
-        run: yarn install --frozen-lockfile
+      - name: Install dependencies
+        run: npm install
 
-      - name: Build (smoke)
+      - name: Build
         env:
-          CI: "false"                # n'échoue pas sur les warnings ESLint
-          REACT_APP_BACKEND_URL: https://app.zayado.net
-        run: yarn build
+          CI: "false"  # les warnings ESLint ne doivent pas faire échouer le build CI
+        run: npm run build

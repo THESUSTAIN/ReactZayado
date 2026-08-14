@@ -9,14 +9,12 @@ import Sidebar from "@/components/Sidebar";
 import CockpitChat from "@/components/CockpitChat";
 import Onboarding from "@/components/Onboarding";
 import InspirationScreen from "@/components/InspirationScreen";
-import InvestorDemoButton from "@/components/InvestorDemoButton";
 import Dashboard from "@/components/Dashboard";
 import Croissance from "@/pages/Croissance";
 import Agents from "@/pages/Agents";
 import BienEtre from "@/pages/BienEtre";
 import Travail from "@/pages/Travail";
 import SimulationModule from "@/pages/SimulationModule";
-import Pilotage from "@/pages/Pilotage";
 import VisionBoard from "@/pages/VisionBoardModule";
 import MonBureau from "@/pages/MonBureau";
 import Extension from "@/pages/Extension";
@@ -38,7 +36,7 @@ import useIsMobile from "@/hooks/useIsMobile";
 // (Navigation par swipe plein écran retirée — voir useSwipeNavigation ci-dessous.)
 
 // Ordre des modules pour les raccourcis clavier 1-6.
-const SWIPE_ROUTES = ["/", "/vision-board", "/croissance", "/travail", "/pilotage", "/bureau", "/bien-etre"];
+const SWIPE_ROUTES = ["/", "/vision-board", "/croissance", "/travail", "/bureau", "/bien-etre"];
 
 // Détecte un swipe horizontal (mobile) et navigue entre modules.
 // DÉSACTIVÉ (bug UX critique) : l'écouteur global sur `document` capturait
@@ -99,11 +97,30 @@ function RequireAuth({ children }) {
 //   2. Revoir l'aide texte (fallback modale)
 //   3. Réinitialiser l'app (efface localStorage/session + recharge)
 // Ne s'affiche JAMAIS en production (détecté via le hostname).
-function DebugMenu({ onStartTour, hasTour, onReplayOnboarding }) {
+function DebugMenu({ onStartTour, hasTour, onReplayOnboarding, user }) {
   const [open, setOpen] = useState(false);
 
   const startTour = () => { setOpen(false); onStartTour?.(); };
   const replay = () => { setOpen(false); onReplayOnboarding(); };
+
+  // ── Démo Investisseur (déplacée depuis l'ancien bouton flottant) ──
+  // Réservée au compte de démo Thomas et aux admins. Peuple/réinitialise le
+  // cockpit en <1s puis recharge sur l'accueil pour rejouer l'écran "aha".
+  const demoAllowed =
+    user &&
+    (user.email === "thomas@zayado.fr" ||
+      ["admin", "super_admin"].includes(user.role));
+  const [demoBusy, setDemoBusy] = useState(false);
+  const runDemo = async (fill) => {
+    if (demoBusy) return;
+    setDemoBusy(true);
+    setOpen(false);
+    try {
+      await axios.post(`${API}/demo/${fill ? "investor-fill" : "investor-reset"}`);
+      try { localStorage.removeItem("zayado_inspired_last"); } catch (e) { /* noop */ }
+      window.location.href = "/";
+    } catch (e) { setDemoBusy(false); }
+  };
 
   const resetAll = async () => {
     if (!window.confirm("Réinitialiser l'app ? Ceci relance l'onboarding et efface les préférences locales (checklist, visites de page…) puis recharge la page. Ton compte n'est pas supprimé.")) return;
@@ -134,6 +151,34 @@ function DebugMenu({ onStartTour, hasTour, onReplayOnboarding }) {
             minWidth: 230,
           }}
         >
+          {demoAllowed && (
+            <>
+              <button
+                data-testid="debug-demo-fill"
+                onClick={() => runDemo(true)}
+                disabled={demoBusy}
+                title="Peupler le cockpit pour une démo investisseur"
+                style={{
+                  ..._dbgItem(),
+                  background: "linear-gradient(180deg,#F2B93B,#E0A320)",
+                  borderColor: "rgba(201,164,73,0.6)",
+                  color: "#0F1B3D",
+                  fontWeight: 800,
+                  cursor: demoBusy ? "wait" : "pointer",
+                }}
+              >
+                Démo Investisseur
+              </button>
+              <button
+                data-testid="debug-demo-reset"
+                onClick={() => runDemo(false)}
+                disabled={demoBusy}
+                style={{ ..._dbgItem(), color: "#cbd5e1" }}
+              >
+                ↺ Réinitialiser la démo
+              </button>
+            </>
+          )}
           <button
             data-testid="debug-guided-tour"
             onClick={startTour}
@@ -368,7 +413,6 @@ function AppShell() {
         setChecklistOpen(true);
         sessionStorage.setItem(seenKey, "1");
       });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded, user, guest, onboarded, prefs.cockpit_checklist_dismissed, showOnboarding, showInspiration]);
 
   return (
@@ -378,20 +422,15 @@ function AppShell() {
       {showInspiration && <InspirationScreen onDone={dismissInspiration} />}
       {left && <Sidebar onSettingsOpen={() => setSettingsOpen(true)} />}
       <div className="app-body">
-        {!(isMobile && location.pathname.startsWith("/vision-board")) && <Header onSettingsOpen={() => setSettingsOpen(true)} />}
+        {!(isMobile && (location.pathname.startsWith("/vision-board") || location.pathname === "/")) && <Header onSettingsOpen={() => setSettingsOpen(true)} />}
         <Outlet />
         {!left && !(isMobile && location.pathname.startsWith("/vision-board")) && <BottomNav />}
       </div>
 
-      {/* Cockpit — chat co-pilote (panneau à droite) */}
-      <CockpitChat />
-
-      {/* Bouton flottant Démo Investisseur (bas-gauche) — Thomas / admin, preview uniquement.
-          Jamais en production : montrer un outil de démo devant de vrais visiteurs
-          serait à la fois un risque (remplit/écrase les vraies données du cockpit)
-          et un signal peu pro. Repoussé au-dessus du DebugMenu (même colonne bas-gauche,
-          z-index 300) pour ne pas se superposer avec son menu déroulant quand il est ouvert. */}
-      {isHome && isPreview && <InvestorDemoButton user={user} />}
+      {/* Cockpit — chat co-pilote.
+          PC : panneau dockable à droite (déplier/replier via l'en-tête).
+          Mobile + accueil : Hub IA en plein écran (façon Kairos). */}
+      <CockpitChat fullscreen={isMobile && location.pathname === "/"} />
 
       {/* Modale Paramètres */}
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
@@ -430,6 +469,7 @@ function AppShell() {
           }}
           hasTour={tourSteps.length > 0}
           onReplayOnboarding={() => setOnboardingModal(true)}
+          user={user}
         />
       )}
 
@@ -541,7 +581,7 @@ function AppRoutes() {
         <Route path="/travail" element={<Travail />} />
         <Route path="/extension" element={<Extension />} />
         <Route path="/simulation" element={<SimulationModule />} />
-        <Route path="/pilotage" element={<Pilotage />} />
+        <Route path="/pilotage" element={<Navigate to="/travail?tab=dafia" replace />} />
         <Route path="/vision-board" element={<div className="vision-page-wrapper" data-testid="vision-board-page"><VisionBoard /></div>} />
         <Route path="/bureau" element={<MonBureau />} />
         <Route path="/parametres" element={<Settings />} />

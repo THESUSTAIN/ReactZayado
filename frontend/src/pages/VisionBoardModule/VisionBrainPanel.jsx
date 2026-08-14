@@ -131,6 +131,14 @@ export default function VisionBrainPanel() {
               <div className="min-w-0">
                 <div className="text-sm font-medium text-white leading-snug">{o.title}</div>
                 {o.sub && <div className="text-xs text-white/50">{o.sub}</div>}
+                <button
+                  type="button"
+                  data-testid={`vision-ai-opp-${i}-talk`}
+                  onClick={() => window.dispatchEvent(new CustomEvent("zayado:open-cockpit-chat", { detail: { ask: `Aide-moi à agir sur cette opportunité : ${o.title}` } }))}
+                  className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-[#C9A449]/40 bg-[#C9A449]/10 px-2.5 py-1 text-[11px] font-semibold text-[#f0dca5] transition-colors hover:bg-[#C9A449]/20"
+                >
+                  <Sparkles size={11} /> En parler au Copilote
+                </button>
                 {/* Sources : uniquement pour les actualités liées à l'état de l'user */}
                 {o.sources?.length > 0 && (
                   <div className="mt-1.5 flex flex-wrap gap-1.5" data-testid={`vision-ai-opp-${i}-sources`}>

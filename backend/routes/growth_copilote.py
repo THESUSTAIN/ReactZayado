@@ -35,6 +35,7 @@ SYSTEM_PROMPT = (
 
 class CopiloteIn(BaseModel):
     message: str
+    history: list = []  # mémoire conversationnelle : [{role:"user"/"assistant", text/content}]
 
 
 async def _build_context(db: AsyncSession, user_id: str) -> str:
@@ -78,18 +79,22 @@ async def _build_context(db: AsyncSession, user_id: str) -> str:
     return "\n".join(parts)
 
 
-async def _llm_reply(system: str, user_prompt: str) -> str:
+async def _llm_reply(system: str, user_prompt: str, history=None) -> str:
     """Appelle le LLM via le client unifié du projet (Mammouth d'abord, piloté par
-    AI_PROVIDER ; repli Emergent automatique en mode 'auto')."""
+    AI_PROVIDER ; repli Emergent automatique en mode 'auto').
+
+    `history` : mémoire conversationnelle optionnelle — liste de tours
+    [{role, content}] insérés entre le system et la question courante."""
     try:
         from mammouth_client import chat as ai_chat
-        reply = await ai_chat(
-            [
-                {"role": "system", "content": system},
-                {"role": "user", "content": user_prompt},
-            ],
-            max_tokens=1024,
-        )
+        msgs = [{"role": "system", "content": system}]
+        for turn in (history or []):
+            role = turn.get("role")
+            content = (turn.get("content") or turn.get("text") or "").strip()
+            if role in ("user", "assistant") and content:
+                msgs.append({"role": role, "content": content[:1500]})
+        msgs.append({"role": "user", "content": user_prompt})
+        reply = await ai_chat(msgs, max_tokens=1024)
         return (reply or "").strip()
     except Exception as e:
         logger.warning("LLM (_llm_reply) échoué: %s", e)
@@ -109,7 +114,10 @@ async def copilote(
     context = await _build_context(db, user_id)
     user_prompt = message if not context else f"[Contexte]\n{context}\n\n[Question]\n{message}"
 
-    reply = await _llm_reply(SYSTEM_PROMPT, user_prompt)
+    # Mémoire conversationnelle : on garde les 8 derniers tours (hors message courant).
+    history = [h for h in (body.history or []) if isinstance(h, dict)][-8:]
+
+    reply = await _llm_reply(SYSTEM_PROMPT, user_prompt, history=history)
     if not reply:
         reply = (
             "Je n'ai pas pu contacter mon moteur d'IA à l'instant. Réessayez dans "
@@ -418,7 +426,8 @@ async def news_digest(
     sector = await _fetch_sector(db, user_id)
     items = await _fetch_news(_news_query(sector))
     if not items:
-        return {"digest": "Je n'ai pas pu récupérer l'actualité à l'instant. Réessayez dans un moment.", "sources": []}
+        # ok=False -> le frontend NE DOIT PAS écraser une actualité déjà affichée
+        return {"ok": False, "digest": "Je n'ai pas pu récupérer l'actualité à l'instant. Réessayez dans un moment.", "sources": []}
 
     headlines = "\n".join(f"- {it['title']}" + (f" ({it['source']})" if it.get("source") else "") for it in items)
     secteur_txt = sector or "entrepreneuriat / PME"
@@ -432,7 +441,7 @@ async def news_digest(
     digest = await _llm_reply(NEWS_SYSTEM, prompt)
     if not digest:
         digest = "Actualités du jour :\n" + "\n".join(f"• {it['title']}" for it in items)
-    return {"digest": digest, "sources": items, "sector": sector}
+    return {"ok": True, "digest": digest, "sources": items, "sector": sector}
 
 
 # ─── « Travailler avec l'équipe » — demande de collaboration ──────

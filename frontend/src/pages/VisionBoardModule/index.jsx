@@ -13,7 +13,7 @@ import {
   Star, Search, ArrowRight,
   ExternalLink, Loader2, Upload, Share2, X, MoreVertical, CreditCard,
   Shield, AlertTriangle, Target, Zap,
-  Printer, FileText, Wand2, Folder, Video, Focus, Presentation,
+  Printer, FileText, Wand2, Folder, Video, Focus, Presentation, LayoutTemplate,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useApp } from "./useApp";
@@ -286,6 +286,11 @@ function TabCanvas({ bgImage }) {
   const [promptInput, setPromptInput] = useState("");
   const [addMenuOpen, setAddMenuOpen] = useState(false);
 
+  // ── Modèles de départ (starter templates prêts à l'emploi) ──
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [starterTemplates, setStarterTemplates] = useState([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+
   const scrollRef = useRef(null);
   const containerRef = useRef(null);
   const dragRef = useRef(null);
@@ -337,6 +342,38 @@ function TabCanvas({ bgImage }) {
     if (!document.fullscreenElement) el.requestFullscreen?.().catch(() => {});
     else document.exitFullscreen?.();
   };
+
+  // ── Modèles de départ : ouvre le panneau et charge la liste depuis l'API ──
+  const openStarterTemplates = useCallback(() => {
+    setAddMenuOpen(false);
+    setTemplatesOpen(true);
+    if (starterTemplates.length === 0) {
+      setTemplatesLoading(true);
+      visionExtApi.getStarterTemplates()
+        .then((r) => setStarterTemplates(r?.templates || []))
+        .catch(() => toast.error("Modèles indisponibles pour l'instant."))
+        .finally(() => setTemplatesLoading(false));
+    }
+  }, [starterTemplates.length]);
+
+  // Remplit le canvas avec un modèle en un clic (confirmation si board non vide)
+  const applyStarterTemplate = useCallback((tpl) => {
+    if (!tpl?.cards?.length) return;
+    if (items.length > 0 && !window.confirm(`Remplacer le canvas actuel par le modèle « ${tpl.label} » ? Vos cartes actuelles seront supprimées.`)) return;
+    const newCards = tpl.cards.map((c, i) => ({ h: 130, ...c, id: `tpl_${Date.now()}_${i}` }));
+    setItems(newCards);
+    setTemplatesOpen(false);
+    // Recentre la vue sur le barycentre des cartes du modèle
+    const xs = newCards.map((c) => c.x || 0), ys = newCards.map((c) => c.y || 0);
+    const cx = (Math.min(...xs) + Math.max(...xs)) / 2 + 130;
+    const cy = (Math.min(...ys) + Math.max(...ys)) / 2 + 90;
+    setTimeout(() => {
+      const el = scrollRef.current;
+      if (el) el.scrollTo({ left: Math.max(0, cx * zoom - el.clientWidth / 2), top: Math.max(0, cy * zoom - el.clientHeight / 2), behavior: "smooth" });
+    }, 150);
+    toast.success(`Modèle « ${tpl.label} » appliqué ✦`);
+  }, [items.length, zoom]);
+
 
   // ---- Card drag (select mode) — pointer events pour support tactile mobile ----
   const onPointerDownCard = useCallback((e, item) => {
@@ -448,7 +485,7 @@ function TabCanvas({ bgImage }) {
       body: { fr: content, en: content },
     };
     setItems((prev) => [...prev, card]);
-  }, []); // eslint-disable-line
+  }, []);  
 
   // Callback Studio : insère image ou vidéo générée dans le board
   const handleStudioGenerated = useCallback(({ kind, url, prompt: gp }) => {
@@ -468,7 +505,7 @@ function TabCanvas({ bgImage }) {
         image: fullUrl, title,
       }]);
     }
-  }, []); // eslint-disable-line
+  }, []);  
 
   // Prompt bar bottom : détecte l'intention (image / vidéo / doc) via mots-clés
   const handlePromptSubmit = () => {
@@ -496,7 +533,7 @@ function TabCanvas({ bgImage }) {
     setItems((prev) => [...prev, note]);
     setPrompt("");
     toast.success(t("board.addNote"));
-  }, [prompt, t]); // eslint-disable-line
+  }, [prompt, t]);  
 
   // Génère un board complet (vision + piliers + actions) depuis 1 prompt IA
   const handleGenerateBoard = useCallback(async () => {
@@ -887,6 +924,13 @@ function TabCanvas({ bgImage }) {
         <div className="absolute bottom-4 left-1/2 z-30 -translate-x-1/2 w-[min(96vw,720px)]" data-testid="vision-prompt-bar-container">
           {/* Templates strip (visible tout le temps, scroll horizontal) */}
           <div className="mb-2 flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+            <button
+              onClick={openStarterTemplates}
+              data-testid="vision-prompt-starter-templates"
+              className="flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--app-accent)] bg-[var(--app-accent-soft)] px-3 py-1.5 text-[11px] font-semibold text-[var(--app-accent)] shadow-sm hover:brightness-105 transition"
+            >
+              <LayoutTemplate size={12} /> Modèles de départ
+            </button>
             {[
               { id: "tpl-image", icon: ImageIcon, label: "Image IA", kind: "image" },
               { id: "tpl-video", icon: Video, label: "Vidéo IA", kind: "video" },
@@ -950,6 +994,7 @@ function TabCanvas({ bgImage }) {
                 data-testid="vision-add-menu"
               >
               {[
+                { id: "starter", icon: LayoutTemplate, label: "Modèles de départ", action: () => openStarterTemplates() },
                 { id: "ai",      icon: Sparkles,   label: "Idée IA",      action: () => addByTool("ai") },
                 { id: "note",    icon: Type,       label: "Note",         action: () => addByTool("text") },
                 { id: "ai-doc",  icon: FileText,   label: "AI Document",  action: () => setAiDocOpen(true) },
@@ -979,6 +1024,50 @@ function TabCanvas({ bgImage }) {
             </>
           )}
         </div>
+
+        {/* Panneau « Modèles de départ » — démarrer un board en un clic */}
+        {templatesOpen && (
+          <>
+            <div className="fixed inset-0 z-[60] bg-[rgba(11,31,58,0.55)] backdrop-blur-sm" onClick={() => setTemplatesOpen(false)} data-testid="vision-templates-overlay" />
+            <div
+              className="fixed left-1/2 top-1/2 z-[61] w-[min(94vw,720px)] max-h-[82vh] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)] p-5 shadow-2xl"
+              data-testid="vision-templates-panel"
+            >
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="flex items-center gap-2 font-head text-lg font-bold text-[var(--app-text)]">
+                    <LayoutTemplate size={18} className="text-[var(--app-accent)]" /> Modèles de départ
+                  </h3>
+                  <p className="text-sm text-[var(--app-text-muted)]">Démarrez votre board en un clic — choisissez un modèle prêt à l'emploi.</p>
+                </div>
+                <button onClick={() => setTemplatesOpen(false)} data-testid="vision-templates-close" className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--app-text-muted)] hover:bg-[var(--app-surface-2)]"><X size={18} /></button>
+              </div>
+
+              {templatesLoading ? (
+                <div className="flex items-center justify-center gap-2 py-12 text-sm text-[var(--app-text-muted)]"><Loader2 size={16} className="animate-spin" /> Chargement des modèles…</div>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {starterTemplates.map((tpl) => (
+                    <button
+                      key={tpl.id}
+                      onClick={() => applyStarterTemplate(tpl)}
+                      data-testid={`vision-template-${tpl.id}`}
+                      className="group flex flex-col items-start gap-1.5 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-2)] p-4 text-left transition hover:border-[var(--app-accent)] hover:shadow-md"
+                    >
+                      <span className="text-2xl">{tpl.emoji}</span>
+                      <span className="font-head text-base font-bold text-[var(--app-text)]">{tpl.label}</span>
+                      <span className="text-xs text-[var(--app-text-muted)]">{tpl.description}</span>
+                      <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--app-accent)] opacity-0 transition group-hover:opacity-100">
+                        Utiliser ce modèle <ArrowRight size={12} />
+                      </span>
+                    </button>
+                  ))}
+                  {!starterTemplates.length && <p className="col-span-full py-8 text-center text-sm text-[var(--app-text-muted)]">Aucun modèle disponible pour l'instant.</p>}
+                </div>
+              )}
+            </div>
+          </>
+        )}
 
         {/* Mini-map — bas droite, style Miro/Figma */}
         <div
@@ -1969,6 +2058,9 @@ function TabSwot() {
   const [swot, setSwot] = useState(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [creatingActionIdx, setCreatingActionIdx] = useState(null);
+  const [createdActions, setCreatedActions] = useState(() => new Set());
+  const [bulkCreating, setBulkCreating] = useState(false);
 
   React.useEffect(() => {
     analyseApi.get()
@@ -1976,6 +2068,41 @@ function TabSwot() {
       .catch(() => setSwot(null))
       .finally(() => setLoading(false));
   }, []);
+
+  // Transforme une prochaine action de l'analyse IA en vraie tâche du Cockpit —
+  // même mécanisme que "+ Mission" sur les piliers stratégiques (createMission
+  // plus haut dans ce fichier), pour que l'IA ne reste jamais un simple
+  // panneau de lecture : chaque recommandation peut devenir une action réelle.
+  const createActionTask = async (actionText, idx) => {
+    setCreatingActionIdx(idx);
+    try {
+      await tasksApi.create({ label: actionText, type: "humain", priority: "normal" });
+      setCreatedActions((prev) => new Set(prev).add(idx));
+      toast.success("Tâche créée dans votre Cockpit ✦");
+    } catch {
+      toast.error("Impossible de créer la tâche pour le moment.");
+    } finally {
+      setCreatingActionIdx(null);
+    }
+  };
+
+  const createAllActionTasks = async () => {
+    setBulkCreating(true);
+    const remaining = swot.next_actions
+      .map((a, i) => [a, i])
+      .filter(([, i]) => !createdActions.has(i));
+    let created = 0;
+    for (const [a, i] of remaining) {
+      try {
+        await tasksApi.create({ label: a, type: "humain", priority: "normal" });
+        created += 1;
+        setCreatedActions((prev) => new Set(prev).add(i));
+      } catch { /* on continue avec les suivantes, best-effort */ }
+    }
+    setBulkCreating(false);
+    if (created > 0) toast.success(`${created} tâche${created > 1 ? "s" : ""} créée${created > 1 ? "s" : ""} dans votre Cockpit ✦`);
+    else toast.error("Aucune tâche n'a pu être créée.");
+  };
 
   const generate = async () => {
     setGenerating(true);
@@ -2099,12 +2226,30 @@ function TabSwot() {
 
           {swot.next_actions?.length > 0 && (
             <div className="app-card p-5" data-testid="swot-next-actions">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--app-text-muted)] mb-3">Prochaines actions</p>
+              <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--app-text-muted)]">Prochaines actions recommandées par l'IA</p>
+                <button onClick={createAllActionTasks} disabled={bulkCreating || createdActions.size === swot.next_actions.length}
+                  data-testid="swot-create-plan-btn"
+                  className="text-xs font-semibold px-3 py-1.5 rounded-full bg-[var(--app-accent)] text-white disabled:opacity-50">
+                  {bulkCreating ? "Création…" : createdActions.size === swot.next_actions.length ? "Plan créé ✓" : "Créer mon plan d'action"}
+                </button>
+              </div>
               <ul className="space-y-2">
                 {swot.next_actions.map((a, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-[var(--app-text)]">
-                    <Circle size={5} className="mt-1.5 flex-shrink-0 text-[var(--app-accent)]" />
-                    {a}
+                  <li key={i} className="flex items-center gap-2 text-sm text-[var(--app-text)]" data-testid={`swot-next-action-${i}`}>
+                    <Circle size={5} className="flex-shrink-0 text-[var(--app-accent)]" />
+                    <span className="flex-1">{a}</span>
+                    {createdActions.has(i) ? (
+                      <span className="text-[10px] font-semibold text-[var(--app-accent)] flex items-center gap-1 flex-shrink-0">
+                        <Check size={12} /> Tâche créée
+                      </span>
+                    ) : (
+                      <button onClick={() => createActionTask(a, i)} disabled={creatingActionIdx === i}
+                        data-testid={`swot-create-task-${i}`}
+                        className="text-[10px] font-semibold text-[var(--app-accent)] hover:underline disabled:opacity-50 flex-shrink-0">
+                        {creatingActionIdx === i ? "…" : "+ Tâche"}
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>

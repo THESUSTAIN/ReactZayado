@@ -1,17 +1,20 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, Compass, TrendingUp, Activity, HeartPulse, Gem, Briefcase, MessageCircle, User } from "lucide-react";
+import { Home, Compass, TrendingUp, Activity, HeartPulse, Gem, Briefcase, MessageCircle, User, Wallet } from "lucide-react";
 import { usePrefs } from "@/context/PrefsContext";
 
 // Architecture V1 : un seul projet actif
-// 5 piliers : Cockpit · Vision · Croissance · Espace de travail · DAF IA (+ Co-pilote)
+// 5 piliers : Hub IA · Vision · Croissance · Pilotage (DAF IA) · Espace (+ Co-pilote)
 // "Moi" (bien-être) est accessible via l'avatar/profil (menu Header).
+// Aligné sur la maquette de référence (labels "Hub IA" / "Pilotage (DAF IA)" /
+// "Espace") — Pilotage pointe vers l'onglet Finances déjà existant dans
+// Travail.jsx (pas de nouvelle page créée, juste un accès direct depuis la nav).
 const ITEMS = [
   { id: "cockpit",    tkey: "nav_cockpit",    Icon: Home,          path: "/" },
   { id: "vision",     tkey: "nav_vision",     Icon: Compass,       path: "/vision-board" },
   { id: "croissance", tkey: "nav_croissance", Icon: TrendingUp,    path: "/croissance" },
+  { id: "pilotage",   tkey: "nav_pilotage",   Icon: Wallet,        path: "/travail?tab=dafia" },
   { id: "travail",    tkey: "nav_travail",    Icon: Briefcase,     path: "/travail" },
-  { id: "dafia",      tkey: "nav_dafia",      Icon: Activity,      path: "/pilotage" },
   { id: "copilote",   tkey: "nav_copilote",   Icon: MessageCircle, action: "open-cockpit-chat" },
 ];
 
@@ -22,10 +25,32 @@ export default function Sidebar({ onSettingsOpen }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = usePrefs();
-  const isActive = (item) =>
-    item.path
-      ? (item.path === "/" ? location.pathname === "/" : location.pathname.startsWith(item.path))
-      : false;
+  // Gère les items dont le path inclut une query string (ex: Pilotage →
+  // /travail?tab=dafia) : sans ça, location.pathname.startsWith() ignore
+  // toujours la query, et Pilotage/Espace s'allumeraient tous les deux en
+  // même temps sur /travail?tab=dafia.
+  const isActive = (item) => {
+    if (!item.path) return false;
+    const [itemPathname, itemQuery] = item.path.split("?");
+    if (item.path === "/") return location.pathname === "/";
+    if (!location.pathname.startsWith(itemPathname)) return false;
+    if (itemQuery) {
+      const params = new URLSearchParams(itemQuery);
+      const current = new URLSearchParams(location.search);
+      return [...params.entries()].every(([k, v]) => current.get(k) === v);
+    }
+    // Un item sans query (ex: "Espace" → /travail) ne doit pas s'allumer
+    // quand on est en fait sur un onglet dédié à un autre item (ex: Pilotage).
+    const otherHasQueryMatch = ITEMS.some((other) => {
+      if (other === item || !other.path?.includes("?")) return false;
+      const [otherPathname, otherQuery] = other.path.split("?");
+      if (!location.pathname.startsWith(otherPathname)) return false;
+      const params = new URLSearchParams(otherQuery);
+      const current = new URLSearchParams(location.search);
+      return [...params.entries()].every(([k, v]) => current.get(k) === v);
+    });
+    return !otherHasQueryMatch;
+  };
 
   // Repli type Samsung Edge : les icônes glissent hors écran, mais on garde
   // (1) le LOGO ancré tout en haut au niveau du header et

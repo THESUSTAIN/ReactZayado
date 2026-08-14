@@ -11,7 +11,6 @@ const ITEMS = [
   { key: "vision",    tkey: "nav_vision",    Icon: Compass,       path: "/vision-board" },
   { key: "croissance",tkey: "nav_croissance",Icon: TrendingUp,    path: "/croissance" },
   { key: "travail",   tkey: "nav_travail",   Icon: Briefcase,     path: "/travail" },
-  { key: "dafia",     tkey: "nav_dafia",     Icon: LineIcon,      path: "/pilotage" },
   { key: "copilote",  tkey: "nav_copilote",  Icon: MessageCircle, action: "open-cockpit-chat" },
 ];
 

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { travailApi, tasksApi, projectsApi, documentsApi } from "@/lib/api";
+import Pilotage from "@/pages/Pilotage";
 
 const GOLD = "#C9A449", SAGE = "#5DCAA5", CORAL = "#F0808A", PLUM = "#8b6fbf", BLUE = "#5B8DEF";
 
@@ -522,33 +523,10 @@ export default function Travail() {
             </div>
           )}
 
-          {/* ══════════ DAF IA ══════════ */}
+          {/* ══════════ DAF IA / FINANCES (module Pilotage intégré) ══════════ */}
           {tab === "dafia" && (
             <div data-testid="dafia-tab">
-              <div className="pgrid pgrid-2" style={{ marginBottom: 16 }}>
-                <div className="glass-card">
-                  <div className="card-label" style={{ color: GOLD }}><Euro size={14} /> Synthèse financière du mois</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 14 }}>
-                    {[
-                      { k: "Chiffre d'affaires", v: eur(fin.ca), d: fin.ca_delta },
-                      { k: "Dépenses", v: eur(fin.depenses), d: fin.depenses_delta, inv: true },
-                      { k: "Résultat net", v: eur(fin.net), d: fin.net_delta },
-                      { k: "Marge", v: `${fin.marge ?? 0} %`, d: fin.marge_delta },
-                    ].map((r) => (
-                      <div key={r.k}>
-                        <p className="muted" style={{ fontSize: 12, margin: 0 }}>{r.k}</p>
-                        <p style={{ fontSize: 24, fontWeight: 300, color: "var(--txt)", margin: "2px 0" }}>{r.v}</p>
-                        <Delta value={r.d} invert={r.inv} />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="glass-card" style={{ borderLeft: `3px solid ${PLUM}` }}>
-                  <div className="card-label" style={{ color: PLUM }}><BarChart3 size={14} /> Votre DAF IA</div>
-                  <p style={{ fontSize: 14, color: "var(--txt)", margin: "10px 0", lineHeight: 1.5 }}>Le pilotage financier complet (prévisions, trésorerie, catégories, import CSV/banque) vit dans le module Pilotage.</p>
-                  <button onClick={() => navigate("/pilotage")} className="zbtn zbtn-primary" data-testid="goto-pilotage"><ArrowRight size={14} /> Ouvrir le Pilotage financier</button>
-                </div>
-              </div>
+              <Pilotage />
             </div>
           )}
         </div>

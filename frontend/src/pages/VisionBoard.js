@@ -57,7 +57,7 @@ export default function VisionBoard() {
       dashboardApi.summary().then(setSummary),
       tasksApi.list().then((d) => setTasks(d.items || [])),
     ]).finally(() => setLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   const patch = async (payload) => {
