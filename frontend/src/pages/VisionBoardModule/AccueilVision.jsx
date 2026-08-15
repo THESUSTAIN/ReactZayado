@@ -5,7 +5,7 @@ import {
   AlertTriangle, Link2, Check, Chrome,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { visionBrainApi } from "@/lib/api";
+import { visionBrainApi } from "../../lib/finalVisionModuleApi";
 
 const PILLAR_COLOR = {
   "Vision": "#E08A4A", "Exécution": "#3B6FE0", "Finance": "#2FB89A",

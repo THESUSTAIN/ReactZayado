@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useApp } from "./useApp";
-import { visionApi, visionExtApi, studioApi } from "@/lib/api";
+import { visionApi, visionExtApi, studioApi } from "../../lib/finalVisionModuleApi";
 
 const backendBase = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/$/, "");
 const fullUrl = (u) => (!u ? u : u.startsWith("http") || u.startsWith("data:") ? u : `${backendBase}${u}`);

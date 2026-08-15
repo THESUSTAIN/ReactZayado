@@ -1,26 +1,25 @@
 import React, { useMemo, useRef, useState, useCallback } from "react";
+import { flushSync } from "react-dom";
 import StudioModal from "./StudioModal";
 import DocumentsDrawer from "./DocumentsDrawer";
 import LiveCardsStrip from "./LiveCardsStrip";
 import AccueilVision from "./AccueilVision";
-import VisionBrainPanel from "./VisionBrainPanel";
+import CoursAccueilVision from "../Vision";
 import {
   Type, Image as ImageIcon, ListChecks, Link2, Palette, Sparkles,
-  Plus, Minus, RotateCcw, Send, MousePointer2, Hand, Maximize2, Minimize2,
+  Plus, Minus, RotateCcw, Send, MousePointer2, Hand, Maximize2,
   TrendingUp, HeartPulse, Globe, Wallet, Check, Circle,
   BookOpen, FileDown, ChevronLeft, ChevronRight,
   Bell, Heart, Clock3,
-  Star, Search, ArrowRight,
+  Star, Search, ArrowLeft, ArrowRight,
   ExternalLink, Loader2, Upload, Share2, X, MoreVertical, CreditCard,
   Shield, AlertTriangle, Target, Zap,
-  Printer, FileText, Wand2, Folder, Video, Focus, Presentation, LayoutTemplate,
+  Printer, FileText, Wand2, Folder, Video, Presentation, LayoutTemplate,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useApp } from "./useApp";
 import { useSearchParams } from "react-router-dom";
-import { visionApi, visionExtApi, pilotageApi, wellnessApi, onboardingApi, tasksApi, analyseApi } from "@/lib/api";
-import useIsMobile from "@/hooks/useIsMobile";
-import VisionCanvaMobile from "./VisionCanvaMobile";
+import { visionApi, visionExtApi, pilotageApi, wellnessApi, onboardingApi, tasksApi, analyseApi } from "../../lib/finalVisionModuleApi";
 import {
   BOARD_CENTER, BOARD_TOOLS,
   VISION_BOOK,
@@ -31,7 +30,6 @@ import "./vision.css";
 // ─── TABS ────────────────────────────────────────────────────────────────────
 const TABS = [
   { id: "accueil",  labelFr: "Accueil Vision",        labelEn: "Vision Home" },
-  { id: "canvas",   labelFr: "Vision Canvas",         labelEn: "Vision Canvas" },
   { id: "pillars",  labelFr: "Piliers stratégiques",  labelEn: "Strategic Pillars" },
   { id: "swot",     labelFr: "Analyse & Validation",  labelEn: "Analysis & Validation" },
 ];
@@ -246,7 +244,7 @@ function AiDocModal({ open, onClose, onGenerated }) {
   );
 }
 
-function TabCanvas({ bgImage }) {
+function TabCanvas({ bgImage, onBack }) {
   const { t, tv } = useApp();
   const [zoom, setZoom] = useState(1);
 
@@ -336,12 +334,28 @@ function TabCanvas({ bgImage }) {
     return () => document.removeEventListener("fullscreenchange", onFs);
   }, []);
 
-  const toggleFullscreen = () => {
-    const el = containerRef.current;
-    if (!el) return;
-    if (!document.fullscreenElement) el.requestFullscreen?.().catch(() => {});
-    else document.exitFullscreen?.();
+  const returnToAccueil = () => {
+    const finalize = () => {
+      onBack?.();
+      window.scrollTo({ top: 0, behavior: "auto" });
+    };
+    if (document.fullscreenElement) {
+      Promise.resolve(document.exitFullscreen?.()).catch(() => {}).finally(finalize);
+    } else {
+      finalize();
+    }
   };
+
+  // Commande déclenchée par le bouton visible dans l’en-tête Vision Board.
+  // Le Canvas conserve son vrai mode plein écran Final-main, avec sortie native.
+  React.useEffect(() => {
+    const openStudio = () => {
+      const el = containerRef.current;
+      if (el && !document.fullscreenElement) el.requestFullscreen?.().catch(() => {});
+    };
+    window.addEventListener("cours:open-vision-studio", openStudio);
+    return () => window.removeEventListener("cours:open-vision-studio", openStudio);
+  }, []);
 
   // ── Modèles de départ : ouvre le panneau et charge la liste depuis l'API ──
   const openStarterTemplates = useCallback(() => {
@@ -880,13 +894,13 @@ function TabCanvas({ bgImage }) {
           <button onClick={() => setZoom((z) => Math.min(1.6, +(z + 0.1).toFixed(2)))} title={t("board.zoomIn")} data-testid="vision-zoom-in" className={ctrlBtn}><Plus size={15} /></button>
           <span className="mx-1 h-5 w-px bg-[var(--app-border)]" />
 
-          {/* Actions principales — style Storyflow : Documents · Présenter · Exporter · Partager · Focus */}
+          {/* Actions principales : documents, export et retour explicite à l’Accueil Vision. */}
           <button onClick={() => setDocsOpen(true)} title="Documents (drawer)" data-testid="vision-open-documents"
             className={ctrlBtn}><Folder size={15} /></button>
           <button onClick={handleExportPdf} disabled={exporting} title="Exporter (PNG / PDF)" data-testid="vision-export"
             className={ctrlBtn}>{exporting ? <Loader2 size={15} className="spin" /> : <FileDown size={15} />}</button>
-          <button onClick={toggleFullscreen} title={focusMode ? "Quitter le focus" : "Focus mode"} data-testid="vision-focus"
-            className={ctrlBtn}>{isFull ? <Minimize2 size={15} /> : <Focus size={15} />}</button>
+          <button onClick={returnToAccueil} title="Retour à l’Accueil Vision" data-testid="vision-back-to-home"
+            className={`${ctrlBtn} gap-1.5 px-2`}><ArrowLeft size={15} /><span className="hidden sm:inline">Retour</span></button>
         </div>
 
         {/* Photo picker (Unsplash) */}
@@ -1932,7 +1946,7 @@ function TabVisionStudio() {
       x: 620 + Math.random() * 120, y: 300 + Math.random() * 120, w: 210, h: 170,
       image, title: { fr: tv(fields.title), en: tv(fields.title) },
     };
-    try { await visionApi.addCard(card); toast.success("Visuel épinglé au board (onglet Vision Canvas)"); }
+    try { await visionApi.addCard(card); toast.success("Visuel ajouté au Studio Vision"); }
     catch { toast.error("Échec de l'épinglage"); }
     finally { setPinning(false); }
   };
@@ -2291,7 +2305,7 @@ function MemoriesStrip() {
         x: 500 + Math.random() * 150, y: 350 + Math.random() * 150, w: 210, h: 170,
         image: m.image, title: { fr: tv(m.title), en: tv(m.title) },
       });
-      toast.success("Souvenir épinglé sur ton Vision Canvas ✦");
+      toast.success("Souvenir épinglé dans ton Studio Vision ✦");
       setDetail(null);
     } catch { toast.error("Échec de l'épinglage"); }
     finally { setPinningId(null); }
@@ -2345,8 +2359,9 @@ function MemoriesStrip() {
 
 // ─── MODULE PRINCIPAL ─────────────────────────────────────────────────────────
 export default function VisionBoardModule() {
-  const isMobile = useIsMobile(768);
-  if (isMobile) return <VisionCanvaMobile />;
+  // Sur mobile, l’accueil de l’application reste le Copilote. Lorsque
+  // l’utilisateur ouvre Vision, il doit retrouver les quatre onglets du Board
+  // et choisir lui-même le Canvas ou le Studio, sans bascule automatique.
   return <VisionBoardDesktop />;
 }
 
@@ -2357,6 +2372,21 @@ function VisionBoardDesktop() {
   const [activeTab, setActiveTab] = useState(TABS.some(t => t.id === initialTab) ? initialTab : "accueil");
   const [menuOpen, setMenuOpen] = useState(false);
   const [bgImage, setBgImage] = useState(null);
+
+  // Le Copilote droit Cours-main est l’unique assistant permanent.
+  // Le module Vision transmet le contexte de l’onglet actif au shell au lieu
+  // de conserver le panneau Cerveau IA Final-main en double.
+  React.useEffect(() => {
+    const labels = {
+      accueil: "Accueil Vision",
+      canvas: "Studio Vision",
+      pillars: "Piliers stratégiques",
+      swot: "Analyse & Validation",
+    };
+    window.dispatchEvent(new CustomEvent("cours:vision-context", {
+      detail: { tab: activeTab, label: labels[activeTab] || "Vision" },
+    }));
+  }, [activeTab]);
   const [canvaModal, setCanvaModal] = useState(false);
   const menuRef = useRef(null);
 
@@ -2393,13 +2423,29 @@ function VisionBoardDesktop() {
     { icon: Share2, label: "Partager mon board", onClick: handleShare },
   ];
 
+  const returnToAccueil = () => {
+    setActiveTab("accueil");
+    window.scrollTo({ top: 0, behavior: "auto" });
+  };
+
+  const openVisionStudio = () => {
+    // Le Studio est l’unique accès au Canvas : il est monté à la demande,
+    // ouvert directement en plein écran, puis son bouton Retour ramène à l’Accueil Vision.
+    if (activeTab !== "canvas") flushSync(() => setActiveTab("canvas"));
+    document.querySelector('[data-testid="vision-canvas-container"]')?.requestFullscreen?.().catch(() => {});
+  };
+
+  const openDailyDecision = () => {
+    window.dispatchEvent(new Event("cours:open-copilot"));
+  };
+
   const renderTab = () => {
     switch (activeTab) {
-      case "accueil":   return <AccueilVision onGoCanvas={() => setActiveTab("canvas")} />;
-      case "canvas":    return <TabCanvas bgImage={bgImage} />;
+      case "accueil":   return <CoursAccueilVision />;
+      case "canvas":    return <TabCanvas bgImage={bgImage} onBack={returnToAccueil} />;
       case "pillars":   return <TabPillars />;
       case "swot":      return <TabSwot />;
-      default:          return <AccueilVision onGoCanvas={() => setActiveTab("canvas")} />;
+      default:          return <CoursAccueilVision />;
     }
   };
 
@@ -2410,16 +2456,17 @@ function VisionBoardDesktop() {
 
       {/* Titre */}
       <div className="vb-header">
-        <h1 className="vb-title">Vision Board <span className="vb-subtitle">— Ma feuille de route</span></h1>
+        <h1 className="vb-title gold-text">Vision Board</h1>
+        <p className="vb-subtitle mt-1">Gardez le cap. Alignez chaque action sur ce qui compte vraiment.</p>
       </div>
 
       {/* Onglets + menu d'actions (⋮) sur la MÊME ligne */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="vb-toolbar flex items-center justify-between gap-3">
         <div className="vb-tabs flex flex-wrap gap-1 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-2)] p-1">
           {TABS.map(tab => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => { setActiveTab(tab.id); window.scrollTo({ top: 0, behavior: "auto" }); }}
               data-testid={`vision-tab-${tab.id}`}
               className={[
                 "rounded-lg px-4 py-2 text-sm font-medium transition-all",
@@ -2432,7 +2479,24 @@ function VisionBoardDesktop() {
             </button>
           ))}
         </div>
-        <div className="relative shrink-0" ref={menuRef}>
+        <button
+          type="button"
+          onClick={openVisionStudio}
+          className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full border border-white/30 bg-white/[0.10] px-4 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(5,8,26,0.18)] transition-colors hover:border-[#D4AF37]/55 hover:bg-white/[0.16]"
+          data-testid="open-vision-studio"
+        >
+          <Maximize2 size={15} className="text-[#D4AF37]" /> Ouvrir le Studio Vision
+        </button>
+        <button
+          type="button"
+          onClick={openDailyDecision}
+          title="Voir la décision du jour dans le Copilote"
+          className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full border border-white/25 bg-[rgba(69,103,164,0.22)] px-4 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(5,8,26,0.16)] transition-colors hover:border-[#D4AF37]/55 hover:bg-[rgba(82,119,180,0.30)]"
+          data-testid="vision-open-decision"
+        >
+          <Target size={15} className="text-[#D4AF37]" /><span className="hidden lg:inline">Voir ma décision du jour</span><span className="lg:hidden">Décision</span>
+        </button>
+        <div className="vb-actions relative shrink-0" ref={menuRef}>
           <button onClick={() => setMenuOpen((o) => !o)} data-testid="vision-actions-menu" title="Actions"
             className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--app-text)] hover:border-[var(--app-accent)] hover:text-[var(--app-accent)]">
             <MoreVertical size={18} />
@@ -2457,13 +2521,10 @@ function VisionBoardDesktop() {
       {/* #4 Live Cards — données live des modules (CA, bien-être, prospects) */}
       {activeTab === "canvas" && <div className="hidden md:block"><LiveCardsStrip /></div>}
 
-      {/* Tab content + Panneau IA persistant à droite */}
+      {/* Le contenu Vision reste au centre ; le Copilote unique est rendu par Layout.jsx à droite. */}
       <div className="vb-main-row">
         <div className="vb-main-content animate-fade-up">
           {renderTab()}
-        </div>
-        <div className="vb-side-panel">
-          <VisionBrainPanel />
         </div>
       </div>
     </div>

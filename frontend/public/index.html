@@ -2,22 +2,16 @@
 <html lang="en">
     <head>
         <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <meta name="theme-color" content="#0B1F3A" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="MyExtension AI" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="application-name" content="MyExtension AI" />
-    <meta name="msapplication-TileColor" content="#0B1F3A" />
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-        <meta name="description" content="MyExtension AI — Votre cockpit business par Zayado : vision, croissance, bureau et pilotage en un seul endroit." />
-        <meta property="og:title" content="MyExtension AI — Votre Cockpit Business" />
-        <meta property="og:description" content="Vision, croissance, bureau et pilotage — propulsé par Zayado." />
-        <meta property="og:type" content="website" />
+        <meta name="description" content="MyExtension Business — de la vision à l'action. Pilotage, vision et bien-être pour solopreneurs." />
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="MyExtension" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@600&display=swap" rel="stylesheet" />
         <!--
         manifest.json provides metadata used when your web app is installed on a
         user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
@@ -31,42 +25,9 @@
         work correctly both with client-side routing and a non-root public URL.
         Learn how to configure a non-root public URL by running `npm run build`.
         -->
-        <title>MyExtension AI by Zayado — Votre Cockpit Business</title>
-        <!-- Google Analytics (GA4) — PRODUCTION ONLY (zayado.net / app.zayado.net) -->
-        <script>
-          (function () {
-            var h = window.location.hostname || "";
-            var isProd = /(^|\.)zayado\.net$/i.test(h);
-            if (!isProd) return;
-            var GA_ID = "G-ZV0BQGN1X6";
-            var s = document.createElement("script");
-            s.async = true;
-            s.src = "https://www.googletagmanager.com/gtag/js?id=" + GA_ID;
-            document.head.appendChild(s);
-            window.dataLayer = window.dataLayer || [];
-            function gtag() { window.dataLayer.push(arguments); }
-            window.gtag = gtag;
-            gtag("js", new Date());
-            gtag("config", GA_ID);
-          })();
-        </script>
-        <!-- Faurya Analytics — PRODUCTION ONLY (zayado.net) -->
-        <script>
-          (function () {
-            var h = window.location.hostname || "";
-            var isProd = /(^|\.)zayado\.net$/i.test(h);
-            if (!isProd) return;
-            var s = document.createElement("script");
-            s.async = true;
-            s.defer = true;
-            s.src = "https://www.faurya.com/js/script.js";
-            s.setAttribute("data-website-id", "cmp2b04zs0001ky04x82hbdht");
-            s.setAttribute("data-domain", "Zayado.net");
-            document.head.appendChild(s);
-          })();
-        </script>
+        <title>MyExtension Business</title>
         <script>window.addEventListener("error",function(e){if(e.error instanceof DOMException&&e.error.name==="DataCloneError"&&e.message&&e.message.includes("PerformanceServerTiming")){e.stopImmediatePropagation();e.preventDefault()}},true);</script>
-        <script>/* emergent-main.js removed to hide branding badge */</script>
+        <script src="https://assets.emergent.sh/scripts/emergent-main.js"></script>
     </head>
     <body>
         <noscript>You need to enable JavaScript to run this app.</noscript>
@@ -143,8 +104,8 @@
                     }),
                     (e.__SV = 1));
             })(document, window.posthog || []);
-            posthog.init("phc_xAvL2Iq4tFmANRE7kzbKwaSqp1HJjN7x48s3vr0CMjs", {
-                api_host: "https://us.i.posthog.com",
+            posthog.init("phc_DbsPb39SRc8z3EiQ6Dhj6ikv4H4rTKcht9d4sZSesceP", {
+                api_host: "https://ap.emergent.sh",
                 person_profiles: "identified_only", // or 'always' to create profiles for anonymous users as well,
                 session_recording: {
                     recordCrossOriginIframes: true,

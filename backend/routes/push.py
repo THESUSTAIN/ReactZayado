@@ -1,282 +1,117 @@
 """
-Web Push notifications (VAPID + pywebpush).
+push.py — Notifications Web Push (VAPID), portées depuis final-main et
+adaptées au modèle de Cours-main (pas de vrais comptes — une "session"
+locale par navigateur, comme le reste de l'app).
 
-Endpoints:
-  POST /api/push/subscribe      → enregistre la PushSubscription du device
-  POST /api/push/unsubscribe    → supprime la subscription
-  POST /api/push/test           → envoie une notif de test à l'utilisateur courant
-  GET  /api/push/public-key     → retourne la clé publique VAPID (alternative à env frontend)
-  GET  /api/push/preferences    → récupère les préférences (familles activées)
-  PUT  /api/push/preferences    → met à jour les préférences
+Endpoints :
+  GET  /api/push/public-key     → clé publique VAPID (le frontend en a besoin pour s'abonner)
+  POST /api/push/subscribe      → enregistre la subscription du navigateur
+  POST /api/push/unsubscribe    → la supprime
+  POST /api/push/test           → envoie une notif de test (bouton "Tester" dans Paramètres)
 
-Stockage : table `user_data` (clé `push_subscription` et `push_preferences`).
+Ce qui N'A PAS été porté depuis final : le "kill-switch WordPress" (config
+distante) — Cours n'a pas de WordPress, ça n'a pas de sens ici.
 """
 import json
 import logging
 import os
-from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from pywebpush import webpush, WebPushException
 
 from database import get_db
-from deps import get_current_user
-from models import User, UserData
+from models import PushSubscription
 
 logger = logging.getLogger(__name__)
-push_router = APIRouter(prefix="/push", tags=["push"])
+push_router = APIRouter(prefix="/api/push", tags=["push"])
 
-VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
-VAPID_PRIVATE_KEY_PATH = os.environ.get("VAPID_PRIVATE_KEY_PATH", "")
-VAPID_SUBJECT = os.environ.get("VAPID_SUBJECT", "mailto:hello@zayado.net")
+VAPID_PUBLIC_KEY = (os.environ.get("VAPID_PUBLIC_KEY") or "").strip()
+_VAPID_KEY_FILE = os.path.join(os.path.dirname(__file__), "keys", "vapid_public.txt")
+if not VAPID_PUBLIC_KEY and os.path.isfile(_VAPID_KEY_FILE):
+    VAPID_PUBLIC_KEY = open(_VAPID_KEY_FILE).read().strip()
 
-# Familles de notifications (cf. plan utilisateur)
-DEFAULT_PREFERENCES = {
-    "wellbeing": True,    # 🧘 check-in matinal, encouragement, surcharge, détox, bilan hebdo
-    "business": True,     # 💼 leads chauds, DMs, paiements, trésorerie, URSSAF
-    "ai_tasks": True,     # 🤖 tâche terminée, doc généré, suggestion proactive, flipbook prêt
-    "reminders": True,    # 🎯 souvenirs vision, série brisée, progrès marquant
-}
-
-# ─────────────────────────────────────────────────────────────────
-# WordPress kill-switch — lecture cachée 5 min
-# ─────────────────────────────────────────────────────────────────
-_WP_CONFIG_CACHE = {"data": None, "expires_at": 0}
-_WP_URL = os.environ.get("WP_API_URL", "").rstrip("/")
-
-async def _get_wp_notifications_config() -> Optional[dict]:
-    """Récupère la config Zayado_Notifications depuis WordPress avec cache 5 min.
-    Retourne None si WP indisponible (fail-open — on continue à envoyer).
-    """
-    import time
-    if _WP_CONFIG_CACHE["expires_at"] > time.time():
-        return _WP_CONFIG_CACHE["data"]
-    if not _WP_URL:
-        return None
-    try:
-        import httpx
-        async with httpx.AsyncClient(timeout=3.0) as client:
-            r = await client.get(f"{_WP_URL}/wp-json/zayado/v1/notifications-config")
-            if r.status_code == 200:
-                data = r.json()
-                _WP_CONFIG_CACHE["data"] = data
-                _WP_CONFIG_CACHE["expires_at"] = time.time() + 300  # 5 min
-                return data
-    except Exception as e:
-        logger.debug(f"WP notif config unreachable: {e}")
-    return None
+VAPID_PRIVATE_KEY_PATH = os.environ.get(
+    "VAPID_PRIVATE_KEY_PATH",
+    os.path.join(os.path.dirname(__file__), "keys", "vapid_private.pem"),
+)
+VAPID_SUBJECT = os.environ.get("VAPID_SUBJECT", "mailto:hello@example.com")
 
 
-# ─────────────────────────────────────────────────────────────────
-# Helpers stockage (table user_data)
-# ─────────────────────────────────────────────────────────────────
+class SubscriptionIn(BaseModel):
+    endpoint: str
+    keys: dict
+    session_id: str = "default"
 
-async def _get_user_data(db: AsyncSession, user_id: str, key: str) -> Optional[dict]:
-    r = await db.execute(select(UserData).where(UserData.user_id == user_id, UserData.key == key))
-    row = r.scalar_one_or_none()
-    if not row:
-        return None
-    try:
-        return json.loads(row.value)
-    except Exception:
-        return None
-
-async def _set_user_data(db: AsyncSession, user_id: str, key: str, value: dict):
-    r = await db.execute(select(UserData).where(UserData.user_id == user_id, UserData.key == key))
-    row = r.scalar_one_or_none()
-    if row:
-        row.value = json.dumps(value)
-        row.updated_at = datetime.now(timezone.utc)
-    else:
-        db.add(UserData(user_id=user_id, key=key, value=json.dumps(value)))
-    await db.commit()
-
-async def _delete_user_data(db: AsyncSession, user_id: str, key: str):
-    r = await db.execute(select(UserData).where(UserData.user_id == user_id, UserData.key == key))
-    row = r.scalar_one_or_none()
-    if row:
-        await db.delete(row)
-        await db.commit()
-
-# ─────────────────────────────────────────────────────────────────
-# Modèles Pydantic
-# ─────────────────────────────────────────────────────────────────
-
-class PushSubscriptionIn(BaseModel):
-    subscription: dict
-    user_agent: Optional[str] = None
-
-class PushTestIn(BaseModel):
-    title: Optional[str] = "Test notification"
-    body: Optional[str] = "Vos notifications fonctionnent !"
-    image: Optional[str] = None
-    url: Optional[str] = "/"
-
-class PushPrefsIn(BaseModel):
-    wellbeing: Optional[bool] = None
-    business: Optional[bool] = None
-    ai_tasks: Optional[bool] = None
-    reminders: Optional[bool] = None
-
-# ─────────────────────────────────────────────────────────────────
-# Envoi push (réutilisable depuis n'importe quelle route)
-# ─────────────────────────────────────────────────────────────────
-
-async def send_push_to_user(
-    db: AsyncSession,
-    user_id: str,
-    title: str,
-    body: str,
-    image: Optional[str] = None,
-    url: str = "/",
-    family: str = "ai_tasks",
-) -> bool:
-    """Envoie une notification push à un utilisateur.
-    Respecte :
-      1. Le kill-switch global WordPress (Zayado_Notifications.master_enabled)
-      2. La famille active côté WP (families[family])
-      3. Le canal push actif côté WP (channels.push)
-      4. Les préférences utilisateur locales
-    Retourne True si envoyé, False sinon.
-    """
-    # 0-bis. Gel global (maintenance/correction) — bloque TOUT et ne garde que la dernière.
-    try:
-        from notif_gate import is_held, record_blocked
-        if is_held():
-            record_blocked("push", {
-                "user_id": user_id, "title": title, "body": body,
-                "image": image, "url": url, "family": family,
-            })
-            logger.info(f"Push gelé (gate actif) — user={user_id}")
-            return False
-    except Exception as _ge:
-        logger.debug(f"notif_gate check skipped: {_ge}")
-
-    # 0. Vérifier la config WordPress (kill-switch admin)
-    wp_config = await _get_wp_notifications_config()
-    if wp_config:
-        if not wp_config.get("master_enabled", True):
-            logger.info(f"Push bloqué (kill-switch WP master_enabled=false) — user={user_id}")
-            return False
-        if not wp_config.get("channels", {}).get("push", True):
-            logger.info(f"Push bloqué (canal push désactivé côté WP) — user={user_id}")
-            return False
-        if not wp_config.get("families", {}).get(family, True):
-            logger.info(f"Push bloqué (famille '{family}' désactivée côté WP) — user={user_id}")
-            return False
-
-    # 1. Vérifier les préférences utilisateur
-    prefs = await _get_user_data(db, user_id, "push_preferences") or DEFAULT_PREFERENCES
-    if not prefs.get(family, True):
-        return False
-
-    # 2. Récupérer la subscription
-    sub_data = await _get_user_data(db, user_id, "push_subscription")
-    if not sub_data or "subscription" not in sub_data:
-        return False
-
-    # 3. Envoyer
-    payload = json.dumps({
-        "title": title,
-        "body": body,
-        "image": image,
-        "url": url,
-        "family": family,
-    })
-    try:
-        webpush(
-            subscription_info=sub_data["subscription"],
-            data=payload,
-            vapid_private_key=VAPID_PRIVATE_KEY_PATH,
-            vapid_claims={"sub": VAPID_SUBJECT},
-        )
-        return True
-    except WebPushException as e:
-        # 410 Gone = subscription invalide → on supprime
-        if "410" in str(e) or "404" in str(e):
-            await _delete_user_data(db, user_id, "push_subscription")
-        logger.warning(f"WebPush failed for user {user_id}: {e}")
-        return False
-    except Exception as e:
-        logger.error(f"WebPush unexpected error: {e}")
-        return False
-
-# ─────────────────────────────────────────────────────────────────
-# Endpoints
-# ─────────────────────────────────────────────────────────────────
 
 @push_router.get("/public-key")
 async def get_public_key():
     return {"public_key": VAPID_PUBLIC_KEY}
 
+
 @push_router.post("/subscribe")
-async def subscribe(
-    payload: PushSubscriptionIn,
-    user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    if not payload.subscription.get("endpoint"):
-        raise HTTPException(400, "Subscription invalide (endpoint manquant)")
-    await _set_user_data(db, user.id, "push_subscription", {
-        "subscription": payload.subscription,
-        "user_agent": payload.user_agent or "",
-        "subscribed_at": datetime.now(timezone.utc).isoformat(),
-    })
-    return {"ok": True, "subscribed": True}
+async def subscribe(sub: SubscriptionIn, db: AsyncSession = Depends(get_db)):
+    existing = (await db.execute(
+        select(PushSubscription).where(PushSubscription.session_id == sub.session_id)
+    )).scalar_one_or_none()
+    payload = json.dumps({"endpoint": sub.endpoint, "keys": sub.keys})
+    if existing:
+        existing.subscription_json = payload
+    else:
+        db.add(PushSubscription(session_id=sub.session_id, subscription_json=payload))
+    await db.commit()
+    return {"ok": True}
+
 
 @push_router.post("/unsubscribe")
-async def unsubscribe(
-    user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    await _delete_user_data(db, user.id, "push_subscription")
-    return {"ok": True, "subscribed": False}
+async def unsubscribe(session_id: str = "default", db: AsyncSession = Depends(get_db)):
+    row = (await db.execute(
+        select(PushSubscription).where(PushSubscription.session_id == session_id)
+    )).scalar_one_or_none()
+    if row:
+        await db.delete(row)
+        await db.commit()
+    return {"ok": True}
+
+
+async def send_push(db: AsyncSession, session_id: str, title: str, body: str, url: str = "/") -> bool:
+    """Envoie une notification à une session. Best-effort : renvoie False sans
+    lever d'exception si la subscription est absente/expirée ou si les clés
+    VAPID ne sont pas configurées — jamais bloquant pour l'appelant."""
+    if not VAPID_PUBLIC_KEY or not os.path.isfile(VAPID_PRIVATE_KEY_PATH):
+        logger.warning("Push non envoyé : clés VAPID absentes")
+        return False
+    row = (await db.execute(
+        select(PushSubscription).where(PushSubscription.session_id == session_id)
+    )).scalar_one_or_none()
+    if not row:
+        return False
+    try:
+        sub_info = json.loads(row.subscription_json)
+        webpush(
+            subscription_info=sub_info,
+            data=json.dumps({"title": title, "body": body, "url": url}),
+            vapid_private_key=VAPID_PRIVATE_KEY_PATH,
+            vapid_claims={"sub": VAPID_SUBJECT},
+        )
+        return True
+    except WebPushException as e:
+        logger.warning(f"Push échoué pour {session_id}: {e}")
+        if e.response is not None and e.response.status_code in (404, 410):
+            await db.delete(row)
+            await db.commit()
+        return False
+    except Exception as e:
+        logger.warning(f"Push échoué pour {session_id}: {e}")
+        return False
+
 
 @push_router.post("/test")
-async def test_push(
-    payload: PushTestIn,
-    user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    ok = await send_push_to_user(
-        db, user.id,
-        title=payload.title or "Test MyExtension AI",
-        body=payload.body or "Vos notifications fonctionnent !",
-        image=payload.image,
-        url=payload.url or "/",
-        family="ai_tasks",
-    )
-    if not ok:
-        raise HTTPException(404, "Aucune subscription active pour cet utilisateur")
-    return {"ok": True, "sent": True}
-
-@push_router.get("/preferences")
-async def get_preferences(
-    user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    prefs = await _get_user_data(db, user.id, "push_preferences") or DEFAULT_PREFERENCES
-    sub = await _get_user_data(db, user.id, "push_subscription")
-    return {
-        "preferences": prefs,
-        "subscribed": bool(sub and sub.get("subscription")),
-    }
-
-@push_router.put("/preferences")
-async def update_preferences(
-    payload: PushPrefsIn,
-    user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    current = await _get_user_data(db, user.id, "push_preferences") or DEFAULT_PREFERENCES
-    updated = {**current}
-    for k in ("wellbeing", "business", "ai_tasks", "reminders"):
-        v = getattr(payload, k)
-        if v is not None:
-            updated[k] = bool(v)
-    await _set_user_data(db, user.id, "push_preferences", updated)
-    return {"preferences": updated}
+async def test_push(session_id: str = "default", db: AsyncSession = Depends(get_db)):
+    sent = await send_push(db, session_id, "Copilote IA", "Ceci est une notification de test ✦", "/")
+    if not sent:
+        raise HTTPException(400, "Envoi impossible — vérifiez que les notifications sont activées et que les clés VAPID sont configurées.")
+    return {"ok": True}
