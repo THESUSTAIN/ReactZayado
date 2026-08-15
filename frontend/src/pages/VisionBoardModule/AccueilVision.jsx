@@ -5,16 +5,18 @@ import {
   AlertTriangle, Link2, Check, Chrome,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { visionBrainApi } from "../../lib/finalVisionModuleApi";
+import { visionBrainApi, dashboardApi } from "@/lib/api";
+import AlignmentCelebration from "@/components/AlignmentCelebration";
+import { KeyInsights, QuoteBar } from "@/components/CockpitSections";
 
 const PILLAR_COLOR = {
   "Vision": "#E08A4A", "Exécution": "#3B6FE0", "Finance": "#2FB89A",
-  "Impact": "#C9A449", "Énergie": "#E0669A", "Croissance": "#4AC0E0",
+  "Impact": "#D4AF37", "Énergie": "#E0669A", "Croissance": "#4AC0E0",
 };
 
 function PillarRing({ name, value }) {
   const r = 26, c = 2 * Math.PI * r, off = c - (value / 100) * c;
-  const color = PILLAR_COLOR[name] || "#C9A449";
+  const color = PILLAR_COLOR[name] || "#D4AF37";
   return (
     <div className="flex flex-col items-center gap-1" data-testid={`pillar-${name}`}>
       <div className="relative h-16 w-16">
@@ -39,8 +41,8 @@ function LinkedCard({ card }) {
   const badgeStyle = card.badge === "Objectif atteint"
     ? "bg-emerald-500/15 text-emerald-300 border-emerald-400/30"
     : card.badge === "Nouvelle opportunité"
-    ? "bg-[#C9A449]/15 text-amber-100 border-[#C9A449]/40"
-    : "bg-[#C9A449]/15 text-amber-100 border-[#C9A449]/40";
+    ? "bg-[#D4AF37]/15 text-amber-100 border-[#D4AF37]/40"
+    : "bg-[#D4AF37]/15 text-amber-100 border-[#D4AF37]/40";
   return (
     <div className="relative min-w-[190px] flex-1 rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 backdrop-blur-sm transition-transform hover:-translate-y-0.5"
       data-testid={`linked-card-${card.key}`}>
@@ -57,7 +59,7 @@ function LinkedCard({ card }) {
       <div className="mt-0.5 text-lg font-bold text-white" data-testid={`linked-card-${card.key}-value`}>{card.value}</div>
       {card.progress != null && (
         <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-          <div className="h-full rounded-full bg-gradient-to-r from-[#E7C67C] to-[#B0851F]"
+          <div className="h-full rounded-full bg-gradient-to-r from-[#E8C96A] to-[#D4AF37]"
             style={{ width: `${Math.min(100, card.progress)}%` }} />
         </div>
       )}
@@ -69,11 +71,15 @@ export default function AccueilVision({ onGoCanvas }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mirror, setMirror] = useState(null);
+  const [dash, setDash] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     visionBrainApi.panel().then(setData).catch(() => {}).finally(() => setLoading(false));
     visionBrainApi.connections().then(setMirror).catch(() => {});
+    // Point du jour / valeur générée / citation — même source que l'ancien
+    // Dashboard (retiré), migrées ici puisque Vision est maintenant l'accueil.
+    dashboardApi.get().then(setDash).catch(() => {});
   }, []);
 
   if (loading) {
@@ -92,11 +98,11 @@ export default function AccueilVision({ onGoCanvas }) {
   return (
     <div className="space-y-5" data-testid="accueil-vision">
       {/* Hero */}
-      <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#C9A449]/15 via-white/[0.02] to-[#C9A449]/10 p-6" data-testid="accueil-hero">
+      <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#D4AF37]/15 via-white/[0.02] to-[#D4AF37]/10 p-6" data-testid="accueil-hero">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 className="font-head text-3xl font-bold text-white sm:text-4xl">
-              Votre vision est alignée à <span className="text-[#C9A449]">{data.alignment_score}%</span>.
+              Votre vision est alignée à <span className="text-[#D4AF37]">{data.alignment_score}%</span>.
             </h2>
             <p className="mt-1 text-white/60">
               {data.delta_week === null || data.delta_week === undefined ? (
@@ -110,7 +116,7 @@ export default function AccueilVision({ onGoCanvas }) {
             </p>
           </div>
           <button onClick={onGoCanvas} data-testid="accueil-open-canvas"
-            className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#E7C67C] to-[#B0851F] px-5 py-2.5 text-sm font-semibold text-white hover:opacity-95 transition-opacity">
+            className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#E8C96A] to-[#D4AF37] px-5 py-2.5 text-sm font-semibold text-white hover:opacity-95 transition-opacity">
             <Zap size={15} /> Ouvrir mon board vivant
           </button>
         </div>
@@ -120,7 +126,7 @@ export default function AccueilVision({ onGoCanvas }) {
       <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5" data-testid="accueil-score-business">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-head text-lg font-semibold text-white">Score Business</h3>
-          <span className="text-2xl font-bold text-[#C9A449]">{data.score_business?.overall}/100</span>
+          <span className="text-2xl font-bold text-[#D4AF37]">{data.score_business?.overall}/100</span>
         </div>
         <div className="grid grid-cols-3 gap-4 sm:grid-cols-6">
           {data.score_business?.pillars?.map((p) => (
@@ -148,17 +154,17 @@ export default function AccueilVision({ onGoCanvas }) {
       <div className="flex flex-wrap gap-2" data-testid="accueil-quick-actions">
         {quickActions.map((a, i) => (
           <button key={i} onClick={a.onClick} data-testid={`accueil-action-${a.label}`}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/90 hover:border-[#C9A449]/50 hover:bg-white/[0.07] transition-colors">
-            <a.icon size={15} className="text-[#C9A449]" /> {a.label}
+            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/90 hover:border-[#D4AF37]/50 hover:bg-white/[0.07] transition-colors">
+            <a.icon size={15} className="text-[#D4AF37]" /> {a.label}
           </button>
         ))}
       </div>
 
       {/* Extension navigateur — CTA découvrable */}
       <button onClick={() => navigate("/extension")} data-testid="accueil-extension-cta"
-        className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[#C9A449]/30 bg-gradient-to-r from-[#C9A449]/12 to-[#C9A449]/10 p-4 text-left hover:border-[#C9A449]/60 transition-colors">
+        className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[#D4AF37]/30 bg-gradient-to-r from-[#D4AF37]/12 to-[#D4AF37]/10 p-4 text-left hover:border-[#D4AF37]/60 transition-colors">
         <span className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#C9A449]/25 text-amber-100"><Chrome size={18} /></span>
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#D4AF37]/25 text-amber-100"><Chrome size={18} /></span>
           <span>
             <span className="block text-sm font-semibold text-white">Nouveau — Extension navigateur</span>
             <span className="block text-xs text-white/60">Zayado Copilot : capturez le web et créez des actions sans quitter votre onglet.</span>
@@ -171,7 +177,7 @@ export default function AccueilVision({ onGoCanvas }) {
       {mirror?.chain?.length > 0 && (
         <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5" data-testid="accueil-mirror">
           <div className="mb-1 flex items-center gap-2">
-            <Link2 size={16} className="text-[#C9A449]" />
+            <Link2 size={16} className="text-[#D4AF37]" />
             <h3 className="font-head text-lg font-semibold text-white">Miroir dynamique</h3>
           </div>
           <p className="mb-4 text-xs text-white/50">Vos connexions (Finance, CRM, Email, Agenda) alimentent la Vision en temps réel.</p>
@@ -181,7 +187,7 @@ export default function AccueilVision({ onGoCanvas }) {
               return (
                 <div key={node.key} data-testid={`mirror-node-${node.key}`}>
                   <div className={`flex items-center gap-3 rounded-2xl border p-3 ${node.connected ? "border-white/10 bg-white/[0.03]" : "border-dashed border-white/15 bg-transparent"}`}>
-                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${node.connected ? "bg-[#C9A449]/20 text-amber-100" : "bg-white/5 text-white/40"}`}>
+                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${node.connected ? "bg-[#D4AF37]/20 text-amber-100" : "bg-white/5 text-white/40"}`}>
                       <Icon size={16} />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -220,12 +226,18 @@ export default function AccueilVision({ onGoCanvas }) {
         <div className="space-y-2.5">
           {data.activity?.map((a, i) => (
             <div key={i} className="flex items-start gap-2.5">
-              <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#C9A449]" />
+              <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#D4AF37]" />
               <p className="text-sm text-white/75 leading-snug">{a.text}</p>
             </div>
           ))}
         </div>
       </div>
+
+      {/* Migrés depuis l'ancien Dashboard (retiré) — Vision est maintenant
+          l'accueil, ces 3 blocs y trouvent naturellement leur place. */}
+      <AlignmentCelebration score={dash?.vision?.alignment_percent ?? dash?.alignment_score ?? 0} />
+      {dash && <KeyInsights data={dash} />}
+      {dash && <QuoteBar data={dash} />}
     </div>
   );
 }

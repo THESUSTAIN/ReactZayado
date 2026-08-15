@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { Loader2 } from "lucide-react";
 import { wellnessApi } from "@/lib/api";
 
-const CORAL = "#F0808A", GOLD = "#C9A449", SAGE = "#5DCAA5";
+const CORAL = "#F0808A", GOLD = "#D4AF37", SAGE = "#5DCAA5";
 
 function colorForScore(score) {
   if (score == null) return "rgba(255,255,255,.06)"; // pas de check-in ce jour-là

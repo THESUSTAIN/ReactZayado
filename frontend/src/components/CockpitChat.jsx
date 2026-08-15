@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import useIsMobile from "@/hooks/useIsMobile";
 import { copiloteApi, dailyBriefApi, visionBrainApi, API } from "@/lib/api";
+import { NightRecap, NextSequence } from "@/components/CockpitSections";
 
 const SUGGESTIONS = [
   "Quelles sont mes priorités aujourd'hui ?",
@@ -456,6 +457,8 @@ export default function CockpitChat({ fullscreen = false }) {
           <>
             <div className="cockpit-body">
               <KairosBriefCard data={dash} onGoto={goto} />
+              {dash && <NightRecap data={dash} />}
+              {dash && <NextSequence data={dash} />}
               {messages.map((m, i) => (
                 m.card ? (
                   <div key={i} data-testid="cockpit-action-card" style={{

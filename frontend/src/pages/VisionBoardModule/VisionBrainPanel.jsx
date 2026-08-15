@@ -4,7 +4,7 @@ import {
   Loader2, ShieldCheck, Compass, RefreshCw, Landmark,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { visionBrainApi } from "../../lib/finalVisionModuleApi";
+import { visionBrainApi } from "@/lib/api";
 import useVisionEvents from "@/hooks/useVisionEvents";
 
 const SOURCE_ICON = { urssaf: Landmark, gouv: ShieldCheck, insee: Landmark };

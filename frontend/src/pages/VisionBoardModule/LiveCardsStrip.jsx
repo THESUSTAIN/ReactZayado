@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { visionCardsApi } from "../../lib/finalVisionModuleApi";
+import { visionCardsApi } from "@/lib/api";
 import useVisionEvents from "@/hooks/useVisionEvents";
 
 const MODULE_ROUTE = { pilotage: "/pilotage", "bien-etre": "/bien-etre", croissance: "/croissance" };

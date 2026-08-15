@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Sparkles, Loader2, Wand2, ImagePlus, Video, ChevronRight, Zap } from "lucide-react";
 import { toast } from "sonner";
-import { studioApi } from "../../lib/finalVisionModuleApi";
+import { studioApi } from "../../lib/api";
 
 // Templates statiques (miroir de /app/backend/routes/studio.py)
 const STATIC_TEMPLATES = {

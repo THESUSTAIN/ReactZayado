@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Loader2, TrendingUp, TrendingDown, Activity } from "lucide-react";
 import { wellnessApi } from "@/lib/api";
 
-const SAGE = "#5DCAA5", CORAL = "#F0808A", GOLD = "#C9A449";
+const SAGE = "#5DCAA5", CORAL = "#F0808A", GOLD = "#D4AF37";
 
 /**
  * #3.1 — Corrélations Cockpit × Bien-être.
