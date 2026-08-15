@@ -15,8 +15,6 @@ import { generateQuarterlyPdf } from "@/lib/pdf";
 import WellnessReactionModal from "./WellnessReactionModal";
 import WellnessCorrelations from "./WellnessCorrelations";
 import YearInPixels from "./YearInPixels";
-import YearInPixels from "./YearInPixels";
-import WellnessCorrelations from "./WellnessCorrelations";
 import { HabitsTab, MoiReminders } from "./MoiTabs";
 
 const GOLD = "#D4AF37", SAGE = "#5DCAA5", CORAL = "#F0808A", PLUM = "#8b6fbf";
@@ -769,13 +767,6 @@ export default function BienEtre() {
           </div>
           </>)}
 
-          {/* Corrélations bien-être/performance + Year in Pixels — fichiers déjà
-              construits (WellnessCorrelations.jsx, YearInPixels.jsx) mais jamais
-              routés nulle part dans l'app, trouvé à l'audit. */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 16 }} className="be-correlations-grid">
-            <WellnessCorrelations />
-            <YearInPixels />
-          </div>
         </div>
       )}
       <WellnessReactionModal open={showReaction} onClose={() => setShowReaction(false)} actions={actions} />

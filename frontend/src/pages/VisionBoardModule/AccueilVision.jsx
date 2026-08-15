@@ -235,6 +235,28 @@ export default function AccueilVision({ onGoCanvas }) {
 
       {/* Migrés depuis l'ancien Dashboard (retiré) — Vision est maintenant
           l'accueil, ces 3 blocs y trouvent naturellement leur place. */}
+      {/* Ressources & Inspiration — pas de contenu externe inventé (pas de
+          fausses citations/images "curées") : des déclencheurs vers le
+          copilote, sur des angles utiles pour la vision. */}
+      <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5" data-testid="accueil-inspiration">
+        <h3 className="mb-3 font-head text-lg font-semibold text-white">Ressources & Inspiration</h3>
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+          {[
+            { label: "Design de vie", prompt: "Aide-moi à repenser mon organisation quotidienne pour qu'elle serve vraiment ma vision." },
+            { label: "Entrepreneurs qui inspirent", prompt: "Partage-moi des parcours d'entrepreneurs dans mon secteur dont je pourrais m'inspirer." },
+            { label: "Stratégies gagnantes", prompt: "Quelles stratégies de croissance seraient les plus pertinentes pour mon activité actuelle ?" },
+            { label: "Outils & méthodes", prompt: "Quels outils ou méthodes pourraient m'aider à avancer plus vite sur ma vision ?" },
+          ].map((r) => (
+            <button key={r.label}
+              onClick={() => window.dispatchEvent(new CustomEvent("zayado:open-cockpit-chat", { detail: { ask: r.prompt } }))}
+              data-testid={`inspiration-${r.label}`}
+              className="rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 text-left text-sm font-medium text-white/85 transition-colors hover:border-[#D4AF37]/50 hover:bg-white/[0.07]">
+              {r.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <AlignmentCelebration score={dash?.vision?.alignment_percent ?? dash?.alignment_score ?? 0} />
       {dash && <KeyInsights data={dash} />}
       {dash && <QuoteBar data={dash} />}

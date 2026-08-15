@@ -7,7 +7,7 @@ import {
   ChevronRight, ChevronLeft, ShieldCheck, Check, Clock, CheckCircle2,
 } from "lucide-react";
 import useIsMobile from "@/hooks/useIsMobile";
-import { copiloteApi, dailyBriefApi, visionBrainApi, API } from "@/lib/api";
+import { copiloteApi, dailyBriefApi, visionBrainApi, collabQueueApi, API } from "@/lib/api";
 import { NightRecap, NextSequence } from "@/components/CockpitSections";
 
 const SUGGESTIONS = [
@@ -163,6 +163,8 @@ export default function CockpitChat({ fullscreen = false }) {
   const [contactSent, setContactSent] = useState(false);
   const [whatsappUrl, setWhatsappUrl] = useState("");
   const [dash, setDash] = useState(null);
+  const [queueItems, setQueueItems] = useState([]);
+  const [queueBusyId, setQueueBusyId] = useState(null);
   const [newsText, setNewsText] = useState("");
   const [newsError, setNewsError] = useState("");
   const [newsSources, setNewsSources] = useState([]);
@@ -175,6 +177,7 @@ export default function CockpitChat({ fullscreen = false }) {
   useEffect(() => {
     if (open && !dash) {
       axios.get(`${API}/dashboard`).then((r) => setDash(r.data)).catch(() => {});
+      collabQueueApi.list(3).then((r) => setQueueItems(r.items || [])).catch(() => {});
     }
   }, [open, dash]);
 
@@ -229,6 +232,17 @@ export default function CockpitChat({ fullscreen = false }) {
   }, [messages]);
 
   const goto = (path) => { setOpen(false); navigate(path); };
+
+  const decideQueueItem = async (id, action) => {
+    if (queueBusyId) return;
+    setQueueBusyId(id);
+    try {
+      if (action === "validate") await collabQueueApi.validate(id);
+      else await collabQueueApi.dismiss(id);
+      setQueueItems((current) => current.filter((it) => it.id !== id));
+    } catch { /* on laisse la carte visible, l'utilisateur peut réessayer */ }
+    finally { setQueueBusyId(null); }
+  };
 
   const send = async (text) => {
     const msg = (text ?? input).trim();
@@ -457,7 +471,43 @@ export default function CockpitChat({ fullscreen = false }) {
           <>
             <div className="cockpit-body">
               <KairosBriefCard data={dash} onGoto={goto} />
-              {dash && <NightRecap data={dash} />}
+              {queueItems.length > 0 && (
+                <div className="glass-card" data-testid="cockpit-decisions-du-jour" style={{ padding: 16, marginBottom: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "var(--txt)" }}>
+                      <Sparkles size={14} style={{ verticalAlign: "-2px", marginRight: 6, color: "#D4AF37" }} />
+                      {queueItems.length} décision{queueItems.length > 1 ? "s" : ""} du jour
+                    </span>
+                    <span style={{ fontSize: 11, color: "var(--txt-muted)" }}>Voir tout</span>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {queueItems.map((item) => (
+                      <div key={item.id} data-testid={`decision-item-${item.id}`} style={{
+                        padding: 12, borderRadius: 12, background: "var(--glass-soft)", border: "1px solid var(--glass-border)",
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
+                          <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--txt)" }}>{item.title}</span>
+                          <span style={{ fontSize: 10.5, color: "var(--txt-muted)", whiteSpace: "nowrap" }}>{item.time}</span>
+                        </div>
+                        {item.excerpt && <p style={{ fontSize: 11.5, color: "var(--txt-muted)", margin: "0 0 8px" }}>{item.excerpt}</p>}
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button onClick={() => decideQueueItem(item.id, "validate")} disabled={queueBusyId === item.id}
+                            data-testid={`decision-approve-${item.id}`}
+                            style={{ flex: 1, height: 30, borderRadius: 8, border: "none", background: "#D4AF37", color: "#241a06", fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>
+                            Approuver
+                          </button>
+                          <button onClick={() => decideQueueItem(item.id, "dismiss")} disabled={queueBusyId === item.id}
+                            data-testid={`decision-dismiss-${item.id}`}
+                            style={{ flex: 1, height: 30, borderRadius: 8, border: "1px solid rgba(255,255,255,0.16)", background: "transparent", color: "var(--txt-muted)", fontSize: 11.5, fontWeight: 600, cursor: "pointer" }}>
+                            Reporter
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {dash && <NightRecap data={dash} onGoto={goto} />}
               {dash && <NextSequence data={dash} />}
               {messages.map((m, i) => (
                 m.card ? (
@@ -617,7 +667,17 @@ export default function CockpitChat({ fullscreen = false }) {
                         {s.title || s.label || "Article"}
                       </a>
                       <div style={{ marginTop: 5, fontSize: 11, opacity: .75, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                        {s.source && <span>{s.source}</span>}
+                        {s.link && s.source && (
+                          <a href={s.link} target="_blank" rel="noopener noreferrer" data-testid={`cockpit-news-source-pill-${j}`}
+                            style={{
+                              display: "inline-flex", alignItems: "center", gap: 4, cursor: "pointer",
+                              border: "1px solid rgba(201,164,73,0.4)", background: "rgba(201,164,73,0.12)", color: "#f0dca5",
+                              borderRadius: 999, padding: "3px 10px", fontSize: 11, fontWeight: 700, textDecoration: "none",
+                            }}>
+                            <ExternalLink size={11} /> {s.source}
+                          </a>
+                        )}
+                        {(!s.link || !s.source) && s.source && <span>{s.source}</span>}
                         {fmtNewsDate(s.published || s.published_at) && <span>· {fmtNewsDate(s.published || s.published_at)}</span>}
                         <button
                           type="button"

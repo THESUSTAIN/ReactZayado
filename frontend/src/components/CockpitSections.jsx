@@ -182,7 +182,7 @@ export function KeyInsights({ data }) {
 }
 
 /* ── Ce que l'IA a fait pour vous (liste de tâches réelles) ──────────── */
-export function NightRecap({ data }) {
+export function NightRecap({ data, onGoto }) {
   const vg = data?.value_generated || {};
   const activity = Array.isArray(data?.activite_recente) ? data.activite_recente : [];
 
@@ -256,6 +256,19 @@ export function NightRecap({ data }) {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Ce qu'il reste à faire — bouton vers le suivi des tâches, demandé
+          pour éviter que ce bloc ne fasse que lister le passé sans jamais
+          renvoyer vers l'action. */}
+      {onGoto && (
+        <button onClick={() => onGoto("/travail")} data-testid="night-recap-goto-tasks" style={{
+          marginTop: 14, width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+          padding: "10px 14px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.14)",
+          background: "rgba(255,255,255,0.06)", color: "var(--txt)", fontSize: 12.5, fontWeight: 600, cursor: "pointer",
+        }}>
+          Voir ce qu'il reste à faire <ArrowRight size={13} />
+        </button>
       )}
     </div>
   );

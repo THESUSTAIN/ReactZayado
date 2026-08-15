@@ -307,6 +307,24 @@ export default function Pilotage() {
           <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 14, color: "var(--txt)" }}><AlertTriangle size={16} style={{ color: "#c26b4a" }} /> Charges ({ov?.charges_next_date}) <strong>{fmt(ov?.charges_due)}</strong></span>
         </div>
       </div>
+
+      {/* Intégrations connectées — placeholder honnête : pas de vraie connexion
+          bancaire/comptable dans ce backend, donc pas de faux statut "connecté". */}
+      <div className="glass-card" style={{ marginTop: 16 }} data-testid="pilotage-integrations">
+        <div className="card-label"><Radio size={14} /> Intégrations connectées</div>
+        <p className="muted" style={{ fontSize: 12, margin: "4px 0 12px" }}>Vos données sont synchronisées automatiquement une fois connectées.</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
+          {["Qonto", "Stripe", "Google Drive", "Mollie"].map((name) => (
+            <div key={name} style={{
+              display: "flex", flexDirection: "column", gap: 4, padding: 12, borderRadius: 12,
+              border: "1px dashed rgba(255,255,255,0.16)", background: "rgba(255,255,255,0.02)",
+            }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--txt)" }}>{name}</span>
+              <span style={{ fontSize: 11, color: "var(--txt-muted)" }}>Non connecté</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </motion.div>
   );
 }

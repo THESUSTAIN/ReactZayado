@@ -436,3 +436,10 @@ export const newsApi = {
 export const gamificationApi = {
   passport: () => axios.get(`${API}/gamification/passport`, withUser()).then(r => r.data),
 };
+
+// ─── File de validation IA (70/30) — "décisions du jour" dans le chat ──
+export const collabQueueApi = {
+  list: (limit = 3) => axios.get(`${API}/collaborateur/queue`, withUser({ limit })).then(r => r.data),
+  validate: (id) => axios.post(`${API}/collaborateur/queue/${id}/validate`, {}, withUser()).then(r => r.data),
+  dismiss: (id) => axios.post(`${API}/collaborateur/queue/${id}/dismiss`, {}, withUser()).then(r => r.data),
+};

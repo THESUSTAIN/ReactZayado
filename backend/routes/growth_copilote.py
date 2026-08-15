@@ -332,7 +332,18 @@ def _build_chat_intro(greeting: str, first_name: str, deadlines, reminders, news
     """Message d'accueil du chat « Le Point du jour » — factuel (échéances issues
     du moteur de règles, pas du LLM). Texte simple (le chat n'affiche pas le markdown)."""
     name = f" {first_name}" if first_name else ""
-    lines = [f"Le Point du jour — {greeting.lower()}{name} 👋", ""]
+    from datetime import datetime as _dt, timezone as _tz
+    today_label = _dt.now(_tz.utc).strftime("%A %d %B").capitalize()
+    _FR_DAYS = {"Monday": "Lundi", "Tuesday": "Mardi", "Wednesday": "Mercredi", "Thursday": "Jeudi",
+                "Friday": "Vendredi", "Saturday": "Samedi", "Sunday": "Dimanche"}
+    _FR_MONTHS = {"January": "janvier", "February": "février", "March": "mars", "April": "avril",
+                  "May": "mai", "June": "juin", "July": "juillet", "August": "août",
+                  "September": "septembre", "October": "octobre", "November": "novembre", "December": "décembre"}
+    for en, fr in _FR_DAYS.items():
+        today_label = today_label.replace(en, fr)
+    for en, fr in _FR_MONTHS.items():
+        today_label = today_label.replace(en, fr)
+    lines = [f"Le Point du jour — {greeting.lower()}{name} 👋", f"({today_label})", ""]
     if deadlines:
         lines.append("📅 ÉCHÉANCES À NE PAS MANQUER")
         for d in deadlines:

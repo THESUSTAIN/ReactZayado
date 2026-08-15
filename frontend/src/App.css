@@ -2267,7 +2267,6 @@ textarea.zinput { height: auto; padding: 12px 14px; resize: vertical; line-heigh
   .page-head { flex-direction: column; gap: 8px; align-items: flex-start; }
   .page-title { font-size: 22px !important; }
   .page-sub { font-size: 13px; }
-  .be-correlations-grid { grid-template-columns: 1fr !important; }
 
   /* Cards full width sur mobile */
   .glass-card { border-radius: 12px; padding: 14px; }
