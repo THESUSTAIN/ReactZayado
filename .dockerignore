@@ -1,21 +1,13 @@
-# Garde le build context Docker propre — sans ça, `COPY . .` copiait aussi
-# .git, node_modules, la DB locale, les rapports de test et la doc, ce qui
-# ralentit chaque build Railway et peut faire fuiter des fichiers non
-# voulus dans l'image. Absent du repo jusqu'ici.
 .git
 .github
-.emergent
-memory
-test_reports
-tests
-_incoming
 *.md
 !README.md
+*.log
 
 backend/__pycache__
 backend/**/__pycache__
 backend/*.db
-backend/zayado.db
+backend/*.db-journal
 backend/venv
 backend/.venv
 backend/uploads
@@ -23,7 +15,3 @@ backend/generated_images
 
 frontend/node_modules
 frontend/build
-
-# public-site est un service Railway séparé (son propre railway.json/nixpacks.toml,
-# root directory dédié) — inutile dans le contexte Docker du backend.
-public-site

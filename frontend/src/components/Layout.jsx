@@ -1,29 +1,46 @@
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
-  Compass, Eye, HeartPulse, MessageCircle, Gem, Search, Bell, Moon, Sun,
-  LayoutGrid, ChevronDown, Settings as SettingsIcon, HelpCircle, LogOut, X,
+  Compass, Eye, HeartPulse, MessageCircle, Gem, Search, Bell,
+  LayoutGrid, ChevronDown, Settings as SettingsIcon, HelpCircle, LogOut, X, Mail, Globe, TrendingUp, Rocket, Briefcase, GraduationCap, Sun, Moon,
 } from "lucide-react";
 import { toast } from "sonner";
 import ChatPanel from "./ChatPanel";
 import SettingsModal from "./SettingsModal";
+import { authMe, getProfile, getHeaderMessages, getHeaderNotifications, markHeaderMessagesRead, markHeaderNotificationsRead, setLanguage, logoutSession } from "../lib/api";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 
 const ITEMS = [
-  { id: "vision", label: "Vision", Icon: Eye, path: "/", exact: true },
-  { id: "pilotage", label: "Pilotage", Icon: Compass, path: "/pilotage" },
-  { id: "bienetre", label: "Bien-être", Icon: HeartPulse, path: "/bien-etre" },
-  { id: "copilote", label: "Copilote", Icon: MessageCircle, action: "open-kairos" },
+  { id: "aujourdhui", label: "Aujourd'hui", shortLabel: "Aujourd'hui", Icon: Compass, path: "/", exact: true },
+  { id: "moncap", label: "Mon Cap", shortLabel: "Mon Cap", Icon: Eye, path: "/vision" },
+  { id: "monmouvement", label: "Mon Mouvement", shortLabel: "Mouvement", Icon: Briefcase, path: "/mouvement" },
+  { id: "mindset", label: "Mindset & capacité", shortLabel: "Mindset", Icon: HeartPulse, path: "/mindset" },
+  { id: "contexte", label: "Contexte", shortLabel: "Contexte", Icon: TrendingUp, path: "/contexte" },
 ];
+const MENU_GROUP_STARTS = new Set(["contexte"]);
 
 const COLLAPSE_KEY = "mx_sidebar_collapsed";
 const SEARCH_TARGETS = [
-  { label: "Vision", path: "/" },
-  { label: "Pilotage", path: "/pilotage" },
-  { label: "Bien-être", path: "/bien-etre" },
+  { label: "Aujourd'hui", path: "/" },
+  { label: "Mon Cap", path: "/vision" },
+  { label: "Mon Mouvement", path: "/mouvement" },
+  { label: "Mindset & capacité", path: "/mindset" },
+  { label: "Contexte (Pilotage & Croissance)", path: "/contexte" },
+  { label: "Campus", path: "/campus" },
+  { label: "Collaborateur", path: "/collaborateur" },
+  { label: "TheSustain · Foi & vocation", path: "/thesustain", requiresTheSustain: true },
+  { label: "Paramètres", action: "settings" },
+];
+
+const ECOSYSTEM_ITEMS = [
+  { id: "collaborateur", label: "Collaborateur", path: "/collaborateur", Icon: Compass, available: true },
+  { id: "campus", label: "Campus", path: "/campus", Icon: GraduationCap, available: true },
+  { id: "business", label: "Équiper mon business", path: "https://zayado.net/boutique", Icon: Gem, available: true, external: true },
+  { id: "espace", label: "Espace", path: "https://espace.zayado.net", Icon: Briefcase, available: true, external: true },
+  { id: "thesustain", label: "TheSustain · Foi & vocation", path: "/thesustain", Icon: Eye, available: true, requiresTheSustain: true },
 ];
 
 /* ─────────────── Sidebar (rail 96px, modèle exact) ─────────────── */
@@ -50,7 +67,7 @@ function Sidebar({ onSettings, onCopilote }) {
     <aside className={`side-nav ${collapsed ? "is-collapsed" : ""}`} data-testid="side-nav" data-collapsed={collapsed ? "1" : "0"}>
       <button type="button" onClick={toggle} className="side-logo-btn" data-testid="side-logo"
         title={collapsed ? "Ouvrir le menu" : "Replier le menu"} aria-label="Menu">
-        <img src="/icon-512.png" alt="MyExtension" className="side-logo-img" />
+        <img src="/logo-zayado.png" alt="myextension-ai by zayado" className="side-logo-img" />
       </button>
 
       <button type="button" onClick={toggle} className="side-edge-strip" data-testid="side-edge-strip"
@@ -64,15 +81,15 @@ function Sidebar({ onSettings, onCopilote }) {
           <svg className="menu-scoop-bottom absolute left-0 bottom-[-30px] pointer-events-none" width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">
             <path d="M30 0H0V30C0 13.431 13.431 0 30 0Z" />
           </svg>
-          <ul className="relative z-10 flex flex-col gap-1.5 items-center w-full">
+          <ul className="relative z-10 flex flex-col items-center w-full" aria-label="Navigation principale">
             {ITEMS.map((item) => {
               const active = isActive(item);
               const Icon = item.Icon;
               return (
-                <li key={item.id} className="w-full flex justify-center">
+                <li key={item.id} className={`w-full flex justify-center ${MENU_GROUP_STARTS.has(item.id) ? "menu-group-start" : ""}`}>
                   <button onClick={() => onItemClick(item)} data-testid={`side-${item.id}`}
-                    className={`menu-link group relative w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 ${active ? "active" : ""} ${item.action ? "menu-link-action" : ""}`}>
-                    <Icon size={17} strokeWidth={1.9} />
+                    className={`menu-link group relative w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 ${active ? "active" : ""} ${item.action ? "menu-link-action" : ""}`}>
+                    <Icon size={16} strokeWidth={1.85} />
                     <span className="menu-tooltip pointer-events-none absolute left-full ml-3 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-md text-white text-xs px-2.5 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-50">
                       {item.label}
                     </span>
@@ -83,7 +100,7 @@ function Sidebar({ onSettings, onCopilote }) {
           </ul>
         </div>
 
-        <div className="w-full flex items-center justify-center pt-1">
+        <div className="side-settings-zone w-full flex items-center justify-center pt-3">
           <button onClick={onSettings} data-testid="side-settings" title="Paramètres"
             className="w-9 h-9 rounded-full bg-gradient-to-br from-[#d4b78c] to-[#c4a374] flex items-center justify-center shadow-lg hover:scale-105 transition-transform">
             <Gem className="w-4 h-4 text-[#0a1f4e]" strokeWidth={2} />
@@ -91,23 +108,38 @@ function Sidebar({ onSettings, onCopilote }) {
         </div>
       </div>
 
-      {!collapsed && (
-        <button type="button" className="side-collapse-handle" onClick={toggle}
-          title="Replier le menu" aria-label="Replier le menu" data-testid="side-collapse-handle">
-          <span aria-hidden="true">‹</span>
-        </button>
-      )}
     </aside>
   );
 }
 
 /* ─────────────── Header (transparent, modèle exact) ─────────────── */
-function Header({ onSettings }) {
+function Header({ onSettings, profileName, theSustainMember }) {
   const navigate = useNavigate();
-  const [dark, setDark] = useState(true);
-  const [flash, setFlash] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [q, setQ] = useState("");
+  const [headerMessages, setHeaderMessages] = useState([]);
+  const [headerNotifications, setHeaderNotifications] = useState([]);
+  const headerSession = "default";
+  const [isLight, setIsLight] = useState(() => document.documentElement.classList.contains("ambiance-clarte"));
+
+  const toggleTheme = () => {
+    const next = !isLight;
+    document.documentElement.classList.toggle("ambiance-clarte", next);
+    setIsLight(next);
+    // Même clé que SettingsModal (PREFERENCE_KEY) — pour que le futur onglet
+    // Paramètres qui lira cette préférence retrouve la même valeur, plutôt
+    // que deux systèmes de thème qui se contredisent.
+    try {
+      const raw = JSON.parse(localStorage.getItem("cours-main-settings-preferences") || "{}");
+      localStorage.setItem("cours-main-settings-preferences", JSON.stringify({ ...raw, ambiance: next ? "clarte" : "sens" }));
+    } catch { /* noop */ }
+  };
+
+  useEffect(() => {
+    Promise.all([getHeaderMessages(headerSession), getHeaderNotifications(headerSession)])
+      .then(([messages, notifications]) => { setHeaderMessages(messages?.items || []); setHeaderNotifications(notifications?.items || []); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const onKey = (e) => {
@@ -118,55 +150,55 @@ function Header({ onSettings }) {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const toggleTheme = () => {
-    const next = !dark;
-    setDark(next);
-    document.documentElement.classList.toggle("ambiance-clarte", !next);
-    setFlash(true);
-    setTimeout(() => setFlash(false), 350);
+  const results = SEARCH_TARGETS
+    .filter((s) => !s.requiresTheSustain || theSustainMember)
+    .filter((s) => s.label.toLowerCase().includes(q.toLowerCase()));
+  const go = (target) => {
+    if (target.action === "settings") onSettings();
+    else if (target.path) navigate(target.path);
+    setSearchOpen(false); setQ("");
   };
-
-  const results = SEARCH_TARGETS.filter((s) => s.label.toLowerCase().includes(q.toLowerCase()));
-  const go = (path) => { navigate(path); setSearchOpen(false); setQ(""); };
 
   return (
     <header className="app-header" data-testid="app-header">
-      <img src="/logo-myextension.png" alt="MyExtension" className="header-logo" data-testid="header-logo" onClick={() => navigate("/")} />
-
+      <button type="button" className="header-mobile-brand" onClick={() => navigate("/")} aria-label="Accueil MyExtension" data-testid="header-mobile-brand">
+        <img src="/logo-zayado.png" alt="myextension-ai by zayado" />
+      </button>
+      <div className="header-cockpit-chip" data-testid="header-mobile-cockpit-status"><Rocket size={14} /> Cockpit <span>0/8</span></div>
       <div className="header-search" data-testid="header-search" onClick={() => setSearchOpen(true)}>
         <Search size={16} className="header-search-icon" />
         <input type="text" placeholder="Rechercher (Cmd+K)" readOnly data-testid="header-search-input" style={{ cursor: "pointer" }} />
       </div>
 
       <div className="header-actions">
-        <button className={`header-icon-btn${flash ? " header-icon-flash" : ""}`} title="Thème" onClick={toggleTheme} data-testid="theme-toggle-btn">
-          {dark ? <Moon size={18} /> : <Sun size={18} />}
+        <button className="header-icon-btn" title="Changer de thème" aria-label="Changer de thème" data-testid="ambiance-toggle-btn" onClick={toggleTheme}>
+          {isLight ? <Moon size={18} /> : <Sun size={18} />}
         </button>
-
-        <button className="header-icon-btn header-icon-badge" title="Notifications" data-testid="header-notifications-btn"
-          onClick={() => toast.info("Aucune nouvelle notification pour le moment.")}>
-          <Bell size={18} /><span className="header-badge">1</span>
-        </button>
+        <DropdownMenu><DropdownMenuTrigger asChild><button className="header-icon-btn header-icon-badge" title="Messages" aria-label="Messages" data-testid="header-mail-btn" onClick={() => markHeaderMessagesRead(headerSession).then(() => setHeaderMessages((items) => items.map((item) => ({ ...item, unread: false })))).catch(() => {})}><Mail size={18} />{headerMessages.filter((item) => item.unread).length > 0 && <span className="header-badge">{headerMessages.filter((item) => item.unread).length}</span>}</button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-80 bg-[#0B1F3A] border-white/15 text-white"><DropdownMenuLabel>Messages</DropdownMenuLabel><DropdownMenuSeparator className="bg-white/10" />{headerMessages.length === 0 && <div className="px-3 py-6 text-center text-xs text-white/50">Aucun message pour le moment.</div>}{headerMessages.map((item) => <DropdownMenuItem key={item.id} className="flex items-start gap-3 py-3 cursor-pointer"><div className="w-9 h-9 rounded-full gold-bg text-[#0A1128] text-xs font-semibold flex items-center justify-center">{(item.sender || "M").charAt(0).toUpperCase()}</div><div className="min-w-0"><p className="text-sm font-medium">{item.sender}</p><p className="text-xs text-white/60">{item.text}</p></div></DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
+        <DropdownMenu><DropdownMenuTrigger asChild><button className="header-icon-btn header-icon-badge" title="Notifications" aria-label="Notifications" data-testid="header-notifications-btn" onClick={() => markHeaderNotificationsRead(headerSession).then(() => setHeaderNotifications((items) => items.map((item) => ({ ...item, unread: false })))).catch(() => {})}><Bell size={18} />{headerNotifications.filter((item) => item.unread).length > 0 && <span className="header-badge">{headerNotifications.filter((item) => item.unread).length}</span>}</button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-80 bg-[#0B1F3A] border-white/15 text-white"><DropdownMenuLabel>Notifications</DropdownMenuLabel><DropdownMenuSeparator className="bg-white/10" />{headerNotifications.length === 0 && <div className="px-3 py-6 text-center text-xs text-white/50">Aucune notification pour le moment.</div>}{headerNotifications.map((item) => <DropdownMenuItem key={item.id} className="flex items-start gap-3 py-3 cursor-pointer"><Bell className="mt-1 h-4 w-4 shrink-0 text-[#E8C96A]" /><div className="min-w-0"><p className="text-sm font-medium">{item.title}</p><p className="text-xs text-white/60">{item.text}</p></div></DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="header-icon-btn" title="Modules" data-testid="header-apps-btn"><LayoutGrid size={18} /></button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 bg-[#0B1F3A] border-white/15 text-white">
-            <DropdownMenuLabel className="text-xs uppercase text-white/50">Écosystème</DropdownMenuLabel>
-            <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/")}>Pilotage</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/vision")}>Vision</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/bien-etre")}>Bien-être</DropdownMenuItem>
+          <DropdownMenuContent align="end" className="ecosystem-menu w-72 border-white/15 p-3 text-white">
+            <DropdownMenuLabel className="ecosystem-menu-title px-1 pb-2 text-[11px] uppercase tracking-[0.18em] text-white/65">Écosystème MyExtension AI</DropdownMenuLabel>
+            <div className="ecosystem-grid grid grid-cols-2 gap-2">
+              {ECOSYSTEM_ITEMS.filter((item) => !item.requiresTheSustain || theSustainMember).map((item) => {
+                const Icon = item.Icon;
+                return <button key={item.id} type="button" data-testid={`ecosystem-${item.id}`} onClick={() => { if (item.available && item.external) window.open(item.path, "_blank", "noopener,noreferrer"); else if (item.available) navigate(item.path); else toast.info(`${item.label} sera disponible dans le prochain lot.`); }} className={`ecosystem-card flex flex-col items-center justify-center gap-1.5 rounded-xl border border-white/10 p-3 text-center ${item.available ? "" : "is-disabled"}`}><span className="ecosystem-card-icon"><Icon size={19} /></span><span className="ecosystem-card-label text-[11px] font-medium leading-tight">{item.label}</span></button>;
+              })}
+            </div>
           </DropdownMenuContent>
         </DropdownMenu>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="header-profile" data-testid="header-profile-btn">
-              <span className="header-avatar" aria-hidden="true">C</span>
+              <span className="header-avatar" aria-hidden="true">{(profileName || "M").trim().charAt(0).toUpperCase()}</span>
               <span className="header-profile-info">
-                <span className="header-profile-name">Cindy Wilson</span>
-                <span className="header-profile-role">Solopreneure</span>
+                <span className="header-profile-name">{profileName || "Mon compte"}</span>
+                <span className="header-profile-role">Espace personnel</span>
               </span>
               <ChevronDown size={16} className="header-profile-chevron" />
             </button>
@@ -174,8 +206,8 @@ function Header({ onSettings }) {
           <DropdownMenuContent align="end" className="w-56 bg-[#0B1F3A] border-white/15 text-white">
             <DropdownMenuLabel>
               <div className="flex items-center gap-3 py-1">
-                <div className="w-10 h-10 rounded-lg gold-bg text-[#0a1f4e] text-sm font-bold flex items-center justify-center">C</div>
-                <div className="min-w-0"><p className="text-sm font-semibold">Cindy Wilson</p><p className="text-xs text-white/50">Solopreneure</p></div>
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#DD2A33] to-[#A81D24] text-white text-sm font-bold flex items-center justify-center">{(profileName || "M").trim().charAt(0).toUpperCase()}</div>
+                <div className="min-w-0"><p className="text-sm font-semibold">{profileName || "Mon compte"}</p><p className="text-xs text-white/50">Espace personnel</p></div>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-white/10" />
@@ -186,7 +218,8 @@ function Header({ onSettings }) {
               <HelpCircle className="w-4 h-4 mr-2" /> Aide & Support
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-white/10" />
-            <DropdownMenuItem className="cursor-pointer text-rose-300" onClick={() => toast.info("Déconnexion (démo).")}>
+            <DropdownMenuItem className="cursor-pointer" onClick={() => setLanguage("fr").then(() => toast.success("Langue française enregistrée.")).catch(() => toast.error("Impossible d’enregistrer la langue."))}><Globe className="w-4 h-4 mr-2" /> Français</DropdownMenuItem><DropdownMenuItem className="cursor-pointer" onClick={() => setLanguage("en").then(() => toast.success("English language saved.")).catch(() => toast.error("Impossible d’enregistrer la langue."))}><Globe className="w-4 h-4 mr-2" /> English</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-rose-300" onClick={() => logoutSession().then(() => { toast.success("Session déconnectée."); navigate("/login"); }).catch(() => toast.error("Impossible de fermer la session."))}>
               <LogOut className="w-4 h-4 mr-2" /> Déconnexion
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -199,14 +232,14 @@ function Header({ onSettings }) {
             <div className="flex items-center gap-2 px-2.5 py-2">
               <Search size={16} className="text-white/40" />
               <input autoFocus value={q} onChange={(e) => setQ(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && results[0] && go(results[0].path)}
+                onKeyDown={(e) => e.key === "Enter" && results[0] && go(results[0])}
                 placeholder="Aller à…" data-testid="global-search-input"
                 className="flex-1 bg-transparent border-none outline-none text-[15px] text-white placeholder:text-white/40" />
               <kbd className="text-[11px] text-white/40 border border-white/15 rounded px-1.5">Esc</kbd>
             </div>
             <div className="border-t border-white/10 mt-1 pt-1">
               {results.map((r) => (
-                <button key={r.path} onClick={() => go(r.path)} data-testid={`search-result-${r.label}`}
+                <button key={r.path || r.action} onClick={() => go(r)} data-testid={`search-result-${r.label}`}
                   className="block w-full text-left px-3 py-2 rounded-lg text-sm text-white/85 hover:bg-white/10 transition-colors">
                   {r.label}
                 </button>
@@ -224,18 +257,15 @@ function Header({ onSettings }) {
 function BottomNav({ onCopilote }) {
   const location = useLocation();
   const navigate = useNavigate();
-  // Sur mobile, / est réservé au Copilote d’ouverture ; Vision doit donc
-  // pointer vers /vision, sans modifier la navigation desktop.
-  const mobileItems = ITEMS.map((item) => item.id === "vision" ? { ...item, path: "/vision", exact: true } : item);
   const isActive = (item) => item.action
     ? location.pathname === "/"
     : (item.exact ? location.pathname === item.path : location.pathname.startsWith(item.path));
   return (
     <nav className="bottom-nav" data-testid="bottom-nav">
-      {mobileItems.map((item) => (
+      {ITEMS.map((item) => (
         <button key={item.id} className={isActive(item) ? "active" : ""} data-testid={`bottomnav-${item.id}`}
-          onClick={() => (item.action ? onCopilote() : navigate(item.path))}>
-          <item.Icon size={14} /> {item.label}
+          onClick={() => (item.action ? (location.pathname === "/" ? navigate("/") : onCopilote()) : navigate(item.path))}>
+          <item.Icon size={14} /> {item.shortLabel || item.label}
         </button>
       ))}
     </nav>
@@ -282,17 +312,25 @@ function useInstallPrompt() {
 /* ─────────────── App shell ─────────────── */
 export default function Layout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [copilotAsk, setCopilotAsk] = useState(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsSection, setSettingsSection] = useState("general");
   const [visionContext, setVisionContext] = useState({ tab: "accueil", label: "Accueil Vision" });
 
   // Bug d'audit : Vision (VisionBoard.jsx) et Bien-être émettent déjà
   // "cours:open-copilot" ("Transformer en action", "Parler au copilote")
   // mais rien ne l'écoutait — les boutons ne faisaient rien.
   useEffect(() => {
+    setCopilotOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
     const onOpenCopilot = (e) => {
       setCopilotAsk(e.detail?.ask || null);
-      setCopilotOpen(true);
+      if (window.innerWidth < 769) { navigate("/"); setCopilotOpen(false); }
+      else setCopilotOpen(true);
     };
     const onVisionContext = (e) => setVisionContext(e.detail || null);
     window.addEventListener("cours:open-copilot", onOpenCopilot);
@@ -301,11 +339,33 @@ export default function Layout() {
       window.removeEventListener("cours:open-copilot", onOpenCopilot);
       window.removeEventListener("cours:vision-context", onVisionContext);
     };
+  }, [navigate]);
+  useEffect(() => {
+    const onOpenSettings = (event) => {
+      setSettingsSection(event?.detail?.section || "general");
+      setSettingsOpen(true);
+    };
+    window.addEventListener("cours:open-settings", onOpenSettings);
+    return () => window.removeEventListener("cours:open-settings", onOpenSettings);
   }, []);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [profileName, setProfileName] = useState("");
+  const [theSustainMember, setTheSustainMember] = useState(false);
+  useEffect(() => {
+    getProfile().then((profile) => setProfileName(profile?.first_name || "")).catch(() => setProfileName(""));
+  }, [settingsOpen]);
+  useEffect(() => {
+    authMe().then((user) => setTheSustainMember(Boolean(user?.thesustain_member))).catch(() => setTheSustainMember(false));
+  }, [settingsOpen]);
   useInstallPrompt();
 
-  const openSettings = () => setSettingsOpen(true);
+  const openSettings = (section = "general") => {
+    setSettingsSection(section);
+    setSettingsOpen(true);
+  };
+  const openCopilot = () => {
+    if (window.innerWidth < 769) { navigate("/"); setCopilotOpen(false); }
+    else setCopilotOpen(true);
+  };
   const baseContext = {
     "/": "Vision de l'entrepreneur: objectifs, alignement, mindset.",
     "/vision": "Vision de l'entrepreneur: objectifs, alignement, mindset.",
@@ -319,12 +379,12 @@ export default function Layout() {
   return (
     <div className="App layout-left" data-testid="app-root">
       <div className="sky-bg" />
-      <Sidebar onSettings={openSettings} onCopilote={() => setCopilotOpen(true)} />
+      <Sidebar onSettings={openSettings} onCopilote={openCopilot} />
 
       <div className="app-body">
-        <Header onSettings={openSettings} />
+        <Header onSettings={openSettings} profileName={profileName} theSustainMember={theSustainMember} />
         <div className="flex">
-          <main className="flex-1 min-w-0 px-4 sm:px-6 pb-28 xl:pb-8 max-w-[1180px]">
+          <main className="flex-1 min-w-0 w-full px-4 sm:px-8 pb-28 xl:pb-8 max-w-none">
             <Outlet />
           </main>
           <button
@@ -341,22 +401,10 @@ export default function Layout() {
             <ChatPanel context={context} initialAsk={copilotAsk} />
           </aside>
         </div>
-        <BottomNav onCopilote={() => setCopilotOpen(true)} />
+        <BottomNav onCopilote={openCopilot} />
       </div>
 
-      {copilotOpen && (
-        <div className="fixed inset-0 z-[80] md:hidden">
-          <div className="absolute inset-0 bg-black/70" onClick={() => setCopilotOpen(false)} />
-          <div className="absolute right-0 top-0 h-full w-full sm:w-96 border-l border-white/20 bg-white/[0.10] backdrop-blur-xl">
-            <button className="absolute right-3 top-4 z-10 text-white/60" onClick={() => setCopilotOpen(false)} data-testid="close-copilot">
-              <X size={22} />
-            </button>
-            <ChatPanel context={context} initialAsk={copilotAsk} />
-          </div>
-        </div>
-      )}
-
-      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} initialSection={settingsSection} />
     </div>
   );
 }

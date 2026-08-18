@@ -548,12 +548,17 @@ async def complete_onboarding_simple(
               </p>
             """
             # Best-effort : on ne casse jamais l'onboarding sur un échec Brevo.
-            send_brevo_email(
-                to_email=user.email,
-                to_name=first_name or (user.name or ""),
-                subject="Bienvenue sur myextension ai — ton cockpit est prêt",
-                html_content=html,
-                brand="myextension",
+            # L’email est utile mais ne doit jamais retarder l’accès au cockpit.
+            # Brevo peut être indisponible, lent ou non configuré en préproduction.
+            asyncio.get_running_loop().run_in_executor(
+                None,
+                lambda: send_brevo_email(
+                    to_email=user.email,
+                    to_name=first_name or (user.name or ""),
+                    subject="Bienvenue sur myextension ai — ton cockpit est prêt",
+                    html_content=html,
+                    brand="myextension",
+                ),
             )
             # Marque comme envoyé pour éviter tout ré-envoi
             settings["welcome_email_sent"] = datetime.now(timezone.utc).isoformat()

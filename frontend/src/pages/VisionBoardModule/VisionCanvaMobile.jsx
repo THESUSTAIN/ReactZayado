@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useApp } from "./useApp";
-import { visionApi, visionExtApi, studioApi } from "@/lib/api";
+import { visionApi, visionExtApi, studioApi } from "../../lib/finalVisionModuleApi";
 
 const backendBase = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/$/, "");
 const fullUrl = (u) => (!u ? u : u.startsWith("http") || u.startsWith("data:") ? u : `${backendBase}${u}`);
@@ -200,7 +200,7 @@ function EditSheet({ card, onClose, onSave }) {
 }
 
 // ─── Composant principal ───────────────────────────────────────
-export default function VisionCanvaMobile() {
+export default function VisionCanvaMobile({ onBack }) {
   const { tv } = useApp();
   const navigate = useNavigate();
   const [cards, setCards] = useState([]);
@@ -499,7 +499,7 @@ export default function VisionCanvaMobile() {
 
       {/* Top overlay : retour + partage (pas d'en-tête d'app → immersif) */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-[120] flex items-start justify-between p-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
-        <button onClick={() => navigate(-1)} data-testid="m-back" className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur active:scale-90"><ChevronLeft size={22} /></button>
+        <button onClick={() => (onBack ? onBack() : navigate(-1))} data-testid="m-back" className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur active:scale-90"><ChevronLeft size={22} /></button>
         <button onClick={shareBoard} data-testid="m-share" className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-[var(--app-accent)] px-4 py-2.5 text-sm font-semibold text-[var(--app-navy)] active:scale-95"><Share2 size={15} /> Partager</button>
       </div>
 

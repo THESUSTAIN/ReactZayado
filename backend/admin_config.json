@@ -4,6 +4,104 @@
       "action": "server_start",
       "detail": "Zayado API v2.5.0 d\u00e9marr\u00e9e",
       "level": "info",
+      "timestamp": "2026-08-18T04:30:52.109551+00:00",
+      "by": "system"
+    },
+    {
+      "action": "server_start",
+      "detail": "Zayado API v2.5.0 d\u00e9marr\u00e9e",
+      "level": "info",
+      "timestamp": "2026-08-18T04:21:11.105691+00:00",
+      "by": "system"
+    },
+    {
+      "action": "server_start",
+      "detail": "Zayado API v2.5.0 d\u00e9marr\u00e9e",
+      "level": "info",
+      "timestamp": "2026-08-18T04:20:18.212861+00:00",
+      "by": "system"
+    },
+    {
+      "action": "server_start",
+      "detail": "Zayado API v2.5.0 d\u00e9marr\u00e9e",
+      "level": "info",
+      "timestamp": "2026-08-18T04:15:37.932462+00:00",
+      "by": "system"
+    },
+    {
+      "action": "server_start",
+      "detail": "Zayado API v2.5.0 d\u00e9marr\u00e9e",
+      "level": "info",
+      "timestamp": "2026-08-18T04:14:45.031486+00:00",
+      "by": "system"
+    },
+    {
+      "action": "server_start",
+      "detail": "Zayado API v2.5.0 d\u00e9marr\u00e9e",
+      "level": "info",
+      "timestamp": "2026-08-18T04:04:53.254144+00:00",
+      "by": "system"
+    },
+    {
+      "action": "server_start",
+      "detail": "Zayado API v2.5.0 d\u00e9marr\u00e9e",
+      "level": "info",
+      "timestamp": "2026-08-18T03:27:18.021907+00:00",
+      "by": "system"
+    },
+    {
+      "action": "server_start",
+      "detail": "Zayado API v2.5.0 d\u00e9marr\u00e9e",
+      "level": "info",
+      "timestamp": "2026-08-18T02:48:27.943315+00:00",
+      "by": "system"
+    },
+    {
+      "action": "server_start",
+      "detail": "Zayado API v2.5.0 d\u00e9marr\u00e9e",
+      "level": "info",
+      "timestamp": "2026-08-18T00:43:36.043718+00:00",
+      "by": "system"
+    },
+    {
+      "action": "server_start",
+      "detail": "Zayado API v2.5.0 d\u00e9marr\u00e9e",
+      "level": "info",
+      "timestamp": "2026-08-17T20:15:07.287039+00:00",
+      "by": "system"
+    },
+    {
+      "action": "server_start",
+      "detail": "Zayado API v2.5.0 d\u00e9marr\u00e9e",
+      "level": "info",
+      "timestamp": "2026-08-17T20:11:42.990424+00:00",
+      "by": "system"
+    },
+    {
+      "action": "server_start",
+      "detail": "Zayado API v2.5.0 d\u00e9marr\u00e9e",
+      "level": "info",
+      "timestamp": "2026-08-17T20:09:17.582815+00:00",
+      "by": "system"
+    },
+    {
+      "action": "server_start",
+      "detail": "Zayado API v2.5.0 d\u00e9marr\u00e9e",
+      "level": "info",
+      "timestamp": "2026-08-17T08:47:16.147503+00:00",
+      "by": "system"
+    },
+    {
+      "action": "server_start",
+      "detail": "Zayado API v2.5.0 d\u00e9marr\u00e9e",
+      "level": "info",
+      "timestamp": "2026-08-17T08:45:02.498425+00:00",
+      "by": "system"
+    },
+    {
+      "action": "server_start",
+      "detail": "Zayado API v2.5.0 d\u00e9marr\u00e9e",
+      "level": "info",
       "timestamp": "2026-08-14T07:20:58.246074+00:00",
       "by": "system"
     },
@@ -420,6 +518,51 @@
     }
   ],
   "email_log": [
+    {
+      "to": "contact@zayado.net",
+      "to_name": "\u00c9quipe Zayado",
+      "subject": "\ud83e\udd1d Demande de collaboration \u2014 Audit Business",
+      "brand": "zayado",
+      "status": "error",
+      "error": "(401)\nReason: Unauthorized\nHTTP response headers: HTTPHeaderDict({'Date': 'Tue, 18 Aug 2026 04:30:57 GMT', 'Content-Type': 'application/json', 'Content-Length': '72', 'Connection': 'keep-alive', 'access-control-allow-credentials': 'true', 'sib-request-id': '260c1bfc-bc59-97e3-aa02-0e6f7389e850', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'PUT, POST, GET, DELETE, PATCH, OPTIONS', 'x-envoy-upstream-service-time': '5', 'server': 'cloudflare', 'cf-cache-status': 'DYNAMIC', 'Cf-Apo-Via': 'origin,noget', 'CF-RAY': 'a2ce2fa94e363cb3-CDG'})\nHTTP response body: {\"message\":\"authentication not found in headers\",\"code\":\"unauthorized\"}\n\n",
+      "sent_at": "2026-08-18T04:30:57.901126+00:00"
+    },
+    {
+      "to": "contact@zayado.net",
+      "to_name": "\u00c9quipe Zayado",
+      "subject": "\ud83e\udd1d Demande de collaboration \u2014 Audit Campus",
+      "brand": "zayado",
+      "status": "error",
+      "error": "(401)\nReason: Unauthorized\nHTTP response headers: HTTPHeaderDict({'Date': 'Tue, 18 Aug 2026 04:30:57 GMT', 'Content-Type': 'application/json', 'Content-Length': '72', 'Connection': 'keep-alive', 'access-control-allow-credentials': 'true', 'sib-request-id': 'ef83526e-cbe6-9f09-9a7c-9fa03524ac22', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'PUT, POST, GET, DELETE, PATCH, OPTIONS', 'x-envoy-upstream-service-time': '5', 'server': 'cloudflare', 'cf-cache-status': 'DYNAMIC', 'Cf-Apo-Via': 'origin,noget', 'CF-RAY': 'a2ce2fa758443d07-CDG'})\nHTTP response body: {\"message\":\"authentication not found in headers\",\"code\":\"unauthorized\"}\n\n",
+      "sent_at": "2026-08-18T04:30:57.485773+00:00"
+    },
+    {
+      "to": "audit.business.20260818@example.com",
+      "to_name": "Audit Business",
+      "subject": "Bienvenue sur MyExtension IA \u2014 Votre assistant IA est pret !",
+      "brand": "zayado",
+      "status": "error",
+      "error": "(401)\nReason: Unauthorized\nHTTP response headers: HTTPHeaderDict({'Date': 'Tue, 18 Aug 2026 04:15:53 GMT', 'Content-Type': 'application/json', 'Content-Length': '72', 'Connection': 'keep-alive', 'access-control-allow-credentials': 'true', 'sib-request-id': '6a35e8fc-309b-922e-8fe6-772280a86cd4', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'PUT, POST, GET, DELETE, PATCH, OPTIONS', 'x-envoy-upstream-service-time': '2', 'server': 'cloudflare', 'cf-cache-status': 'DYNAMIC', 'Cf-Apo-Via': 'origin,noget', 'CF-RAY': 'a2ce19961a8903f1-CDG'})\nHTTP response body: {\"message\":\"authentication not found in headers\",\"code\":\"unauthorized\"}\n\n",
+      "sent_at": "2026-08-18T04:15:53.740410+00:00"
+    },
+    {
+      "to": "audit.campus.20260818@example.com",
+      "to_name": "Audit Campus",
+      "subject": "Bienvenue sur MyExtension IA \u2014 Votre assistant IA est pret !",
+      "brand": "zayado",
+      "status": "error",
+      "error": "(401)\nReason: Unauthorized\nHTTP response headers: HTTPHeaderDict({'Date': 'Tue, 18 Aug 2026 04:15:53 GMT', 'Content-Type': 'application/json', 'Content-Length': '72', 'Connection': 'keep-alive', 'access-control-allow-credentials': 'true', 'sib-request-id': '81d4c6d4-49a9-98d0-a330-5956028e28fc', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'PUT, POST, GET, DELETE, PATCH, OPTIONS', 'x-envoy-upstream-service-time': '0', 'server': 'cloudflare', 'cf-cache-status': 'DYNAMIC', 'Cf-Apo-Via': 'origin,noget', 'CF-RAY': 'a2ce1994cb3dd781-BCN'})\nHTTP response body: {\"message\":\"authentication not found in headers\",\"code\":\"unauthorized\"}\n\n",
+      "sent_at": "2026-08-18T04:15:53.412673+00:00"
+    },
+    {
+      "to": "test-login@example.com",
+      "to_name": "",
+      "subject": "Votre lien de connexion \u2014 MyExtension-ai by Zayado",
+      "brand": "myextension",
+      "status": "error",
+      "error": "(401)\nReason: Unauthorized\nHTTP response headers: HTTPHeaderDict({'Date': 'Mon, 17 Aug 2026 08:47:31 GMT', 'Content-Type': 'application/json', 'Content-Length': '72', 'Connection': 'keep-alive', 'access-control-allow-credentials': 'true', 'sib-request-id': '25d83703-353b-941f-bffa-80f965494d62', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'PUT, POST, GET, DELETE, PATCH, OPTIONS', 'x-envoy-upstream-service-time': '4', 'server': 'cloudflare', 'cf-cache-status': 'DYNAMIC', 'Cf-Apo-Via': 'origin,noget', 'CF-RAY': 'a2c76a1f6a6bfffd-AMS'})\nHTTP response body: {\"message\":\"authentication not found in headers\",\"code\":\"unauthorized\"}\n\n",
+      "sent_at": "2026-08-17T08:47:32.037025+00:00"
+    },
     {
       "to": "strictmode-test@example.com",
       "to_name": "strictmode-test",

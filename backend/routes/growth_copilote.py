@@ -20,6 +20,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
+from deps import get_current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/growth", tags=["growth-copilote"])
@@ -332,18 +333,7 @@ def _build_chat_intro(greeting: str, first_name: str, deadlines, reminders, news
     """Message d'accueil du chat « Le Point du jour » — factuel (échéances issues
     du moteur de règles, pas du LLM). Texte simple (le chat n'affiche pas le markdown)."""
     name = f" {first_name}" if first_name else ""
-    from datetime import datetime as _dt, timezone as _tz
-    today_label = _dt.now(_tz.utc).strftime("%A %d %B").capitalize()
-    _FR_DAYS = {"Monday": "Lundi", "Tuesday": "Mardi", "Wednesday": "Mercredi", "Thursday": "Jeudi",
-                "Friday": "Vendredi", "Saturday": "Samedi", "Sunday": "Dimanche"}
-    _FR_MONTHS = {"January": "janvier", "February": "février", "March": "mars", "April": "avril",
-                  "May": "mai", "June": "juin", "July": "juillet", "August": "août",
-                  "September": "septembre", "October": "octobre", "November": "novembre", "December": "décembre"}
-    for en, fr in _FR_DAYS.items():
-        today_label = today_label.replace(en, fr)
-    for en, fr in _FR_MONTHS.items():
-        today_label = today_label.replace(en, fr)
-    lines = [f"Le Point du jour — {greeting.lower()}{name} 👋", f"({today_label})", ""]
+    lines = [f"Le Point du jour — {greeting.lower()}{name} 👋", ""]
     if deadlines:
         lines.append("📅 ÉCHÉANCES À NE PAS MANQUER")
         for d in deadlines:
@@ -465,10 +455,10 @@ class WorkRequestIn(BaseModel):
 @router.post("/work-request")
 async def work_request(
     body: WorkRequestIn,
-    user_id: str = Query("default"),
+    user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Enregistre une demande de collaboration et notifie l'équipe (best-effort)."""
+    """Enregistre une demande de collaboration pour son compte et notifie l'équipe."""
     msg = (body.message or "").strip()
     if not msg:
         return {"ok": False, "error": "Message vide"}
@@ -478,7 +468,7 @@ async def work_request(
     try:
         row = (await db.execute(
             text("SELECT name, email FROM users WHERE id = :uid LIMIT 1"),
-            {"uid": user_id},
+            {"uid": str(user.id)},
         )).fetchone()
         if row:
             name = row[0] or ""

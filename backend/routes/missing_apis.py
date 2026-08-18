@@ -128,6 +128,13 @@ class TaskIn(BaseModel):
     type: Optional[str] = "humain"   # humain | ia
     priority: Optional[str] = "normal"
     due_at: Optional[str] = None
+    project_id: Optional[str] = None
+    planned_for: Optional[str] = None
+    estimated_minutes: Optional[int] = None
+    decision_id: Optional[str] = None
+    vision_pillar_id: Optional[str] = None
+    strategic_milestone_id: Optional[str] = None
+    defer_reason: Optional[str] = None
     notes: Optional[str] = None
 
 
@@ -138,6 +145,13 @@ class TaskPatch(BaseModel):
     in_progress: Optional[bool] = None
     priority: Optional[str] = None
     due_at: Optional[str] = None
+    project_id: Optional[str] = None
+    planned_for: Optional[str] = None
+    estimated_minutes: Optional[int] = None
+    decision_id: Optional[str] = None
+    vision_pillar_id: Optional[str] = None
+    strategic_milestone_id: Optional[str] = None
+    defer_reason: Optional[str] = None
     notes: Optional[str] = None
 
 
@@ -345,6 +359,138 @@ async def delete_task(tid: str, user: User = Depends(get_current_user), db: Asyn
 
 
 # ============================================================
+# STRATEGY  /api/strategy — jalons et décisions Mon Cap
+# ============================================================
+STRATEGIC_WINDOWS = {"now", "next", "later"}
+STRATEGIC_STATUSES = {"planned", "active", "watch", "complete", "deferred", "abandoned"}
+
+
+class StrategicMilestoneIn(BaseModel):
+    title: str
+    pillar_id: Optional[str] = None
+    time_window: str = "now"
+    expected_evidence: Optional[str] = ""
+    status: Optional[str] = "planned"
+    project_id: Optional[str] = None
+    decision_id: Optional[str] = None
+    notes: Optional[str] = ""
+
+
+class StrategicMilestonePatch(BaseModel):
+    title: Optional[str] = None
+    pillar_id: Optional[str] = None
+    time_window: Optional[str] = None
+    expected_evidence: Optional[str] = None
+    status: Optional[str] = None
+    project_id: Optional[str] = None
+    decision_id: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class StrategicDecisionIn(BaseModel):
+    title: str
+    detail: Optional[str] = ""
+    why_now: Optional[str] = ""
+    impact: Optional[str] = ""
+    pillar_id: Optional[str] = None
+    milestone_id: Optional[str] = None
+    project_id: Optional[str] = None
+    priority: Optional[str] = "normal"
+
+
+class StrategicDecisionPatch(BaseModel):
+    title: Optional[str] = None
+    detail: Optional[str] = None
+    why_now: Optional[str] = None
+    impact: Optional[str] = None
+    pillar_id: Optional[str] = None
+    milestone_id: Optional[str] = None
+    project_id: Optional[str] = None
+    priority: Optional[str] = None
+    status: Optional[str] = None
+
+
+def _validate_strategy_values(time_window: Optional[str] = None, status: Optional[str] = None):
+    if time_window is not None and time_window not in STRATEGIC_WINDOWS:
+        raise HTTPException(422, "Fenêtre stratégique invalide")
+    if status is not None and status not in STRATEGIC_STATUSES:
+        raise HTTPException(422, "État stratégique invalide")
+
+
+@missing_router.get("/strategy/milestones")
+async def list_strategic_milestones(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    return {"items": await _list_rows(db, "user_strategy_milestones", user.id)}
+
+
+@missing_router.post("/strategy/milestones")
+async def create_strategic_milestone(body: StrategicMilestoneIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    _validate_strategy_values(body.time_window, body.status)
+    return await _insert_row(db, "user_strategy_milestones", user.id, body.dict())
+
+
+@missing_router.patch("/strategy/milestones/{mid}")
+async def patch_strategic_milestone(mid: str, body: StrategicMilestonePatch, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    patch = body.dict(exclude_unset=True)
+    _validate_strategy_values(patch.get("time_window"), patch.get("status"))
+    res = await _update_row(db, "user_strategy_milestones", user.id, mid, patch)
+    if not res:
+        raise HTTPException(404, "Jalon stratégique introuvable")
+    return res
+
+
+@missing_router.delete("/strategy/milestones/{mid}")
+async def delete_strategic_milestone(mid: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    return {"deleted": await _delete_row(db, "user_strategy_milestones", user.id, mid)}
+
+
+@missing_router.get("/strategy/decisions")
+async def list_strategic_decisions(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    return {"items": await _list_rows(db, "user_strategy_decisions", user.id)}
+
+
+@missing_router.post("/strategy/decisions")
+async def create_strategic_decision(body: StrategicDecisionIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    return await _insert_row(db, "user_strategy_decisions", user.id, {**body.dict(), "status": "pending"})
+
+
+@missing_router.patch("/strategy/decisions/{did}")
+async def patch_strategic_decision(did: str, body: StrategicDecisionPatch, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    res = await _update_row(db, "user_strategy_decisions", user.id, did, body.dict(exclude_unset=True))
+    if not res:
+        raise HTTPException(404, "Décision stratégique introuvable")
+    return res
+
+
+@missing_router.post("/strategy/decisions/{did}/apply")
+async def apply_strategic_decision(did: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    decisions = await _list_rows(db, "user_strategy_decisions", user.id)
+    item = next((row for row in decisions if row.get("id") == did), None)
+    if not item:
+        raise HTTPException(404, "Décision stratégique introuvable")
+    task = await _insert_row(db, "user_tasks", user.id, {
+        "label": item.get("title") or "Mission stratégique",
+        "priority": item.get("priority") or "normal",
+        "notes": item.get("detail") or "",
+        "project_id": item.get("project_id"),
+        "decision_id": did,
+        "vision_pillar_id": item.get("pillar_id"),
+        "strategic_milestone_id": item.get("milestone_id"),
+        "done": False, "in_progress": False, "source": "strategy-decision",
+    })
+    decision = await _update_row(db, "user_strategy_decisions", user.id, did, {"status": "approved", "task_id": task.get("id")})
+    return {"decision": decision, "task": task}
+
+
+@missing_router.get("/strategy/overview")
+async def get_strategy_overview(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    return {
+        "milestones": await _list_rows(db, "user_strategy_milestones", user.id),
+        "decisions": await _list_rows(db, "user_strategy_decisions", user.id),
+        "tasks": await _list_rows(db, "user_tasks", user.id),
+    }
+
+
+# ============================================================
 # HABITUDES  /api/wellness/habits  (hub "Moi" — onglet Habitudes)
 # ============================================================
 class HabitIn(BaseModel):
@@ -500,6 +646,7 @@ class DocumentIn(BaseModel):
     name: str
     type: Optional[str] = "general"
     content: Optional[str] = ""
+    url: Optional[str] = None
     source: Optional[str] = "humain"   # humain | ia
 
 

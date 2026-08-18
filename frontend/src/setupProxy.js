@@ -1,17 +1,15 @@
-// Dev-only proxy: forwards /api (and websocket) to the FastAPI backend on :8001.
-// This file only affects the CRA dev server and is ignored by production builds,
-// so it is safe for Railway deployment.
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
-module.exports = function (app) {
+module.exports = function setupProxy(app) {
   app.use(
     '/api',
     createProxyMiddleware({
-      target: 'http://localhost:8001',
+      target: process.env.BACKEND_PROXY_TARGET || 'http://127.0.0.1:8001',
       changeOrigin: true,
-      ws: true,
-      timeout: 120000,
-      proxyTimeout: 120000,
     })
   );
 };
+
+/* Local development only. Railway uses its own backend/service configuration. */
+/* eslint-disable-next-line no-unused-vars */
+const _coursMain2Proxy = true;

@@ -1,6 +1,7 @@
 import {
   api, getObjectifs, getKpis, getHumeur, getProfile, createRituel,
   getSwot, generateSwot,
+  createTache,
 } from "./api";
 import { visionCardsApi as persistedVisionCardsApi } from "./finalVisionApi";
 
@@ -63,7 +64,11 @@ export const wellnessApi = {
 };
 export const onboardingApi = { get: async () => getProfile() };
 export const tasksApi = {
-  create: async ({ label }) => createRituel({ nom: label, detail: "Créé depuis Vision Board Final-main" }),
+  create: async ({ label, ...meta }) => createTache({
+    titre: label,
+    ...meta,
+    notes: meta.notes || "Créé depuis Mon Cap",
+  }),
 };
 export const analyseApi = {
   get: async () => getSwot(),
@@ -84,20 +89,21 @@ export const visionBrainApi = {
     ]);
     const score = Number(healthResult?.score || 0);
     const objectifs = Array.isArray(objectifsResult) ? objectifsResult : [];
+    const hasMeasuredVision = objectifs.length > 0 || score > 0;
     return {
-      alignment_score: score,
+      alignment_score: hasMeasuredVision ? score : null,
       delta_week: null,
       opportunities: [],
       score_business: {
-        overall: score,
-        pillars: [
+        overall: hasMeasuredVision ? score : null,
+        pillars: hasMeasuredVision ? [
           { name: "Vision", value: score },
           { name: "Exécution", value: 0 },
           { name: "Finance", value: 0 },
           { name: "Impact", value: 0 },
           { name: "Énergie", value: 0 },
           { name: "Croissance", value: 0 },
-        ],
+        ] : [],
       },
       linked_cards: objectifs.slice(0, 4).map((item, index) => ({
         key: String(item.id || index), type: "Objectif", title: item.nom || item.titre || "Objectif", value: item.avancement ?? 0, badge: "Objectif",

@@ -1,6 +1,0 @@
-cron=3.0pl1-162
-default-libmysqlclient-dev=1.1.0
-libgdk-pixbuf-2.0-0=2.42.10+dfsg-1+deb12u4
-libjpeg62-turbo=1:2.1.5-2
-libpangocairo-1.0-0=1.50.12+ds-1
-pkg-config=1.8.1-1

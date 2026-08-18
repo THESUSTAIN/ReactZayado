@@ -2,15 +2,23 @@ import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
 import {
-  Moon, Sun, LayoutGrid, PanelLeft, Palette, User, Globe, Check,
+  Moon, LayoutGrid, PanelLeft, Palette, User, Globe, Check,
   Plug, Link2, Trash2, ShieldCheck, Loader2, Images, Quote,
   Bell, Heart, Lock, Brain, CreditCard, X, Download,
   Save, ChevronRight, Upload, Image as ImageIcon,
-  Search, Zap, BellRing, Settings as SettingsIcon,
+  Search, Zap, BellRing, Settings as SettingsIcon, LineChart,
+  AlertTriangle, Battery, CheckCircle2, FileText, FileUp, Filter,
+  GraduationCap, Kanban, MapPin, MessageSquare, MoreHorizontal, Plus,
+  Radar, Send, ShieldAlert, ShoppingBag, Sparkles, StickyNote, Newspaper,
+  ThumbsUp, TrendingUp, Wallet, Wand2,
 } from "lucide-react";
 import {
   getProfile, setProfile, getReminders, setReminders,
   getInspiration, setInspirationImage, exportCsvUrl,
+  getVisionMemory, setVisionMemory, getPlan, setPlan,
+  getNewsPreferences, setNewsPreferences,
+  getOdooConfig, setOdooConfig, syncOdoo,
+  getBankAggregatorConfig, setBankAggregatorConfig, syncBankAggregator,
 } from "../lib/api";
 import { isPushSubscribed, subscribeToPush, unsubscribeFromPush, sendTestPush } from "../lib/pwa";
 import { toast } from "sonner";
@@ -35,20 +43,27 @@ function usePrefs() {
   return { prefs, setPref, t: (key) => TRANSLATIONS[key] || key };
 }
 
+// Plan affiché dans Facturation : vraiment persisté côté backend maintenant
+// (avant : toujours "free" en dur, jamais réellement lu nulle part). Limite
+// assumée, documentée aussi côté backend (routes /settings/plan) : ce SaaS
+// n'a pas de webhook Mollie relié à cette base — pas de mise à jour
+// automatique après un paiement réel sur la page tarifs publique tant que
+// cette intégration n'existe pas. Activable manuellement en attendant
+// (bouton dans l'onglet Facturation).
 function useAuth() {
-  return { user: { name: "", email: "", plan: "free" } };
+  const [plan, setPlanState] = useState("free");
+  useEffect(() => { getPlan().then((r) => setPlanState(r.plan)).catch(() => {}); }, []);
+  return { user: { name: "", email: "", plan }, setPlan: async (p) => { await setPlan(p); setPlanState(p); } };
 }
 
 const growthApi = {
   getSettings: async () => {
-    const [profile, inspiration] = await Promise.all([getProfile(), getInspiration()]);
-    let vision = {};
-    try { vision = JSON.parse(localStorage.getItem("cours-main-ai-memory") || "{}"); } catch { vision = {}; }
-    return { profile: { name: profile?.first_name || "", email: "" }, vision, inspiration_photo: inspiration?.image_url || "" };
+    const [profile, inspiration, vision] = await Promise.all([getProfile(), getInspiration(), getVisionMemory()]);
+    return { profile: { name: profile?.first_name || "", email: "" }, vision: vision?.memory || {}, inspiration_photo: inspiration?.image_url || "" };
   },
   saveSettings: async (data) => {
     if (data?.profile?.name !== undefined) await setProfile(data.profile.name);
-    if (data?.vision) localStorage.setItem("cours-main-ai-memory", JSON.stringify(data.vision));
+    if (data?.vision) await setVisionMemory(data.vision);
     return { ok: true };
   },
 };
@@ -172,6 +187,137 @@ const FIELD_LABELS = {
   api_key: "Clé API", webhook_url: "URL Webhook",
   phone: "Téléphone (+33…)", sender_email: "Email expéditeur", sender_name: "Nom expéditeur",
 };
+
+function OdooIntegrationCard() {
+  const [url, setUrl] = useState("");
+  const [dbName, setDbName] = useState("");
+  const [email, setEmail] = useState("");
+  const [apiKey, setApiKey] = useState("");
+  const [connected, setConnected] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState("");
+
+  useEffect(() => {
+    getOdooConfig().then((r) => { setUrl(r.url || ""); setConnected(!!r.connected); }).catch(() => {});
+  }, []);
+
+  const save = async () => {
+    if (!url || !dbName || !email || !apiKey) return;
+    setSaving(true);
+    try {
+      await setOdooConfig({ url, db_name: dbName, email, api_key: apiKey });
+      setConnected(true);
+      toast.success("Odoo connecté");
+    } catch { toast.error("Échec de la connexion à Odoo"); }
+    finally { setSaving(false); }
+  };
+
+  const sync = async () => {
+    setSyncing(true); setSyncMsg("");
+    try {
+      const r = await syncOdoo();
+      setSyncMsg(r.message);
+      if (r.ok) toast.success(r.message); else toast.error(r.message);
+    } catch { toast.error("Échec de la synchronisation"); }
+    finally { setSyncing(false); }
+  };
+
+  return (
+    <div className="glass-card" data-testid="odoo-integration-card" style={{ marginBottom: 4 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <span style={{ fontWeight: 600, fontSize: 14 }}>Odoo</span>
+        <span className="zchip" style={{ fontSize: 11, background: connected ? "rgba(52,211,153,0.15)" : "var(--glass-soft)", color: connected ? "#34d399" : "var(--muted)" }}>
+          {connected ? "Connecté" : "Non connecté"}
+        </span>
+      </div>
+      <p className="muted" style={{ fontSize: 12, margin: "0 0 10px" }}>Importe tes factures et dépenses réelles depuis Odoo dans Pilotage — lecture seule, Odoo reste ton système principal.</p>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+        <input placeholder="URL (https://monentreprise.odoo.com)" value={url} onChange={(e) => setUrl(e.target.value)} className="zinput" data-testid="odoo-url" />
+        <input placeholder="Base de données" value={dbName} onChange={(e) => setDbName(e.target.value)} className="zinput" data-testid="odoo-db" />
+        <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="zinput" data-testid="odoo-email" />
+        <input placeholder="Clé API" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} className="zinput" data-testid="odoo-api-key" />
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={save} disabled={saving} className="zbtn" data-testid="odoo-save">{saving ? "…" : connected ? "Mettre à jour" : "Connecter"}</button>
+        {connected && <button onClick={sync} disabled={syncing} className="zbtn-primary" data-testid="odoo-sync">{syncing ? "Synchronisation…" : "Synchroniser maintenant"}</button>}
+      </div>
+      {syncMsg && <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>{syncMsg}</p>}
+    </div>
+  );
+}
+
+function BankAggregatorCard() {
+  const [apiKey, setApiKey] = useState("");
+  const [connected, setConnected] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState("");
+
+  useEffect(() => {
+    getBankAggregatorConfig().then((r) => setConnected(!!r.connected)).catch(() => {});
+  }, []);
+
+  const save = async () => {
+    if (!apiKey.trim()) return;
+    setSaving(true);
+    try {
+      await setBankAggregatorConfig({ api_key: apiKey.trim() });
+      setConnected(true);
+      toast.success("Clé enregistrée");
+    } catch { toast.error("Échec de l'enregistrement"); }
+    finally { setSaving(false); }
+  };
+
+  const sync = async () => {
+    setSyncing(true); setSyncMsg("");
+    try { const r = await syncBankAggregator(); setSyncMsg(r.message); }
+    catch { toast.error("Échec"); }
+    finally { setSyncing(false); }
+  };
+
+  return (
+    <div className="glass-card" data-testid="bank-aggregator-card" style={{ marginBottom: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <span style={{ fontWeight: 600, fontSize: 14 }}>Agrégateur bancaire</span>
+        <span className="zchip" style={{ fontSize: 11, background: connected ? "rgba(52,211,153,0.15)" : "var(--glass-soft)", color: connected ? "#34d399" : "var(--muted)" }}>
+          {connected ? "Clé enregistrée" : "Non connecté"}
+        </span>
+      </div>
+      <p className="muted" style={{ fontSize: 12, margin: "0 0 10px" }}>
+        Une seule inscription (type Enable Banking, Bridge, Powens) donne accès à des dizaines de banques françaises — même principe qu'Odoo. Nécessite un compte développeur chez le fournisseur choisi.
+      </p>
+      <div style={{ display: "flex", gap: 8 }}>
+        <input placeholder="Clé API de l'agrégateur" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} className="zinput" style={{ flex: 1 }} data-testid="aggregator-api-key" />
+        <button onClick={save} disabled={saving} className="zbtn" data-testid="aggregator-save">{saving ? "…" : "Enregistrer"}</button>
+      </div>
+      {connected && (
+        <button onClick={sync} disabled={syncing} className="zbtn-primary" style={{ marginTop: 8 }} data-testid="aggregator-sync">
+          {syncing ? "…" : "Synchroniser"}
+        </button>
+      )}
+      {syncMsg && <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>{syncMsg}</p>}
+    </div>
+  );
+}
+
+function PlannedFinancialIntegrationCard({ name, detail, testid }) {
+  return (
+    <div className="glass-card" data-testid={testid} style={{ marginBottom: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--glass-soft)", flexShrink: 0 }}><Plug size={18} style={{ color: "#D4AF37" }} /></div>
+          <div>
+            <p style={{ fontWeight: 600, fontSize: 14, margin: 0 }}>{name}</p>
+            <p className="muted" style={{ fontSize: 12, margin: "4px 0 0" }}>{detail}</p>
+          </div>
+        </div>
+        <span className="zchip" style={{ fontSize: 11, background: "var(--glass-soft)", color: "var(--muted)", whiteSpace: "nowrap" }}>À connecter</span>
+      </div>
+      <p className="muted" style={{ fontSize: 11, margin: "10px 0 0" }}>Ce connecteur sera activé après l’ajout de son autorisation sécurisée côté backend. Aucune donnée n’est importée avant votre consentement.</p>
+    </div>
+  );
+}
 
 function IntegrationCard({ item, onSaved }) {
   const [open, setOpen] = useState(false);
@@ -999,15 +1145,16 @@ function SettingsNav({ active, onSelect, connectedCount, query }) {
 }
 
 // ─── CONTENU PARTAGÉ (utilisé par la modale ET la page) ────────
-function SettingsContent() {
+function SettingsContent({ initialSection = "general" }) {
   const { prefs, setPref, t } = usePrefs();
   const { user } = useAuth();
-  const [active, setActive] = useState("general");
+  const [active, setActive] = useState(initialSection);
   const [searchQuery, setSearchQuery] = useState("");
   const [profile, setProfile] = useState({ name: "", email: "" });
   const [vision, setVisionData] = useState(null);
   const [integrations, setIntegrations] = useState([]);
   const [connectedCount, setConnectedCount] = useState(0);
+  const [newsPrefs, setNewsPrefsState] = useState({ sector: "", region: "France", frequency_per_week: 1 });
 
   const loadIntegrations = () => {
     integrationsApi.list().then(d => { setIntegrations(d.items || []); setConnectedCount(d.connected_count || 0); }).catch(() => {});
@@ -1018,7 +1165,9 @@ function SettingsContent() {
       setVisionData(s.vision || {});
     }).catch(() => setProfile({ name: user?.name || "", email: user?.email || "" }));
     loadIntegrations();
-  }, []);
+    getNewsPreferences().then((data) => setNewsPrefsState({ sector: data?.sector || "", region: data?.region || "France", frequency_per_week: Number(data?.frequency_per_week) === 2 ? 2 : 1 })).catch(() => {});
+  }, [user?.email, user?.name]);
+  useEffect(() => { setActive(initialSection || "general"); }, [initialSection]);
 
   // Complétion du profil — nom, email, 4 champs mémoire IA, image d'inspiration
   const completionItems = [
@@ -1034,6 +1183,9 @@ function SettingsContent() {
     growthApi.saveSettings({ profile: next }).then(() => toast.success(t("set_saved"))).catch(() => {});
   };
   const change = (patch, msg) => { setPref(patch); toast.success(msg || t("set_saved")); };
+  const saveNewsPrefs = () => {
+    setNewsPreferences(newsPrefs).then(() => toast.success("Flux d’actualité enregistré")).catch(() => toast.error("Impossible d’enregistrer le flux d’actualité"));
+  };
 
   return (
     <div className="settings-shell" data-testid="settings-shell">
@@ -1065,13 +1217,7 @@ function SettingsContent() {
               <div className="card-label"><Palette size={14} /> {t("set_appearance")}</div>
               <p className="muted" style={{ fontSize: 13, margin: "6px 0 12px" }}>{t("set_theme")}</p>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <Opt active={prefs.theme === "dark"} onClick={() => change({ theme: "dark" })} Icon={Moon} label={t("theme_dark")} testid="set-theme-dark" />
-                <Opt active={prefs.theme === "light"} onClick={() => change({ theme: "light" })} Icon={Sun} label={t("theme_light")} testid="set-theme-light" />
-              </div>
-              <p className="muted" style={{ fontSize: 13, margin: "16px 0 12px" }}>{t("set_menu")}</p>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <Opt active={prefs.menu_position === "bottom"} onClick={() => change({ menu_position: "bottom" })} Icon={LayoutGrid} label={t("menu_bottom")} testid="set-menu-bottom" />
-                <Opt active={prefs.menu_position === "left"} onClick={() => change({ menu_position: "left" })} Icon={PanelLeft} label={t("menu_left")} testid="set-menu-left" />
+                <Opt active={prefs.theme !== "light"} onClick={() => change({ theme: "dark" })} Icon={Moon} label={t("theme_dark")} testid="set-theme-dark" />
               </div>
             </div>
             <div className="glass-card" data-testid="settings-language">
@@ -1081,6 +1227,28 @@ function SettingsContent() {
                 <Opt active={prefs.language === "fr"} onClick={() => change({ language: "fr" })} Icon={Globe} label="Français" testid="set-lang-fr" />
                 <Opt active={prefs.language === "en"} onClick={() => change({ language: "en" })} Icon={Globe} label="English" testid="set-lang-en" />
               </div>
+            </div>
+            <div className="glass-card" style={{ marginTop: 16 }} data-testid="settings-news-preferences">
+              <div className="card-label"><Newspaper size={14} /> Flux d’actualité</div>
+              <p className="muted" style={{ fontSize: 12, margin: "6px 0 14px" }}>Le Copilote utilisera automatiquement ces critères pour sa veille sectorielle.</p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 12 }}>
+                <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 12, color: "var(--muted)" }}>
+                  Secteur d’intérêt
+                  <input className="settings-input" value={newsPrefs.sector} onChange={(e) => setNewsPrefsState((current) => ({ ...current, sector: e.target.value }))} placeholder="Ex. SaaS, e-commerce, finance" data-testid="settings-news-sector" />
+                </label>
+                <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 12, color: "var(--muted)" }}>
+                  Région / pays
+                  <input className="settings-input" value={newsPrefs.region} onChange={(e) => setNewsPrefsState((current) => ({ ...current, region: e.target.value }))} placeholder="Ex. France, Europe, Canada" data-testid="settings-news-region" />
+                </label>
+                <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 12, color: "var(--muted)" }}>
+                  Fréquence automatique
+                  <select className="settings-input" value={newsPrefs.frequency_per_week} onChange={(e) => setNewsPrefsState((current) => ({ ...current, frequency_per_week: Number(e.target.value) }))} data-testid="settings-news-frequency">
+                    <option value={1}>1 fois par semaine</option>
+                    <option value={2}>2 fois par semaine</option>
+                  </select>
+                </label>
+              </div>
+              <button onClick={saveNewsPrefs} style={{ marginTop: 14 }} className="settings-action-button" data-testid="settings-news-save"><Save size={14} /> Enregistrer le flux</button>
             </div>
           </>
         )}
@@ -1121,10 +1289,14 @@ function SettingsContent() {
           <div className="glass-card" data-testid="settings-integrations">
             <div className="card-label" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Plug size={14} /> Intégrations</span>
-              <span className="zchip" style={{ fontSize: 11, background: "var(--glass-soft)", color: "var(--muted)" }}>{connectedCount}/{integrations.length} connectées</span>
+              <span className="zchip" style={{ fontSize: 11, background: "var(--glass-soft)", color: "var(--muted)" }}>{connectedCount} service(s) connecté(s)</span>
             </div>
             <p className="muted" style={{ fontSize: 13, margin: "6px 0 14px" }}>Connecte tes services. Les clés sont enregistrées en base.</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <OdooIntegrationCard />
+            <PlannedFinancialIntegrationCard name="Pennylane" detail="Lecture des factures, dépenses et indicateurs comptables autorisés." testid="pennylane-integration-card" />
+            <PlannedFinancialIntegrationCard name="Qonto" detail="Lecture des comptes, soldes et transactions autorisées, sans capacité de paiement." testid="qonto-integration-card" />
+            <BankAggregatorCard />
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
               {integrations.map(it => <IntegrationCard key={it.key} item={it} onSaved={loadIntegrations} />)}
               {integrations.length === 0 && <p className="muted" style={{ fontSize: 13, textAlign: "center", padding: 20 }}>Chargement du catalogue…</p>}
             </div>
@@ -1139,7 +1311,7 @@ function SettingsContent() {
 }
 
 // ─── MODALE PARAMÈTRES ────────────────────────────────────────
-export function SettingsModal({ open, onClose }) {
+export function SettingsModal({ open, onClose, initialSection = "general" }) {
   const { t } = usePrefs();
   if (!open || typeof document === "undefined") return null;
   return createPortal(
@@ -1155,7 +1327,7 @@ export function SettingsModal({ open, onClose }) {
             <button onClick={onClose} data-testid="settings-modal-close" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: 4 }}><X size={20} /></button>
           </div>
           <div style={{ overflow: "hidden", flex: 1, minHeight: 0, display: "flex" }}>
-            <SettingsContent />
+            <SettingsContent initialSection={initialSection} />
           </div>
         </motion.div>
       </motion.div>

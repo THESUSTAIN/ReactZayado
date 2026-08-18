@@ -1,5 +1,7 @@
 import os
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.engine import make_url
+import json
 from sqlalchemy.orm import DeclarativeBase
 from dotenv import load_dotenv
 from pathlib import Path
@@ -16,10 +18,15 @@ DB_PORT = os.environ.get('DB_PORT') or os.environ.get('DB_PORT_PROD', '3306')
 DB_NAME = (os.environ.get('DB_NAME') or os.environ.get('DB_DATABASE')
            or os.environ.get('DB_NAME_CUSTOM') or os.environ.get('DB_NAME_PROD'))
 NODE_ENV = os.environ.get('NODE_ENV', 'development')
+FORCE_LOCAL_DB = os.environ.get('CAP_VIVANT_LOCAL_DB') == '1'
 
 # ── Priorité 1 : DATABASE_URL fourni directement (Railway MySQL natif ou Hostinger)
 _raw_url = os.environ.get('DATABASE_URL', '')
-if _raw_url:
+if FORCE_LOCAL_DB:
+    db_path = ROOT_DIR / "zayado.db"
+    DATABASE_URL = f"sqlite+aiosqlite:///{db_path}"
+    DB_TYPE = "sqlite"
+elif _raw_url:
     # Railway fournit mysql:// mais asyncmy requiert mysql+asyncmy://
     if _raw_url.startswith('mysql://'):
         _raw_url = _raw_url.replace('mysql://', 'mysql+asyncmy://', 1)
@@ -43,6 +50,28 @@ import logging as _db_logging
 _db_logger = _db_logging.getLogger("database")
 _db_logger.info(f"Database mode: {DB_TYPE}")
 
+# asyncmy attend un dictionnaire pour ``ssl``. Certaines URLs Railway/MySQL
+# portent ``?ssl=true`` ou une valeur sérialisée : SQLAlchemy la transmet alors
+# comme chaîne et asyncmy appelle ``.get`` dessus, ce qui bloque toutes les
+# routes protégées. On retire ce paramètre de l’URL puis on le normalise dans
+# ``connect_args`` sans modifier les secrets fournis par l’environnement.
+_mysql_ssl_options = None
+if DB_TYPE == "mysql":
+    _parsed_url = make_url(DATABASE_URL)
+    _raw_ssl = _parsed_url.query.get("ssl")
+    if _raw_ssl is not None:
+        _query = dict(_parsed_url.query)
+        _query.pop("ssl", None)
+        DATABASE_URL = str(_parsed_url.set(query=_query))
+        if isinstance(_raw_ssl, str):
+            try:
+                _decoded_ssl = json.loads(_raw_ssl)
+            except (TypeError, ValueError):
+                _decoded_ssl = {}
+        else:
+            _decoded_ssl = _raw_ssl
+        _mysql_ssl_options = _decoded_ssl if isinstance(_decoded_ssl, dict) else {}
+
 from sqlalchemy.pool import NullPool
 
 _engine_kwargs = {"echo": False}
@@ -53,6 +82,8 @@ if DB_TYPE != "sqlite":
         "poolclass": NullPool,
         "connect_args": {"connect_timeout": 10},
     })
+    if DB_TYPE == "mysql" and _mysql_ssl_options is not None:
+        _engine_kwargs["connect_args"]["ssl"] = _mysql_ssl_options
 else:
     _engine_kwargs["pool_pre_ping"] = True
 engine = create_async_engine(DATABASE_URL, **_engine_kwargs)

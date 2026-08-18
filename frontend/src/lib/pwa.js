@@ -1,30 +1,16 @@
-// PWA — enregistrement du service worker + abonnement Web Push (VAPID).
-// Le backend expose /api/push/public-key et /api/push/subscribe (déjà en place).
-import axios from "axios";
+// pwa.js — abonnement Web Push (VAPID), porté depuis final-main.
+// Le service worker (public/service-worker.js) gère déjà l'affichage des
+// notifications reçues — ce fichier ne gère que l'abonnement du navigateur.
+import { api } from "./api";
 
-const API = `${process.env.REACT_APP_BACKEND_URL || ""}/api`;
-
-export function registerServiceWorker() {
-  if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
-  window.addEventListener("load", () => {
-    navigator.serviceWorker
-      .register("/service-worker.js")
-      .then((reg) => {
-        // Recharge automatiquement quand une NOUVELLE version du SW est installée
-        // alors qu'une version tournait déjà (déploiement) → l'utilisateur récupère
-        // le code/les couleurs à jour sans avoir à vider le cache manuellement.
-        reg.addEventListener("updatefound", () => {
-          const nw = reg.installing;
-          if (!nw) return;
-          nw.addEventListener("statechange", () => {
-            if (nw.state === "installed" && navigator.serviceWorker.controller) {
-              window.location.reload();
-            }
-          });
-        });
-      })
-      .catch((err) => console.warn("[PWA] SW registration failed:", err));
-  });
+function getSessionId() {
+  const key = "mx_copilot_session_id";
+  let sessionId = localStorage.getItem(key);
+  if (!sessionId) {
+    sessionId = window.crypto?.randomUUID?.() || `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    localStorage.setItem(key, sessionId);
+  }
+  return sessionId;
 }
 
 function urlBase64ToUint8Array(base64String) {
@@ -36,25 +22,46 @@ function urlBase64ToUint8Array(base64String) {
   return arr;
 }
 
-// À appeler suite à une action utilisateur (ex: bouton "Activer les notifications").
-export async function subscribeToPush(getUidHeader = {}) {
+export async function isPushSubscribed() {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) return false;
+  const reg = await navigator.serviceWorker.ready.catch(() => null);
+  if (!reg) return false;
+  const sub = await reg.pushManager.getSubscription();
+  return !!sub;
+}
+
+export async function subscribeToPush() {
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-    return { ok: false, error: "Push non supporté par ce navigateur" };
+    return { ok: false, error: "Notifications non supportées par ce navigateur." };
   }
   const permission = await Notification.requestPermission();
-  if (permission !== "granted") return { ok: false, error: "Permission refusée" };
+  if (permission !== "granted") return { ok: false, error: "Permission refusée." };
 
   const reg = await navigator.serviceWorker.ready;
-  let key = process.env.REACT_APP_VAPID_PUBLIC_KEY;
-  if (!key) {
-    try { key = (await axios.get(`${API}/push/public-key`)).data.public_key; } catch (e) { /* noop */ }
+  let key;
+  try {
+    key = (await api.get("/push/public-key")).data.public_key;
+  } catch {
+    return { ok: false, error: "Clé VAPID indisponible." };
   }
-  if (!key) return { ok: false, error: "Clé VAPID indisponible" };
+  if (!key) return { ok: false, error: "Clé VAPID indisponible." };
 
   const sub = await reg.pushManager.subscribe({
     userVisibleOnly: true,
     applicationServerKey: urlBase64ToUint8Array(key),
   });
-  await axios.post(`${API}/push/subscribe`, sub.toJSON(), { headers: getUidHeader });
+  await api.post("/push/subscribe", { ...sub.toJSON(), session_id: getSessionId() });
   return { ok: true };
+}
+
+export async function unsubscribeFromPush() {
+  const reg = await navigator.serviceWorker.ready.catch(() => null);
+  const sub = await reg?.pushManager.getSubscription();
+  if (sub) await sub.unsubscribe().catch(() => {});
+  await api.post(`/push/unsubscribe?session_id=${encodeURIComponent(getSessionId())}`).catch(() => {});
+  return { ok: true };
+}
+
+export async function sendTestPush() {
+  return api.post(`/push/test?session_id=${encodeURIComponent(getSessionId())}`).then((r) => r.data);
 }

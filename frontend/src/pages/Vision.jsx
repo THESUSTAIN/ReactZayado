@@ -6,7 +6,10 @@ import { toast } from "sonner";
 import {
   getObjectifs, createObjectif, updateObjectif, deleteObjectif, objectifToAction,
   getVision, setVision, getSwot, generateSwot, getVisionDocument, generateVisionDocument,
+  getCopilotBrief,
 } from "../lib/api";
+import { KeyInsights } from "../components/CockpitSections";
+import AlignmentCelebration from "../components/AlignmentCelebration";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
 } from "../components/ui/dialog";
@@ -93,6 +96,7 @@ export default function Vision({ onChanged }) {
   const [swotLoading, setSwotLoading] = useState(false);
   const [document, setDocument] = useState(null);
   const [docLoading, setDocLoading] = useState(false);
+  const [brief, setBrief] = useState(null);
 
   const load = async () => {
     setObjectifs(await getObjectifs());
@@ -103,8 +107,11 @@ export default function Vision({ onChanged }) {
     setSwot(s.swot);
     const d = await getVisionDocument().catch(() => ({ content: null }));
     setDocument(d.content);
+    getCopilotBrief().then(setBrief).catch(() => {});
     onChanged && onChanged(); // resynchronise les onglets Canvas/Piliers/Analyse (VisionBoard.jsx)
   };
+  // `load` orchestre volontairement le chargement initial ; il ne doit pas être recréé comme dépendance d’un hook.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, []);
 
   const runGenerateSwot = async () => {
@@ -113,8 +120,8 @@ export default function Vision({ onChanged }) {
       const r = await generateSwot();
       setSwot(r.swot);
       toast.success("Analyse SWOT générée à partir de vos vraies données ✦");
-    } catch {
-      toast.error("Analyse indisponible pour le moment.");
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Analyse indisponible pour le moment.");
     } finally {
       setSwotLoading(false);
     }
@@ -126,8 +133,8 @@ export default function Vision({ onChanged }) {
       const r = await generateVisionDocument();
       setDocument(r.content);
       toast.success("Plan 30 jours généré ✦");
-    } catch {
-      toast.error("Génération indisponible pour le moment.");
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Génération indisponible pour le moment.");
     } finally {
       setDocLoading(false);
     }
@@ -290,6 +297,10 @@ export default function Vision({ onChanged }) {
           <div className="text-[13px] text-white/75 leading-relaxed whitespace-pre-wrap" data-testid="vision-doc-content">{document}</div>
         )}
       </div>
+
+      {/* ── Fusion cockpit : Ressources & Inspiration (données réelles) ── */}
+      <KeyInsights data={brief} />
+      <AlignmentCelebration score={brief?.vision?.alignment_percent} />
     </div>
   );
 }

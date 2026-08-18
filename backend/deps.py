@@ -17,7 +17,6 @@ from datetime import datetime, timezone, timedelta
 import os
 import uuid
 import logging
-import hmac
 
 from database import get_db
 from models import User
@@ -197,40 +196,14 @@ async def get_current_user_optional(
     return await _get_user_optional_impl(authorization, db)
 
 
-class WordPressServicePrincipal:
-    """Principal de service minimal pour les appels administratifs du plugin WordPress.
-
-    Cette identité ne peut être obtenue qu'avec le secret stocké côté serveur et
-    n'est jamais sérialisée ou exposée par les routes publiques.
+async def get_admin_user(user: User = Depends(get_current_user)) -> User:
     """
-    id = "wordpress-service"
-    email = "wordpress-plugin@service.local"
-    name = "WordPress Plugin"
-    role = "super_admin"
-    is_active = True
-    is_service = True
-
-
-async def get_admin_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: AsyncSession = Depends(get_db),
-) -> User | WordPressServicePrincipal:
-    """Autorise un JWT administrateur ou le secret de service WordPress.
-
-    Le secret est limité à cette dépendance : il ne donne pas accès aux routes
-    utilisateur protégées par ``get_current_user``. La comparaison est effectuée
-    en temps constant afin d'éviter une fuite par temporisation.
+    Vérifie que l'utilisateur a des privilèges admin.
     """
-    service_token = os.environ.get("WP_ADMIN_SERVICE_TOKEN", "").strip()
-    if service_token and hmac.compare_digest(credentials.credentials, service_token):
-        logger.info("Administrative request authenticated by WordPress service token")
-        return WordPressServicePrincipal()
-
-    user = await get_current_user(credentials, db)
     if user.role not in ("admin", "super_admin"):
         logger.warning(f"Unauthorized admin access attempt by user {user.id}")
         raise HTTPException(status_code=403, detail="Accès admin requis")
-
+    
     return user
 
 

@@ -52,7 +52,7 @@ export default function AlignmentCelebration({ score }) {
           border: "1px solid rgba(201,164,73,0.5)", textAlign: "center", position: "relative",
         }}>
           <button onClick={() => setMilestone(null)} data-testid="alignment-celebration-close"
-            style={{ position: "absolute", top: 10, right: 10, background: "none", border: "none", color: "var(--muted)", cursor: "pointer" }}>
+            style={{ position: "absolute", top: 10, right: 10, background: "none", border: "none", color: "rgba(255,255,255,0.6)", cursor: "pointer" }}>
             <X size={16} />
           </button>
           <PartyPopper size={28} style={{ color: "#E5C887", marginBottom: 8 }} />

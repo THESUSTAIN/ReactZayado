@@ -1,330 +1,449 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 import {
-  Wallet, TrendingUp, TrendingDown, Euro, Target, Inbox, AlertTriangle,
-  Plus, Sparkles, Gauge, ShieldCheck, PieChart, Trophy, CheckCircle2, X, Loader2, Radio,
-  Download, Calculator,
+  Wallet, TrendingUp, PieChart, LineChart as LineIcon, Plus, Trash2,
+  ArrowUpRight, ArrowDownRight, Building2, Download, AlertTriangle, Calculator, Gauge, Loader2,
+  Landmark, Plug, ShieldCheck,
 } from "lucide-react";
-import { pilotageApi } from "@/lib/api";
-import DecisionBanner from "@/components/DecisionBanner";
+import {
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
+} from "recharts";
 import { toast } from "sonner";
+import {
+  getKpis, getFactures, createFacture, deleteFacture,
+  getDepenses, createDepense, deleteDepense, euro,
+  getTresorerieHistory, getDecision, simulatePilotage, getHealthScore, exportCsvUrl, getOdooConfig,
+} from "../lib/api";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
+} from "../components/ui/dialog";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "../components/ui/select";
 
-const fmt = (v) => `${Math.round(Number(v || 0)).toLocaleString("fr-FR")} €`;
-const TONE = { gold: "#D4AF37", sage: "#5e8a5a", navy: "#4a6a9e", danger: "#c26b4a" };
-const PERIODS = [
-  { id: "semaine", label: "Semaine" }, { id: "mois", label: "Mois" },
-  { id: "trimestre", label: "Trimestre" }, { id: "annee", label: "Année" },
-];
-const ALERT_TONE = { danger: "#c26b4a", warn: "#D4AF37", ok: "#5e8a5a" };
+const STATUT_COLORS = {
+  "Payée": "text-emerald-400 bg-emerald-400/10 border-emerald-400/30",
+  "En retard": "text-rose-400 bg-rose-400/10 border-rose-400/30",
+  "En attente": "text-amber-400 bg-amber-400/10 border-amber-400/30",
+  "À envoyer": "text-sky-400 bg-sky-400/10 border-sky-400/30",
+};
 
-// Export comptable — format compatible Pennylane/Indy/Comptastart (CSV standard)
-function exportComptable(ov) {
-  if (!ov) return;
-  const rows = [
-    ["Date", "Libellé", "Catégorie", "Type", "Montant"],
-    ...(ov.entries || []).map(e => [e.date, e.label, e.category, e.type === "revenu" ? "Recette" : "Dépense", e.amount]),
-  ];
-  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";")).join("\n");
-  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = `zayado-pilotage-${new Date().toISOString().slice(0, 10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-// Score de santé financière — calculé côté backend (routes/pilotage_overview.py,
-// champ `summary.score`, réservé depuis le début mais jamais rempli avant).
-function ScoreSante({ ov }) {
-  const score = ov?.summary?.score;
-  if (score == null) return null;
-  const color = score >= 70 ? "#34d399" : score >= 40 ? "#D4AF37" : "#f87171";
+function KpiCard({ icon: Icon, label, value, delta, positive }) {
   return (
-    <div className="glass-card" style={{ marginBottom: 16, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }} data-testid="score-sante">
-      <div className="card-label"><Gauge size={14} /> Score de santé financière</div>
-      <div style={{ position: "relative", width: 96, height: 96, margin: "10px 0" }}>
-        <svg width="96" height="96" style={{ transform: "rotate(-90deg)" }}>
-          <circle cx="48" cy="48" r="40" stroke="rgba(255,255,255,0.1)" strokeWidth="8" fill="none" />
-          <circle cx="48" cy="48" r="40" stroke={color} strokeWidth="8" fill="none"
-            strokeDasharray={2 * Math.PI * 40} strokeDashoffset={2 * Math.PI * 40 * (1 - score / 100)} strokeLinecap="round" />
-        </svg>
-        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, fontWeight: 700 }}>{score}</div>
+    <div className="glass glass-hover p-5 fade-in" data-testid={`kpi-${label}`}>
+      <div className="flex items-start justify-between">
+        <span className="text-[13px] text-white/60">{label}</span>
+        <div className="w-9 h-9 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/25 flex items-center justify-center">
+          <Icon size={17} className="text-[#D4AF37]" strokeWidth={1.5} />
+        </div>
       </div>
-      <p className="muted" style={{ fontSize: 11 }}>Marge · Trésorerie · Résultat net</p>
+      <div className="mt-3 font-head text-2xl font-semibold tracking-tight">{value}</div>
+      {delta && (
+        <div className={`mt-1.5 flex items-center gap-1 text-xs ${positive ? "text-emerald-400" : "text-rose-400"}`}>
+          {positive ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />} {delta}
+        </div>
+      )}
     </div>
   );
 }
 
-export default function Pilotage() {
-  const [period, setPeriod] = useState("mois");
-  const [ov, setOv] = useState(null);
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ type: "revenu", label: "", amount: "", category: "Général" });
-  const [simContracts, setSimContracts] = useState(0);
-  const [simAmount, setSimAmount] = useState(500);
+function DecisionBanner({ decision }) {
+  if (!decision) return null;
+  return (
+    <div className={`glass p-4 flex items-start gap-3 border-l-4 ${decision.severity === "high" ? "border-l-rose-400" : "border-l-amber-400"}`} data-testid="decision-banner">
+      <AlertTriangle size={18} className={decision.severity === "high" ? "text-rose-400" : "text-amber-400"} />
+      <div>
+        <div className="text-sm font-semibold text-white">{decision.title}</div>
+        <p className="text-[12.5px] text-white/60 mt-0.5">{decision.detail}</p>
+      </div>
+    </div>
+  );
+}
 
-  const load = useCallback((p) => {
-    pilotageApi.overview(p).then(setOv).catch(() => setOv(null));
-  }, []);
-  useEffect(() => { load(period); }, [period, load]);
-
-  const submit = async (e) => {
-    e.preventDefault();
-    if (!form.label || !form.amount) return toast.error("Renseigne un libellé et un montant");
-    try {
-      await pilotageApi.addEntry({ ...form, amount: Number(form.amount) });
-      toast.success(form.type === "revenu" ? "Revenu ajouté" : "Dépense ajoutée");
-      setForm({ type: "revenu", label: "", amount: "", category: "Général" });
-      setShowForm(false);
-      load(period);
-    } catch { toast.error("Ajout impossible"); }
+function FinancialSourceCard({ icon: Icon, title, detail, status, tone = "muted" }) {
+  const tones = {
+    muted: "border-white/15 bg-white/[0.05] text-white/60",
+    connected: "border-emerald-300/30 bg-emerald-300/10 text-emerald-200",
   };
+  return (
+    <div className="rounded-2xl border border-white/15 bg-white/[0.045] p-4" data-testid={`pilotage-source-${title.toLowerCase()}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#E5C887]/25 bg-[#E5C887]/10 text-[#E5C887]"><Icon size={18} /></div>
+        <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-bold ${tones[tone]}`}>{status}</span>
+      </div>
+      <p className="mt-4 font-head text-sm font-semibold text-white">{title}</p>
+      <p className="mt-1 text-xs leading-5 text-white/52">{detail}</p>
+    </div>
+  );
+}
 
-  const caPct = ov ? Math.min(100, Math.round((ov.ca_month / ov.ca_objective) * 100)) : 0;
-  const salPct = ov ? Math.min(100, Math.round((ov.salary_possible / ov.salary_target) * 100)) : 0;
-  const s = ov?.summary;
+function FinancialSources() {
+  const [odooConnected, setOdooConnected] = useState(false);
+
+  useEffect(() => {
+    getOdooConfig().then((config) => setOdooConnected(Boolean(config?.connected))).catch(() => setOdooConnected(false));
+  }, []);
+
+  const openIntegrations = () => window.dispatchEvent(new CustomEvent("cours:open-settings", { detail: { section: "integrations" } }));
 
   return (
-    <motion.div className="page cours-style" data-testid="page-pilotage"
-      initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-      <div className="page-head">
-        <div>
-          <h1 className="page-title">DAF IA — Pilotage financier</h1>
-          <p className="page-sub">Ta santé financière en un coup d'œil. Un tableau de bord, pas un logiciel de compta — tu visualises, et Zayado peut superviser.</p>
+    <section className="glass overflow-hidden p-5 sm:p-6" data-testid="pilotage-financial-sources">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="max-w-2xl">
+          <p className="text-[11px] font-bold uppercase tracking-[.17em] text-[#E5C887]">Sources financières</p>
+          <h2 className="mt-1 font-head text-xl font-semibold text-white">Une lecture consolidée, sans remplacer vos outils.</h2>
+          <p className="mt-2 text-sm leading-6 text-white/58">MyExtension rassemble uniquement les comptes, factures, dépenses et encaissements que vous autorisez. Aucune écriture comptable, aucun paiement et aucune donnée inventée.</p>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => window.dispatchEvent(new Event("zayado:open-cockpit-chat"))} className="zbtn" data-testid="daf-supervision-btn" title="Faire superviser mes chiffres par Zayado (comptabilité, optimisation)"><ShieldCheck size={16} /> Faire superviser par Zayado</button>
-          <button onClick={() => exportComptable(ov)} className="zbtn" data-testid="export-comptable-btn"><Download size={16} /> Export comptable</button>
-          <button onClick={() => setShowForm((v) => !v)} className="zbtn zbtn-primary" data-testid="add-entry-btn"><Plus size={16} /> Ajouter une entrée</button>
-        </div>
+        <button onClick={openIntegrations} className="inline-flex items-center gap-2 rounded-xl border border-[#E5C887]/45 bg-[#E5C887]/10 px-4 py-2.5 text-sm font-semibold text-[#F4D990] transition hover:bg-[#E5C887]/18" data-testid="pilotage-open-integrations"><Plug size={15} /> Configurer les sources</button>
       </div>
 
-      {/* Sélecteur de période */}
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }} data-testid="period-selector">
-        {PERIODS.map((p) => (
-          <button key={p.id} onClick={() => setPeriod(p.id)} data-testid={`period-${p.id}`}
-            className={period === p.id ? "zbtn zbtn-primary" : "zbtn"} style={{ height: 38 }}>{p.label}</button>
-        ))}
+      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        <FinancialSourceCard icon={Building2} title="Odoo" detail="Factures, dépenses et statuts autorisés. Odoo reste votre système de gestion." status={odooConnected ? "Connecté" : "À connecter"} tone={odooConnected ? "connected" : "muted"} />
+        <FinancialSourceCard icon={Wallet} title="Pennylane" detail="Factures, dépenses et vision comptable, après autorisation explicite." status="À connecter" />
+        <FinancialSourceCard icon={Landmark} title="Qonto" detail="Comptes, soldes et transactions bancaires, en lecture seule." status="À connecter" />
       </div>
 
-      {/* Décision d'abord — signature Zayado. Runway et CA vs objectif
-          alimentent la phrase du jour. */}
-      <DecisionBanner
-        page="pilotage"
-        data={{
-          treasury_runway_days: s?.runway_days ?? ov?.runway_days ?? 0,
-          ca_month: s?.ca_month ?? 0,
-          ca_objective: s?.ca_objective ?? 0,
-        }}
-      />
+      <div className="mt-5 flex flex-wrap items-start gap-3 rounded-xl border border-white/12 bg-white/[0.035] p-3 text-xs leading-5 text-white/58">
+        <ShieldCheck size={17} className="mt-0.5 shrink-0 text-[#E5C887]" />
+        <p className="m-0"><strong className="font-semibold text-white/82">Votre outil source reste la vérité.</strong> Chaque connexion devra indiquer son périmètre, sa dernière synchronisation et pouvoir être révoquée. Les capacités de paiement restent hors du périmètre initial.</p>
+      </div>
+    </section>
+  );
+}
 
-      <ScoreSante ov={ov} />
+function SimulateurTresorerie() {
+  const [nbContrats, setNbContrats] = useState(1);
+  const [montant, setMontant] = useState(1000);
+  const [depenses, setDepenses] = useState(0);
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-      {/* Sources connectées */}
-      {ov && (
-        <div className="glass-card" style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", marginBottom: 16 }} data-testid="sources-strip">
-          <span className="card-label" style={{ margin: 0 }}><Radio size={14} /> Sources connectées</span>
-          {ov.sources.map((src) => (
-            <span key={src.id} data-testid={`source-${src.id}`} title={src.connected ? `Sync ${src.last_sync}` : "Non connecté"}
-              style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 12px", borderRadius: 999, background: "var(--glass-soft)", border: "1px solid var(--glass-border)", opacity: src.connected ? 1 : 0.5 }}>
-              <span style={{ width: 22, height: 22, borderRadius: 6, background: src.color, color: "#fff", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{src.letter}</span>
-              <span style={{ fontSize: 13, color: "var(--txt)" }}>{src.name}</span>
-              {src.connected ? <CheckCircle2 size={13} style={{ color: "#5e8a5a" }} /> : <span className="muted" style={{ fontSize: 11 }}>—</span>}
-            </span>
-          ))}
-        </div>
-      )}
+  const run = async () => {
+    setLoading(true);
+    try {
+      const r = await simulatePilotage({ nb_contrats: Number(nbContrats) || 0, montant_moyen: Number(montant) || 0, depenses_supplementaires: Number(depenses) || 0 });
+      setResult(r);
+    } catch {
+      toast.error("Simulation indisponible");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      {/* Formulaire d'ajout */}
-      {showForm && (
-        <form onSubmit={submit} className="glass-card" style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", marginBottom: 16 }} data-testid="entry-form">
-          <div style={{ display: "flex", gap: 6 }}>
-            {["revenu", "depense"].map((t) => (
-              <button type="button" key={t} onClick={() => setForm({ ...form, type: t })}
-                className={form.type === t ? "zbtn zbtn-primary" : "zbtn"} style={{ height: 44 }} data-testid={`entry-type-${t}`}>
-                {t === "revenu" ? "Revenu" : "Dépense"}
-              </button>
-            ))}
+  return (
+    <div className="glass p-5" data-testid="simulateur-tresorerie">
+      <h3 className="font-head font-semibold flex items-center gap-2 mb-3"><Calculator size={16} className="text-[#D4AF37]" /> Simulateur de trésorerie</h3>
+      <p className="text-[12px] text-white/50 mb-3">Si je signe X contrats à Y€, quelle devient ma trésorerie ?</p>
+      <div className="grid grid-cols-3 gap-2 mb-3">
+        <input type="number" value={nbContrats} onChange={(e) => setNbContrats(e.target.value)} placeholder="Contrats"
+          className="bg-white/5 border border-white/15 rounded-lg px-2.5 py-2 text-sm text-white" data-testid="sim-nb-contrats" />
+        <input type="number" value={montant} onChange={(e) => setMontant(e.target.value)} placeholder="€ moyen"
+          className="bg-white/5 border border-white/15 rounded-lg px-2.5 py-2 text-sm text-white" data-testid="sim-montant" />
+        <input type="number" value={depenses} onChange={(e) => setDepenses(e.target.value)} placeholder="Dépenses +"
+          className="bg-white/5 border border-white/15 rounded-lg px-2.5 py-2 text-sm text-white" data-testid="sim-depenses" />
+      </div>
+      <button onClick={run} disabled={loading} data-testid="sim-run-btn"
+        className="w-full gold-bg text-[#0A1128] font-semibold rounded-full py-2 text-sm flex items-center justify-center gap-2 disabled:opacity-60">
+        {loading ? <Loader2 size={14} className="animate-spin" /> : <Calculator size={14} />} Simuler
+      </button>
+      {result && (
+        <div className="mt-4 grid grid-cols-2 gap-3 text-center" data-testid="sim-result">
+          <div>
+            <div className="text-[11px] text-white/50">Trésorerie projetée</div>
+            <div className="font-head font-semibold text-lg text-emerald-400">{euro(result.projected_tresorerie)}</div>
           </div>
-          <input className="zinput" style={{ flex: 1, minWidth: 160 }} placeholder="Libellé" value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} data-testid="entry-label" />
-          <input className="zinput" type="number" style={{ width: 130 }} placeholder="Montant €" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} data-testid="entry-amount" />
-          <button type="submit" className="zbtn zbtn-primary" data-testid="entry-submit">Ajouter</button>
-          <button type="button" onClick={() => setShowForm(false)} className="zbtn" style={{ width: 44, padding: 0, justifyContent: "center" }}><X size={16} /></button>
-        </form>
+          <div>
+            <div className="text-[11px] text-white/50">Marge projetée</div>
+            <div className="font-head font-semibold text-lg">{result.projected_marge}%</div>
+          </div>
+        </div>
       )}
+    </div>
+  );
+}
+
+function ScoreSante({ score }) {
+  if (!score) return null;
+  const color = score.score >= 70 ? "#34d399" : score.score >= 40 ? "#fbbf24" : "#f87171";
+  return (
+    <div className="glass p-5 flex flex-col items-center text-center" data-testid="score-sante">
+      <h3 className="font-head font-semibold flex items-center gap-2 mb-3"><Gauge size={16} className="text-[#D4AF37]" /> Score de santé financière</h3>
+      <div className="relative w-24 h-24 my-1">
+        <svg className="w-24 h-24 -rotate-90">
+          <circle cx="48" cy="48" r="40" stroke="rgba(255,255,255,0.1)" strokeWidth="8" fill="none" />
+          <circle cx="48" cy="48" r="40" stroke={color} strokeWidth="8" fill="none"
+            strokeDasharray={2 * Math.PI * 40} strokeDashoffset={2 * Math.PI * 40 * (1 - score.score / 100)} strokeLinecap="round" />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center font-head text-2xl font-semibold">{score.score}</div>
+      </div>
+      <p className="text-[11px] text-white/50 mt-2">Marge {score.marge_score} · Trésorerie {score.tresorerie_score} · Retards {score.retard_score}</p>
+    </div>
+  );
+}
+
+function AddFactureDialog({ onAdded }) {
+  const [open, setOpen] = useState(false);
+  const [f, setF] = useState({ client: "", reference: "", montant: "", statut: "À envoyer", echeance: "" });
+  const submit = async () => {
+    if (!f.client || !f.montant) return toast.error("Client et montant requis");
+    await createFacture({ ...f, montant: parseFloat(f.montant) });
+    toast.success("Facture ajoutée");
+    setOpen(false);
+    setF({ client: "", reference: "", montant: "", statut: "À envoyer", echeance: "" });
+    onAdded();
+  };
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <button data-testid="add-facture-btn" className="flex items-center gap-1 text-xs text-[#D4AF37] hover:text-[#FFD700] transition-colors">
+          <Plus size={14} /> Ajouter
+        </button>
+      </DialogTrigger>
+      <DialogContent className="bg-[#0A1128] border-white/15 text-white">
+        <DialogHeader><DialogTitle className="font-head">Nouvelle facture</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div><Label className="text-white/70">Client</Label>
+            <Input data-testid="facture-client" value={f.client} onChange={(e) => setF({ ...f, client: e.target.value })} className="bg-white/5 border-white/15 mt-1" /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label className="text-white/70">Référence</Label>
+              <Input value={f.reference} onChange={(e) => setF({ ...f, reference: e.target.value })} className="bg-white/5 border-white/15 mt-1" /></div>
+            <div><Label className="text-white/70">Montant (€)</Label>
+              <Input data-testid="facture-montant" type="number" value={f.montant} onChange={(e) => setF({ ...f, montant: e.target.value })} className="bg-white/5 border-white/15 mt-1" /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label className="text-white/70">Statut</Label>
+              <Select value={f.statut} onValueChange={(v) => setF({ ...f, statut: v })}>
+                <SelectTrigger className="bg-white/5 border-white/15 mt-1" data-testid="facture-statut"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-[#0A1128] border-white/15 text-white">
+                  {["À envoyer", "En attente", "En retard", "Payée"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select></div>
+            <div><Label className="text-white/70">Échéance</Label>
+              <Input type="date" value={f.echeance} onChange={(e) => setF({ ...f, echeance: e.target.value })} className="bg-white/5 border-white/15 mt-1" /></div>
+          </div>
+        </div>
+        <DialogFooter>
+          <button data-testid="facture-submit" onClick={submit} className="gold-bg text-[#0A1128] font-semibold rounded-full px-5 py-2 text-sm">Enregistrer</button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AddDepenseDialog({ onAdded }) {
+  const [open, setOpen] = useState(false);
+  const [d, setD] = useState({ libelle: "", categorie: "SaaS", montant: "", date: "" });
+  const submit = async () => {
+    if (!d.libelle || !d.montant) return toast.error("Libellé et montant requis");
+    await createDepense({ ...d, montant: parseFloat(d.montant) });
+    toast.success("Dépense ajoutée");
+    setOpen(false);
+    setD({ libelle: "", categorie: "SaaS", montant: "", date: "" });
+    onAdded();
+  };
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <button data-testid="add-depense-btn" className="flex items-center gap-1 text-xs text-[#D4AF37] hover:text-[#FFD700] transition-colors">
+          <Plus size={14} /> Ajouter
+        </button>
+      </DialogTrigger>
+      <DialogContent className="bg-[#0A1128] border-white/15 text-white">
+        <DialogHeader><DialogTitle className="font-head">Nouvelle dépense</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div><Label className="text-white/70">Libellé</Label>
+            <Input data-testid="depense-libelle" value={d.libelle} onChange={(e) => setD({ ...d, libelle: e.target.value })} className="bg-white/5 border-white/15 mt-1" /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label className="text-white/70">Catégorie</Label>
+              <Select value={d.categorie} onValueChange={(v) => setD({ ...d, categorie: v })}>
+                <SelectTrigger className="bg-white/5 border-white/15 mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-[#0A1128] border-white/15 text-white">
+                  {["SaaS", "Marketing", "Outils", "Sous-traitance", "Autre"].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                </SelectContent>
+              </Select></div>
+            <div><Label className="text-white/70">Montant (€)</Label>
+              <Input data-testid="depense-montant" type="number" value={d.montant} onChange={(e) => setD({ ...d, montant: e.target.value })} className="bg-white/5 border-white/15 mt-1" /></div>
+          </div>
+        </div>
+        <DialogFooter>
+          <button data-testid="depense-submit" onClick={submit} className="gold-bg text-[#0A1128] font-semibold rounded-full px-5 py-2 text-sm">Enregistrer</button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export default function Pilotage() {
+  const [kpis, setKpis] = useState(null);
+  const [factures, setFactures] = useState([]);
+  const [depenses, setDepenses] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [decision, setDecision] = useState(null);
+  const [score, setScore] = useState(null);
+
+  const load = async () => {
+    try {
+      const [nextKpis, nextFactures, nextDepenses, nextHistory, nextDecision, nextScore] = await Promise.all([
+        getKpis().catch(() => null),
+        getFactures().catch(() => []),
+        getDepenses().catch(() => []),
+        getTresorerieHistory().catch(() => []),
+        getDecision().catch(() => null),
+        getHealthScore().catch(() => null),
+      ]);
+      setKpis(nextKpis);
+      setFactures(Array.isArray(nextFactures) ? nextFactures : []);
+      setDepenses(Array.isArray(nextDepenses) ? nextDepenses : []);
+      setHistory(Array.isArray(nextHistory) ? nextHistory : []);
+      setDecision(nextDecision);
+      setScore(nextScore);
+    } catch {
+      setKpis(null); setFactures([]); setDepenses([]); setHistory([]); setDecision(null); setScore(null);
+    }
+  };
+  useEffect(() => { load(); }, []);
+
+  const trend = history.map((h) => ({ jour: h.date.slice(5), valeur: h.tresorerie }));
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="font-head text-3xl sm:text-4xl font-semibold"><span className="gold-text">Pilotage & trésorerie</span></h1>
+          <p className="text-white/55 text-sm mt-1">Lire vos indicateurs, arbitrer avec le Cap et rester maître de vos outils financiers.</p>
+        </div>
+        <a href={exportCsvUrl()} download className="glass glass-hover px-4 py-2 text-sm flex items-center gap-2" data-testid="export-btn">
+          <Download size={15} /> Exporter
+        </a>
+      </div>
+
+      <FinancialSources />
+
+      <DecisionBanner decision={decision} />
 
       {/* KPIs */}
-      <div className="pgrid pgrid-4" style={{ marginBottom: 16 }}>
-        {(ov?.kpis || []).map((k) => {
-          const up = k.delta >= 0;
-          return (
-            <div key={k.id} className="glass-card" data-testid={`kpi-${k.id}`}>
-              <div className="card-label" style={{ color: TONE[k.tone] }}>{k.label}</div>
-              <div style={{ fontSize: 26, fontWeight: 300, color: "var(--txt)", marginTop: 4 }}>{fmt(k.value)}</div>
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, marginTop: 6, color: up ? "#5e8a5a" : "#c26b4a" }}>
-                {up ? <TrendingUp size={13} /> : <TrendingDown size={13} />} {Math.abs(k.delta)}%
-              </div>
-            </div>
-          );
-        })}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <KpiCard icon={Building2} label="Trésorerie disponible" value={kpis ? euro(kpis.tresorerie) : "—"} />
+        <KpiCard icon={TrendingUp} label="Chiffre d'affaires" value={kpis ? euro(kpis.chiffre_affaires) : "—"} />
+        <KpiCard icon={PieChart} label="Marge nette" value={kpis ? `${kpis.marge_nette}%` : "—"} />
+        <KpiCard icon={LineIcon} label="Résultat net" value={kpis ? euro(kpis.resultat_net) : "—"} />
       </div>
 
-      {/* Coach + Verdict + Alertes */}
-      <div className="pgrid pgrid-3" style={{ marginBottom: 16 }}>
-        <div className="glass-card" data-testid="coach-card">
-          <div className="card-label" style={{ color: TONE.gold }}><Sparkles size={14} /> Coach IA du jour</div>
-          <p style={{ fontSize: 14, color: "var(--txt)", marginTop: 8, lineHeight: 1.5 }}>
-            {ov?.coach?.message || <span className="muted">— Pas encore de message du jour. Revenez après votre prochain check-in.</span>}
+      {/* Chart + Analyse */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <div className="glass p-5 xl:col-span-2">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-head font-semibold">Évolution de la trésorerie</h3>
+            <span className="text-xs text-white/50">Historique réel</span>
+          </div>
+          {trend.length < 2 ? (
+            <p className="text-sm text-white/40 py-16 text-center">
+              Pas encore assez d'historique — un point est enregistré chaque jour. Revenez dans quelques jours pour voir la courbe se dessiner.
+            </p>
+          ) : (
+            <ResponsiveContainer width="100%" height={260}>
+              <AreaChart data={trend} margin={{ left: -10, right: 10, top: 10 }}>
+                <defs>
+                  <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#E5C887" stopOpacity={0.55} />
+                    <stop offset="100%" stopColor="#C9A449" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                <XAxis dataKey="jour" stroke="rgba(255,255,255,0.4)" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke="rgba(255,255,255,0.4)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
+                <Tooltip
+                  contentStyle={{ background: "#0B1F3A", border: "1px solid rgba(201,164,73,0.4)", borderRadius: 12, color: "#fff" }}
+                  formatter={(v) => [euro(v), "Trésorerie"]}
+                />
+                <Area type="monotone" dataKey="valeur" stroke="#E5C887" strokeWidth={3} fill="url(#gold)" dot={{ r: 3, fill: "#E5C887" }} activeDot={{ r: 5 }} isAnimationActive={false} />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        <ScoreSante score={score} />
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <SimulateurTresorerie />
+        <div className="glass p-5">
+          <h3 className="font-head font-semibold flex items-center gap-2 mb-3">
+            <span className="text-[#D4AF37]">✦</span> Analyse de contexte
+          </h3>
+          <p className="text-sm text-white/70 leading-relaxed">
+            Votre trésorerie est {kpis && kpis.tresorerie > 0 ? "saine" : "à surveiller"}.
+            {kpis && kpis.en_retard > 0 && ` ${euro(kpis.en_retard)} de factures sont en retard.`}
           </p>
-        </div>
-        <div className="glass-card" data-testid="verdict-card">
-          <div className="card-label"><Gauge size={14} /> Verdict hebdo IA</div>
-          <div style={{ fontSize: 22, fontWeight: 300, color: TONE.gold, margin: "6px 0" }}>{ov?.verdict?.level || "—"}</div>
-          <p className="muted" style={{ fontSize: 13 }}>{ov?.verdict?.message}</p>
-        </div>
-        <div className="glass-card" data-testid="alerts-card">
-          <div className="card-label"><AlertTriangle size={14} /> Alertes</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
-            {(ov?.alerts || []).map((a, i) => (
-              <div key={i} style={{ display: "flex", gap: 8, fontSize: 13, color: "var(--txt)" }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: ALERT_TONE[a.tone], marginTop: 5, flexShrink: 0 }} />{a.text}
+          <div className="mt-4 space-y-2">
+            {[
+              kpis && kpis.en_retard > 0 && `Relancer ${euro(kpis.en_retard)} de factures en retard`,
+              kpis && kpis.marge_nette < 20 && `Marge nette à ${kpis.marge_nette}% — revoir les charges récurrentes`,
+              kpis && kpis.total_depenses > 0 && `${euro(kpis.total_depenses)} de dépenses ce mois — vérifier les abonnements inutilisés`,
+            ].filter(Boolean).map((t) => (
+              <div key={t} className="flex items-start gap-2 text-[13px] text-white/70">
+                <span className="text-[#D4AF37] mt-0.5">✓</span> {t}
               </div>
             ))}
+            {kpis && !kpis.en_retard && kpis.marge_nette >= 20 && (
+              <p className="text-[13px] text-white/45">Rien à signaler — vos indicateurs sont sains.</p>
+            )}
           </div>
         </div>
       </div>
 
-      {/* CA chart (barres CSS) */}
-      <div className="glass-card" style={{ marginBottom: 16 }} data-testid="ca-chart">
-        <div className="card-label"><Euro size={14} /> Évolution du chiffre d'affaires · {PERIODS.find((p) => p.id === period)?.label}</div>
-        {ov && (() => {
-          const max = Math.max(...ov.monthly.map((m) => m.ca), 1);
-          return (
-            <>
-              <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 210, marginTop: 16 }}>
-                {ov.monthly.map((m, i) => {
-                  const h = Math.max(4, Math.round((m.ca / max) * 100));
-                  const last = i === ov.monthly.length - 1;
-                  return <div key={i} title={fmt(m.ca)} style={{ flex: 1, display: "flex", alignItems: "flex-end", height: "100%" }}>
-                    <div style={{ width: "100%", height: `${h}%`, borderRadius: "6px 6px 0 0", background: last ? "linear-gradient(180deg,#E8C96A,#D4AF37)" : "rgba(212,175,55,0.35)", transition: "height 0.6s cubic-bezier(0.22,1,0.36,1)" }} />
-                  </div>;
-                })}
-              </div>
-              <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-                {ov.monthly.map((m, i) => <span key={i} className="muted" style={{ flex: 1, textAlign: "center", fontSize: 10 }}>{m.month}</span>)}
-              </div>
-            </>
-          );
-        })()}
-      </div>
-
-      {/* Simulateur de trésorerie — "si je signe X contrats ce mois" */}
-      <div className="glass-card" style={{ marginBottom: 16 }} data-testid="cashflow-simulator">
-        <div className="card-label" style={{ color: TONE.navy }}><Calculator size={14} /> Simulateur — si je signe des contrats en plus</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 14 }}>
-          <div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8 }}>
-              <span className="muted">Nombre de contrats supplémentaires</span>
-              <strong style={{ color: "var(--txt)" }}>{simContracts}</strong>
-            </div>
-            <input type="range" min="0" max="10" value={simContracts} onChange={(e) => setSimContracts(Number(e.target.value))}
-              style={{ width: "100%" }} data-testid="sim-contracts-slider" />
+      {/* Factures + Dépenses */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="glass p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-head font-semibold">Factures à suivre</h3>
+            <AddFactureDialog onAdded={load} />
           </div>
-          <div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8 }}>
-              <span className="muted">Montant moyen par contrat</span>
-              <strong style={{ color: "var(--txt)" }}>{fmt(simAmount)}</strong>
-            </div>
-            <input type="range" min="100" max="5000" step="100" value={simAmount} onChange={(e) => setSimAmount(Number(e.target.value))}
-              style={{ width: "100%" }} data-testid="sim-amount-slider" />
-          </div>
-          {ov && (() => {
-            const extra = simContracts * simAmount;
-            const newCa = (ov.ca_month || 0) + extra;
-            const newSalary = (ov.salary_possible || 0) + extra * 0.6; // ~60% après charges, approximation
-            return (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, padding: "14px", background: "rgba(74,106,158,0.06)", borderRadius: 12, border: "1px solid rgba(74,106,158,0.2)" }}>
-                <div>
-                  <p className="muted" style={{ fontSize: 11, margin: 0 }}>Nouveau CA du mois</p>
-                  <p style={{ fontSize: 20, fontWeight: 300, color: TONE.navy, margin: "2px 0 0" }}>{fmt(newCa)}</p>
+          <div className="space-y-2" data-testid="factures-list">
+            {factures.map((f) => (
+              <div key={f.id} className="flex items-center justify-between rounded-xl bg-white/5 border border-white/10 px-3.5 py-2.5 group">
+                <div className="min-w-0">
+                  <div className="text-sm font-medium truncate">{f.client}</div>
+                  <div className="text-[11px] text-white/45">#{f.reference || "—"}</div>
                 </div>
-                <div>
-                  <p className="muted" style={{ fontSize: 11, margin: 0 }}>Nouveau salaire possible (estimation)</p>
-                  <p style={{ fontSize: 20, fontWeight: 300, color: TONE.sage, margin: "2px 0 0" }}>{fmt(newSalary)}</p>
+                <div className="flex items-center gap-3">
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full border ${STATUT_COLORS[f.statut] || ""}`}>{f.statut}</span>
+                  <span className="text-sm font-semibold">{euro(f.montant)}</span>
+                  <button onClick={async () => { await deleteFacture(f.id); load(); }} data-testid={`delete-facture-${f.id}`} className="text-white/30 hover:text-rose-400 transition-colors">
+                    <Trash2 size={15} />
+                  </button>
                 </div>
-              </div>
-            );
-          })()}
-          <p className="muted" style={{ fontSize: 11, fontStyle: "italic" }}>Estimation indicative — le salaire possible réel dépend de vos charges exactes.</p>
-        </div>
-      </div>
-
-      <div className="pgrid pgrid-2">
-        {/* Résumé santé financière */}
-        <div className="glass-card" data-testid="summary-card">
-          <div className="card-label"><PieChart size={14} /> Résumé de ta santé financière</div>
-          <div className="pgrid pgrid-4" style={{ marginTop: 12, gap: 12 }}>
-            <div><div style={{ display: "flex", alignItems: "center", gap: 6, color: "#8b6fbf" }}><Trophy size={14} /><span className="muted" style={{ fontSize: 11 }}>Score</span></div><div style={{ fontSize: 22, fontWeight: 300, color: "var(--txt)" }}>{s?.score ?? "—"}<span className="muted" style={{ fontSize: 12 }}>/100</span></div></div>
-            <div><div style={{ display: "flex", alignItems: "center", gap: 6, color: TONE.navy }}><Euro size={14} /><span className="muted" style={{ fontSize: 11 }}>Revenus</span></div><div style={{ fontSize: 20, fontWeight: 300, color: "var(--txt)" }}>{fmt(s?.revenus)}</div></div>
-            <div><div style={{ display: "flex", alignItems: "center", gap: 6, color: TONE.gold }}><PieChart size={14} /><span className="muted" style={{ fontSize: 11 }}>Marge</span></div><div style={{ fontSize: 20, fontWeight: 300, color: "var(--txt)" }}>{s?.marge ?? "—"} %</div></div>
-            <div><div style={{ display: "flex", alignItems: "center", gap: 6, color: TONE.sage }}><ShieldCheck size={14} /><span className="muted" style={{ fontSize: 11 }}>Trésorerie</span></div><div style={{ fontSize: 20, fontWeight: 300, color: "var(--txt)" }}>{fmt(s?.tresorerie)}</div></div>
-          </div>
-          <div style={{ marginTop: 18 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}><span className="muted">CA vs objectif</span><span style={{ color: "var(--txt)" }}>{fmt(ov?.ca_month)} / {fmt(ov?.ca_objective)}</span></div>
-            <div className="progress-bar"><div className="progress-bar-fill yellow" style={{ width: `${caPct}%` }} /></div>
-          </div>
-          <div style={{ marginTop: 14 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}><span className="muted">Salaire possible</span><span style={{ color: "var(--txt)" }}>{fmt(ov?.salary_possible)} / {fmt(ov?.salary_target)}</span></div>
-            <div className="progress-bar"><div className="progress-bar-fill green" style={{ width: `${salPct}%` }} /></div>
-          </div>
-        </div>
-
-        {/* Mouvements récents */}
-        <div className="glass-card" data-testid="recent-card">
-          <div className="card-label"><Inbox size={14} /> Mouvements récents</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
-            {(ov?.entries || []).map((e) => (
-              <div key={e.id} data-testid={`entry-${e.id}`} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--glass-soft)" }}>
-                <div style={{ minWidth: 0 }}>
-                  <p style={{ fontSize: 14, color: "var(--txt)", margin: 0 }}>{e.label}</p>
-                  <p className="muted" style={{ fontSize: 11, margin: "2px 0 0" }}>{e.category} · {e.date}</p>
-                </div>
-                <span style={{ fontSize: 15, fontWeight: 600, whiteSpace: "nowrap", color: e.type === "revenu" ? "#5e8a5a" : "#c26b4a" }}>
-                  {e.type === "revenu" ? "+" : "−"}{fmt(e.amount)}
-                </span>
               </div>
             ))}
-            {(ov?.entries || []).length === 0 && <p className="muted" style={{ fontSize: 13, textAlign: "center", padding: 12 }}>Aucun mouvement.</p>}
+            {factures.length === 0 && <p className="text-sm text-white/40 py-4 text-center">Aucune facture.</p>}
+          </div>
+        </div>
+
+        <div className="glass p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-head font-semibold">Dépenses récentes</h3>
+            <AddDepenseDialog onAdded={load} />
+          </div>
+          <div className="space-y-2" data-testid="depenses-list">
+            {depenses.map((d) => (
+              <div key={d.id} className="flex items-center justify-between rounded-xl bg-white/5 border border-white/10 px-3.5 py-2.5">
+                <div className="min-w-0">
+                  <div className="text-sm font-medium truncate">{d.libelle}</div>
+                  <div className="text-[11px] text-white/45">{d.categorie}</div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-semibold text-rose-300">-{euro(d.montant)}</span>
+                  <button onClick={async () => { await deleteDepense(d.id); load(); }} data-testid={`delete-depense-${d.id}`} className="text-white/30 hover:text-rose-400 transition-colors">
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </div>
+            ))}
+            {depenses.length === 0 && <p className="text-sm text-white/40 py-4 text-center">Aucune dépense.</p>}
           </div>
         </div>
       </div>
-
-      {/* À venir */}
-      <div className="glass-card" style={{ marginTop: 16 }} data-testid="pilotage-echeances">
-        <div className="card-label"><Wallet size={14} /> À venir</div>
-        <div style={{ display: "flex", gap: 24, flexWrap: "wrap", marginTop: 10 }}>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 14, color: "var(--txt)" }}><Wallet size={16} /> Factures en attente <strong>{fmt(ov?.pending_invoices)}</strong></span>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 14, color: "var(--txt)" }}><AlertTriangle size={16} style={{ color: "#c26b4a" }} /> Charges ({ov?.charges_next_date}) <strong>{fmt(ov?.charges_due)}</strong></span>
-        </div>
-      </div>
-
-      {/* Intégrations connectées — placeholder honnête : pas de vraie connexion
-          bancaire/comptable dans ce backend, donc pas de faux statut "connecté". */}
-      <div className="glass-card" style={{ marginTop: 16 }} data-testid="pilotage-integrations">
-        <div className="card-label"><Radio size={14} /> Intégrations connectées</div>
-        <p className="muted" style={{ fontSize: 12, margin: "4px 0 12px" }}>Vos données sont synchronisées automatiquement une fois connectées.</p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
-          {["Qonto", "Stripe", "Google Drive", "Mollie"].map((name) => (
-            <div key={name} style={{
-              display: "flex", flexDirection: "column", gap: 4, padding: 12, borderRadius: 12,
-              border: "1px dashed rgba(255,255,255,0.16)", background: "rgba(255,255,255,0.02)",
-            }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--txt)" }}>{name}</span>
-              <span style={{ fontSize: 11, color: "var(--txt-muted)" }}>Non connecté</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </motion.div>
+    </div>
   );
 }
