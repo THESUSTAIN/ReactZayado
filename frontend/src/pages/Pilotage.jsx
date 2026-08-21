@@ -113,19 +113,26 @@ function FinancialSources() {
 }
 
 function SimulateurTresorerie() {
-  const [nbContrats, setNbContrats] = useState(1);
-  const [montant, setMontant] = useState(1000);
-  const [depenses, setDepenses] = useState(0);
-  const [result, setResult] = useState(null);
+  const [scenarios, setScenarios] = useState([
+    { id: "prudent", name: "Prudent", nbContrats: 1, montant: 1000, depenses: 0 },
+    { id: "central", name: "Central", nbContrats: 3, montant: 1500, depenses: 500 },
+    { id: "ambitieux", name: "Ambitieux", nbContrats: 6, montant: 2000, depenses: 1200 },
+  ]);
+  const [results, setResults] = useState({});
   const [loading, setLoading] = useState(false);
+
+  const updateScenario = (id, field, value) => setScenarios((current) => current.map((scenario) => scenario.id === id ? { ...scenario, [field]: value } : scenario));
 
   const run = async () => {
     setLoading(true);
     try {
-      const r = await simulatePilotage({ nb_contrats: Number(nbContrats) || 0, montant_moyen: Number(montant) || 0, depenses_supplementaires: Number(depenses) || 0 });
-      setResult(r);
+      const entries = await Promise.all(scenarios.map(async (scenario) => {
+        const result = await simulatePilotage({ nb_contrats: Number(scenario.nbContrats) || 0, montant_moyen: Number(scenario.montant) || 0, depenses_supplementaires: Number(scenario.depenses) || 0 });
+        return [scenario.id, result];
+      }));
+      setResults(Object.fromEntries(entries));
     } catch {
-      toast.error("Simulation indisponible");
+      toast.error("Impossible de comparer les scénarios pour le moment");
     } finally {
       setLoading(false);
     }
@@ -133,32 +140,24 @@ function SimulateurTresorerie() {
 
   return (
     <div className="glass p-5" data-testid="simulateur-tresorerie">
-      <h3 className="font-head font-semibold flex items-center gap-2 mb-3"><Calculator size={16} className="text-[#D4AF37]" /> Simulateur de trésorerie</h3>
-      <p className="text-[12px] text-white/50 mb-3">Si je signe X contrats à Y€, quelle devient ma trésorerie ?</p>
-      <div className="grid grid-cols-3 gap-2 mb-3">
-        <input type="number" value={nbContrats} onChange={(e) => setNbContrats(e.target.value)} placeholder="Contrats"
-          className="bg-white/5 border border-white/15 rounded-lg px-2.5 py-2 text-sm text-white" data-testid="sim-nb-contrats" />
-        <input type="number" value={montant} onChange={(e) => setMontant(e.target.value)} placeholder="€ moyen"
-          className="bg-white/5 border border-white/15 rounded-lg px-2.5 py-2 text-sm text-white" data-testid="sim-montant" />
-        <input type="number" value={depenses} onChange={(e) => setDepenses(e.target.value)} placeholder="Dépenses +"
-          className="bg-white/5 border border-white/15 rounded-lg px-2.5 py-2 text-sm text-white" data-testid="sim-depenses" />
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div><h3 className="font-head flex items-center gap-2 font-semibold"><Calculator size={16} className="text-[#D4AF37]" /> Comparateur de scénarios</h3><p className="mt-1 text-[12px] text-white/50">Comparez trois hypothèses avant de décider, sans présenter une projection comme une certitude.</p></div>
+        <span className="rounded-full border border-white/15 bg-white/[0.04] px-2.5 py-1 text-[10px] text-white/45">Simulation indicative</span>
       </div>
-      <button onClick={run} disabled={loading} data-testid="sim-run-btn"
-        className="w-full gold-bg text-[#0A1128] font-semibold rounded-full py-2 text-sm flex items-center justify-center gap-2 disabled:opacity-60">
-        {loading ? <Loader2 size={14} className="animate-spin" /> : <Calculator size={14} />} Simuler
-      </button>
-      {result && (
-        <div className="mt-4 grid grid-cols-2 gap-3 text-center" data-testid="sim-result">
-          <div>
-            <div className="text-[11px] text-white/50">Trésorerie projetée</div>
-            <div className="font-head font-semibold text-lg text-emerald-400">{euro(result.projected_tresorerie)}</div>
+      <div className="space-y-3">
+        {scenarios.map((scenario) => (
+          <div key={scenario.id} className="rounded-2xl border border-white/10 bg-white/[0.035] p-3" data-testid={`simulation-scenario-${scenario.id}`}>
+            <div className="mb-2 flex items-center justify-between"><strong className="text-sm text-white">{scenario.name}</strong><span className="text-[10px] uppercase tracking-wide text-white/40">Hypothèse</span></div>
+            <div className="grid grid-cols-3 gap-2">
+              <input type="number" value={scenario.nbContrats} onChange={(e) => updateScenario(scenario.id, "nbContrats", e.target.value)} aria-label={`${scenario.name} contrats`} placeholder="Contrats" className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-2 text-sm text-white" />
+              <input type="number" value={scenario.montant} onChange={(e) => updateScenario(scenario.id, "montant", e.target.value)} aria-label={`${scenario.name} montant`} placeholder="€ moyen" className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-2 text-sm text-white" />
+              <input type="number" value={scenario.depenses} onChange={(e) => updateScenario(scenario.id, "depenses", e.target.value)} aria-label={`${scenario.name} dépenses`} placeholder="Dépenses +" className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-2 text-sm text-white" />
+            </div>
+            {results[scenario.id] && <div className="mt-3 grid grid-cols-2 gap-3 text-center" data-testid={`simulation-result-${scenario.id}`}><div><div className="text-[11px] text-white/50">Trésorerie projetée</div><div className="font-head text-lg font-semibold text-emerald-400">{euro(results[scenario.id].projected_tresorerie)}</div></div><div><div className="text-[11px] text-white/50">Marge projetée</div><div className="font-head text-lg font-semibold">{results[scenario.id].projected_marge}%</div></div></div>}
           </div>
-          <div>
-            <div className="text-[11px] text-white/50">Marge projetée</div>
-            <div className="font-head font-semibold text-lg">{result.projected_marge}%</div>
-          </div>
-        </div>
-      )}
+        ))}
+      </div>
+      <button onClick={run} disabled={loading} data-testid="sim-run-btn" className="gold-bg mt-4 flex w-full items-center justify-center gap-2 rounded-full py-2 text-sm font-semibold text-[#0A1128] disabled:opacity-60">{loading ? <Loader2 size={14} className="animate-spin" /> : <Calculator size={14} />} Comparer les scénarios</button>
     </div>
   );
 }

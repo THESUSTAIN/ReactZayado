@@ -7,7 +7,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { visionBrainApi } from "../../lib/finalVisionModuleApi";
 import { getCopilotBrief } from "../../lib/api";
-import { KeyInsights } from "../../components/CockpitSections";
+import { KeyInsights, QuoteBar } from "../../components/CockpitSections";
 import AlignmentCelebration from "../../components/AlignmentCelebration";
 
 const PILLAR_COLOR = {
@@ -105,6 +105,10 @@ export default function AccueilVision({ onGoCanvas, onNavigateTab }) {
   const connectionChain = mirror?.chain || [];
   const hasRealData = Boolean(data);
 
+  const openInspiration = (ask) => {
+    window.dispatchEvent(new CustomEvent("cours:open-copilot", { detail: { ask } }));
+  };
+
   const progressLabel = useMemo(() => {
     if (delta == null) return "Premier calcul — pas encore d’historique";
     return `${delta >= 0 ? "+" : ""}${delta} cette semaine`;
@@ -155,6 +159,32 @@ export default function AccueilVision({ onGoCanvas, onNavigateTab }) {
 
       <KeyInsights data={brief} />
       <AlignmentCelebration score={score || 0} />
+
+      <section className="vision-resources" data-testid="vision-resources-inspiration">
+        <div className="vision-section-title">
+          <div><span>Ressources &amp; Inspiration</span><small>Des angles de travail à ouvrir avec le Copilote, sans contenu fabriqué</small></div>
+          <Sparkles size={16} />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[
+            { key: "life-design", icon: Focus, title: "Design de vie", text: "Clarifier un mode de réussite soutenable et cohérent avec votre énergie.", ask: "Aide-moi à clarifier un design de vie entrepreneurial cohérent avec ma Vision, mes contraintes et mon énergie actuelle." },
+            { key: "strategy", icon: TrendingUp, title: "Stratégies", text: "Mettre à l’épreuve une priorité, un positionnement ou une décision.", ask: "Challenge ma stratégie actuelle à partir de ma Vision et propose trois options réalistes avec leurs risques." },
+            { key: "tools", icon: Target, title: "Outils utiles", text: "Identifier les outils réellement pertinents avant d’ajouter une nouvelle connexion.", ask: "Quels outils simples et proportionnés pourraient soutenir ma prochaine priorité, sans complexifier mon système ?" },
+            { key: "visual-references", icon: Quote, title: "Références visuelles", text: "Transformer une intention de Vision en brief visuel exploitable.", ask: "Transforme mon intention de Vision en brief visuel précis : ambiance, symboles, palette et usages possibles." },
+          ].map((item) => {
+            const Icon = item.icon;
+            return (
+              <button key={item.key} type="button" onClick={() => openInspiration(item.ask)} data-testid={`vision-resource-${item.key}`} className="group rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left transition hover:border-[#C9A449]/50 hover:bg-white/[0.07]">
+                <span className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-[#C9A449]/15 text-[#E8C96A]"><Icon size={16} /></span>
+                <strong className="block text-sm text-white">{item.title}</strong>
+                <span className="mt-1 block text-xs leading-relaxed text-white/55">{item.text}</span>
+                <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#E8C96A]">Ouvrir dans le Copilote <ArrowRight size={13} /></span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+      <QuoteBar data={brief} />
     </div>
   );
 }
