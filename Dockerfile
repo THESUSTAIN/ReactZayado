@@ -15,7 +15,15 @@ COPY . .
 RUN pip install --upgrade pip
 RUN pip install --no-binary greenlet "greenlet>=3.1.1,<4.0.0"
 RUN pip install -r backend/requirements.txt
-RUN pip install emergentintegrations==0.2.0 --extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/
+# emergentintegrations est un dépôt de paquets privé (plateforme Emergent), utilisé
+# uniquement comme repli optionnel si le fournisseur IA principal (Mammouth) échoue —
+# jamais chargé au démarrage, seulement importé à l'intérieur d'une fonction et déjà
+# protégé par une vérification de clé (EMERGENT_LLM_KEY). Si ce dépôt privé est
+# injoignable depuis les serveurs de build Railway, ça ne doit PAS faire échouer
+# tout le build de l'image — d'où le "|| echo" : le build continue, seul le repli
+# Emergent sera indisponible (Mammouth reste pleinement fonctionnel).
+RUN pip install emergentintegrations==0.2.0 --extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/ \
+    || echo "⚠️  emergentintegrations non installé (dépôt privé injoignable) — le repli Emergent sera indisponible, Mammouth reste actif."
 
 # Frontend (CRA) — yarn obligatoire (bug ajv codegen avec npm)
 # REACT_APP_BACKEND_URL laissé vide : le backend sert le SPA sur la même origine,

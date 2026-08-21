@@ -73,3 +73,45 @@ trouvés au passage :
 Les deux respectent le consentement explicite du navigateur (rien n'est
 capturé/généré sans un geste de l'utilisateur), et dégradent proprement
 en cas d'échec (message d'erreur clair, jamais une fausse image/réponse).
+
+## Correctif build Railway (21/08)
+
+**Symptôme** : "Failed to build an image" sur Railway, log de diagnostic
+vide/inaccessible côté Railway ("Agent usage limit reached").
+
+**Cause probable identifiée** : `Dockerfile` installait
+`emergentintegrations` depuis un dépôt de paquets **privé**
+(`d33sy5i8bnduwe.cloudfront.net`, propre à la plateforme Emergent). Si ce
+dépôt est injoignable depuis les serveurs de build Railway (réseau,
+expiration, indisponibilité), toute la construction de l'image échoue —
+correspond exactement au symptôme observé.
+
+**Vérifié avant de corriger** : ce paquet est réellement utilisé (pas un
+reste inutile) dans `mammouth_client.py`, `simulation_service.py`,
+`routes/growth_copilote.py`, `routes/missing_apis.py` — mais uniquement
+comme **repli optionnel** si le fournisseur IA principal (Mammouth)
+échoue, jamais chargé au démarrage, toujours importé à l'intérieur d'une
+fonction, déjà protégé par une vérification de la clé
+`EMERGENT_LLM_KEY`.
+
+**Correctif** : l'installation de ce paquet ne fait plus échouer tout le
+build en cas d'échec (`|| echo "..."` dans le Dockerfile) — le build
+continue, seul le repli Emergent serait indisponible si ce dépôt privé
+est injoignable, Mammouth (fournisseur principal) reste pleinement
+fonctionnel dans tous les cas.
+
+**Non confirmé** : le fichier log fourni était vide (0 octet) — cette
+correction est basée sur une analyse de risque réelle (dépendance
+fragile identifiée), pas sur la lecture du message d'erreur exact. Si le
+build échoue encore après ce correctif, il faudra renvoyer un vrai
+export du log Railway (bouton "View logs" ou export texte, pas une
+capture d'écran) pour voir la ligne d'erreur précise.
+
+## Qualification de prospects (backend prêt, interface en attente)
+
+Endpoint `POST /growth/leads/{id}/qualify` ajouté — score sur 100 (6
+critères pondérés), fiche justifiée par l'IA à partir des notes fournies
+uniquement (jamais une donnée inventée), statut d'aide à la décision. Pas
+encore branché côté interface : la page Croissance actuelle (refonte
+"Radar") n'a plus de liste de prospects à ce jour — direction à choisir
+avant de construire l'UI de qualification.

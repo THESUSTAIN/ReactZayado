@@ -27,7 +27,7 @@ from datetime import datetime, timezone
 
 import httpx
 from cryptography.fernet import Fernet
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import text, select
@@ -184,6 +184,84 @@ async def create_lead(body: LeadCreateIn, user: User = Depends(get_current_user)
     }
     await _save_lead(db, user.id, lead)
     return {"ok": True, "lead": lead}
+
+
+# ─────────── Qualification structurée d'un lead (fiche assistée par IA) ───────────
+# Reprend le modèle décrit dans le brief prospection : un score sur 100 basé sur
+# 6 critères pondérés, une fiche justifiée (jamais une qualification inventée
+# sans donnée réelle), et un statut d'aide à la décision plutôt qu'un envoi
+# automatique. Rien n'est envoyé au prospect depuis cet endpoint — il ne fait
+# que qualifier, l'utilisateur reste maître de la suite.
+# NOTE : backend prêt, mais pas encore branché côté interface — la page
+# Croissance actuelle (refonte "Radar") n'a plus de liste de prospects/cartes
+# à ce jour. Direction à choisir avant de construire l'UI (voir échange précédent).
+_QUALIF_WEIGHTS = {
+    "cible": 25,       # le prospect correspond à la cible définie
+    "probleme": 25,    # le problème correspond réellement à l'offre
+    "urgence": 15,     # le besoin est actuel ou urgent
+    "decision": 15,    # le prospect a le pouvoir de décision
+    "budget": 10,       # le budget est compatible
+    "ouverture": 10,    # ouvert à un échange / une démonstration
+}
+
+
+class QualifyLeadIn(BaseModel):
+    notes: str = ""  # ce que l'utilisateur sait déjà du prospect — seule source d'information autorisée
+
+
+@router.post("/leads/{lead_id}/qualify")
+async def qualify_lead(lead_id: str, body: QualifyLeadIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    leads = await _list_leads(db, user.id)
+    lead = next((l for l in leads if l.get("id") == lead_id), None)
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead introuvable")
+
+    notes = (body.notes or lead.get("snippet") or "").strip()
+    if not notes:
+        raise HTTPException(status_code=400, detail="Ajoutez au moins une note sur ce prospect avant de le qualifier — l'IA ne peut pas inventer d'informations.")
+
+    system = (
+        "Tu qualifies un prospect commercial UNIQUEMENT à partir des notes fournies par l'utilisateur. "
+        "Tu n'inventes jamais d'information absente des notes. Pour chaque critère, tu attribues une note "
+        "de 0 au poids maximum indiqué, en te basant sur ce qui est explicitement écrit — si l'information "
+        "manque, mets 0 et liste le critère dans 'inconnu'. Réponds UNIQUEMENT en JSON valide, structure exacte : "
+        '{"scores": {"cible": 0-25, "probleme": 0-25, "urgence": 0-15, "decision": 0-15, "budget": 0-10, "ouverture": 0-10}, '
+        '"justification": "phrase courte par critère noté", "inconnu": ["critères sans information"], '
+        '"prochaine_action": "action concrète recommandée"}'
+    )
+    user_msg = f"Notes sur le prospect « {lead.get('name', 'Lead')} » ({lead.get('company') or 'entreprise non précisée'}) :\n\n{notes}"
+
+    try:
+        from mammouth_client import chat as ai_chat
+        raw = await ai_chat([{"role": "system", "content": system}, {"role": "user", "content": user_msg}], max_tokens=500, temperature=0.2)
+        cleaned = raw.strip()
+        if cleaned.startswith("```"):
+            cleaned = re.sub(r"^```(json)?\s*|\s*```$", "", cleaned.strip(), flags=re.MULTILINE)
+        parsed = json.loads(cleaned)
+    except Exception as e:
+        logger.error(f"qualify_lead AI failed for lead {lead_id}: {e}")
+        raise HTTPException(status_code=502, detail="La qualification IA est indisponible pour le moment — réessayez dans un instant.")
+
+    scores = {k: max(0, min(_QUALIF_WEIGHTS[k], int(parsed.get("scores", {}).get(k, 0)))) for k in _QUALIF_WEIGHTS}
+    total = sum(scores.values())
+    band = "A transmettre" if total >= 70 else "A nourrir" if total >= 40 else "Non prioritaire"
+
+    qualification = {
+        "scores": scores,
+        "total": total,
+        "band": band,
+        "justification": parsed.get("justification", ""),
+        "inconnu": parsed.get("inconnu", []),
+        "prochaine_action": parsed.get("prochaine_action", ""),
+        "notes_source": notes,
+        "qualified_at": datetime.now(timezone.utc).isoformat(),
+    }
+    lead["qualification"] = qualification
+    lead["score"] = total
+    await db.execute(text("UPDATE user_leads SET data = :d WHERE id = :id AND user_id = :uid"),
+                     {"d": json.dumps(lead), "id": lead_id, "uid": user.id})
+    await db.commit()
+    return {"ok": True, "qualification": qualification}
 
 
 # ─────────── Détection de leads (Reddit public JSON) ───────────
