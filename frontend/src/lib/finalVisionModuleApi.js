@@ -67,7 +67,7 @@ export const tasksApi = {
   create: async ({ label, ...meta }) => createTache({
     titre: label,
     ...meta,
-    notes: meta.notes || "Créé depuis Mon Cap",
+    notes: meta.notes || "Créé depuis Vision",
   }),
 };
 export const analyseApi = {

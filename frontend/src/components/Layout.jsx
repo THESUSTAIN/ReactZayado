@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import ChatPanel from "./ChatPanel";
 import SettingsModal from "./SettingsModal";
 import TheSustainModal from "./TheSustainModal";
+import InstallBanner from "./InstallBanner";
 import { authMe, getProfile, getHeaderMessages, getHeaderNotifications, markHeaderMessagesRead, markHeaderNotificationsRead, setLanguage, logoutSession, getNewsHistory, getLastSeenNewsId, setLastSeenNewsId } from "../lib/api";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -272,42 +273,10 @@ function BottomNav({ onCopilote, hasUnseenNews }) {
   );
 }
 
-/* ─────────────── PWA install prompt (notif de téléchargement) ─────────────── */
-const INSTALL_DISMISS_KEY = "mx_pwa_prompt_dismissed";
-
-function useInstallPrompt() {
-  const deferred = useRef(null);
-  useEffect(() => {
-    const onPrompt = (e) => {
-      e.preventDefault();
-      deferred.current = e;
-      try { if (localStorage.getItem(INSTALL_DISMISS_KEY) === "1") return; } catch { /* noop */ }
-      toast("Installer MyExtension Business", {
-        description: "Ajoutez l'app à votre écran d'accueil pour un accès rapide.",
-        duration: Infinity,
-        closeButton: true,
-        onDismiss: () => { try { localStorage.setItem(INSTALL_DISMISS_KEY, "1"); } catch { /* noop */ } },
-        action: {
-          label: "Installer",
-          onClick: async () => {
-            if (!deferred.current) return;
-            deferred.current.prompt();
-            const { outcome } = await deferred.current.userChoice;
-            if (outcome === "accepted") toast.success("Installation lancée !");
-            deferred.current = null;
-          },
-        },
-      });
-    };
-    const onInstalled = () => toast.success("MyExtension Business est installée 🎉");
-    window.addEventListener("beforeinstallprompt", onPrompt);
-    window.addEventListener("appinstalled", onInstalled);
-    return () => {
-      window.removeEventListener("beforeinstallprompt", onPrompt);
-      window.removeEventListener("appinstalled", onInstalled);
-    };
-  }, []);
-}
+/* ─────────────── PWA install prompt : voir components/InstallBanner.jsx
+   (remplace l'ancien toast générique par une bannière au format natif —
+   carte blanche, icône, lien d'action, cohérente avec ce que montrent
+   les autres apps type Bol.com plutôt qu'une notification texte). ─────────────── */
 
 /* ─────────────── App shell ─────────────── */
 export default function Layout() {
@@ -407,7 +376,6 @@ export default function Layout() {
       setAmbianceFoi((user?.settings || {}).ambiance === "foi");
     }).catch(() => { setTheSustainMember(false); setAmbianceFoi(false); });
   }, [settingsOpen]);
-  useInstallPrompt();
 
   const openSettings = (section = "general") => {
     setSettingsSection(section);
@@ -486,6 +454,7 @@ export default function Layout() {
 
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} initialSection={settingsSection} />
       <TheSustainModal open={theSustainModalOpen} onClose={() => setTheSustainModalOpen(false)} />
+      <InstallBanner />
     </div>
   );
 }

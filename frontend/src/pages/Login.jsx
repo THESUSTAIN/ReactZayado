@@ -7,6 +7,7 @@ import {
   sendMagicLink, verifyMagicLink, demoLogin, oauthStart, oauthExchange, setLanguage,
 } from "../lib/api";
 import "./login.css";
+import InstallBanner from "../components/InstallBanner";
 
 // Reprend l'UI de final-main (structure, .login-* CSS), mais rebranchée sur
 // les vraies fonctions déjà existantes dans CE repo (lib/api.js /
@@ -362,6 +363,7 @@ export default function Login() {
           </span>
         </div>
       </motion.div>
+      <InstallBanner />
     </div>
   );
 }

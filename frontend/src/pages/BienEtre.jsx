@@ -242,7 +242,7 @@ export default function BienEtre() {
       return { verbe: "Déléguer ou reporter", detail: cible ? `« ${cible.titre} » peut attendre demain — garde ton énergie pour l'essentiel.` : "Allège ta charge si possible aujourd'hui." };
     }
     const cible = tachesTriees[0];
-    return { verbe: "Se concentrer", detail: cible ? `Ton énergie permet d'avancer sur « ${cible.titre} » en priorité.` : "Aucune tâche ouverte — bon moment pour avancer sur Mon Cap." };
+    return { verbe: "Se concentrer", detail: cible ? `Ton énergie permet d'avancer sur « ${cible.titre} » en priorité.` : "Aucune tâche ouverte — bon moment pour avancer sur ta Vision." };
   })();
 
   // Plan de journée (#) — vraies tâches de Mon Mouvement, juste réordonnées/plafonnées
@@ -308,7 +308,7 @@ export default function BienEtre() {
         </div>
 
         <div className="glass p-5" data-testid="lien-vision">
-          <h3 className="font-head font-semibold mb-2">Lien avec Mon Cap</h3>
+          <h3 className="font-head font-semibold mb-2">Lien avec votre Vision</h3>
           {vision?.value ? (
             <>
               <p className="text-[13px] text-white/70 leading-relaxed line-clamp-3">{vision.value}</p>

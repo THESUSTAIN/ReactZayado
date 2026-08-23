@@ -54,3 +54,19 @@ même formule que `.sky-bg`.
 ## Vérifié avant livraison
 Backend et frontend compilent intégralement, tous les imports relatifs
 résolvent vers un vrai fichier, aucune base de données committée.
+
+## Bannière d'installation PWA — nouveau design (23/08, suite)
+
+**Trouvé** : la bannière existait déjà, mais implémentée en simple
+`toast` (notification texte générique), et montée uniquement dans
+`Layout.jsx` — donc jamais visible avant connexion, sur la page Login.
+
+**Corrigé** : nouveau composant réutilisable
+(`components/InstallBanner.jsx`) sur le modèle natif montré (carte
+blanche, icône carrée, titre en gras + sous-titre, lien d'action bleu
+"Télécharger", bouton fermer) — remplace le toast générique. Monté à la
+fois dans `Layout.jsx` (une fois connecté) et sur `Login.jsx` (avant
+connexion, comme demandé).
+
+Même logique qu'avant en dessous (`beforeinstallprompt`, mémorisation du
+refus via localStorage) — seul le composant visuel change.

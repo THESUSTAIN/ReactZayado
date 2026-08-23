@@ -56,7 +56,7 @@ export function StrategicCapHome({ onOpenHorizon, onOpenDecisions, onOpenPillars
         <div className="max-w-3xl">
           <span className="mb-2 inline-flex items-center gap-2 text-[10px] font-bold tracking-[.16em] text-[#F1E2CC]"><Compass size={13} /> MON CAP VIVANT</span>
           <h2 className="font-head text-2xl font-semibold text-white md:text-3xl">{visionText(vision)}</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-white/70">Votre Vision se transforme ici en axes, jalons et décisions. Mon Mouvement exécute ; Mon Cap arbitre le pourquoi.</p>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-white/70">Votre Vision se transforme ici en axes, jalons et décisions. Mon Mouvement exécute ; la Vision arbitre le pourquoi.</p>
         </div>
         <button onClick={onOpenPillars} className="gold-bg inline-flex shrink-0 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-[#0B1F3A]"><Target size={15} /> Voir mes axes</button>
       </div>

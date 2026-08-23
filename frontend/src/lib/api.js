@@ -191,6 +191,25 @@ export async function uploadChatFile(file) {
   return response.data;
 }
 
+// Google Drive — reconstruit après un bug de build réel : ChatPanel.jsx
+// importait ces 4 fonctions, qui n'existaient nulle part dans ce fichier
+// (échec de compilation en production : "getDriveStatus is not exported").
+// Les vraies routes serveur existent bien (routes/gdrive.py, drive_router
+// monté sur /api/drive) — seules les fonctions frontend manquaient.
+export const getDriveStatus = () => api.get("/drive/status").then((r) => r.data);
+export const connectDrive = () => api.get("/drive/connect").then((r) => r.data); // { authorization_url }
+export const listDriveFiles = (folderId = "root") =>
+  api.get("/drive/files", { params: { folder_id: folderId } }).then((r) => r.data);
+// Télécharge un fichier depuis Drive (réponse binaire), puis le renvoie comme
+// pièce jointe de chat via le vrai endpoint /chat/upload — pas de route
+// serveur dédiée "importer depuis Drive", on enchaîne les deux appels réels.
+export async function importDriveFileToChat(fileId, fileName) {
+  const fileResponse = await api.get(`/drive/download/${fileId}`, { responseType: "blob" });
+  const blob = fileResponse.data;
+  const file = new File([blob], fileName || "fichier", { type: blob.type || "application/octet-stream" });
+  return uploadChatFile(file);
+}
+
 // Génération d'image — vrai endpoint déjà présent côté serveur (coûte des
 // crédits utilisateur, 8 par image ; nouveaux comptes démarrent avec 180).
 export async function generateChatImage(prompt, style = "verset_illustre") {
@@ -264,6 +283,11 @@ export const getCopilotNews = (session = "default", refresh = false) =>
 
 export const getNewsHistory = (session = "default") =>
   api.get(`/chat/news-history?session_id=${encodeURIComponent(session)}`).then((r) => r.data);
+
+// Badge de notification "nouvelle actualité" (Layout.jsx) — compare la
+// dernière édition disponible à la dernière vue par l'utilisateur.
+export const getLastSeenNewsId = () => api.get("/prefs").then((r) => r.data?.last_seen_news_id || null);
+export const setLastSeenNewsId = (newsId) => api.put("/prefs", { last_seen_news_id: newsId }).then((r) => r.data?.last_seen_news_id || null);
 
 export const archiveNewsEdition = (session = "default", item) =>
   api.post("/chat/news-history", { session_id: session, ...item }).then((r) => r.data);
@@ -371,7 +395,7 @@ export const updateTacheStatut = (id, statut) => api.patch(`/tasks/${id}`, { don
 export const deleteTache = (id) => api.delete(`/tasks/${id}`).then((r) => r.data);
 export const generateTaches = () => api.post("/tasks/generate").then((r) => r.data);
 
-// Mon Cap — jalons et décisions stratégiques. Les objets restent vides tant que
+// Vision — jalons et décisions stratégiques. Les objets restent vides tant que
 // l'utilisateur ne les crée pas ; aucun jalon ni décision n'est généré localement.
 export const getStrategicMilestones = () => api.get("/strategy/milestones").then((r) => listOf(r.data));
 export const createStrategicMilestone = (d) => api.post("/strategy/milestones", d).then((r) => r.data);

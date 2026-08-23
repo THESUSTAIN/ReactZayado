@@ -2379,7 +2379,7 @@ function VisionBoardDesktop() {
 
       {/* Titre */}
       <div className="vb-header">
-        <h1 className="vb-title gold-text">Mon Cap</h1>
+        <h1 className="vb-title gold-text">Vision</h1>
         <p className="vb-subtitle mt-1">Votre maison stratégique : de la Vision à la décision, puis au mouvement.</p>
       </div>
 
