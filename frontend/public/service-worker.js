@@ -23,6 +23,14 @@ self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
   const url = new URL(request.url);
+  // Ne jamais intercepter des requêtes hors http(s) — ex: chrome-extension://...
+  // venant d'une extension tierce installée dans le navigateur (Google Drive,
+  // gestionnaire de mots de passe, etc.). On tentait de les fetch/cacher comme
+  // les nôtres, et le fallback caches.match() ne trouvait jamais rien pour ces
+  // URLs jamais mises en cache → respondWith(undefined) → "Failed to convert
+  // value to 'Response'" dans la console, sans rapport avec notre app.
+  if (url.protocol !== "http:" && url.protocol !== "https:") return;
+  if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api")) return;
   if (request.mode === "navigate") {
     event.respondWith(

@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { Mail, ShieldCheck, Loader2, RotateCcw, Server, Lock } from "lucide-react";
 import { toast } from "sonner";
 import {
-  sendMagicLink, verifyMagicLink, demoLogin, oauthStart, setLanguage,
+  sendMagicLink, verifyMagicLink, demoLogin, oauthStart, oauthExchange, setLanguage,
 } from "../lib/api";
 import "./login.css";
 
@@ -103,6 +103,32 @@ export default function Login() {
         navigate(res.user?.onboarding_done ? "/" : "/onboarding");
       })
       .catch(() => toast.error(t.errLink));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Retour Google/Microsoft : le fournisseur redirige vers /login?code=...&state=...
+  // (voir routes/oauth.py google_oauth_start/microsoft_oauth_start, state = "google_…"
+  // ou "microsoft_…"). Sans cet effet, le code arrive bien mais n'est jamais échangé
+  // contre une session — la page reste silencieusement sur /login.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const state = params.get("state") || "";
+    if (!code) return;
+    const provider = state.startsWith("microsoft_") ? "microsoft" : "google";
+    setOauthProvider(provider === "google" ? "Google" : "Microsoft");
+    const redirectUri = `${window.location.origin}/login`;
+    oauthExchange(provider, code, redirectUri)
+      .then((res) => {
+        rememberMethod(provider);
+        window.history.replaceState({}, "", "/login");
+        finishLogin(res);
+      })
+      .catch(() => {
+        setOauthProvider(null);
+        window.history.replaceState({}, "", "/login?error=" + (provider === "google" ? "google_failed" : "microsoft_failed"));
+        toast.error(provider === "google" ? t.errGoogle : t.errMsft);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
