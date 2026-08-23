@@ -37,7 +37,7 @@ const STR = {
     google: "Google", microsoft: "Microsoft", orEmail: "ou par email", yourEmail: "Votre email",
     getLink: "Recevoir mon lien", emailSent: "Email envoyé",
     clickLink: (e) => <>Cliquez sur le lien reçu à <b>{e}</b> pour vous connecter.</>,
-    previewText: "Mode preview — l'email n'est pas envoyé, cliquez sur le lien :",
+    previewText: "Envoi d'email momentanément indisponible — utilisez ce lien pour vous connecter :",
     connectNow: "→ Se connecter maintenant", resend: "Renvoyer un lien",
     withPassword: "Se connecter avec un mot de passe", withMagic: "Se connecter sans mot de passe (lien par email)",
     lastLogin: "Dernière méthode utilisée", thesustain: "Continuer avec thesustain.net",
@@ -49,7 +49,7 @@ const STR = {
     google: "Google", microsoft: "Microsoft", orEmail: "or with email", yourEmail: "Your email",
     getLink: "Send me a link", emailSent: "Email sent",
     clickLink: (e) => <>Click the link sent to <b>{e}</b> to sign in.</>,
-    previewText: "Preview mode — email isn't sent, click this link:",
+    previewText: "Email delivery temporarily unavailable — use this link to sign in:",
     connectNow: "→ Sign in now", resend: "Resend a link",
     withPassword: "Sign in with a password", withMagic: "Sign in without a password (email link)",
     lastLogin: "Last method used", thesustain: "Continue with thesustain.net",
@@ -114,7 +114,7 @@ export default function Login() {
       const res = await sendMagicLink(email.trim());
       setMagicSent(true);
       rememberMethod("email");
-      if (res.dev_link) { setDevLink(res.dev_link); toast.success("Mode preview : cliquez sur le lien affiché."); }
+      if (res.dev_link) { setDevLink(res.dev_link); toast.success("Utilisez le lien affiché pour vous connecter."); }
       else if (res.delivered_via_email) toast.success(`Lien envoyé à ${res.masked_email || email}`);
       else { toast.error("Envoi impossible pour le moment. Essayez un mot de passe."); setMagicSent(false); }
     } catch { toast.error("Envoi impossible pour le moment."); }
@@ -147,14 +147,11 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#081734] px-4 py-10" data-testid="login-page">
-      <div className="fixed inset-0 -z-10 login-sky" aria-hidden="true" style={{
-        background: `
-          radial-gradient(ellipse at 20% 10%, rgba(45,81,150,0.45) 0%, transparent 50%),
-          radial-gradient(ellipse at 80% 8%, rgba(30,60,110,0.35) 0%, transparent 55%),
-          linear-gradient(180deg, #172C5C 0%, #101F47 42%, #0B1F3A 76%, #081734 100%)
-        `,
-      }} />
+    <div className="min-h-screen flex items-center justify-center px-4 py-10" style={{ backgroundColor: "var(--navy-900)" }} data-testid="login-page">
+      {/* Même fond que le reste de l'application (classe .sky-bg, index.css) —
+          garantit le bleu exact de Cours-main au lieu d'un dégradé recopié
+          à la main qui pouvait diverger. */}
+      <div className="fixed inset-0 -z-10 sky-bg" aria-hidden="true" />
 
       <div className="w-full max-w-sm">
         <div className="flex justify-end mb-3">
@@ -167,8 +164,9 @@ export default function Login() {
         </div>
 
         <div className="text-center mb-6">
-          <img src="/logo-icon.png" alt="Zayado" className="w-14 h-14 mx-auto rounded-2xl mb-4" onError={(e) => { e.target.style.display = "none"; }} />
-          <h1 className="font-head text-2xl font-semibold text-white" data-testid="login-title">{t.welcome} Zayado</h1>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#DEC2A3]/85 mb-1.5" data-testid="login-brand-by">by Zayado</p>
+          <img src="/logo-icon.png" alt="MyExtension Business — by Zayado" className="w-14 h-14 mx-auto rounded-2xl mb-4" onError={(e) => { e.target.style.display = "none"; }} />
+          <h1 className="font-head text-2xl font-semibold text-white" data-testid="login-title">{t.welcome} MyExtension Business</h1>
           <p className="mt-1.5 text-sm text-white/55">{t.subtitle}</p>
         </div>
 
@@ -249,7 +247,7 @@ export default function Login() {
           <div className="my-4 h-px bg-white/10" />
 
           <button onClick={() => openDemo("membre@thesustain.net", "thesustain")} disabled={loading} data-testid="login-thesustain-btn"
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#DEC2A3]/40 bg-transparent py-2.5 text-sm font-medium text-[#DEC2A3] hover:bg-[#DEC2A3]/10 disabled:opacity-60">
+            className="flex w-full items-center justify-center gap-2 rounded-xl border-0 bg-transparent py-2.5 text-sm font-medium text-[#DEC2A3] hover:text-[#E5C887] hover:bg-[#DEC2A3]/10 disabled:opacity-60">
             {t.thesustain}
           </button>
           <button onClick={() => openDemo("thomas@zayado.fr", "demo")} disabled={loading} data-testid="login-guest-btn"
