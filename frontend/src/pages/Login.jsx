@@ -177,13 +177,17 @@ export default function Login() {
         </div>
 
         <div className="glass rounded-2xl p-6" data-testid="login-card">
-          <div className="space-y-2.5">
+          {/* Grille 2 colonnes + Microsoft en noir plein (#1a1a1a) : structure et
+              couleurs copiées telles quelles de final-main/login.css
+              (.login-social-row, .login-btn-light, .login-btn-msft), pas une
+              recoloration approximative. */}
+          <div className="grid grid-cols-2 gap-2.5">
             <button onClick={() => doOauth("google")} disabled={!!oauthLoading} data-testid="login-google-btn"
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/95 py-2.5 text-sm font-medium text-[#1F1F1F] hover:bg-white disabled:opacity-60">
+              className="flex h-12 items-center justify-center gap-2 rounded-xl border border-black/[0.06] bg-white text-[13px] font-semibold text-[#1a2230] hover:opacity-90 disabled:opacity-60">
               {oauthLoading === "google" ? <Loader2 size={15} className="animate-spin" /> : <GoogleIcon />} {t.google}
             </button>
             <button onClick={() => doOauth("microsoft")} disabled={!!oauthLoading} data-testid="login-microsoft-btn"
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 py-2.5 text-sm font-medium text-white hover:bg-white/10 disabled:opacity-60">
+              className="flex h-12 items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-[#1a1a1a] text-[13px] font-semibold text-white hover:bg-[#262626] disabled:opacity-60">
               {oauthLoading === "microsoft" ? <Loader2 size={15} className="animate-spin" /> : <MicrosoftIcon />} {t.microsoft}
             </button>
           </div>
@@ -250,7 +254,7 @@ export default function Login() {
             <p className="mt-3 text-center text-[11px] text-white/35" data-testid="login-last-method">{t.lastLogin} : {lastMethodLabel}</p>
           )}
 
-          {process.env.NODE_ENV !== "production" && (
+          {window.location.hostname !== "app.zayado.net" && (
             <>
               <div className="my-4 h-px bg-white/10" />
               <button onClick={() => openDemo("membre@thesustain.net", "thesustain")} disabled={loading} data-testid="login-thesustain-btn"
