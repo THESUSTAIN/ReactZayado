@@ -76,8 +76,8 @@ function CheckinDialog({ onSaved }) {
         <DialogHeader><DialogTitle className="font-head">Comment te sens-tu ?</DialogTitle></DialogHeader>
         <div className="space-y-5 py-2">
           <div>
-            <Label className="text-white/70">Énergie : <span className="text-[#D4AF37] font-semibold">{energie}/100</span></Label>
-            <input data-testid="checkin-energie" type="range" min="0" max="100" value={energie} onChange={(e) => setEnergie(e.target.value)} className="w-full mt-3 accent-[#D4AF37]" />
+            <Label className="text-white/70">Énergie : <span className="text-[#DEC2A3] font-semibold">{energie}/100</span></Label>
+            <input data-testid="checkin-energie" type="range" min="0" max="100" value={energie} onChange={(e) => setEnergie(e.target.value)} className="w-full mt-3 accent-[#DEC2A3]" />
           </div>
           <div><Label className="text-white/70">Humeur</Label>
             <Select value={humeur} onValueChange={setHumeur}>
@@ -109,7 +109,7 @@ function WellnessCorrelations() {
 
   return (
     <div className="glass p-5" data-testid="wellness-correlations">
-      <h3 className="font-head font-semibold flex items-center gap-2 mb-1"><TrendingUp size={17} className="text-[#D4AF37]" /> Corrélation énergie / performance</h3>
+      <h3 className="font-head font-semibold flex items-center gap-2 mb-1"><TrendingUp size={17} className="text-[#DEC2A3]" /> Corrélation énergie / performance</h3>
       <p className="text-[12px] text-white/50 mb-4">Votre énergie du jour comparée à votre chiffre d'affaires du même jour.</p>
       {loading ? (
         <div className="flex justify-center py-10"><Loader2 size={20} className="animate-spin text-white/40" /></div>
@@ -125,9 +125,9 @@ function WellnessCorrelations() {
               <XAxis type="number" dataKey="energie" name="Énergie" domain={[0, 100]} stroke="rgba(255,255,255,0.4)" fontSize={11} tickLine={false} axisLine={false} label={{ value: "Énergie", position: "insideBottom", offset: -2, fill: "rgba(255,255,255,0.4)", fontSize: 11 }} />
               <YAxis type="number" dataKey="chiffre_affaires" name="CA" stroke="rgba(255,255,255,0.4)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
               <ZAxis range={[60, 60]} />
-              <Tooltip cursor={{ strokeDasharray: "3 3" }} contentStyle={{ background: "#0B1F3A", border: "1px solid rgba(212,175,55,0.4)", borderRadius: 12, color: "#fff" }}
+              <Tooltip cursor={{ strokeDasharray: "3 3" }} contentStyle={{ background: "#0B1F3A", border: "1px solid rgba(222, 194, 163,0.4)", borderRadius: 12, color: "#fff" }}
                 formatter={(v, name) => [name === "chiffre_affaires" ? euro(v) : v, name === "chiffre_affaires" ? "CA" : "Énergie"]} />
-              <Scatter data={data.points} fill="#D4AF37" />
+              <Scatter data={data.points} fill="#DEC2A3" />
             </ScatterChart>
           </ResponsiveContainer>
           {data.insight && <p className="mt-3 text-[12.5px] text-white/70 leading-relaxed">{data.insight}</p>}
@@ -148,7 +148,7 @@ function YearInPixels() {
   }, []);
 
   const byDate = Object.fromEntries(days.map((d) => [d.date, d.energie]));
-  const colorFor = (e) => (e == null ? "rgba(255,255,255,0.05)" : e >= 65 ? "#34d399" : e >= 45 ? "#D4AF37" : "#f87171");
+  const colorFor = (e) => (e == null ? "rgba(255,255,255,0.05)" : e >= 65 ? "#34d399" : e >= 45 ? "#DEC2A3" : "#f87171");
 
   const year = new Date().getFullYear();
   const start = new Date(year, 0, 1);
@@ -160,7 +160,7 @@ function YearInPixels() {
 
   return (
     <div className="glass p-5" data-testid="year-in-pixels">
-      <h3 className="font-head font-semibold flex items-center gap-2 mb-1"><CalendarDays size={17} className="text-[#D4AF37]" /> Year in Pixels — {year}</h3>
+      <h3 className="font-head font-semibold flex items-center gap-2 mb-1"><CalendarDays size={17} className="text-[#DEC2A3]" /> Year in Pixels — {year}</h3>
       <p className="text-[12px] text-white/50 mb-4">Un pixel par jour de check-in — vert = bonne énergie, or = moyenne, rouge = basse.</p>
       {loading ? (
         <div className="flex justify-center py-10"><Loader2 size={20} className="animate-spin text-white/40" /></div>
@@ -262,7 +262,7 @@ export default function BienEtre() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-head text-3xl sm:text-4xl font-semibold flex items-center gap-2">
-            <Zap className="text-[#D4AF37]" size={30} /> <span className="gold-text">Mindset & capacité</span>
+            <Zap className="text-[#DEC2A3]" size={30} /> <span className="gold-text">Mindset & capacité</span>
           </h1>
           <p className="text-white/55 text-sm mt-1">Pilotez votre énergie et votre mindset pour performer durablement.</p>
         </div>
@@ -272,19 +272,19 @@ export default function BienEtre() {
       {/* Gauges */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Gauge value={energie} color="#34d399" label="Énergie actuelle" sub={latest ? latest.humeur : "—"} />
-        <Gauge value={focusPct} color="#D4AF37" label="Rituels du jour" sub={`${doneCount}/${rituels.length}`} />
+        <Gauge value={focusPct} color="#DEC2A3" label="Rituels du jour" sub={`${doneCount}/${rituels.length}`} />
         <Gauge value={Math.min(100, bestStreak * 10)} color="#f472b6" label="Meilleure série" sub={`${bestStreak} jours`} />
       </div>
 
       <div className={`rounded-2xl border p-4 sm:p-5 ${burnoutRisk === "Élevé" ? "border-rose-400/35 bg-rose-400/10" : burnoutRisk === "Modéré" ? "border-amber-400/35 bg-amber-400/10" : "border-emerald-400/25 bg-emerald-400/10"}`} data-testid="wellness-verdict">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="flex gap-3"><span className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${burnoutRisk === "Élevé" ? "bg-rose-400/15 text-rose-300" : burnoutRisk === "Modéré" ? "bg-amber-400/15 text-amber-300" : "bg-emerald-400/15 text-emerald-300"}`}>{burnoutRisk === "Élevé" ? <AlertTriangle size={18} /> : <ShieldCheck size={18} />}</span><div><div className="font-head text-[15px] font-semibold">Verdict du jour · risque de surcharge : {burnoutRisk}</div><p className="m-0 mt-0.5 text-[13px] leading-relaxed text-white/65">{verdict}</p></div></div><button onClick={openCopilot} className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[#D4AF37]/40 bg-[#D4AF37]/15 px-3 py-2 text-xs font-semibold text-[#F0DCA5] hover:bg-[#D4AF37]/25"><MessageCircle size={14} /> Parler au copilote</button></div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="flex gap-3"><span className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${burnoutRisk === "Élevé" ? "bg-rose-400/15 text-rose-300" : burnoutRisk === "Modéré" ? "bg-amber-400/15 text-amber-300" : "bg-emerald-400/15 text-emerald-300"}`}>{burnoutRisk === "Élevé" ? <AlertTriangle size={18} /> : <ShieldCheck size={18} />}</span><div><div className="font-head text-[15px] font-semibold">Verdict du jour · risque de surcharge : {burnoutRisk}</div><p className="m-0 mt-0.5 text-[13px] leading-relaxed text-white/65">{verdict}</p></div></div><button onClick={openCopilot} className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[#DEC2A3]/40 bg-[#DEC2A3]/15 px-3 py-2 text-xs font-semibold text-[#F0DCA5] hover:bg-[#DEC2A3]/25"><MessageCircle size={14} /> Parler au copilote</button></div>
       </div>
 
       {/* Action recommandée + Plan de journée + Lien avec Vision — dérivés de vraies données */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div className="glass p-5" data-testid="action-recommandee">
           <h3 className="font-head font-semibold mb-2">Action recommandée</h3>
-          <p className="text-[#D4AF37] text-sm font-semibold mb-1">{actionRecommandee.verbe}</p>
+          <p className="text-[#DEC2A3] text-sm font-semibold mb-1">{actionRecommandee.verbe}</p>
           <p className="text-[13px] text-white/65 leading-relaxed">{actionRecommandee.detail}</p>
         </div>
 
@@ -343,7 +343,7 @@ export default function BienEtre() {
         <div className="glass p-6 flex flex-col fade-in relative overflow-hidden">
           <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "url(https://images.unsplash.com/photo-1777492480070-5316d7562a2d?crop=entropy&cs=srgb&fm=jpg&q=85&w=800)", backgroundSize: "cover", backgroundPosition: "center" }} />
           <div className="relative flex flex-col h-full">
-            <div className="flex items-center gap-2 text-[#D4AF37] text-xs font-semibold uppercase tracking-wider">
+            <div className="flex items-center gap-2 text-[#DEC2A3] text-xs font-semibold uppercase tracking-wider">
               <Heart size={14} /> Affirmation du jour
             </div>
             <p className="font-vision italic text-2xl leading-snug text-white/90 my-auto py-6">
@@ -352,7 +352,7 @@ export default function BienEtre() {
             <button
               data-testid="new-affirmation"
               onClick={() => setAffIdx((i) => (i + 1) % AFFIRMATIONS.length)}
-              className="self-start flex items-center gap-1.5 text-sm text-[#D4AF37] hover:text-[#FFD700] transition-colors"
+              className="self-start flex items-center gap-1.5 text-sm text-[#DEC2A3] hover:text-[#FFD700] transition-colors"
             >
               <RefreshCw size={14} /> Nouvelle affirmation
             </button>
@@ -364,7 +364,7 @@ export default function BienEtre() {
       <div id="missions" className="grid grid-cols-1 lg:grid-cols-3 gap-4 scroll-mt-6">
         <div className="glass p-5 lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-head font-semibold flex items-center gap-2"><Wind size={17} className="text-[#D4AF37]" /> Mes rituels</h3>
+            <h3 className="font-head font-semibold flex items-center gap-2"><Wind size={17} className="text-[#DEC2A3]" /> Mes rituels</h3>
           </div>
           <div className="space-y-2" data-testid="rituels-list">
             {rituels.map((r) => (
@@ -404,8 +404,8 @@ export default function BienEtre() {
           <p className="text-[13px] text-white/60 leading-relaxed mb-4">
             La plupart des solopreneurs abandonnent, non par manque de vision, mais par manque de constance. Tiens ta série.
           </p>
-          <div className="rounded-2xl bg-gradient-to-br from-[#D4AF37]/20 to-transparent border border-[#D4AF37]/30 p-5 text-center">
-            <Flame size={28} className="text-[#D4AF37] mx-auto" />
+          <div className="rounded-2xl bg-gradient-to-br from-[#DEC2A3]/20 to-transparent border border-[#DEC2A3]/30 p-5 text-center">
+            <Flame size={28} className="text-[#DEC2A3] mx-auto" />
             <div className="font-head text-4xl font-bold mt-2">{bestStreak}</div>
             <div className="text-xs text-white/60 mt-1">jours de constance</div>
           </div>

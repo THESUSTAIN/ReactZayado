@@ -17,8 +17,8 @@
   --app-border: rgba(255, 255, 255, 0.25);
   --app-surface: rgba(255,255,255,0.12);
   --app-surface-2: rgba(255,255,255,0.08);
-  --app-accent: #D4AF37;
-  --app-accent-soft: rgba(212, 175, 55, 0.16);
+  --app-accent: #DEC2A3;
+  --app-accent-soft: rgba(222, 194, 163, 0.16);
   --app-navy: #0A1128;
   --app-navy-deep: #0A1128;
 }
@@ -28,8 +28,8 @@
 .vb-tokens {
   --app-navy: #0A1128;
   --app-navy-deep: #0A1128;
-  --app-accent: #D4AF37;
-  --app-accent-soft: rgba(212, 175, 55, 0.16);
+  --app-accent: #DEC2A3;
+  --app-accent-soft: rgba(222, 194, 163, 0.16);
   --app-text: #F8FAFC;
   --app-text-muted: rgba(235, 242, 255, 0.76);
   --app-surface: rgba(255,255,255,0.12);

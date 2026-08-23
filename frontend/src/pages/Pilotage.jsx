@@ -34,8 +34,8 @@ function KpiCard({ icon: Icon, label, value, delta, positive }) {
     <div className="glass glass-hover p-5 fade-in" data-testid={`kpi-${label}`}>
       <div className="flex items-start justify-between">
         <span className="text-[13px] text-white/60">{label}</span>
-        <div className="w-9 h-9 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/25 flex items-center justify-center">
-          <Icon size={17} className="text-[#D4AF37]" strokeWidth={1.5} />
+        <div className="w-9 h-9 rounded-xl bg-[#DEC2A3]/15 border border-[#DEC2A3]/25 flex items-center justify-center">
+          <Icon size={17} className="text-[#DEC2A3]" strokeWidth={1.5} />
         </div>
       </div>
       <div className="mt-3 font-head text-2xl font-semibold tracking-tight">{value}</div>
@@ -141,7 +141,7 @@ function SimulateurTresorerie() {
   return (
     <div className="glass p-5" data-testid="simulateur-tresorerie">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div><h3 className="font-head flex items-center gap-2 font-semibold"><Calculator size={16} className="text-[#D4AF37]" /> Comparateur de scénarios</h3><p className="mt-1 text-[12px] text-white/50">Comparez trois hypothèses avant de décider, sans présenter une projection comme une certitude.</p></div>
+        <div><h3 className="font-head flex items-center gap-2 font-semibold"><Calculator size={16} className="text-[#DEC2A3]" /> Comparateur de scénarios</h3><p className="mt-1 text-[12px] text-white/50">Comparez trois hypothèses avant de décider, sans présenter une projection comme une certitude.</p></div>
         <span className="rounded-full border border-white/15 bg-white/[0.04] px-2.5 py-1 text-[10px] text-white/45">Simulation indicative</span>
       </div>
       <div className="space-y-3">
@@ -167,7 +167,7 @@ function ScoreSante({ score }) {
   const color = score.score >= 70 ? "#34d399" : score.score >= 40 ? "#fbbf24" : "#f87171";
   return (
     <div className="glass p-5 flex flex-col items-center text-center" data-testid="score-sante">
-      <h3 className="font-head font-semibold flex items-center gap-2 mb-3"><Gauge size={16} className="text-[#D4AF37]" /> Score de santé financière</h3>
+      <h3 className="font-head font-semibold flex items-center gap-2 mb-3"><Gauge size={16} className="text-[#DEC2A3]" /> Score de santé financière</h3>
       <div className="relative w-24 h-24 my-1">
         <svg className="w-24 h-24 -rotate-90">
           <circle cx="48" cy="48" r="40" stroke="rgba(255,255,255,0.1)" strokeWidth="8" fill="none" />
@@ -195,7 +195,7 @@ function AddFactureDialog({ onAdded }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <button data-testid="add-facture-btn" className="flex items-center gap-1 text-xs text-[#D4AF37] hover:text-[#FFD700] transition-colors">
+        <button data-testid="add-facture-btn" className="flex items-center gap-1 text-xs text-[#DEC2A3] hover:text-[#FFD700] transition-colors">
           <Plus size={14} /> Ajouter
         </button>
       </DialogTrigger>
@@ -244,7 +244,7 @@ function AddDepenseDialog({ onAdded }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <button data-testid="add-depense-btn" className="flex items-center gap-1 text-xs text-[#D4AF37] hover:text-[#FFD700] transition-colors">
+        <button data-testid="add-depense-btn" className="flex items-center gap-1 text-xs text-[#DEC2A3] hover:text-[#FFD700] transition-colors">
           <Plus size={14} /> Ajouter
         </button>
       </DialogTrigger>
@@ -369,7 +369,7 @@ export default function Pilotage() {
         <SimulateurTresorerie />
         <div className="glass p-5">
           <h3 className="font-head font-semibold flex items-center gap-2 mb-3">
-            <span className="text-[#D4AF37]">✦</span> Analyse de contexte
+            <span className="text-[#DEC2A3]">✦</span> Analyse de contexte
           </h3>
           <p className="text-sm text-white/70 leading-relaxed">
             Votre trésorerie est {kpis && kpis.tresorerie > 0 ? "saine" : "à surveiller"}.
@@ -382,7 +382,7 @@ export default function Pilotage() {
               kpis && kpis.total_depenses > 0 && `${euro(kpis.total_depenses)} de dépenses ce mois — vérifier les abonnements inutilisés`,
             ].filter(Boolean).map((t) => (
               <div key={t} className="flex items-start gap-2 text-[13px] text-white/70">
-                <span className="text-[#D4AF37] mt-0.5">✓</span> {t}
+                <span className="text-[#DEC2A3] mt-0.5">✓</span> {t}
               </div>
             ))}
             {kpis && !kpis.en_retard && kpis.marge_nette >= 20 && (

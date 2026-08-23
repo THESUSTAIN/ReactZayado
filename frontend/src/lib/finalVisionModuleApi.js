@@ -29,7 +29,7 @@ export const visionExtApi = {
   getPillars: async () => {
     const objectifs = await getObjectifs();
     const palette = [
-      { color: "#D4AF37", icon: "TrendingUp" }, { color: "#4CBF88", icon: "HeartPulse" },
+      { color: "#DEC2A3", icon: "TrendingUp" }, { color: "#4CBF88", icon: "HeartPulse" },
       { color: "#7DB7FF", icon: "Globe" }, { color: "#D9986A", icon: "Wallet" },
     ];
     return (Array.isArray(objectifs) ? objectifs : []).map((item, index) => {

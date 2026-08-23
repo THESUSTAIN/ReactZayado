@@ -27,7 +27,7 @@ function ResumeContexte({ onOpenTab }) {
   return (
     <>
       <div>
-        <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-[#D4AF37]">Contexte business</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-[#DEC2A3]">Contexte business</p>
         <h1 className="font-head text-2xl sm:text-3xl font-semibold text-white mt-1">Les données servent le Cap.</h1>
         <p className="text-white/55 text-sm mt-1 max-w-xl">Pilotage et Croissance éclairent les décisions, sans prendre la place de votre direction.</p>
       </div>
@@ -36,7 +36,7 @@ function ResumeContexte({ onOpenTab }) {
         <div className="glass p-6" data-testid="contexte-card-pilotage">
           <div className="flex items-center gap-2 mb-4">
             <span className="w-9 h-9 rounded-lg gold-bg flex items-center justify-center shrink-0"><WalletCards size={17} className="text-[#0A1128]" /></span>
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-[#D4AF37]">Pilotage & trésorerie</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-[#DEC2A3]">Pilotage & trésorerie</span>
           </div>
           <h2 className="font-head text-lg font-semibold text-white">Relier votre trésorerie au Cap.</h2>
           <p className="text-[13px] text-white/55 mt-1.5 leading-relaxed">Comptes, revenus, factures et charges — la lecture est consolidée depuis les sources que vous autorisez.</p>
@@ -49,7 +49,7 @@ function ResumeContexte({ onOpenTab }) {
             </div>
           ) : (
             <div className="flex items-center gap-2 mt-6">
-              <span className="w-6 h-0.5 bg-[#D4AF37]" />
+              <span className="w-6 h-0.5 bg-[#DEC2A3]" />
               <span className="text-sm text-white/45">aucune donnée importée</span>
             </div>
           )}
@@ -74,7 +74,7 @@ function ResumeContexte({ onOpenTab }) {
             </div>
           ) : (
             <div className="flex items-center gap-2 mt-6">
-              <span className="w-6 h-0.5 bg-[#D4AF37]" />
+              <span className="w-6 h-0.5 bg-[#DEC2A3]" />
               <span className="text-sm text-white/45">aucun prospect connecté</span>
             </div>
           )}
@@ -100,7 +100,7 @@ function AgentsContext() {
       <div className="flex items-start gap-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/[.06] text-[#E5C887]"><Bot size={19} /></span>
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-[#D4AF37]">Agents IA</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-[#DEC2A3]">Agents IA</p>
           <h1 className="font-head mt-1 text-2xl font-semibold text-white">Des agents au service du contexte, jamais à votre insu.</h1>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/60">Cet espace réunira les agents autorisés à préparer une analyse, surveiller une source ou mettre en forme un brouillon. Aucun agent n’est déclaré actif tant qu’il n’a pas été configuré et que son périmètre n’a pas été validé.</p>
         </div>

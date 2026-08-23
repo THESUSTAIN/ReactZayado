@@ -50,7 +50,7 @@ export default function Aujourdhui() {
   // d'abord "quoi faire maintenant", pas la trajectoire Vision->Décision->Action.
   const prioriteBlock = (
     <div className="glass p-5" data-testid="aujourdhui-priorite">
-      <p className="font-head font-semibold flex items-center gap-2 mb-3"><ListChecks size={14} className="text-[#D4AF37]" /> Priorité du jour</p>
+      <p className="font-head font-semibold flex items-center gap-2 mb-3"><ListChecks size={14} className="text-[#DEC2A3]" /> Priorité du jour</p>
       {loading ? (
         <p className="text-sm text-white/40">Chargement…</p>
       ) : prioritePrincipale ? (
@@ -60,14 +60,14 @@ export default function Aujourdhui() {
             <p className="text-xs text-white/40 mt-1">+ {tachesOuvertes.length - 1} autre(s) tâche(s) ouverte(s), secondaires pour l'instant.</p>
           )}
           <button onClick={() => navigate("/mouvement")} data-testid="aujourdhui-goto-mouvement"
-            className="mt-3 inline-flex items-center gap-1 text-xs text-[#D4AF37] hover:text-[#FFD700] transition-colors">
+            className="mt-3 inline-flex items-center gap-1 text-xs text-[#DEC2A3] hover:text-[#FFD700] transition-colors">
             Ouvrir Mon Mouvement <ArrowRight size={13} />
           </button>
         </>
       ) : (
         <>
           <p className="text-sm text-white/40">Aucune tâche ouverte pour l'instant.</p>
-          <button onClick={() => navigate("/taches")} data-testid="aujourdhui-goto-taches" className="mt-3 inline-flex items-center gap-1 text-xs text-[#D4AF37] hover:text-[#FFD700] transition-colors">
+          <button onClick={() => navigate("/taches")} data-testid="aujourdhui-goto-taches" className="mt-3 inline-flex items-center gap-1 text-xs text-[#DEC2A3] hover:text-[#FFD700] transition-colors">
             Ouvrir la liste des tâches <ArrowRight size={13} />
           </button>
         </>
@@ -80,13 +80,13 @@ export default function Aujourdhui() {
       {/* En-tête pattern "eyebrow / titre / description", repris de la maquette */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-[#D4AF37]">Aujourd'hui aligné</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-[#DEC2A3]">Aujourd'hui aligné</p>
           <h1 className="font-head text-2xl sm:text-3xl font-semibold text-white mt-1">Ce qui compte maintenant.</h1>
           <p className="text-white/55 text-sm mt-1 max-w-xl">Votre Vision devient une décision concrète, sans perdre de vue votre capacité.</p>
         </div>
         <button onClick={() => window.dispatchEvent(new CustomEvent("cours:open-copilot"))}
           className="inline-flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white/85 hover:bg-white/10 transition-colors">
-          <Sparkles size={15} className="text-[#D4AF37]" /> Ouvrir le Copilote
+          <Sparkles size={15} className="text-[#DEC2A3]" /> Ouvrir le Copilote
         </button>
       </div>
 
@@ -119,7 +119,7 @@ export default function Aujourdhui() {
             <svg className="w-24 h-24 -rotate-90">
               <circle cx="48" cy="48" r="40" stroke="rgba(255,255,255,0.1)" strokeWidth="8" fill="none" />
               {capaciteValue != null && (
-                <circle cx="48" cy="48" r="40" stroke="#D4AF37" strokeWidth="8" fill="none"
+                <circle cx="48" cy="48" r="40" stroke="#DEC2A3" strokeWidth="8" fill="none"
                   strokeDasharray={2 * Math.PI * 40}
                   strokeDashoffset={2 * Math.PI * 40 * (1 - capaciteValue / 100)}
                   strokeLinecap="round" />
@@ -131,7 +131,7 @@ export default function Aujourdhui() {
           </div>
           <span className="text-xs text-white/50">capacité</span>
           {capaciteValue == null && (
-            <button onClick={() => navigate("/mindset")} className="text-[11px] text-[#D4AF37] hover:text-[#FFD700] inline-flex items-center gap-1">
+            <button onClick={() => navigate("/mindset")} className="text-[11px] text-[#DEC2A3] hover:text-[#FFD700] inline-flex items-center gap-1">
               Faire un check-in <ArrowRight size={11} />
             </button>
           )}
@@ -162,7 +162,7 @@ export default function Aujourdhui() {
         <div className="glass p-5" data-testid="aujourdhui-decisions">
           <div className="flex items-center gap-2 mb-2">
             <span className="w-8 h-8 rounded-lg gold-bg flex items-center justify-center shrink-0"><Target size={16} className="text-[#0A1128]" /></span>
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-[#D4AF37]">Décision à clarifier</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-[#DEC2A3]">Décision à clarifier</span>
           </div>
           <h3 className="font-head font-semibold text-white">Quelle action mérite d'être choisie maintenant ?</h3>
           <p className="text-[13px] text-white/55 mt-1.5 leading-relaxed">
@@ -185,7 +185,7 @@ export default function Aujourdhui() {
           ) : (
             <p className="text-[13px] text-white/55 mt-1.5 leading-relaxed">Commencez par structurer votre Vision ; les décisions pourront ensuite être reliées à un résultat attendu.</p>
           )}
-          <button onClick={() => navigate("/vision")} className="mt-3 inline-flex items-center gap-1 text-sm text-[#D4AF37] hover:text-[#FFD700] transition-colors">
+          <button onClick={() => navigate("/vision")} className="mt-3 inline-flex items-center gap-1 text-sm text-[#DEC2A3] hover:text-[#FFD700] transition-colors">
             Construire ma Vision <ArrowRight size={14} />
           </button>
         </div>

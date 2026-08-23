@@ -38,7 +38,7 @@ export default function Onboarding() {
           <div>
             <label className="mb-1.5 block text-[12px] font-medium text-white/70">Votre prénom</label>
             <input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Prénom"
-              className="w-full rounded-xl border border-white/15 bg-white/5 px-3.5 py-2.5 text-sm text-white placeholder:text-white/35 focus:outline-none focus:border-[#D4AF37]/50" />
+              className="w-full rounded-xl border border-white/15 bg-white/5 px-3.5 py-2.5 text-sm text-white placeholder:text-white/35 focus:outline-none focus:border-[#DEC2A3]/50" />
           </div>
 
           <div>
@@ -46,7 +46,7 @@ export default function Onboarding() {
             <div className="grid grid-cols-2 gap-2">
               {INSPIRATIONS.map((i) => (
                 <button key={i.id} onClick={() => setInspiration(i.id)} data-testid={`inspiration-${i.id}`}
-                  className={`rounded-xl border px-3.5 py-2.5 text-sm font-medium ${inspiration === i.id ? "border-[#D4AF37] bg-[#D4AF37]/15 text-[#F0DCA5]" : "border-white/15 bg-white/5 text-white/70"}`}>
+                  className={`rounded-xl border px-3.5 py-2.5 text-sm font-medium ${inspiration === i.id ? "border-[#DEC2A3] bg-[#DEC2A3]/15 text-[#F0DCA5]" : "border-white/15 bg-white/5 text-white/70"}`}>
                   {i.label}
                 </button>
               ))}
@@ -58,7 +58,7 @@ export default function Onboarding() {
             <div className="grid grid-cols-3 gap-2">
               {WORKSPACES.map((w) => (
                 <button key={w} onClick={() => setWorkspace(w)}
-                  className={`rounded-xl border px-2 py-2.5 text-xs font-medium ${workspace === w ? "border-[#D4AF37] bg-[#D4AF37]/15 text-[#F0DCA5]" : "border-white/15 bg-white/5 text-white/70"}`}>
+                  className={`rounded-xl border px-2 py-2.5 text-xs font-medium ${workspace === w ? "border-[#DEC2A3] bg-[#DEC2A3]/15 text-[#F0DCA5]" : "border-white/15 bg-white/5 text-white/70"}`}>
                   {w}
                 </button>
               ))}
@@ -70,7 +70,7 @@ export default function Onboarding() {
             <div className="grid grid-cols-3 gap-2">
               {PROJECT_TYPES.map((t) => (
                 <button key={t} onClick={() => setProjectType(t)}
-                  className={`rounded-xl border px-2 py-2.5 text-xs font-medium ${projectType === t ? "border-[#D4AF37] bg-[#D4AF37]/15 text-[#F0DCA5]" : "border-white/15 bg-white/5 text-white/70"}`}>
+                  className={`rounded-xl border px-2 py-2.5 text-xs font-medium ${projectType === t ? "border-[#DEC2A3] bg-[#DEC2A3]/15 text-[#F0DCA5]" : "border-white/15 bg-white/5 text-white/70"}`}>
                   {t}
                 </button>
               ))}
@@ -79,7 +79,7 @@ export default function Onboarding() {
         </div>
 
         <button onClick={submit} disabled={saving} data-testid="onboarding-submit"
-          className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#D4AF37] py-3 text-sm font-semibold text-[#0A1128] hover:opacity-90 disabled:opacity-60">
+          className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#DEC2A3] py-3 text-sm font-semibold text-[#0A1128] hover:opacity-90 disabled:opacity-60">
           {saving ? <Loader2 size={15} className="animate-spin" /> : <>Continuer <ArrowRight size={15} /></>}
         </button>
       </div>

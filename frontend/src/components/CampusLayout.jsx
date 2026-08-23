@@ -60,7 +60,7 @@ export default function CampusLayout() {
           {CAMPUS_ITEMS.map((item) => {
             const Icon = item.Icon;
             const active = isCurrent(item, location.pathname);
-            return <button key={item.id} onClick={() => navigate(item.path)} title={item.label} data-testid={`campus-side-${item.id}`} className={`group relative flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 ${active ? "bg-[#D4AF37] text-[#0A1128] shadow-[0_8px_22px_rgba(212,175,55,.22)]" : "text-white/60 hover:bg-white/[.08] hover:text-white"}`}><Icon size={17} /><span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-md border border-white/15 bg-[#0B1F3A] px-2.5 py-1.5 text-xs text-white opacity-0 shadow-xl transition-opacity group-hover:opacity-100">{item.label}</span></button>;
+            return <button key={item.id} onClick={() => navigate(item.path)} title={item.label} data-testid={`campus-side-${item.id}`} className={`group relative flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 ${active ? "bg-[#DEC2A3] text-[#0A1128] shadow-[0_8px_22px_rgba(222, 194, 163,.22)]" : "text-white/60 hover:bg-white/[.08] hover:text-white"}`}><Icon size={17} /><span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-md border border-white/15 bg-[#0B1F3A] px-2.5 py-1.5 text-xs text-white opacity-0 shadow-xl transition-opacity group-hover:opacity-100">{item.label}</span></button>;
           })}
         </nav>
       </aside>
@@ -80,7 +80,7 @@ export default function CampusLayout() {
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 flex gap-1 overflow-x-auto border-t border-white/15 bg-[#0B1F3A]/95 px-2 py-2 backdrop-blur-xl md:hidden" aria-label="Navigation Campus mobile" data-testid="campus-bottom-nav">
-        {CAMPUS_ITEMS.map((item) => { const Icon = item.Icon; const active = isCurrent(item, location.pathname); return <button key={item.id} onClick={() => navigate(item.path)} className={`flex min-w-[74px] flex-col items-center gap-1 rounded-xl px-2 py-1.5 text-[10px] font-medium ${active ? "bg-[#D4AF37] text-[#0A1128]" : "text-white/65"}`}><Icon size={15} />{item.short}</button>; })}
+        {CAMPUS_ITEMS.map((item) => { const Icon = item.Icon; const active = isCurrent(item, location.pathname); return <button key={item.id} onClick={() => navigate(item.path)} className={`flex min-w-[74px] flex-col items-center gap-1 rounded-xl px-2 py-1.5 text-[10px] font-medium ${active ? "bg-[#DEC2A3] text-[#0A1128]" : "text-white/65"}`}><Icon size={15} />{item.short}</button>; })}
       </nav>
     </div>
   );

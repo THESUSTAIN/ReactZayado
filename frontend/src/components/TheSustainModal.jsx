@@ -27,11 +27,11 @@ export function TheSustainModal({ open, onClose }) {
   return createPortal(
     <div style={{ position: "fixed", inset: 0, background: "rgba(5,8,26,0.72)", backdropFilter: "blur(10px)", zIndex: 3000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
       onClick={onClose} data-testid="thesustain-modal-overlay">
-      <div style={{ background: "linear-gradient(135deg, rgba(20,35,70,0.94), rgba(11,31,58,0.97))", border: "1px solid rgba(212,175,55,0.3)", borderRadius: 22, width: "100%", maxWidth: 460, padding: 24, boxShadow: "0 24px 80px rgba(0,0,0,0.45)" }}
+      <div style={{ background: "linear-gradient(135deg, rgba(20,35,70,0.94), rgba(11,31,58,0.97))", border: "1px solid rgba(222, 194, 163,0.3)", borderRadius: 22, width: "100%", maxWidth: 460, padding: 24, boxShadow: "0 24px 80px rgba(0,0,0,0.45)" }}
         onClick={(e) => e.stopPropagation()} data-testid="thesustain-modal">
         <div className="flex items-start justify-between mb-1">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-[#D4AF37]">TheSustain</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-[#DEC2A3]">TheSustain</p>
             <h2 className="font-head text-lg font-semibold text-white mt-0.5">Votre espace foi</h2>
           </div>
           <button onClick={onClose} data-testid="thesustain-modal-close" className="text-white/40 hover:text-white/80"><X size={18} /></button>
@@ -44,8 +44,8 @@ export function TheSustainModal({ open, onClose }) {
           <div className="grid grid-cols-2 gap-2.5">
             {TILES.map(({ key, label, desc, Icon }) => (
               <a key={key} href={urls[key] || "https://thesustain.net"} target="_blank" rel="noreferrer" data-testid={`thesustain-tile-${key}`}
-                className="rounded-xl border border-white/10 bg-white/[0.03] p-3.5 hover:border-[#D4AF37]/40 hover:bg-white/[0.06] transition-colors">
-                <Icon size={18} className="text-[#D4AF37] mb-2" />
+                className="rounded-xl border border-white/10 bg-white/[0.03] p-3.5 hover:border-[#DEC2A3]/40 hover:bg-white/[0.06] transition-colors">
+                <Icon size={18} className="text-[#DEC2A3] mb-2" />
                 <p className="text-sm font-semibold text-white flex items-center gap-1">{label} <ExternalLink size={11} className="text-white/30" /></p>
                 <p className="text-[11px] text-white/40 mt-0.5 leading-snug">{desc}</p>
               </a>
@@ -54,7 +54,7 @@ export function TheSustainModal({ open, onClose }) {
         )}
 
         <a href={urls?.accueil || "https://thesustain.net"} target="_blank" rel="noreferrer" data-testid="thesustain-tile-accueil"
-          className="mt-3 flex items-center justify-center gap-1.5 rounded-xl border border-[#D4AF37]/30 py-2.5 text-sm font-semibold text-[#D4AF37] hover:bg-[#D4AF37]/10">
+          className="mt-3 flex items-center justify-center gap-1.5 rounded-xl border border-[#DEC2A3]/30 py-2.5 text-sm font-semibold text-[#DEC2A3] hover:bg-[#DEC2A3]/10">
           Ouvrir thesustain.net <ExternalLink size={13} />
         </a>
       </div>

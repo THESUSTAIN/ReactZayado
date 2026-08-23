@@ -317,6 +317,11 @@ export const getCopilotNews = (session = "default", refresh = false) =>
 export const getNewsHistory = (session = "default") =>
   api.get(`/chat/news-history?session_id=${encodeURIComponent(session)}`).then((r) => r.data);
 
+// Badge de notification "nouvelle actualité" — compare la dernière édition
+// disponible à la dernière vue par l'utilisateur (stockée via /api/prefs).
+export const getLastSeenNewsId = () => api.get("/prefs").then((r) => r.data?.last_seen_news_id || null);
+export const setLastSeenNewsId = (newsId) => api.put("/prefs", { last_seen_news_id: newsId }).then((r) => r.data?.last_seen_news_id || null);
+
 export const archiveNewsEdition = (session = "default", item) =>
   api.post("/chat/news-history", { session_id: session, ...item }).then((r) => r.data);
 

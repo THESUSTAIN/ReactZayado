@@ -240,7 +240,7 @@ function OdooIntegrationCard() {
       </div>
       <div style={{ display: "flex", gap: 8 }}>
         <button onClick={save} disabled={saving} className="zbtn" data-testid="odoo-save">{saving ? "…" : connected ? "Mettre à jour" : "Connecter"}</button>
-        {connected && <button onClick={sync} disabled={syncing} className="zbtn-primary" data-testid="odoo-sync">{syncing ? "Synchronisation…" : "Synchroniser maintenant"}</button>}
+        {connected && <button disabled title="La synchronisation Odoo n'est pas encore construite côté serveur — la connexion enregistre vos identifiants, mais aucune donnée n'est encore importée." className="zbtn-primary" style={{ opacity: 0.5, cursor: "not-allowed" }} data-testid="odoo-sync">Synchroniser — Bientôt</button>}
       </div>
       {syncMsg && <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>{syncMsg}</p>}
     </div>
@@ -292,8 +292,8 @@ function BankAggregatorCard() {
         <button onClick={save} disabled={saving} className="zbtn" data-testid="aggregator-save">{saving ? "…" : "Enregistrer"}</button>
       </div>
       {connected && (
-        <button onClick={sync} disabled={syncing} className="zbtn-primary" style={{ marginTop: 8 }} data-testid="aggregator-sync">
-          {syncing ? "…" : "Synchroniser"}
+        <button disabled title="La synchronisation bancaire n'est pas encore construite côté serveur — la clé est enregistrée, mais aucune donnée n'est encore importée." className="zbtn-primary" style={{ marginTop: 8, opacity: 0.5, cursor: "not-allowed" }} data-testid="aggregator-sync">
+          Synchroniser — Bientôt
         </button>
       )}
       {syncMsg && <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>{syncMsg}</p>}
@@ -306,7 +306,7 @@ function PlannedFinancialIntegrationCard({ name, detail, testid }) {
     <div className="glass-card" data-testid={testid} style={{ marginBottom: 12 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--glass-soft)", flexShrink: 0 }}><Plug size={18} style={{ color: "#D4AF37" }} /></div>
+          <div style={{ width: 40, height: 40, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--glass-soft)", flexShrink: 0 }}><Plug size={18} style={{ color: "#DEC2A3" }} /></div>
           <div>
             <p style={{ fontWeight: 600, fontSize: 14, margin: 0 }}>{name}</p>
             <p className="muted" style={{ fontSize: 12, margin: "4px 0 0" }}>{detail}</p>

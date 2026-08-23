@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import ChatPanel from "./ChatPanel";
 import SettingsModal from "./SettingsModal";
 import TheSustainModal from "./TheSustainModal";
-import { authMe, getProfile, getHeaderMessages, getHeaderNotifications, markHeaderMessagesRead, markHeaderNotificationsRead, setLanguage, logoutSession } from "../lib/api";
+import { authMe, getProfile, getHeaderMessages, getHeaderNotifications, markHeaderMessagesRead, markHeaderNotificationsRead, setLanguage, logoutSession, getNewsHistory, getLastSeenNewsId, setLastSeenNewsId } from "../lib/api";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -253,7 +253,7 @@ function Header({ onSettings, profileName, theSustainMember, ambianceFoi, onOpen
 }
 
 /* ─────────────── Bottom nav (mobile, pill) ─────────────── */
-function BottomNav({ onCopilote }) {
+function BottomNav({ onCopilote, hasUnseenNews }) {
   const location = useLocation();
   const navigate = useNavigate();
   const isActive = (item) => item.action
@@ -262,8 +262,9 @@ function BottomNav({ onCopilote }) {
   return (
     <nav className="bottom-nav" data-testid="bottom-nav">
       {ITEMS.map((item) => (
-        <button key={item.id} className={isActive(item) ? "active" : ""} data-testid={`bottomnav-${item.id}`}
+        <button key={item.id} className={`relative ${isActive(item) ? "active" : ""}`} data-testid={`bottomnav-${item.id}`}
           onClick={() => (item.action ? (location.pathname === "/" ? navigate("/") : onCopilote()) : navigate(item.path))}>
+          {item.action && hasUnseenNews && <span className="absolute right-2 top-1 h-2 w-2 rounded-full bg-red-500" data-testid="bottomnav-news-badge" />}
           <item.Icon size={14} /> {item.shortLabel || item.label}
         </button>
       ))}
@@ -330,6 +331,10 @@ export default function Layout() {
   // de nav légère ouverte depuis la petite barre du chat (voir App.js).
   const hideChromeForMobileChat = isMobile && location.pathname === "/";
   useEffect(() => {
+    if (hideChromeForMobileChat) markNewsSeen();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hideChromeForMobileChat, latestNewsId]);
+  useEffect(() => {
     const onOpenMobileNav = () => setMobileNavOpen(true);
     window.addEventListener("cours:open-mobile-nav", onOpenMobileNav);
     return () => window.removeEventListener("cours:open-mobile-nav", onOpenMobileNav);
@@ -369,6 +374,24 @@ export default function Layout() {
   const [theSustainMember, setTheSustainMember] = useState(false);
   const [ambianceFoi, setAmbianceFoi] = useState(false); // choix "Foi" fait à l'onboarding — distinct de l'adhésion payante ci-dessus
   const [theSustainModalOpen, setTheSustainModalOpen] = useState(false);
+  // Badge "nouvelle actualité" — compare la dernière édition disponible à la
+  // dernière vue par l'utilisateur.
+  const [hasUnseenNews, setHasUnseenNews] = useState(false);
+  const [latestNewsId, setLatestNewsId] = useState(null);
+  useEffect(() => {
+    Promise.all([getNewsHistory().catch(() => ({ items: [] })), getLastSeenNewsId().catch(() => null)])
+      .then(([history, lastSeen]) => {
+        const items = Array.isArray(history?.items) ? history.items : [];
+        const latest = items[0]?.id || null;
+        setLatestNewsId(latest);
+        setHasUnseenNews(Boolean(latest) && latest !== lastSeen);
+      });
+  }, []);
+  const markNewsSeen = () => {
+    if (!latestNewsId || !hasUnseenNews) return;
+    setHasUnseenNews(false);
+    setLastSeenNewsId(latestNewsId).catch(() => {});
+  };
   useEffect(() => {
     getProfile().then((profile) => setProfileName(profile?.first_name || "")).catch(() => setProfileName(""));
   }, [settingsOpen]);
@@ -385,6 +408,7 @@ export default function Layout() {
     setSettingsOpen(true);
   };
   const openCopilot = () => {
+    markNewsSeen();
     if (window.innerWidth < 769) { navigate("/"); setCopilotOpen(false); }
     else setCopilotOpen(true);
   };
@@ -413,19 +437,20 @@ export default function Layout() {
           </main>
           <button
             type="button"
-            onClick={() => setCopilotOpen((open) => !open)}
+            onClick={() => { markNewsSeen(); setCopilotOpen((open) => !open); }}
             className={`hidden md:flex fixed top-1/2 z-[70] -translate-y-1/2 items-center gap-2 rounded-l-2xl border border-r-0 border-white/20 bg-white/[0.10] px-3 py-3 text-sm font-semibold text-white shadow-2xl backdrop-blur-xl transition-[right] duration-200 ${copilotOpen ? "right-[380px]" : "right-0"}`}
             aria-label={copilotOpen ? "Replier le Copilote" : "Déplier le Copilote"}
             title={copilotOpen ? "Replier le Copilote" : "Déplier le Copilote"}
             data-testid="copilot-drawer-toggle"
           >
+            {hasUnseenNews && <span className="absolute -left-1 top-1 h-2.5 w-2.5 rounded-full bg-red-500" data-testid="copilot-news-badge" title="Nouvelle actualité" />}
             <span className="[writing-mode:vertical-rl] rotate-180 tracking-wide">Copilote</span>
           </button>
           <aside className={`hidden md:flex fixed right-0 top-0 z-[60] h-screen w-[380px] shrink-0 border-l border-white/20 bg-white/[0.08] backdrop-blur-xl shadow-2xl transition-transform duration-300 ${copilotOpen ? "translate-x-0" : "translate-x-full"}`} data-testid="copilot-right-drawer">
             <ChatPanel context={context} initialAsk={copilotAsk} />
           </aside>
         </div>
-        {!hideChromeForMobileChat && <BottomNav onCopilote={openCopilot} />}
+        {!hideChromeForMobileChat && <BottomNav onCopilote={openCopilot} hasUnseenNews={hasUnseenNews} />}
       </div>
 
       {mobileNavOpen && (

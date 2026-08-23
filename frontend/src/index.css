@@ -103,8 +103,8 @@ h1, h2, h3, h4, .font-head { font-family: 'Outfit', sans-serif; letter-spacing: 
   .glass, .app-body div[class*="rounded-"][class*="bg-white/"] { transition: none; }
 }
 
-.gold-text { background: linear-gradient(90deg, #E5C887, #C9A449); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-.gold-bg { background: linear-gradient(135deg, #E5C887, #C9A449); }
+.gold-text { background: linear-gradient(90deg, #F1E2CC, #DEC2A3); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.gold-bg { background: linear-gradient(135deg, #F1E2CC, #DEC2A3); }
 
 /* ─────────── Sidebar (rail 96px — modèle exact) ─────────── */
 .side-nav {
@@ -156,7 +156,7 @@ h1, h2, h3, h4, .font-head { font-family: 'Outfit', sans-serif; letter-spacing: 
 .menu-scoop-bottom { fill: #101F47; }
 .menu-link { color: rgba(255,255,255,0.76); background: transparent; border: none; cursor: pointer; margin: 0; }
 .menu-link:hover { background: rgba(255,255,255,0.16); color: #fff; }
-.menu-link.active { background: rgba(255,255,255,0.95); color: var(--blue-slate); box-shadow: 0 4px 14px rgba(0,0,0,0.22), inset 0 0 0 2px rgba(212,175,55,0.55); }
+.menu-link.active { background: rgba(255,255,255,0.95); color: var(--blue-slate); box-shadow: 0 4px 14px rgba(0,0,0,0.22), inset 0 0 0 2px rgba(222,194,163,0.55); }
 .menu-tooltip { background: var(--blue-slate); border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 10px 24px rgba(0,0,0,0.45); }
 .menu-link-action { border: 1px dashed rgba(255,255,255,0.35) !important; }
 .menu-link-action:hover { border-color: rgba(255,255,255,0.6) !important; }
@@ -189,6 +189,19 @@ html.ambiance-clarte .app-body .text-white { color: #0B1F3A !important; }
 html.ambiance-clarte .app-body [class*="text-white/"] { color: rgba(11,31,58,.67) !important; }
 html.ambiance-clarte .app-body [class*="border-white/"] { border-color: rgba(23,44,92,.16) !important; }
 html.ambiance-clarte .app-body [class*="bg-white/"] { background-color: rgba(255,255,255,.64) !important; }
+/* Corrige un vrai risque de texte invisible : le chat plein écran sur
+   mobile (accueil, route "/") est rendu par App.js, EN DEHORS de
+   .app-body — les règles ci-dessus ne l'atteignaient jamais. Sans ceci,
+   soit le texte restait blanc sur fond blanc si un futur correctif
+   changeait juste le fond, soit (comme ici) le fond figé en navy masquait
+   le problème sans le résoudre. On traite ce conteneur explicitement,
+   fond ET texte ensemble, pour qu'il reste cohérent avec le thème choisi
+   au lieu de rester figé en sombre quel que soit le thème.  */
+html.ambiance-clarte [data-testid="mobile-copilot-home"] { background: #edf3fa !important; }
+html.ambiance-clarte [data-testid="mobile-copilot-home"] .text-white { color: #0B1F3A !important; }
+html.ambiance-clarte [data-testid="mobile-copilot-home"] [class*="text-white/"] { color: rgba(11,31,58,.67) !important; }
+html.ambiance-clarte [data-testid="mobile-copilot-home"] [class*="border-white/"] { border-color: rgba(23,44,92,.16) !important; }
+html.ambiance-clarte [data-testid="mobile-copilot-home"] [class*="bg-white/"] { background-color: rgba(255,255,255,.64) !important; }
 html.ambiance-clarte .menu-island { background: linear-gradient(180deg, #5679b7 0%, #4567A4 48%, #31578f 100%) !important; box-shadow: 0 16px 34px rgba(45,78,130,.18); }
 html.ambiance-clarte .menu-scoop-top { fill: #5679b7; }
 html.ambiance-clarte .menu-scoop-bottom { fill: #31578f; }
@@ -332,7 +345,7 @@ html.ambiance-clarte [data-testid="campus-bottom-nav"] [class*="text-white/"] { 
   font-size: 10px; font-family: inherit; transition: color .2s ease, background .2s ease;
 }
 .bottom-nav button:hover { color: #fff; }
-.bottom-nav button.active { background: rgba(212,175,55,0.12); color: #D4AF37; }
+.bottom-nav button.active { background: rgba(222,194,163,0.12); color: #DEC2A3; }
 @media (min-width: 769px) { .bottom-nav { display: none; } }
 
 /* Hub Copilote : une seule surface Cours-main, sur PC comme sur mobile. */
@@ -342,7 +355,7 @@ html.ambiance-clarte [data-testid="campus-bottom-nav"] [class*="text-white/"] { 
 }
 [data-testid="copilot-drawer-toggle"] {
   background: linear-gradient(180deg, rgba(24,53,111,.96), rgba(10,17,40,.99)) !important;
-  border-color: rgba(212,175,55,.36) !important;
+  border-color: rgba(222,194,163,.36) !important;
 }
 
 /* ─────────── Utils ─────────── */
@@ -364,7 +377,7 @@ html.ambiance-clarte [data-testid="campus-bottom-nav"] [class*="text-white/"] { 
 .settings-search-box input { width: 100%; border: 0; outline: 0; background: transparent; color: #fff; font: inherit; font-size: 12px; }
 .settings-search-box input::placeholder { color: rgba(255,255,255,.45); }
 .settings-completion { display: flex; align-items: center; gap: 10px; margin: 2px 0 14px; padding: 10px; border: 1px solid rgba(255,255,255,.12); border-radius: 14px; background: rgba(255,255,255,.04); cursor: pointer; }
-.settings-completion-ring { --size: 34px; width: var(--size); height: var(--size); border-radius: 50%; display: grid; place-items: center; flex: 0 0 var(--size); background: conic-gradient(#D4AF37 calc(var(--pct) * 1%), rgba(255,255,255,.14) 0); position: relative; }
+.settings-completion-ring { --size: 34px; width: var(--size); height: var(--size); border-radius: 50%; display: grid; place-items: center; flex: 0 0 var(--size); background: conic-gradient(#DEC2A3 calc(var(--pct) * 1%), rgba(255,255,255,.14) 0); position: relative; }
 .settings-completion-ring::after { content: ""; position: absolute; inset: 4px; border-radius: inherit; background: #0A1128; }
 .settings-completion-ring span { position: relative; z-index: 1; font-size: 9px; font-weight: 700; }
 .settings-nav-desktop { display: grid; gap: 4px; }
@@ -372,7 +385,7 @@ html.ambiance-clarte [data-testid="campus-bottom-nav"] [class*="text-white/"] { 
 .settings-nav-item { width: 100%; display: flex; align-items: center; gap: 9px; border: 1px solid transparent; border-radius: 10px; padding: 10px; color: rgba(255,255,255,.66); background: transparent; font: inherit; font-size: 12px; font-weight: 600; text-align: left; cursor: pointer; transition: background .18s ease, color .18s ease, border-color .18s ease; }
 .settings-nav-item:hover { background: rgba(255,255,255,.07); color: #fff; }
 .settings-nav-item.active { color: #fff; background: rgba(174,193,220,.16); border-color: rgba(255,255,255,.16); }
-.settings-nav-badge { margin-left: auto; min-width: 17px; text-align: center; padding: 1px 5px; border-radius: 999px; color: #0A1128; background: #D4AF37; font-size: 10px; }
+.settings-nav-badge { margin-left: auto; min-width: 17px; text-align: center; padding: 1px 5px; border-radius: 999px; color: #0A1128; background: #DEC2A3; font-size: 10px; }
 .settings-panel { flex: 1 1 auto; min-width: 0; overflow-y: auto; padding: 20px; }
 .settings-glass-card, .glass-card { padding: 16px; border: 1px solid rgba(255,255,255,.23); border-radius: 16px; background: linear-gradient(135deg, rgba(69,103,164,.18), rgba(255,255,255,.09)); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: 0 8px 26px rgba(0,0,0,.14); }
 .settings-glass-card + .settings-glass-card { margin-top: 16px; }
@@ -381,17 +394,17 @@ html.ambiance-clarte [data-testid="campus-bottom-nav"] [class*="text-white/"] { 
 .settings-field-row { display: flex; align-items: center; gap: 10px; margin-top: 11px; }
 .settings-input, .zinput { width: 100%; border: 1px solid rgba(255,255,255,.16); border-radius: 10px; padding: 10px 12px; outline: 0; color: #fff; background: rgba(255,255,255,.055); font: inherit; font-size: 13px; }
 .settings-input::placeholder, .zinput::placeholder { color: rgba(255,255,255,.36); }
-.settings-input:focus, .zinput:focus { border-color: rgba(212,175,55,.65); }
+.settings-input:focus, .zinput:focus { border-color: rgba(222,194,163,.65); }
 .settings-inspiration-preview { display: block; width: 100%; max-height: 176px; object-fit: cover; margin-top: 12px; border: 1px solid rgba(255,255,255,.15); border-radius: 12px; }
 .settings-row { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,.1); }
 .settings-row-last { border-bottom: 0; }
 .settings-row-label { margin: 0 0 2px; color: rgba(255,255,255,.9); font-size: 13px; font-weight: 600; }
 .settings-row .settings-muted { margin: 0; font-size: 11.5px; line-height: 1.4; }
 .settings-action-button, .zbtn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid rgba(255,255,255,.16); border-radius: 10px; padding: 9px 12px; color: rgba(255,255,255,.9); background: rgba(255,255,255,.065); font: inherit; font-size: 12px; font-weight: 700; text-decoration: none; cursor: pointer; transition: border-color .18s ease, background .18s ease, transform .16s ease; }
-.settings-action-button:hover, .zbtn:hover { border-color: rgba(212,175,55,.55); background: rgba(212,175,55,.11); }
+.settings-action-button:hover, .zbtn:hover { border-color: rgba(222,194,163,.55); background: rgba(222,194,163,.11); }
 .settings-action-button:active, .zbtn:active { transform: scale(.97); }
-.settings-link-button { margin-top: 2px; border: 0; background: transparent; color: #D4AF37; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
-.zbtn-primary { color: #0A1128; border-color: #D4AF37; background: #D4AF37; }
+.settings-link-button { margin-top: 2px; border: 0; background: transparent; color: #DEC2A3; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.zbtn-primary { color: #0A1128; border-color: #DEC2A3; background: #DEC2A3; }
 .zchip { display: inline-flex; align-items: center; border-radius: 999px; padding: 4px 8px; }
 @media (max-width: 720px) {
   .settings-shell { display: block; overflow-y: auto; }

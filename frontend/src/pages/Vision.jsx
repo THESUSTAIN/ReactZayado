@@ -23,7 +23,7 @@ import {
 const CAT = {
   "Liberté": { icon: Feather, color: "#38bdf8" },
   "Impact": { icon: Heart, color: "#f472b6" },
-  "Entreprise": { icon: Building2, color: "#D4AF37" },
+  "Entreprise": { icon: Building2, color: "#DEC2A3" },
   "Finance": { icon: Coins, color: "#34d399" },
 };
 
@@ -49,7 +49,7 @@ function ObjectifDialog({ onSaved, existing }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {existing ? (
-          <button data-testid={`edit-objectif-${existing.id}`} className="text-white/40 hover:text-[#D4AF37] transition-colors"><Pencil size={14} /></button>
+          <button data-testid={`edit-objectif-${existing.id}`} className="text-white/40 hover:text-[#DEC2A3] transition-colors"><Pencil size={14} /></button>
         ) : (
           <button data-testid="add-objectif-btn" className="glass glass-hover flex flex-col items-center justify-center gap-2 p-6 text-white/60 hover:text-white min-h-[160px]">
             <Plus size={22} /> <span className="text-sm">Ajouter un objectif</span>
@@ -173,7 +173,7 @@ export default function Vision({ onChanged }) {
             ) : (
               <>
                 <p className="font-vision text-2xl sm:text-3xl leading-snug text-white/90 max-w-xl">{vision}</p>
-                <button data-testid="vision-edit" onClick={() => setEditing(true)} className="mt-4 flex items-center gap-1.5 text-sm text-[#D4AF37] hover:text-[#FFD700] transition-colors">
+                <button data-testid="vision-edit" onClick={() => setEditing(true)} className="mt-4 flex items-center gap-1.5 text-sm text-[#DEC2A3] hover:text-[#FFD700] transition-colors">
                   <Pencil size={14} /> Modifier ma vision
                 </button>
               </>
@@ -186,7 +186,7 @@ export default function Vision({ onChanged }) {
           <div className="relative my-4 w-32 h-32">
             <svg className="w-32 h-32 -rotate-90">
               <circle cx="64" cy="64" r="56" stroke="rgba(255,255,255,0.1)" strokeWidth="10" fill="none" />
-              <circle cx="64" cy="64" r="56" stroke="#D4AF37" strokeWidth="10" fill="none"
+              <circle cx="64" cy="64" r="56" stroke="#DEC2A3" strokeWidth="10" fill="none"
                 strokeDasharray={2 * Math.PI * 56}
                 strokeDashoffset={2 * Math.PI * 56 * (1 - globalScore / 100)}
                 strokeLinecap="round" />
@@ -204,7 +204,7 @@ export default function Vision({ onChanged }) {
 
       {/* Pillars */}
       <div>
-        <h3 className="font-head font-semibold mb-3 flex items-center gap-2"><Target size={18} className="text-[#D4AF37]" /> Mes piliers</h3>
+        <h3 className="font-head font-semibold mb-3 flex items-center gap-2"><Target size={18} className="text-[#DEC2A3]" /> Mes piliers</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4" data-testid="objectifs-grid">
           {objectifs.map((o) => {
             const meta = CAT[o.categorie] || CAT["Entreprise"];
@@ -219,7 +219,7 @@ export default function Vision({ onChanged }) {
                   <div className="flex items-center gap-2">
                     <button onClick={async () => { await objectifToAction(o.id); toast.success("Action créée dans vos rituels ✦"); }}
                       data-testid={`objectif-to-action-${o.id}`} title="Transformer en action"
-                      className="text-white/40 hover:text-[#D4AF37] transition-colors"><ArrowRight size={14} /></button>
+                      className="text-white/40 hover:text-[#DEC2A3] transition-colors"><ArrowRight size={14} /></button>
                     <ObjectifDialog existing={o} onSaved={load} />
                     <button onClick={async () => { await deleteObjectif(o.id); load(); }} data-testid={`delete-objectif-${o.id}`} className="text-white/40 hover:text-rose-400 transition-colors"><Trash2 size={14} /></button>
                   </div>
@@ -241,9 +241,9 @@ export default function Vision({ onChanged }) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="glass p-5 lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-head font-semibold flex items-center gap-2"><Sparkles size={17} className="text-[#D4AF37]" /> Analyse IA — SWOT</h3>
+            <h3 className="font-head font-semibold flex items-center gap-2"><Sparkles size={17} className="text-[#DEC2A3]" /> Analyse IA — SWOT</h3>
             <button onClick={runGenerateSwot} disabled={swotLoading} data-testid="swot-generate-btn"
-              className="text-xs font-semibold text-[#D4AF37] hover:text-[#FFD700] flex items-center gap-1.5 disabled:opacity-50">
+              className="text-xs font-semibold text-[#DEC2A3] hover:text-[#FFD700] flex items-center gap-1.5 disabled:opacity-50">
               {swotLoading ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
               {swot ? "Régénérer" : "Générer l'analyse"}
             </button>
@@ -256,7 +256,7 @@ export default function Vision({ onChanged }) {
             <div className="grid grid-cols-2 gap-4">
               {Object.entries(swot).map(([k, items]) => (
                 <div key={k}>
-                  <div className="text-xs font-semibold text-[#D4AF37] mb-2">{k}</div>
+                  <div className="text-xs font-semibold text-[#DEC2A3] mb-2">{k}</div>
                   <ul className="space-y-1">
                     {(items || []).map((i) => <li key={i} className="text-[13px] text-white/65">• {i}</li>)}
                   </ul>
@@ -271,7 +271,7 @@ export default function Vision({ onChanged }) {
           <div className="space-y-3">
             {MINDSET.map((m) => (
               <div key={m.t} className="rounded-xl bg-white/5 border border-white/10 p-3.5">
-                <div className="text-sm font-medium text-[#D4AF37]">{m.t}</div>
+                <div className="text-sm font-medium text-[#DEC2A3]">{m.t}</div>
                 <p className="text-[12px] text-white/60 mt-1 leading-relaxed">{m.d}</p>
               </div>
             ))}
@@ -282,9 +282,9 @@ export default function Vision({ onChanged }) {
       {/* Vision Document — plan 30 jours généré par le copilote */}
       <div className="glass p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-head font-semibold flex items-center gap-2"><FileText size={17} className="text-[#D4AF37]" /> Vision Document — plan 30 jours</h3>
+          <h3 className="font-head font-semibold flex items-center gap-2"><FileText size={17} className="text-[#DEC2A3]" /> Vision Document — plan 30 jours</h3>
           <button onClick={runGenerateDocument} disabled={docLoading} data-testid="vision-doc-generate-btn"
-            className="text-xs font-semibold text-[#D4AF37] hover:text-[#FFD700] flex items-center gap-1.5 disabled:opacity-50">
+            className="text-xs font-semibold text-[#DEC2A3] hover:text-[#FFD700] flex items-center gap-1.5 disabled:opacity-50">
             {docLoading ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
             {document ? "Régénérer" : "Générer mon plan"}
           </button>
