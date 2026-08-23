@@ -7,6 +7,7 @@ import {
 import { toast } from "sonner";
 import ChatPanel from "./ChatPanel";
 import SettingsModal from "./SettingsModal";
+import TheSustainModal from "./TheSustainModal";
 import { authMe, getProfile, getHeaderMessages, getHeaderNotifications, markHeaderMessagesRead, markHeaderNotificationsRead, setLanguage, logoutSession } from "../lib/api";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -15,7 +16,7 @@ import {
 
 const ITEMS = [
   { id: "aujourdhui", label: "Aujourd'hui", shortLabel: "Aujourd'hui", Icon: Compass, path: "/", exact: true },
-  { id: "moncap", label: "Mon Cap", shortLabel: "Mon Cap", Icon: Eye, path: "/vision" },
+  { id: "moncap", label: "Ma Vision", shortLabel: "Ma Vision", Icon: Eye, path: "/vision" },
   { id: "monmouvement", label: "Mon Mouvement", shortLabel: "Mouvement", Icon: Briefcase, path: "/mouvement" },
   { id: "mindset", label: "Mindset & capacité", shortLabel: "Mindset", Icon: HeartPulse, path: "/mindset" },
   { id: "contexte", label: "Contexte", shortLabel: "Contexte", Icon: TrendingUp, path: "/contexte" },
@@ -25,7 +26,7 @@ const MENU_GROUP_STARTS = new Set(["contexte"]);
 const COLLAPSE_KEY = "mx_sidebar_collapsed";
 const SEARCH_TARGETS = [
   { label: "Aujourd'hui", path: "/" },
-  { label: "Mon Cap", path: "/vision" },
+  { label: "Ma Vision", path: "/vision" },
   { label: "Mon Mouvement", path: "/mouvement" },
   { label: "Mindset & capacité", path: "/mindset" },
   { label: "Contexte (Pilotage & Croissance)", path: "/contexte" },
@@ -101,7 +102,7 @@ function Sidebar({ onSettings, onCopilote }) {
         </div>
 
         <div className="side-settings-zone w-full flex items-center justify-center pt-3">
-          <button onClick={onSettings} data-testid="side-settings" title="Paramètres"
+          <button onClick={() => onSettings()} data-testid="side-settings" title="Paramètres"
             className="w-9 h-9 rounded-full bg-gradient-to-br from-[#d4b78c] to-[#c4a374] flex items-center justify-center shadow-lg hover:scale-105 transition-transform">
             <Gem className="w-4 h-4 text-[#0a1f4e]" strokeWidth={2} />
           </button>
@@ -113,7 +114,7 @@ function Sidebar({ onSettings, onCopilote }) {
 }
 
 /* ─────────────── Header (transparent, modèle exact) ─────────────── */
-function Header({ onSettings, profileName, theSustainMember }) {
+function Header({ onSettings, profileName, theSustainMember, ambianceFoi, onOpenTheSustain }) {
   const navigate = useNavigate();
   const [searchOpen, setSearchOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -126,12 +127,10 @@ function Header({ onSettings, profileName, theSustainMember }) {
     const next = !isLight;
     document.documentElement.classList.toggle("ambiance-clarte", next);
     setIsLight(next);
-    // Même clé que SettingsModal (PREFERENCE_KEY) — pour que le futur onglet
-    // Paramètres qui lira cette préférence retrouve la même valeur, plutôt
-    // que deux systèmes de thème qui se contredisent.
+    // Même clé que SettingsModal (PREFERENCE_KEY), sans modifier l’univers éditorial des citations.
     try {
       const raw = JSON.parse(localStorage.getItem("cours-main-settings-preferences") || "{}");
-      localStorage.setItem("cours-main-settings-preferences", JSON.stringify({ ...raw, ambiance: next ? "clarte" : "sens" }));
+      localStorage.setItem("cours-main-settings-preferences", JSON.stringify({ ...raw, theme: next ? "light" : "dark" }));
     } catch { /* noop */ }
   };
 
@@ -151,7 +150,7 @@ function Header({ onSettings, profileName, theSustainMember }) {
   }, []);
 
   const results = SEARCH_TARGETS
-    .filter((s) => !s.requiresTheSustain || theSustainMember)
+    .filter((s) => !s.requiresTheSustain || theSustainMember || ambianceFoi)
     .filter((s) => s.label.toLowerCase().includes(q.toLowerCase()));
   const go = (target) => {
     if (target.action === "settings") onSettings();
@@ -184,9 +183,9 @@ function Header({ onSettings, profileName, theSustainMember }) {
           <DropdownMenuContent align="end" className="ecosystem-menu w-72 border-white/15 p-3 text-white">
             <DropdownMenuLabel className="ecosystem-menu-title px-1 pb-2 text-[11px] uppercase tracking-[0.18em] text-white/65">Écosystème MyExtension AI</DropdownMenuLabel>
             <div className="ecosystem-grid grid grid-cols-2 gap-2">
-              {ECOSYSTEM_ITEMS.filter((item) => !item.requiresTheSustain || theSustainMember).map((item) => {
+              {ECOSYSTEM_ITEMS.filter((item) => !item.requiresTheSustain || theSustainMember || ambianceFoi).map((item) => {
                 const Icon = item.Icon;
-                return <button key={item.id} type="button" data-testid={`ecosystem-${item.id}`} onClick={() => { if (item.available && item.external) window.open(item.path, "_blank", "noopener,noreferrer"); else if (item.available) navigate(item.path); else toast.info(`${item.label} sera disponible dans le prochain lot.`); }} className={`ecosystem-card flex flex-col items-center justify-center gap-1.5 rounded-xl border border-white/10 p-3 text-center ${item.available ? "" : "is-disabled"}`}><span className="ecosystem-card-icon"><Icon size={19} /></span><span className="ecosystem-card-label text-[11px] font-medium leading-tight">{item.label}</span></button>;
+                return <button key={item.id} type="button" data-testid={`ecosystem-${item.id}`} onClick={() => { if (item.id === "thesustain") { onOpenTheSustain(); return; } if (item.available && item.external) window.open(item.path, "_blank", "noopener,noreferrer"); else if (item.available) navigate(item.path); else toast.info(`${item.label} sera disponible dans le prochain lot.`); }} className={`ecosystem-card flex flex-col items-center justify-center gap-1.5 rounded-xl border border-white/10 p-3 text-center ${item.available ? "" : "is-disabled"}`}><span className="ecosystem-card-icon"><Icon size={19} /></span><span className="ecosystem-card-label text-[11px] font-medium leading-tight">{item.label}</span></button>;
               })}
             </div>
           </DropdownMenuContent>
@@ -211,7 +210,7 @@ function Header({ onSettings, profileName, theSustainMember }) {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-white/10" />
-            <DropdownMenuItem className="cursor-pointer" data-testid="profile-parametres" onClick={onSettings}>
+            <DropdownMenuItem className="cursor-pointer" data-testid="profile-parametres" onClick={() => onSettings()}>
               <SettingsIcon className="w-4 h-4 mr-2" /> Paramètres
             </DropdownMenuItem>
             <DropdownMenuItem className="cursor-pointer" onClick={() => toast.info("Aide & support bientôt disponible.")}>
@@ -318,6 +317,24 @@ export default function Layout() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsSection, setSettingsSection] = useState("general");
   const [visionContext, setVisionContext] = useState({ tab: "accueil", label: "Accueil Vision" });
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 769);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  useEffect(() => {
+    const update = () => setIsMobile(window.innerWidth < 769);
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+  // Le chat plein écran (accueil mobile) est trop à l'étroit avec le header
+  // (58px) + la bottom nav (72px) autour ("le chat est petit") — on les
+  // masque sur cette seule route/largeur et on les remplace par une feuille
+  // de nav légère ouverte depuis la petite barre du chat (voir App.js).
+  const hideChromeForMobileChat = isMobile && location.pathname === "/";
+  useEffect(() => {
+    const onOpenMobileNav = () => setMobileNavOpen(true);
+    window.addEventListener("cours:open-mobile-nav", onOpenMobileNav);
+    return () => window.removeEventListener("cours:open-mobile-nav", onOpenMobileNav);
+  }, []);
+  useEffect(() => { setMobileNavOpen(false); }, [location.pathname]);
 
   // Bug d'audit : Vision (VisionBoard.jsx) et Bien-être émettent déjà
   // "cours:open-copilot" ("Transformer en action", "Parler au copilote")
@@ -350,11 +367,16 @@ export default function Layout() {
   }, []);
   const [profileName, setProfileName] = useState("");
   const [theSustainMember, setTheSustainMember] = useState(false);
+  const [ambianceFoi, setAmbianceFoi] = useState(false); // choix "Foi" fait à l'onboarding — distinct de l'adhésion payante ci-dessus
+  const [theSustainModalOpen, setTheSustainModalOpen] = useState(false);
   useEffect(() => {
     getProfile().then((profile) => setProfileName(profile?.first_name || "")).catch(() => setProfileName(""));
   }, [settingsOpen]);
   useEffect(() => {
-    authMe().then((user) => setTheSustainMember(Boolean(user?.thesustain_member))).catch(() => setTheSustainMember(false));
+    authMe().then((user) => {
+      setTheSustainMember(Boolean(user?.thesustain_member));
+      setAmbianceFoi((user?.settings || {}).ambiance === "foi");
+    }).catch(() => { setTheSustainMember(false); setAmbianceFoi(false); });
   }, [settingsOpen]);
   useInstallPrompt();
 
@@ -382,7 +404,9 @@ export default function Layout() {
       <Sidebar onSettings={openSettings} onCopilote={openCopilot} />
 
       <div className="app-body">
-        <Header onSettings={openSettings} profileName={profileName} theSustainMember={theSustainMember} />
+        {!hideChromeForMobileChat && (
+          <Header onSettings={openSettings} profileName={profileName} theSustainMember={theSustainMember} ambianceFoi={ambianceFoi} onOpenTheSustain={() => setTheSustainModalOpen(true)} />
+        )}
         <div className="flex">
           <main className="flex-1 min-w-0 w-full px-4 sm:px-8 pb-28 xl:pb-8 max-w-none">
             <Outlet />
@@ -401,10 +425,36 @@ export default function Layout() {
             <ChatPanel context={context} initialAsk={copilotAsk} />
           </aside>
         </div>
-        <BottomNav onCopilote={openCopilot} />
+        {!hideChromeForMobileChat && <BottomNav onCopilote={openCopilot} />}
       </div>
 
+      {mobileNavOpen && (
+        <div className="fixed inset-0 z-[90] flex items-end md:hidden" onClick={() => setMobileNavOpen(false)} data-testid="mobile-nav-sheet">
+          <div className="absolute inset-0 bg-black/60" />
+          <div className="relative w-full rounded-t-2xl border-t border-white/15 bg-[#0B1F3A] pb-[env(safe-area-inset-bottom)]" onClick={(e) => e.stopPropagation()}>
+            <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-white/20" />
+            <ul className="grid grid-cols-4 gap-1 px-4 py-4">
+              {ITEMS.map((item) => (
+                <li key={item.id}>
+                  <button onClick={() => { navigate(item.path); setMobileNavOpen(false); }} className="flex w-full flex-col items-center gap-1.5 rounded-xl px-2 py-3 text-white/80 hover:bg-white/10" data-testid={`mobile-nav-${item.id}`}>
+                    <item.Icon size={18} />
+                    <span className="text-[11px] leading-tight text-center">{item.shortLabel || item.label}</span>
+                  </button>
+                </li>
+              ))}
+              <li>
+                <button onClick={() => { openSettings(); setMobileNavOpen(false); }} className="flex w-full flex-col items-center gap-1.5 rounded-xl px-2 py-3 text-white/80 hover:bg-white/10" data-testid="mobile-nav-settings">
+                  <SettingsIcon size={18} />
+                  <span className="text-[11px] leading-tight text-center">Paramètres</span>
+                </button>
+              </li>
+            </ul>
+          </div>
+        </div>
+      )}
+
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} initialSection={settingsSection} />
+      <TheSustainModal open={theSustainModalOpen} onClose={() => setTheSustainModalOpen(false)} />
     </div>
   );
 }

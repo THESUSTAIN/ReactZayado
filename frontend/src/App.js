@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import "./App.css";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { Toaster } from "sonner";
@@ -16,7 +16,7 @@ import Aujourdhui from "./pages/Aujourdhui";
 import Contexte from "./pages/Contexte";
 import Collaborateur from "./pages/Collaborateur";
 import TheSustain from "./pages/TheSustain";
-import Campus from "./pages/Campus";
+import CampusComingSoon from "./pages/CampusComingSoon";
 import { authMe } from "./lib/api";
 
 // Accueil : "Aujourd'hui", porte d'entree quotidienne Cap Vivant (tache #21 —
@@ -45,8 +45,11 @@ function AppHome() {
   }, [isMobile]);
   if (isMobile) {
     return (
-      <div className="fixed inset-x-0 top-[58px] bottom-[72px] z-10 overflow-hidden overscroll-none bg-[#0B1F3A]" data-testid="mobile-copilot-home">
-        <ChatPanel context="Accueil quotidien Cap Vivant." />
+      <div className="fixed inset-0 z-10 overflow-hidden overscroll-none bg-[#0B1F3A]" data-testid="mobile-copilot-home">
+        <ChatPanel
+          context="Accueil quotidien Cap Vivant."
+          onMenu={() => window.dispatchEvent(new CustomEvent("cours:open-mobile-nav"))}
+        />
       </div>
     );
   }
@@ -69,15 +72,25 @@ function TheSustainAccess() {
   return allowed ? <TheSustain /> : <Navigate to="/contexte" replace />;
 }
 
+class AppErrorBoundary extends React.Component {
+  state = { error: null };
+  static getDerivedStateFromError(error) { return { error }; }
+  render() {
+    if (this.state.error) return <div style={{ minHeight: "100vh", background: "#0B1F3A", color: "#fff", padding: 32, fontFamily: "system-ui" }}><h1>Erreur de chargement V1</h1><p>{this.state.error.message}</p><pre style={{ whiteSpace: "pre-wrap", opacity: .7 }}>{this.state.error.stack}</pre></div>;
+    return this.props.children;
+  }
+}
+
 function App() {
   return (
-    <div className="App">
+    <AppErrorBoundary><div className="App">
       <BrowserRouter>
         <Routes>
           <Route element={<Layout />}>
             <Route path="/" element={<AppHome />} />
             <Route path="/vision" element={<VisionBoard />} />
             <Route path="/mouvement" element={<Travail />} />
+            <Route path="/taches" element={<Travail initialView="engagements" />} />
             <Route path="/mindset" element={<BienEtre />} />
             <Route path="/contexte" element={<Contexte />} />
             <Route path="/collaborateur" element={<Collaborateur />} />
@@ -89,21 +102,21 @@ function App() {
             <Route path="/pilotage" element={<Pilotage />} />
             <Route path="/croissance" element={<Croissance />} />
           </Route>
-          <Route element={<CampusLayout />}>
-            <Route path="/campus" element={<Campus activeSection="today" />} />
-            <Route path="/campus/entreprise" element={<Campus activeSection="enterprise" />} />
-            <Route path="/campus/missions" element={<Campus activeSection="missions" />} />
-            <Route path="/campus/coach" element={<Campus activeSection="coach" />} />
-            <Route path="/campus/progression" element={<Campus activeSection="progress" />} />
-            <Route path="/campus/portfolio" element={<Campus activeSection="portfolio" />} />
-            <Route path="/campus/alternance" element={<Campus activeSection="alternance" />} />
+          <Route element={<Layout />}>
+            <Route path="/campus" element={<CampusComingSoon />} />
+            <Route path="/campus/entreprise" element={<CampusComingSoon />} />
+            <Route path="/campus/missions" element={<CampusComingSoon />} />
+            <Route path="/campus/coach" element={<CampusComingSoon />} />
+            <Route path="/campus/progression" element={<CampusComingSoon />} />
+            <Route path="/campus/portfolio" element={<CampusComingSoon />} />
+            <Route path="/campus/alternance" element={<CampusComingSoon />} />
           </Route>
           <Route path="/login" element={<Login />} />
           <Route path="/onboarding" element={<Onboarding />} />
         </Routes>
       </BrowserRouter>
       <Toaster theme="dark" position="top-right" richColors />
-    </div>
+    </div></AppErrorBoundary>
   );
 }
 

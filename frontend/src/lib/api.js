@@ -140,6 +140,20 @@ export const createHumeur = ({ energie, humeur, note }) => createWellnessCheckin
   notes: note || null,
 });
 
+export const getKairosHistory = (session = "default") =>
+  api.get(`/kairos/history?session_id=${session}`).then((r) => r.data);
+
+export const uploadKairosAttachment = (file, session = "default") => {
+  const form = new FormData();
+  form.append("file", file);
+  return api.post(`/kairos/upload?session_id=${session}`, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  }).then((r) => r.data);
+};
+
+export const executeKairosAction = (action) =>
+  api.post("/kairos/execute-action", action).then((r) => r.data);
+
 // Corrigé : ces fonctions appelaient toutes /settings/* — une famille de
 // routes qui n'existe nulle part côté serveur (vérifié systématiquement).
 // Rebranché sur /api/prefs, le vrai magasin générique clé-valeur déjà
@@ -166,6 +180,27 @@ export const setNewsPreferences = ({ sector, region, frequency_per_week = 1 }) =
 
 export const seed = () => api.post("/seed").then((r) => r.data);
 
+export async function streamKairos({ message, session = "default", context, attachmentIds = [], onToken, onDone }) {
+  const res = await fetch(`${API}/kairos/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message, session_id: session, context, attachment_ids: attachmentIds }),
+  });
+  if (!res.ok) throw new Error(`Kairos error ${res.status}`);
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let full = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const chunk = decoder.decode(value, { stream: true });
+    full += chunk;
+    onToken && onToken(full);
+  }
+  onDone && onDone(full);
+  return full;
+}
+
 // --- Panneau de chat complet (copilote) : upload persistant, historique,
 // brief du jour, veille, "travailler avec l'équipe". ---
 export const getChatHistory = (session = "default") =>
@@ -189,6 +224,30 @@ export async function uploadChatFile(file) {
 export async function generateChatImage(prompt, style = "verset_illustre") {
   const response = await api.post(`/chat/image`, { prompt, style });
   return response.data;
+}
+
+// --- Google Drive : le backend (routes/gdrive.py) existe déjà en entier
+// (connexion OAuth, statut, liste, upload) mais n'était câblé nulle part
+// côté frontend — ajouté ici pour le menu "+" du chat.
+export const getDriveStatus = () => api.get(`/drive/status`).then((r) => r.data);
+export const connectDrive = () => api.get(`/drive/connect`).then((r) => r.data); // { authorization_url }
+export const listDriveFiles = (folderId = "root", pageToken = null) =>
+  api.get(`/drive/files`, { params: { folder_id: folderId, page_token: pageToken || undefined } }).then((r) => r.data);
+export async function uploadFileToDrive(file, folderId = "root") {
+  const form = new FormData();
+  form.append("file", file);
+  const response = await api.post(`/drive/upload`, form, {
+    params: { folder_id: folderId },
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data;
+}
+export async function importDriveFileToChat(fileId, fileName) {
+  // Télécharge le fichier Drive côté serveur puis le fait suivre au pipeline
+  // d'upload du chat existant (extraction de texte + attachment).
+  const response = await api.get(`/drive/download/${fileId}`, { responseType: "blob" });
+  const file = new File([response.data], fileName, { type: response.data.type });
+  return uploadChatFile(file);
 }
 
 export async function streamChatMessage({ message, session = "default", context, uploadIds = [], onToken, onDone }) {

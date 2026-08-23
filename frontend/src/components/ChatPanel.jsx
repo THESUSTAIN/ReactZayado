@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  ArrowLeft, ArrowRight, Camera, Check, CheckCircle2, ChevronDown, Clock, Compass, Copy, ExternalLink, FileText, Globe, Handshake, HeartPulse, Image, Loader2,
-  MessageCircle, Newspaper, Paperclip, Send, ShieldCheck,
+  ArrowLeft, ArrowRight, Camera, Check, CheckCircle2, ChevronDown, Clock, Compass, Copy, ExternalLink, FileText, Folder, Globe, Handshake, HeartPulse, Image, Loader2,
+  Menu, MessageCircle, Newspaper, Paperclip, Plus, Send, ShieldCheck,
   Sparkles, Sun, Wallet, X,
 } from "lucide-react";
 import { NightRecap, NextSequence } from "./CockpitSections";
@@ -10,6 +10,7 @@ import {
   applyCopilotDecision, getChatHistory, getCopilotBrief, getCopilotConfig,
   getCopilotDecision, getCopilotNews, getNewsHistory, getSavedNews, saveNewsItem, deleteSavedNews, archiveNewsEdition,
   sendCopilotWorkRequest, streamChatMessage, sendCopilotMessage, uploadChatFile, generateChatImage,
+  getDriveStatus, connectDrive, listDriveFiles, importDriveFileToChat,
 } from "../lib/api";
 
 const SUGGESTIONS = [
@@ -174,7 +175,7 @@ function ActionCard({ card, onDecision, busy, index = 0 }) {
   );
 }
 
-export default function ChatPanel({ context, initialAsk, onBack }) {
+export default function ChatPanel({ context, initialAsk, onBack, onMenu }) {
   const navigate = useNavigate();
   const sessionId = useMemo(getSessionId, []);
   const visionContextLabel = String(context || "").match(/Onglet Vision actif : ([^.]+)/)?.[1] || null;
@@ -286,13 +287,15 @@ export default function ChatPanel({ context, initialAsk, onBack }) {
       // pas de streaming token-par-token (contrairement à l'ancien appel
       // /chat/messages, qui n'a jamais eu de route serveur). La réponse arrive
       // en un bloc ; on l'affiche directement.
-      const reply = await sendCopilotMessage({
+      const replyData = await sendCopilotMessage({
         message: messageForAI || "Analyse les pièces jointes et indique-moi la prochaine action utile.",
         session: sessionId,
         history: priorHistory,
       });
+      const reply = typeof replyData === "string" ? replyData : (replyData?.reply || "");
+      const sources = typeof replyData === "string" ? [] : (replyData?.sources || []);
       setMessages((current) => {
-        const next = [...current]; next[next.length - 1] = { role: "assistant", content: reply }; return next;
+        const next = [...current]; next[next.length - 1] = { role: "assistant", content: reply, sources }; return next;
       });
     } catch (error) {
       setMessages((current) => {
@@ -386,6 +389,44 @@ export default function ChatPanel({ context, initialAsk, onBack }) {
     } finally { setGeneratingImage(false); }
   };
   const [imageMode, setImageMode] = useState(false);
+  // Menu "+" : regroupe Capture / Générer une image / Drive, plutôt que
+  // 3 icônes séparées qui prenaient toute la largeur de la barre — pattern
+  // repris des chats "+" (ChatGPT/Claude) plutôt que 3 boutons permanents.
+  const [plusOpen, setPlusOpen] = useState(false);
+  const plusRef = useRef(null);
+  const [driveConnected, setDriveConnected] = useState(null); // null = pas encore vérifié
+  const [driveOpen, setDriveOpen] = useState(false);
+  const [driveFiles, setDriveFiles] = useState([]);
+  const [driveLoading, setDriveLoading] = useState(false);
+  useEffect(() => {
+    getDriveStatus().then((r) => setDriveConnected(Boolean(r?.connected))).catch(() => setDriveConnected(false));
+  }, []);
+  useEffect(() => {
+    if (!plusOpen) return undefined;
+    const onClickOutside = (event) => { if (plusRef.current && !plusRef.current.contains(event.target)) setPlusOpen(false); };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [plusOpen]);
+  const openDrive = async () => {
+    setPlusOpen(false);
+    if (!driveConnected) {
+      try { const { authorization_url } = await connectDrive(); if (authorization_url) window.location.href = authorization_url; }
+      catch { setMessages((current) => [...current, { role: "assistant", content: "Connexion à Google Drive indisponible pour le moment." }]); }
+      return;
+    }
+    setDriveOpen(true);
+    setDriveLoading(true);
+    try { const r = await listDriveFiles("root"); setDriveFiles(r?.files || []); }
+    catch { setDriveFiles([]); }
+    finally { setDriveLoading(false); }
+  };
+  const importDriveFile = async (file) => {
+    setDriveOpen(false);
+    setUploading(true);
+    try { const uploaded = await importDriveFileToChat(file.id, file.name); setAttachments((current) => [...current, uploaded]); }
+    catch { setMessages((current) => [...current, { role: "assistant", content: `Impossible d'importer "${file.name}" depuis Drive.` }]); }
+    finally { setUploading(false); }
+  };
 
   const decideCard = async (decisionId, decision) => {
     if (!decisionId || decisionBusyId) return;
@@ -483,7 +524,11 @@ export default function ChatPanel({ context, initialAsk, onBack }) {
     <div className="flex h-full w-full flex-col" data-testid="copilot-panel">
       <div className="border-b border-white/10 px-5 py-3.5">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2.5"><div className="gold-bg flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"><Sparkles size={18} className="text-[#0A1128]" /></div><div className="min-w-0"><div className="font-head text-[15px] font-semibold">Cockpit</div><p className="m-0 text-[11px] text-white/55">Votre co-pilote IA</p>{visionContextLabel && <div className="mt-1 inline-flex max-w-full truncate rounded-full border border-[#D4AF37]/25 bg-[#D4AF37]/10 px-2 py-0.5 text-[10px] font-medium text-[#F0DCA5]">Vision · {visionContextLabel}</div>}</div></div>
+          <div className="flex min-w-0 items-center gap-2.5">
+            {onMenu && <button type="button" onClick={onMenu} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white/80 hover:border-[#D4AF37]/60 hover:text-[#F0DCA5]" title="Menu" aria-label="Ouvrir le menu" data-testid="copilot-menu">
+              <Menu size={16} />
+            </button>}
+            <div className="gold-bg flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"><Sparkles size={18} className="text-[#0A1128]" /></div><div className="min-w-0"><div className="font-head text-[15px] font-semibold">Cockpit</div><p className="m-0 text-[11px] text-white/55">Votre co-pilote IA</p>{visionContextLabel && <div className="mt-1 inline-flex max-w-full truncate rounded-full border border-[#D4AF37]/25 bg-[#D4AF37]/10 px-2 py-0.5 text-[10px] font-medium text-[#F0DCA5]">Vision · {visionContextLabel}</div>}</div></div>
           <div className="flex shrink-0 items-center gap-2">
             {onBack && <button type="button" onClick={onBack} className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 text-[11px] font-semibold text-white hover:border-[#D4AF37]/60 hover:text-[#F0DCA5]" title="Retour" aria-label="Retour" data-testid="copilot-back"><ArrowLeft size={14} /> <span>Retour</span></button>}
             <button onClick={() => setContactOpen((value) => !value)} className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-[11px] font-semibold transition-colors ${contactOpen ? "border-[#D4AF37]/60 bg-[#D4AF37]/20 text-[#F0DCA5]" : "border-[#D4AF37]/45 bg-[#D4AF37]/12 text-[#F0DCA5] hover:bg-[#D4AF37]/20"}`} title="Travailler avec l’équipe" aria-label="Travailler avec l’équipe" data-testid="copilot-contact"><Handshake size={16} /> <span>Collaborer</span></button>
@@ -515,12 +560,59 @@ export default function ChatPanel({ context, initialAsk, onBack }) {
           {!historyLoading && brief && <NightRecap data={brief} onSeeTasks={() => navigate("/bien-etre#missions")} />}
           {!historyLoading && messages.length === 0 && <div className="space-y-3"><div className="glass p-4"><div className="mb-1 text-sm font-medium">Bonjour</div><p className="m-0 text-[13px] leading-relaxed text-white/60">Je garde le fil de nos échanges, peux lire tes documents et t’aider à décider de la prochaine action.</p></div><div className="space-y-2">{SUGGESTIONS.map((suggestion) => <button key={suggestion} onClick={() => send(suggestion)} className="w-full rounded-xl border border-white/15 bg-white/5 px-3.5 py-2.5 text-left text-[13px] text-white/75 transition-colors hover:border-[#D4AF37]/40 hover:bg-white/10" data-testid="copilot-suggestion">{suggestion}</button>)}</div></div>}
           {messages.map((message, index) => {
-            return <div key={message.id || index} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}><div className={`max-w-[87%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap ${message.role === "user" ? "border border-[#D4AF37]/30 bg-[#D4AF37]/20 text-white" : "glass text-white/85"}`}>{message.pending && (loading || generatingImage) && !message.content ? <Loader2 size={16} className="animate-spin text-[#D4AF37]" /> : renderMarkdownLite(message.content)}{message.imageUrl && <img src={message.imageUrl} alt="Générée par le Copilote" className="mt-2 max-w-full rounded-xl border border-white/10" />}</div></div>;
+            return <div key={message.id || index} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}><div className={`max-w-[87%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap ${message.role === "user" ? "border border-[#D4AF37]/30 bg-[#D4AF37]/20 text-white" : "glass text-white/85"}`}>{message.pending && (loading || generatingImage) && !message.content ? <Loader2 size={16} className="animate-spin text-[#D4AF37]" /> : renderMarkdownLite(message.content)}{message.imageUrl && <img src={message.imageUrl} alt="Générée par le Copilote" className="mt-2 max-w-full rounded-xl border border-white/10" />}{message.role === "assistant" && Array.isArray(message.sources) && message.sources.length > 0 && <div className="mt-3 flex flex-wrap gap-1.5 border-t border-white/10 pt-2" data-testid="copilot-response-sources"><span className="text-[9px] font-bold uppercase tracking-wide text-[#E8C96A]">Sources</span>{message.sources.map((source, sourceIndex) => <span key={`${source.type}-${sourceIndex}`} className="rounded-full border border-white/15 bg-white/[0.05] px-2 py-1 text-[9px] text-white/55">{source.label}</span>)}</div>}</div></div>;
           })}
         </div>
         <div className="border-t border-white/10 p-4">
           {attachments.length > 0 && <div className="mb-2 flex flex-wrap gap-1.5">{attachments.map((file) => <span key={file.id} className="inline-flex max-w-full items-center gap-1 rounded-lg border border-[#D4AF37]/25 bg-[#D4AF37]/10 px-2 py-1 text-[11px] text-[#F0DCA5]"><FileText size={12} /><span className="max-w-[150px] truncate">{file.name}</span><button onClick={() => setAttachments((current) => current.filter((item) => item.id !== file.id))} aria-label={`Retirer ${file.name}`}><X size={12} /></button></span>)}</div>}
-          <div className={`flex items-center gap-1.5 rounded-2xl border py-1.5 pl-2 pr-1.5 transition-colors ${imageMode ? "border-[#D4AF37]/60 bg-[#D4AF37]/10" : "border-white/15 bg-white/5 focus-within:border-[#D4AF37]/50"}`}><input ref={fileRef} type="file" className="hidden" multiple onChange={handleUpload} accept=".txt,.md,.csv,.json,.pdf,.docx,.png,.jpg,.jpeg,.webp" /><button onClick={() => fileRef.current?.click()} disabled={uploading || attachments.length >= 5} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/55 transition-colors hover:bg-white/10 hover:text-[#E8C96A] disabled:opacity-40" aria-label="Ajouter un fichier" data-testid="copilot-upload">{uploading ? <Loader2 size={16} className="animate-spin" /> : <Paperclip size={16} />}</button><button onClick={handleScreenCapture} disabled={uploading} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/55 transition-colors hover:bg-white/10 hover:text-[#E8C96A] disabled:opacity-40" aria-label="Capturer l'écran" title="Capturer l'écran" data-testid="copilot-capture"><Camera size={16} /></button><button onClick={() => setImageMode((v) => !v)} className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors ${imageMode ? "bg-[#D4AF37] text-[#0A1128]" : "text-white/55 hover:bg-white/10 hover:text-[#E8C96A]"}`} aria-label="Mode Image IA" title="Générer une image" data-testid="copilot-image-mode"><Image size={16} /></button><input value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); send(); } }} placeholder={imageMode ? "Décrivez l'image à générer…" : "Écrivez à votre copilote…"} className="min-w-0 flex-1 bg-transparent text-sm text-white placeholder:text-white/40 focus:outline-none" data-testid="copilot-input" /><button onClick={() => send()} disabled={loading || uploading || generatingImage || (!input.trim() && attachments.length === 0)} className="gold-bg flex h-9 w-9 shrink-0 items-center justify-center rounded-full disabled:opacity-50" aria-label="Envoyer" data-testid="copilot-send">{loading || generatingImage ? <Loader2 size={16} className="animate-spin text-[#0A1128]" /> : <Send size={16} className="text-[#0A1128]" />}</button></div>
+          <div className={`relative flex items-center gap-1.5 rounded-2xl border py-1.5 pl-2 pr-1.5 transition-colors ${imageMode ? "border-[#D4AF37]/60 bg-[#D4AF37]/10" : "border-white/15 bg-white/5 focus-within:border-[#D4AF37]/50"}`}>
+            <input ref={fileRef} type="file" className="hidden" multiple onChange={handleUpload} accept=".txt,.md,.csv,.json,.pdf,.docx,.png,.jpg,.jpeg,.webp" />
+            <button onClick={() => fileRef.current?.click()} disabled={uploading || attachments.length >= 5} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/55 transition-colors hover:bg-white/10 hover:text-[#E8C96A] disabled:opacity-40" aria-label="Ajouter un fichier" data-testid="copilot-upload">{uploading ? <Loader2 size={16} className="animate-spin" /> : <Paperclip size={16} />}</button>
+            <div className="relative shrink-0" ref={plusRef}>
+              <button onClick={() => setPlusOpen((v) => !v)} disabled={uploading} className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${plusOpen || imageMode ? "bg-white/15 text-[#E8C96A]" : "text-white/55 hover:bg-white/10 hover:text-[#E8C96A]"} disabled:opacity-40`} aria-label="Plus d'options" title="Capture, image IA, Drive" data-testid="copilot-plus">
+                <Plus size={16} className={`transition-transform ${plusOpen ? "rotate-45" : ""}`} />
+              </button>
+              {plusOpen && (
+                <div className="absolute bottom-11 left-0 z-20 w-56 overflow-hidden rounded-2xl border border-white/15 bg-[#0B1F3A] shadow-2xl" data-testid="copilot-plus-menu">
+                  <button onClick={() => { setPlusOpen(false); handleScreenCapture(); }} className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-[13px] text-white/85 hover:bg-white/10" data-testid="copilot-capture">
+                    <Camera size={15} className="text-white/60" /> Capturer l'écran
+                  </button>
+                  <button onClick={() => { setImageMode((v) => !v); setPlusOpen(false); }} className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-[13px] text-white/85 hover:bg-white/10" data-testid="copilot-image-mode">
+                    <Image size={15} className="text-white/60" /> Générer une image
+                  </button>
+                  <button onClick={openDrive} disabled={driveConnected === null} className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-[13px] text-white/85 hover:bg-white/10 disabled:opacity-50" data-testid="copilot-drive">
+                    <Folder size={15} className="text-white/60" /> Drive
+                    <span
+                      className={`ml-auto h-2 w-2 rounded-full ${driveConnected ? "bg-sky-400 animate-pulse" : "bg-red-500"}`}
+                      title={driveConnected ? "Drive synchronisé" : "Drive non connecté"}
+                      data-testid="copilot-drive-status"
+                    />
+                  </button>
+                </div>
+              )}
+            </div>
+            <input value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); send(); } }} placeholder={imageMode ? "Décrivez l'image à générer…" : "Écrivez à votre copilote…"} className="min-w-0 flex-1 bg-transparent text-sm text-white placeholder:text-white/40 focus:outline-none" data-testid="copilot-input" />
+            <button onClick={() => send()} disabled={loading || uploading || generatingImage || (!input.trim() && attachments.length === 0)} className="gold-bg flex h-9 w-9 shrink-0 items-center justify-center rounded-full disabled:opacity-50" aria-label="Envoyer" data-testid="copilot-send">{loading || generatingImage ? <Loader2 size={16} className="animate-spin text-[#0A1128]" /> : <Send size={16} className="text-[#0A1128]" />}</button>
+          </div>
+          {driveOpen && (
+            <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 sm:items-center" onClick={() => setDriveOpen(false)}>
+              <div className="max-h-[70vh] w-full max-w-sm overflow-hidden rounded-t-2xl border border-white/15 bg-[#0B1F3A] sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+                  <span className="text-sm font-semibold text-white">Importer depuis Drive</span>
+                  <button onClick={() => setDriveOpen(false)} aria-label="Fermer"><X size={18} className="text-white/60" /></button>
+                </div>
+                <div className="max-h-[55vh] overflow-y-auto p-2">
+                  {driveLoading && <div className="flex justify-center py-8"><Loader2 size={18} className="animate-spin text-[#D4AF37]" /></div>}
+                  {!driveLoading && driveFiles.length === 0 && <div className="px-3 py-8 text-center text-[13px] text-white/50">Aucun fichier trouvé dans ce dossier.</div>}
+                  {!driveLoading && driveFiles.filter((f) => !f.isFolder).map((f) => (
+                    <button key={f.id} onClick={() => importDriveFile(f)} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[13px] text-white/85 hover:bg-white/10">
+                      <FileText size={15} className="shrink-0 text-white/50" /> <span className="truncate">{f.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
           <p className="m-0 mt-2 text-center text-[10px] text-white/35">Conversations · Documents · Décisions</p>
         </div>
       </>}
