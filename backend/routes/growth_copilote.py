@@ -77,6 +77,25 @@ async def _build_context(db: AsyncSession, user_id: str) -> str:
             parts.append("Tâches récentes : " + "; ".join(labels) + ".")
     except Exception:
         pass
+
+    # Décisions du Copilote en attente (user_copilot_decisions, générées à partir
+    # de vraies données — tâches en retard, piliers faibles — cf. copilot_persistence.py).
+    # Avant cette correction, ce contexte n'était jamais lu : le Copilote pouvait
+    # afficher une décision "à valider" dans l'onglet Décisions tout en l'ignorant
+    # complètement dans ses réponses de chat — deux vues déconnectées de la même donnée.
+    try:
+        from routes.missing_apis import _list_rows
+        decisions = await _list_rows(db, "user_copilot_decisions", user_id)
+        pending = [d for d in decisions if d.get("status") == "pending"]
+        if pending:
+            lines = []
+            for d in pending[:3]:
+                title = d.get("title") or "Décision en attente"
+                why = d.get("why_now")
+                lines.append(f"{title}" + (f" ({why})" if why else ""))
+            parts.append("Décisions en attente de validation : " + "; ".join(lines) + ".")
+    except Exception:
+        pass
     return "\n".join(parts)
 
 
