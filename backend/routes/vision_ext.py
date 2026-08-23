@@ -670,6 +670,88 @@ async def coach_vision(
     }
 
 
+SWOT_KEY = "vision_swot_analysis"
+
+
+@router.get("/swot")
+async def get_swot(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Dernière analyse SWOT générée (persistée), ou {} si aucune n'existe encore —
+    le frontend traite l'absence de 'strengths'/'summary' comme 'pas d'analyse'."""
+    data = await _get_kv(db, user.id, SWOT_KEY)
+    return (data or {}).get("swot") or {}
+
+
+@router.post("/swot/generate")
+async def generate_swot(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Génère une vraie analyse SWOT par IA à partir des données réelles de
+    l'utilisateur (piliers stratégiques + canvas vision), pas un modèle
+    générique codé en dur. Même mécanisme que /coach (Mammouth/Claude,
+    JSON strict) — endpoint manquant côté serveur jusqu'ici alors que le
+    frontend l'appelait déjà (getSwot/generateSwot -> 404)."""
+    def _txt(v):
+        if isinstance(v, dict):
+            return v.get("fr") or v.get("en") or ""
+        return v or ""
+
+    pdata = await _get_kv(db, user.id, PILLARS_KEY)
+    pillars = (pdata or {}).get("pillars") or []
+    pillar_lines = [f"- {_txt(p.get('title'))} ({p.get('progress', 0)}% avancé) : {_txt(p.get('description'))}" for p in pillars]
+
+    bdata = await _get_kv(db, user.id, BOARD_KEY)
+    cards = (bdata or {}).get("cards", [])
+    card_lines = []
+    for c in (cards or [])[:40]:
+        t, b = _txt(c.get("title")), _txt(c.get("body"))
+        label = (t + (" — " + b if b else "")).strip()
+        if label:
+            card_lines.append(f"- [{c.get('type', 'note')}] {label[:160]}")
+
+    if not pillar_lines and not card_lines:
+        raise HTTPException(400, "Ajoutez au moins un pilier ou une carte à votre vision avant de générer une analyse — l'IA ne peut pas inventer votre contexte.")
+
+    score = _compute_global_score(pillars) if pillars else None
+
+    system = (
+        "Tu es un consultant en stratégie qui réalise une analyse SWOT lucide et bienveillante "
+        "pour un solo-entrepreneur, UNIQUEMENT à partir des piliers et cartes de vision fournis — "
+        "tu n'inventes jamais d'élément absent de ces données. Réponds UNIQUEMENT en JSON strict, "
+        "en français, sans markdown ni texte autour."
+    )
+    prompt = (
+        "Piliers stratégiques :\n" + ("\n".join(pillar_lines) or "(aucun)") +
+        "\n\nCartes du vision board :\n" + ("\n".join(card_lines) or "(aucune)") +
+        (f"\n\nScore de complétion actuel des piliers : {score}/100" if score is not None else "") +
+        "\n\nRenvoie ce JSON exact :\n"
+        '{"strengths": ["force 1 tirée des données ci-dessus", "..."], '
+        '"weaknesses": ["faiblesse 1", "..."], '
+        '"opportunities": ["opportunité 1", "..."], '
+        '"threats": ["menace ou risque 1", "..."], '
+        '"verdict": "go|pivot|abandon", '
+        '"summary": "1-2 phrases de synthèse lucide sur l\'état actuel de la vision", '
+        '"next_actions": ["action concrète 1 (max 10 mots)", "action 2", "action 3"]}\n'
+        "2 à 4 éléments par catégorie (forces/faiblesses/opportunités/menaces), toujours ancrés dans "
+        "les données fournies. 'verdict' : 'go' si la vision est solide et actionnable, 'pivot' si des "
+        "ajustements sont nécessaires, 'abandon' seulement si les signaux sont vraiment préoccupants."
+    )
+    result = await _claude_complete_json(system, prompt, max_tokens=900)
+    if not result or not result.get("strengths"):
+        raise HTTPException(502, "L'analyse IA est indisponible pour le moment — réessayez dans un instant.")
+
+    swot = {
+        "strengths": result.get("strengths") or [],
+        "weaknesses": result.get("weaknesses") or [],
+        "opportunities": result.get("opportunities") or [],
+        "threats": result.get("threats") or [],
+        "verdict": result.get("verdict") if result.get("verdict") in ("go", "pivot", "abandon") else None,
+        "summary": result.get("summary") or "",
+        "next_actions": (result.get("next_actions") or [])[:5],
+        "score": score,
+        "generated_at": _utc_now(),
+    }
+    await _save_kv(db, user.id, SWOT_KEY, {"swot": swot})
+    return {"ok": True, "swot": swot}
+
+
 # ─────────── Partage du board (fix #5) ─────────────────────────────────────
 
 @router.post("/share")

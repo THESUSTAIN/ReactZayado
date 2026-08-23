@@ -15,19 +15,19 @@ const moodLabel = (mood) => ({ 1: "Épuisé", 2: "Fatigué", 3: "Bien", 4: "Moti
 const moodValue = (mood) => ({ "Épuisé": 1, "Fatigué": 2, "Bien": 3, "Motivé": 4, "En feu": 5 })[mood] || 3;
 const priorityLabel = (priority) => ({ high: "Haute", medium: "Moyenne", normal: "Normale", low: "Basse", Haute: "Haute", Moyenne: "Moyenne", Normale: "Normale" })[priority] || "Normale";
 const priorityValue = (priority) => ({ Haute: "high", Moyenne: "medium", Basse: "low", Normale: "normal", high: "high", medium: "medium", low: "low", normal: "normal" })[priority] || "normal";
-const normalizeTask = (task = {}) => ({
+export const normalizeTask = (task = {}) => ({
   ...task,
   titre: task.titre || task.label || "Tâche sans titre",
   statut: task.done ? "Terminé" : task.in_progress ? "En cours" : "A faire",
   priorite: priorityLabel(task.priorite || task.priority),
 });
-const normalizeCheckin = (checkin = {}) => ({
+export const normalizeCheckin = (checkin = {}) => ({
   ...checkin,
   energie: asEnergyPercent(checkin.energie ?? checkin.energy),
   humeur: checkin.humeur || moodLabel(checkin.mood),
   date: checkin.date || checkin.created_at || null,
 });
-const normalizeHabit = (habit = {}) => ({
+export const normalizeHabit = (habit = {}) => ({
   ...habit,
   nom: habit.nom || habit.name || "Habitude",
   done: habit.done ?? habit.done_today ?? false,
@@ -44,15 +44,41 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// En prévisualisation frontend seule, le serveur statique peut renvoyer index.html
+// pour une URL /api. Ne jamais laisser ce HTML contaminer les données React.
+api.interceptors.response.use((response) => {
+  const contentType = String(response.headers?.["content-type"] || "").toLowerCase();
+  if (contentType.includes("text/html")) {
+    const error = new Error("Backend API indisponible dans cette prévisualisation.");
+    error.code = "STATIC_PREVIEW_API";
+    return Promise.reject(error);
+  }
+  return response;
+});
+
 // Contrat Final-main réel : l'inscription utilise /api/auth/register.
 export const authSignup = (email, password, first_name) =>
   api.post("/auth/register", { email, password, first_name }).then((r) => r.data);
 export const authLogin = (email, password) =>
   api.post("/auth/login", { email, password }).then((r) => r.data);
 export const authMe = () => api.get("/auth/me").then((r) => r.data);
+// URLs de la fenêtre TheSustain — éditables par un admin (PUT /admin/config
+// avec {thesustain_urls: {...}}), lues ici en public.
+export const getPublicConfig = () => api.get("/config/public").then((r) => r.data);
 // Le routeur alias Final-main est monté sous /api/onboarding. Le chemin
 // /auth/onboarding n’existe pas et empêchait l’onboarding frontend de persister.
 export const authOnboarding = (d) => api.post("/onboarding", d).then((r) => r.data);
+
+// Ajoutés — routes réelles côté backend (auth.py), jamais reliées côté
+// frontend jusqu'ici : lien magique, compte de démo, OAuth Google/Microsoft.
+export const sendMagicLink = (email) => api.post("/auth/request-link", { email }).then((r) => r.data);
+export const verifyMagicLink = (token) => api.post("/auth/verify-link", { token }).then((r) => r.data);
+export const demoLogin = (email) => api.post("/auth/demo-login", { email }).then((r) => r.data);
+// Renvoie l'URL d'autorisation Google/Microsoft, ou lève une erreur claire
+// (503 "GOOGLE_CLIENT_ID non configuré") si les clés OAuth ne sont pas encore
+// définies dans Railway — jamais un faux succès silencieux.
+export const oauthStart = (provider, redirectUri) =>
+  api.get(`/oauth/${provider}/start`, { params: { redirect_uri: redirectUri } }).then((r) => r.data);
 
 
 export const getPilotageOverview = () => api.get("/pilotage/overview").then((r) => r.data);
@@ -69,12 +95,12 @@ export const getDecision = () => api.get("/pilotage/decision").then((r) => r.dat
 export const simulatePilotage = (payload) => api.post("/pilotage/simulate", payload).then((r) => r.data);
 export const getHealthScore = () => api.get("/pilotage/health-score").then((r) => r.data);
 export const exportCsvUrl = () => `${API}/pilotage/export.csv`;
-export const getFactures = async () => [];
+export const getFactures = () => api.get("/factures").then((r) => r.data);
 export const createFacture = (d) => api.post("/factures", d).then((r) => r.data);
 export const updateFacture = (id, d) => api.put(`/factures/${id}`, d).then((r) => r.data);
 export const deleteFacture = (id) => api.delete(`/factures/${id}`).then((r) => r.data);
 
-export const getDepenses = async () => [];
+export const getDepenses = () => api.get("/depenses").then((r) => r.data);
 export const createDepense = (d) => api.post("/depenses", d).then((r) => r.data);
 export const deleteDepense = (id) => api.delete(`/depenses/${id}`).then((r) => r.data);
 
@@ -114,22 +140,13 @@ export const createHumeur = ({ energie, humeur, note }) => createWellnessCheckin
   notes: note || null,
 });
 
-export const getKairosHistory = (session = "default") =>
-  api.get(`/kairos/history?session_id=${session}`).then((r) => r.data);
-
-export const uploadKairosAttachment = (file, session = "default") => {
-  const form = new FormData();
-  form.append("file", file);
-  return api.post(`/kairos/upload?session_id=${session}`, form, {
-    headers: { "Content-Type": "multipart/form-data" },
-  }).then((r) => r.data);
-};
-
-export const executeKairosAction = (action) =>
-  api.post("/kairos/execute-action", action).then((r) => r.data);
-
-export const getProfile = () => api.get("/settings/profile").then((r) => r.data);
-export const setProfile = (first_name) => api.put("/settings/profile", { first_name }).then((r) => r.data);
+// Corrigé : ces fonctions appelaient toutes /settings/* — une famille de
+// routes qui n'existe nulle part côté serveur (vérifié systématiquement).
+// Rebranché sur /api/prefs, le vrai magasin générique clé-valeur déjà
+// fonctionnel (routes/prefs.py), chaque réglage sous sa propre clé, fusionné
+// automatiquement par le backend à chaque PUT.
+export const getProfile = () => api.get("/prefs").then((r) => r.data?.profile || {});
+export const setProfile = (first_name) => api.put("/prefs", { profile: { first_name } }).then((r) => r.data?.profile || {});
 // MyExtension Campus s'appuie sur le moteur de simulation professionnel
 // Final-main déjà disponible. Ces appels restent protégés par la session :
 // aucune entreprise, mission ou évaluation n'est fabriquée côté interface.
@@ -139,36 +156,15 @@ export const startCampusSimulation = ({ programme_label, diploma_level }) =>
 export const getCampusSimulationHistory = () => api.get("/simulation/history").then((r) => r.data);
 export const submitCampusMission = (taskId, response_text) =>
   api.post(`/simulation/tasks/${taskId}/submit`, { response_text }).then((r) => r.data);
-export const getReminders = () => api.get("/settings/reminders").then((r) => r.data);
-export const setReminders = (weekly_review) => api.put("/settings/reminders", { weekly_review }).then((r) => r.data);
-export const getInspiration = () => api.get("/settings/inspiration").then((r) => r.data);
-export const setInspirationImage = (image_url) => api.put("/settings/inspiration", { image_url }).then((r) => r.data);
+export const getReminders = () => api.get("/prefs").then((r) => r.data?.reminders || {});
+export const setReminders = (weekly_review) => api.put("/prefs", { reminders: { weekly_review } }).then((r) => r.data?.reminders || {});
+export const getInspiration = () => api.get("/prefs").then((r) => r.data?.inspiration || {});
+export const setInspirationImage = (image_url) => api.put("/prefs", { inspiration: { image_url } }).then((r) => r.data?.inspiration || {});
 // Les préférences Actualité sont persistées par les réglages Growth Final-main.
 export const getNewsPreferences = () => api.get("/growth/settings").then((r) => r.data);
 export const setNewsPreferences = ({ sector, region, frequency_per_week = 1 }) => api.put("/growth/settings", { sector, region, frequency_per_week }).then((r) => r.data);
 
 export const seed = () => api.post("/seed").then((r) => r.data);
-
-export async function streamKairos({ message, session = "default", context, attachmentIds = [], onToken, onDone }) {
-  const res = await fetch(`${API}/kairos/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message, session_id: session, context, attachment_ids: attachmentIds }),
-  });
-  if (!res.ok) throw new Error(`Kairos error ${res.status}`);
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let full = "";
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    const chunk = decoder.decode(value, { stream: true });
-    full += chunk;
-    onToken && onToken(full);
-  }
-  onDone && onDone(full);
-  return full;
-}
 
 // --- Panneau de chat complet (copilote) : upload persistant, historique,
 // brief du jour, veille, "travailler avec l'équipe". ---
@@ -234,7 +230,7 @@ export async function sendCopilotMessage({ message, session = "default", history
     message,
     history: history.slice(-8).map((m) => ({ role: m.role, content: m.content })),
   });
-  return res.data?.reply || "";
+  return { reply: res.data?.reply || "", sources: Array.isArray(res.data?.sources) ? res.data.sources : [] };
 }
 
 // /chat/brief et /chat/news-digest n'ont pas non plus de route serveur
@@ -282,12 +278,17 @@ export const sendCopilotWorkRequest = ({ message, channel = "chat", contact = ""
 export const euro = (n) =>
   new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n || 0);
 
-export const getVisionMemory = () => api.get("/settings/vision-memory").then((r) => r.data);
-export const setVisionMemory = (memory) => api.put("/settings/vision-memory", { memory }).then((r) => r.data);
-export const getPlan = () => api.get("/settings/plan").then((r) => r.data);
-export const setPlan = (plan) => api.put("/settings/plan", { plan }).then((r) => r.data);
-export const getOdooConfig = () => api.get("/settings/odoo").then((r) => r.data);
-export const setOdooConfig = (d) => api.put("/settings/odoo", d).then((r) => r.data);
+export const getVisionMemory = () => api.get("/prefs").then((r) => r.data?.vision_memory || {});
+export const setVisionMemory = (memory) => api.put("/prefs", { vision_memory: { memory } }).then((r) => r.data?.vision_memory || {});
+export const getPlan = () => api.get("/prefs").then((r) => r.data?.plan || {});
+export const setPlan = (plan) => api.put("/prefs", { plan: { plan } }).then((r) => r.data?.plan || {});
+// Stockage de la config Odoo réel (via /api/prefs) — mais aucune vraie
+// intégration de synchronisation n'existe côté serveur (POST /odoo/sync
+// n'a pas de route). Le bouton "Synchroniser" échouera donc proprement
+// tant qu'une vraie intégration Odoo n'est pas construite — pas de faux
+// succès simulé.
+export const getOdooConfig = () => api.get("/prefs").then((r) => r.data?.odoo || {});
+export const setOdooConfig = (d) => api.put("/prefs", { odoo: d }).then((r) => r.data?.odoo || {});
 export const syncOdoo = () => api.post("/odoo/sync").then((r) => r.data);
 
 export const getWellnessCorrelations = () => api.get("/wellness/correlations").then((r) => r.data);
@@ -319,8 +320,13 @@ export const getProspects = () => getGrowthPipeline().then((data) => listOf(data
   valeur_estimee: Number(lead.valeur_estimee || lead.value || 0),
   etape: GROWTH_STAGE_TO_CAP[stage.id] || "Nouveaux",
 }))));
-export const createProspect = (d) => api.post("/growth/leads", { name: d.nom || d.name, company: d.entreprise || d.company || null, email: d.email || null, source: "manual", stage: "detected" }).then((r) => r.data);
+export const createProspect = (d) => api.post("/growth/leads", { name: d.nom || d.name, company: d.entreprise || d.company || null, email: d.email || null, snippet: d.notes || d.snippet || "", source: "manual", stage: "detected" }).then((r) => r.data);
 export const moveProspect = (id, etape) => api.patch(`/growth/pipeline/${id}`, { stage: CAP_STAGE_TO_GROWTH[etape] || "detected" }).then((r) => r.data);
+export const qualifyProspect = (id, notes) => api.post(`/growth/leads/${id}/qualify`, { notes }).then((r) => r.data);
+export const getValidationQueue = () => api.get("/collaborateur/queue?limit=20").then((r) => r.data);
+export const createValidationDraft = (draft) => api.post("/collaborateur/queue", draft).then((r) => r.data);
+export const validateDraft = (id) => api.post(`/collaborateur/queue/${id}/validate`).then((r) => r.data);
+export const dismissDraft = (id) => api.post(`/collaborateur/queue/${id}/dismiss`).then((r) => r.data);
 export const deleteProspect = async () => { throw new Error("La suppression d’un prospect n’est pas encore disponible côté serveur."); };
 export const getPipelineStats = () => getProspects().then((items) => {
   const signed = items.filter((item) => item.etape === "Gagnés");
@@ -395,6 +401,27 @@ export const createDocumentTravail = ({ nom, url = "", content = "" }) => api.po
 }).then((r) => r.data);
 export const deleteDocumentTravail = (id) => api.delete(`/documents/${id}`).then((r) => r.data);
 
-export const getBankAggregatorConfig = () => api.get("/settings/bank-aggregator").then((r) => r.data);
-export const setBankAggregatorConfig = (d) => api.put("/settings/bank-aggregator", d).then((r) => r.data);
+// Même chose que pour Odoo ci-dessus : stockage réel via /api/prefs, mais
+// pas de vraie synchronisation bancaire côté serveur pour l'instant.
+export const getBankAggregatorConfig = () => api.get("/prefs").then((r) => r.data?.bank_aggregator || {});
+export const setBankAggregatorConfig = (d) => api.put("/prefs", { bank_aggregator: d }).then((r) => r.data?.bank_aggregator || {});
 export const syncBankAggregator = () => api.post("/bank-aggregator/sync").then((r) => r.data);
+
+// Lot 9 — intégrations réelles : cycle de vie connecté, testé et révocable.
+export const getConnectionProviders = () => api.get("/connections/providers").then((r) => Array.isArray(r.data) ? r.data : []);
+export const getConnections = () => api.get("/connections").then((r) => Array.isArray(r.data) ? r.data : []);
+export const testConnection = (id) => api.post(`/connections/${id}/test`).then((r) => r.data);
+export const revokeConnection = (id) => api.delete(`/connections/${id}`).then((r) => r.data);
+export const createConnection = (provider, credentials, label) => api.post("/connections", { provider, credentials, label }).then((r) => r.data);
+
+
+// Lot 10 — historique persistant des simulations, toujours scopé au compte JWT.
+export const getSimulationHistory = () => api.get("/pilotage/simulations").then((r) => listOf(r.data));
+export const saveSimulationHistory = (payload) => api.post("/pilotage/simulations", payload).then((r) => r.data);
+
+// Lots 11–12 — second cerveau et capacités IA contrôlées.
+export const getMemoryList = () => api.get("/memory/list").then((r) => listOf(r.data));
+export const storeMemory = (content, category = "general") => api.post("/memory/store", { content, category, source: "manual" }).then((r) => r.data);
+export const deleteMemory = (id) => api.delete(`/memory/${id}`).then((r) => r.data);
+export const getAiPermissions = () => api.get("/prefs").then((r) => r.data?.ai_permissions || {});
+export const saveAiPermissions = (permissions) => api.put("/prefs", { ai_permissions: permissions }).then((r) => r.data?.ai_permissions || {});

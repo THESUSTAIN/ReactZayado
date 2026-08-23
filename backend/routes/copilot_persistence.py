@@ -13,9 +13,76 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from deps import get_current_user, User
-from routes.missing_apis import _delete_row, _insert_row, _list_rows
+from routes.missing_apis import _delete_row, _insert_row, _list_rows, _update_row
+from routes.vision_board import _get_kv
 
 router = APIRouter(prefix="/chat", tags=["copilot-persistence"])
+
+PILLARS_KEY = "vision_pillars"
+
+
+def _txt(v):
+    if isinstance(v, dict):
+        return v.get("fr") or v.get("en") or ""
+    return v or ""
+
+
+async def _generate_decisions_from_real_data(db: AsyncSession, user_id: str, session_id: str) -> list[dict]:
+    """Génère les décisions du jour à partir de vraies données (tâches réelles
+    de l'utilisateur, piliers stratégiques réels) — jamais un contenu inventé.
+    Ne recrée pas de doublon : une clé source (source_key) + jour ne produit
+    qu'une seule décision en attente à la fois.
+    """
+    from datetime import date as _date
+    today_iso = _date.today().isoformat()
+
+    existing = [row for row in await _list_rows(db, "user_copilot_decisions", user_id) if row.get("session_id") == session_id]
+    existing_keys_today = {
+        (row.get("source_key"), (row.get("created_at") or "")[:10])
+        for row in existing if row.get("status") == "pending"
+    }
+
+    candidates = []
+
+    # Signal 1 : tâches en retard (planned_for < aujourd'hui, non terminées) — réelles.
+    tasks = await _list_rows(db, "user_tasks", user_id)
+    overdue = [t for t in tasks if t.get("planned_for") and t["planned_for"] < today_iso and not t.get("done")]
+    overdue.sort(key=lambda t: t["planned_for"])
+    for t in overdue[:2]:
+        key = f"overdue:{t.get('id')}"
+        if (key, today_iso) in existing_keys_today:
+            continue
+        candidates.append({
+            "session_id": session_id, "title": f"Rattraper « {t.get('label') or 'une tâche'} »",
+            "detail": f"Cette tâche était planifiée le {t['planned_for']} et n'est toujours pas terminée.",
+            "source_key": key, "priority": "high", "why_now": "Cette échéance est déjà dépassée.",
+            "project_id": t.get("project_id") or "",
+            "task_payload": {"label": t.get("label"), "priority": t.get("priority") or "normal",
+                              "project_id": t.get("project_id"), "planned_for": today_iso},
+        })
+
+    # Signal 2 : piliers stratégiques réels avec progression faible (<30%).
+    pdata = await _get_kv(db, user_id, PILLARS_KEY)
+    pillars = (pdata or {}).get("pillars") or []
+    weak = [p for p in pillars if (p.get("progress") or 0) < 30]
+    for p in weak[:1]:
+        key = f"pillar:{p.get('id') or _txt(p.get('title'))}"
+        if (key, today_iso) in existing_keys_today:
+            continue
+        title_txt = _txt(p.get("title")) or "un pilier stratégique"
+        candidates.append({
+            "session_id": session_id, "title": f"Faire avancer « {title_txt} »",
+            "detail": f"Ce pilier est à {p.get('progress', 0)}% d'avancement — la progression la plus faible actuellement.",
+            "source_key": key, "priority": "normal", "why_now": "C'est le pilier le moins avancé de votre Vision.",
+            "pillar": p.get("id") or title_txt,
+            "task_payload": {"label": f"Avancer sur : {title_txt}", "priority": "normal", "vision_pillar_id": p.get("id") or title_txt},
+        })
+
+    created = []
+    for c in candidates:
+        row = await _insert_row(db, "user_copilot_decisions", user_id, {**c, "status": "pending"})
+        created.append(row)
+    return created
 
 
 class NewsItemIn(BaseModel):
@@ -107,6 +174,14 @@ async def delete_saved_news(item_id: str, session_id: str = "default", user: Use
 @router.get("/decision")
 async def get_decisions(session_id: str = "default", user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     items = [row for row in await _list_rows(db, "user_copilot_decisions", user.id) if row.get("session_id") == session_id]
+    pending = [row for row in items if row.get("status") == "pending"]
+    # Aucune décision en attente : on tente d'en générer à partir des vraies
+    # données de l'utilisateur (tâches en retard, piliers faibles). S'il n'y a
+    # aucun signal réel, la liste reste honnêtement vide — rien n'est inventé.
+    if not pending:
+        generated = await _generate_decisions_from_real_data(db, user.id, session_id)
+        if generated:
+            items = items + generated
     return {"decisions": items}
 
 

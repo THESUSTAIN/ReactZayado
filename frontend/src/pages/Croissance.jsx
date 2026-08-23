@@ -1,28 +1,22 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Activity, ArrowUpRight, BarChart3, Building2, CheckCircle2, ChevronRight,
   CircleDashed, CircleAlert, Clock3, Database, Facebook, FileText, Globe2,
   Inbox, Lightbulb, Link2, MessageSquare, Plug, Plus, Radar, RefreshCw,
-  Search, ShieldCheck, SlidersHorizontal, Target, Youtube,
+  Search, ShieldCheck, SlidersHorizontal, Target, Users, Youtube,
 } from "lucide-react";
 import { toast } from "sonner";
+import { createProspect, createValidationDraft, dismissDraft, getProspects, getValidationQueue, moveProspect, qualifyProspect, validateDraft } from "../lib/api";
 
 const VIEWS = [
+  { id: "crm", label: "Prospects", icon: Users },
   { id: "radar", label: "Radar du jour", icon: Radar },
   { id: "campaigns", label: "Campagnes & ICP", icon: Target },
   { id: "signals", label: "Signaux", icon: Activity },
-  { id: "crm", label: "CRM connecté", icon: Database },
   { id: "actions", label: "Actions", icon: MessageSquare },
   { id: "intelligence", label: "Intelligence", icon: Lightbulb },
 ];
 
-const SOURCES = [
-  { label: "HubSpot / Brevo / Pipedrive / Odoo", detail: "CRM de référence", icon: Database, status: "À connecter", tone: "gold" },
-  { label: "Google Business Profile", detail: "Avis, questions, posts", icon: Building2, status: "À connecter", tone: "blue" },
-  { label: "YouTube", detail: "Chaînes, vidéos, commentaires", icon: Youtube, status: "À connecter", tone: "red" },
-  { label: "Meta / Facebook", detail: "Pages et interactions autorisées", icon: Facebook, status: "À connecter", tone: "blue" },
-  { label: "Forums & communautés", detail: "Signaux publics avec preuve", icon: Globe2, status: "À définir", tone: "green" },
-];
 
 function SectionHeading({ eyebrow, title, description, action }) {
   return (
@@ -148,7 +142,7 @@ function CrmView({ onConfigure }) {
           <div className="flex items-center justify-between"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/14 bg-white/5"><Database size={18} className="text-[#E5C887]" /></div><div><h3 className="font-head font-semibold text-white">Aucun CRM connecté</h3><p className="text-xs text-white/45">Dernière synchronisation : —</p></div></div><StatusPill tone="muted">Non connecté</StatusPill></div>
           <div className="mt-5 grid grid-cols-2 gap-3 text-sm"><div className="rounded-xl border border-white/10 bg-white/[0.04] p-3"><p className="text-xs text-white/45">Contacts synchronisés</p><p className="mt-1 font-head text-xl text-white">—</p></div><div className="rounded-xl border border-white/10 bg-white/[0.04] p-3"><p className="text-xs text-white/45">Opportunités CRM</p><p className="mt-1 font-head text-xl text-white">—</p></div></div>
         </div>
-        <div className="glass p-5"><p className="text-xs font-bold uppercase tracking-[.13em] text-white/45">CRM compatibles</p><div className="mt-3 flex flex-wrap gap-2">{["HubSpot", "Brevo", "Pipedrive", "Odoo"].map((name) => <span key={name} className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.05] px-2.5 py-1 text-[11px] font-semibold text-white/68"><Database size={12} className="text-[#E5C887]" /> {name} <span className="text-white/38">· À connecter</span></span>)}</div><p className="mt-5 text-xs font-bold uppercase tracking-[.13em] text-white/45">Ce qui sera synchronisé</p><div className="mt-4 space-y-3">{["Créer une fiche contact ou entreprise", "Créer ou mettre à jour un deal", "Ajouter une note, une tâche ou un brouillon", "Lire les statuts et les données autorisées"].map((line) => <div className="flex gap-3" key={line}><CheckCircle2 size={16} className="mt-0.5 shrink-0 text-[#E5C887]" /><p className="text-sm text-white/62">{line}</p></div>)}</div></div>
+        <div className="glass p-5"><p className="text-xs font-bold uppercase tracking-[.13em] text-white/45">Gestion du CRM</p><p className="mt-2 text-sm leading-6 text-white/55">Le choix du CRM, les autorisations et les opérations de connexion sont centralisés dans Paramètres → Intégrations.</p><button onClick={onConfigure} className="mt-4 inline-flex items-center gap-2 rounded-xl border border-[#E5C887]/45 bg-[#E5C887]/10 px-4 py-2.5 text-sm font-semibold text-[#F4D990]"><Plug size={15} /> Ouvrir Paramètres</button></div>
       </div>
       <SyncNotice />
     </div>
@@ -174,13 +168,36 @@ function IntelligenceView({ onConfigure }) {
         <div className="glass p-5"><Globe2 size={18} className="text-[#E5C887]" /><h3 className="mt-4 font-head font-semibold text-white">Questions du marché</h3><p className="mt-2 text-sm leading-6 text-white/55">Les questions répétées deviennent des pistes d’offre, de contenu ou de réponse utile.</p><StatusPill tone="muted">Aucune source connectée</StatusPill></div>
         <div className="glass p-5"><ArrowUpRight size={18} className="text-[#E5C887]" /><h3 className="mt-4 font-head font-semibold text-white">Opportunités éditoriales</h3><p className="mt-2 text-sm leading-6 text-white/55">Identifiez un sujet utile avant de préparer un contenu ou une contribution conforme aux règles de la communauté.</p><StatusPill tone="muted">À configurer</StatusPill></div>
       </div>
-      <div className="glass p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[.13em] text-white/45">Sources disponibles</p><p className="mt-1 text-sm text-white/55">Chaque connecteur reste désactivé tant que vous ne l’avez pas autorisé.</p></div><ShieldCheck size={19} className="text-[#E5C887]" /></div><div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{SOURCES.map(({ label, detail, icon: Icon, status, tone }) => <div className="rounded-xl border border-white/10 bg-white/[0.035] p-3" key={label}><div className="flex items-start justify-between gap-2"><Icon size={17} className="text-[#E5C887]" /><StatusPill tone={tone}>{status}</StatusPill></div><p className="mt-3 text-sm font-semibold text-white">{label}</p><p className="mt-1 text-xs text-white/48">{detail}</p></div>)}</div></div>
+      <div className="glass p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[.13em] text-white/45">Sources du Radar</p><p className="mt-1 text-sm text-white/55">Les sources et autorisations se gèrent exclusivement dans Paramètres → Intégrations.</p></div><ShieldCheck size={19} className="text-[#E5C887]" /></div><button onClick={onConfigure} className="mt-4 inline-flex items-center gap-2 rounded-xl border border-[#E5C887]/45 bg-[#E5C887]/10 px-4 py-2.5 text-sm font-semibold text-[#F4D990]"><Plug size={15} /> Gérer les intégrations</button></div>
     </div>
   );
 }
 
+function ValidationActionsView() {
+  const [items, setItems] = useState([]); const [draft, setDraft] = useState({ title: "", excerpt: "" }); const [loading, setLoading] = useState(true);
+  const load = async () => { try { const data = await getValidationQueue(); setItems(data?.items || []); } catch (err) { if (![401, 403].includes(err?.response?.status)) toast.error("Impossible de charger la file de validation."); } finally { setLoading(false); } };
+  useEffect(() => { load(); }, []);
+  const add = async () => { if (!draft.title.trim()) return toast.error("Le titre du brouillon est requis."); try { await createValidationDraft({ tag: "Croissance", title: draft.title.trim(), excerpt: draft.excerpt.trim() }); setDraft({ title: "", excerpt: "" }); await load(); toast.success("Brouillon placé dans la file de validation."); } catch { toast.error("Impossible de créer le brouillon."); } };
+  const act = async (id, validate) => { try { await (validate ? validateDraft(id) : dismissDraft(id)); await load(); toast.success(validate ? "Brouillon validé." : "Brouillon reporté."); } catch { toast.error("Action de validation impossible."); } };
+  return <div className="space-y-5"><SectionHeading eyebrow="Validation humaine" title="Préparer, puis décider." description="Les brouillons sont stockés dans une file personnelle. Rien n’est envoyé ni synchronisé sans votre action explicite." action={<StatusPill tone="muted">{items.length} en attente</StatusPill>} /><div className="glass p-5"><div className="grid gap-2 md:grid-cols-[1fr_1.5fr_auto]"><input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Titre du brouillon" className="rounded-xl border border-white/15 bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/35" /><textarea value={draft.excerpt} onChange={(e) => setDraft({ ...draft, excerpt: e.target.value })} placeholder="Contenu ou contexte à relire" className="min-h-11 rounded-xl border border-white/15 bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/35" /><button onClick={add} className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#E5C887] px-4 py-2.5 text-sm font-semibold text-[#0B1F3A]"><Plus size={15} /> Ajouter</button></div></div>{loading ? <div className="glass p-8 text-center text-sm text-white/55">Chargement de la file…</div> : items.length ? <div className="grid gap-3">{items.map((item) => <article key={item.id} className="glass flex flex-col gap-4 p-5 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><StatusPill tone="gold">{item.tag}</StatusPill><span className="text-[11px] text-white/40">{item.time}</span></div><h3 className="mt-2 break-words font-head font-semibold text-white">{item.title}</h3><p className="mt-1 break-words text-sm leading-6 text-white/58">{item.excerpt || "Aucun contenu fourni."}</p></div><div className="flex shrink-0 gap-2"><button onClick={() => act(item.id, true)} className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-300/15 px-3 py-2 text-xs font-semibold text-emerald-200"><CheckCircle2 size={14} /> Approuver</button><button onClick={() => act(item.id, false)} className="inline-flex items-center gap-1.5 rounded-xl border border-white/15 px-3 py-2 text-xs font-semibold text-white/65"><Clock3 size={14} /> Reporter</button></div></article>)}</div> : <EmptyPanel icon={MessageSquare} title="Aucun brouillon à valider" text="Créez un brouillon depuis Croissance ou le Copilote. Il restera en attente jusqu’à votre décision." />}</div>;
+}
+
+function PipelineMvpView() {
+  const stages = ["Nouveaux", "Contactés", "Négociation", "Gagnés", "Perdus"];
+  const [items, setItems] = useState([]); const [loading, setLoading] = useState(true); const [form, setForm] = useState({ nom: "", entreprise: "", email: "", notes: "" });
+  const load = async () => { setLoading(true); try { setItems(await getProspects()); } catch (err) { if (![401, 403].includes(err?.response?.status)) toast.error("Impossible de charger le pipeline."); } finally { setLoading(false); } };
+  useEffect(() => { load(); }, []);
+  const add = async () => { if (!form.nom.trim()) return toast.error("Le nom du prospect est requis."); try { await createProspect(form); setForm({ nom: "", entreprise: "", email: "", notes: "" }); await load(); toast.success("Prospect ajouté au pipeline."); } catch { toast.error("Impossible d’ajouter ce prospect."); } };
+  const move = async (id, stage) => { try { await moveProspect(id, stage); await load(); } catch { toast.error("Déplacement impossible."); } };
+  const qualify = async (lead) => { if (!lead.notes?.trim()) return toast.error("Ajoutez les notes du prospect avant la qualification."); try { const result = await qualifyProspect(lead.id, lead.notes); toast.success(`Score calculé : ${result.qualification?.total ?? 0}/100`); await load(); } catch (err) { toast.error(err?.response?.data?.detail || "Qualification indisponible."); } };
+  return <div className="space-y-5"><SectionHeading eyebrow="Pipeline commercial" title="Un pipeline lisible, validé par vous." description="Les prospects sont enregistrés dans votre espace. Aucun message ni synchronisation CRM n’est envoyé automatiquement." action={<StatusPill tone="muted">{items.length} prospect(s)</StatusPill>} />
+    <div className="glass p-5"><div className="grid gap-2 md:grid-cols-[1fr_1fr_1fr_1.4fr_auto]"><input value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} placeholder="Nom du prospect" className="rounded-xl border border-white/15 bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/35" /><input value={form.entreprise} onChange={(e) => setForm({ ...form, entreprise: e.target.value })} placeholder="Entreprise" className="rounded-xl border border-white/15 bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/35" /><input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Email facultatif" className="rounded-xl border border-white/15 bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/35" /><input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Notes réelles pour qualification" className="rounded-xl border border-white/15 bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/35" /><button onClick={add} className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#E5C887] px-4 py-2.5 text-sm font-semibold text-[#0B1F3A]"><Plus size={15} /> Ajouter</button></div></div>
+    {loading ? <div className="glass p-8 text-center text-sm text-white/55"><RefreshCw size={17} className="mx-auto mb-2 animate-spin text-[#E5C887]" />Chargement du pipeline…</div> : <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{items.length ? items.map((lead) => <article key={lead.id} className="glass min-w-0 p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="truncate font-head font-semibold text-white">{lead.nom}</h3><p className="truncate text-xs text-white/50">{lead.entreprise || "Entreprise non précisée"}{lead.email ? ` · ${lead.email}` : ""}</p></div><StatusPill tone={lead.qualification ? "gold" : "muted"}>{lead.qualification ? `${lead.qualification.total}/100` : "À qualifier"}</StatusPill></div><select value={lead.etape} onChange={(e) => move(lead.id, e.target.value)} className="mt-4 w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-xs text-white/75">{stages.map((stage) => <option key={stage} value={stage}>{stage}</option>)}</select><textarea defaultValue={lead.notes || lead.snippet || ""} onBlur={(e) => { lead.notes = e.target.value; }} placeholder="Notes factuelles du prospect…" className="mt-3 min-h-20 w-full resize-y rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-xs text-white placeholder:text-white/35" /><button onClick={() => qualify(lead)} className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-[#E5C887]/40 bg-[#E5C887]/10 px-3 py-2 text-xs font-semibold text-[#F4D990]"><CheckCircle2 size={14} /> Qualifier avec validation</button>{lead.qualification?.band && <p className="mt-2 text-[11px] text-white/50">{lead.qualification.band} · {lead.qualification.prochaine_action || "Prochaine action à préciser."}</p>}</article>) : <div className="glass p-8 text-center text-sm text-white/55 md:col-span-2 xl:col-span-3"><Inbox size={20} className="mx-auto mb-2 text-[#E5C887]" />Aucun prospect réel enregistré. Ajoutez votre première fiche pour démarrer.</div>}</div>}
+  </div>;
+}
+
 export default function Croissance() {
-  const [view, setView] = useState("radar");
+  const [view, setView] = useState("crm");
   const active = useMemo(() => VIEWS.find((item) => item.id === view) || VIEWS[0], [view]);
   const configure = () => toast.info("Les connexions seront configurables dans Paramètres → Intégrations. Aucun connecteur n’est actif pour le moment.");
 
@@ -188,8 +205,8 @@ export default function Croissance() {
     radar: <RadarView onConfigure={configure} />,
     campaigns: <CampaignsView onConfigure={configure} />,
     signals: <SignalsView onConfigure={configure} />,
-    crm: <CrmView onConfigure={configure} />,
-    actions: <ActionsView onConfigure={configure} />,
+    crm: <PipelineMvpView />,
+    actions: <ValidationActionsView />,
     intelligence: <IntelligenceView onConfigure={configure} />,
   };
 
@@ -200,7 +217,7 @@ export default function Croissance() {
           <div className="absolute right-0 top-0 h-44 w-44 rounded-full bg-[#E5C887]/10 blur-3xl" />
           <div className="relative flex flex-wrap items-start justify-between gap-4">
             <div className="flex gap-3"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#E5C887]/35 bg-[#E5C887]/10 text-[#E5C887]"><Radar size={20} /></div><div><p className="text-[11px] font-bold uppercase tracking-[.17em] text-[#E5C887]">Croissance guidée</p><h1 className="font-head text-xl font-semibold text-white">Radar de Croissance</h1><p className="mt-1 max-w-xl text-sm text-white/56">Détecter, comprendre, préparer, puis synchroniser vers votre CRM.</p></div></div>
-            <div className="flex items-center gap-2"><StatusPill tone="muted"><CircleDashed size={11} className="mr-1" /> CRM non connecté</StatusPill><button onClick={configure} className="inline-flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold text-white/75 hover:bg-white/10"><Plug size={14} /> Connecter</button></div>
+            <div className="flex items-center gap-2"><StatusPill tone="muted"><CircleDashed size={11} className="mr-1" /> CRM géré dans Paramètres</StatusPill><button onClick={configure} className="inline-flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold text-white/75 hover:bg-white/10"><Plug size={14} /> Gérer</button></div>
           </div>
         </div>
         <div className="relative flex gap-1 overflow-x-auto border-t border-white/10 px-3 py-2 sm:px-4">
