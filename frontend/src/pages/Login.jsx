@@ -147,10 +147,12 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-10" style={{ backgroundColor: "var(--navy-900)" }} data-testid="login-page">
-      {/* Même fond que le reste de l'application (classe .sky-bg, index.css) —
-          garantit le bleu exact de Cours-main au lieu d'un dégradé recopié
-          à la main qui pouvait diverger. */}
+    <div className="min-h-dvh flex items-center justify-center px-4 py-10" data-testid="login-page">
+      {/* Même fond que le reste de l'application (classe .sky-bg, index.css).
+          Avant : un backgroundColor inline sur ce conteneur passait AU-DESSUS
+          du dégradé .sky-bg (même contexte d'empilement, priorité de
+          cascade) — d'où le bleu plat trop sombre signalé, différent du
+          reste de l'app. Retiré : .sky-bg fixed suffit, comme dans Layout.jsx. */}
       <div className="fixed inset-0 -z-10 sky-bg" aria-hidden="true" />
 
       <div className="w-full max-w-sm">
@@ -248,16 +250,19 @@ export default function Login() {
             <p className="mt-3 text-center text-[11px] text-white/35" data-testid="login-last-method">{t.lastLogin} : {lastMethodLabel}</p>
           )}
 
-          <div className="my-4 h-px bg-white/10" />
-
-          <button onClick={() => openDemo("membre@thesustain.net", "thesustain")} disabled={loading} data-testid="login-thesustain-btn"
-            className="flex w-full items-center justify-center gap-2 rounded-xl border-0 bg-transparent py-2.5 text-sm font-medium text-[#DEC2A3] hover:text-[#E5C887] hover:bg-[#DEC2A3]/10 disabled:opacity-60">
-            {t.thesustain}
-          </button>
-          <button onClick={() => openDemo("thomas@zayado.fr", "demo")} disabled={loading} data-testid="login-guest-btn"
-            className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-transparent py-2.5 text-sm font-medium text-white/60 hover:text-white/85 hover:bg-white/5 disabled:opacity-60">
-            {t.testAccount}
-          </button>
+          {process.env.NODE_ENV !== "production" && (
+            <>
+              <div className="my-4 h-px bg-white/10" />
+              <button onClick={() => openDemo("membre@thesustain.net", "thesustain")} disabled={loading} data-testid="login-thesustain-btn"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#DEC2A3]/25 bg-[#DEC2A3]/5 py-2.5 text-sm font-medium text-[#DEC2A3] hover:text-[#E5C887] hover:bg-[#DEC2A3]/10 disabled:opacity-60">
+                {t.thesustain}
+              </button>
+              <button onClick={() => openDemo("thomas@zayado.fr", "demo")} disabled={loading} data-testid="login-guest-btn"
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-transparent py-2.5 text-sm font-medium text-white/60 hover:text-white/85 hover:bg-white/5 disabled:opacity-60">
+                {t.testAccount}
+              </button>
+            </>
+          )}
         </div>
 
         <p className="mt-5 flex items-center justify-center gap-1.5 text-[11px] text-white/40">
