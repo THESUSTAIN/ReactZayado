@@ -177,9 +177,9 @@ function CoursInspirationUrl() {
 const Opt = ({ active, onClick, Icon, label, testid }) => (
   <button onClick={onClick} data-testid={testid}
     className="zbtn" style={{ flex: 1, minWidth: 150, height: 56, justifyContent: "flex-start", gap: 10,
-      border: active ? "2px solid #C9A449" : "1px solid var(--glass-border)", position: "relative" }}>
+      border: active ? "2px solid #DEC2A3" : "1px solid var(--glass-border)", position: "relative" }}>
     <Icon size={18} /> {label}
-    {active && <Check size={16} style={{ position: "absolute", right: 12, color: "#C9A449" }} />}
+    {active && <Check size={16} style={{ position: "absolute", right: 12, color: "#DEC2A3" }} />}
   </button>
 );
 
@@ -373,7 +373,7 @@ function IntegrationCard({ item, onSaved }) {
 function Toggle({ on, onChange, testid }) {
   return (
     <button onClick={() => onChange(!on)} data-testid={testid}
-      style={{ position: "relative", width: 44, height: 24, borderRadius: 12, border: "none", cursor: "pointer", background: on ? "#C9A449" : "var(--glass-soft)", transition: "background 0.2s", flexShrink: 0 }}>
+      style={{ position: "relative", width: 44, height: 24, borderRadius: 12, border: "none", cursor: "pointer", background: on ? "#DEC2A3" : "var(--glass-soft)", transition: "background 0.2s", flexShrink: 0 }}>
       <span style={{ position: "absolute", top: 2, left: on ? 22 : 2, width: 20, height: 20, borderRadius: "50%", background: "white", transition: "left 0.2s", display: "block" }} />
     </button>
   );
@@ -538,13 +538,13 @@ function InspirationSection({ prefs, setPref }) {
           <div style={{
             position: "relative", width: "100%", maxWidth: 320, height: 180, borderRadius: 16, overflow: "hidden",
             backgroundImage: `url(${previewUrl})`, backgroundSize: "cover", backgroundPosition: "center",
-            border: "2px solid #C9A449",
+            border: "2px solid #DEC2A3",
           }}>
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(11,31,58,0.15), rgba(11,31,58,0.75))" }} />
             <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: 14 }}>
               <p style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontStyle: "italic", color: "#F6F2EA", fontSize: 14, margin: 0 }}>« Aperçu de votre écran d'inspiration »</p>
             </div>
-            <span className="zchip" style={{ position: "absolute", top: 10, right: 10, background: "rgba(201,164,73,0.9)", color: "#0B1F3A", fontSize: 10 }}>Aperçu</span>
+            <span className="zchip" style={{ position: "absolute", top: 10, right: 10, background: "rgba(222, 194, 163,0.9)", color: "#0B1F3A", fontSize: 10 }}>Aperçu</span>
           </div>
           <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
             <button className="zbtn zbtn-primary" style={{ height: 36, gap: 6, fontSize: 13 }} disabled={uploading}
@@ -560,7 +560,7 @@ function InspirationSection({ prefs, setPref }) {
         <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
           <div style={{
             width: 96, height: 96, borderRadius: 14, overflow: "hidden",
-            border: currentImage ? "2px solid #C9A449" : "1px dashed var(--glass-border)",
+            border: currentImage ? "2px solid #DEC2A3" : "1px dashed var(--glass-border)",
             background: "var(--glass-soft)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
           }}>
             {currentImage ? (
@@ -689,18 +689,18 @@ function FacturationSection() {
           <div key={p.id} style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",
             padding: p.highlight ? "18px 16px" : "12px 14px", borderRadius: 10,
-            border: p.current ? "2px solid #C9A449" : p.highlight ? "1px solid rgba(201,164,73,0.5)" : "1px solid var(--glass-border)",
-            background: p.current ? "rgba(201,164,73,0.06)" : p.highlight ? "linear-gradient(135deg, rgba(201,164,73,0.1), rgba(30,60,130,0.15))" : "var(--glass-soft)",
+            border: p.current ? "2px solid #DEC2A3" : p.highlight ? "1px solid rgba(222, 194, 163,0.5)" : "1px solid var(--glass-border)",
+            background: p.current ? "rgba(222, 194, 163,0.06)" : p.highlight ? "linear-gradient(135deg, rgba(222, 194, 163,0.1), rgba(30,60,130,0.15))" : "var(--glass-soft)",
           }} data-testid={`plan-${p.id}`}>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontWeight: 700, color: p.current ? "#C9A449" : "var(--txt)", fontSize: p.highlight ? 16 : 14 }}>{p.label}</span>
+                <span style={{ fontWeight: 700, color: p.current ? "#DEC2A3" : "var(--txt)", fontSize: p.highlight ? 16 : 14 }}>{p.label}</span>
                 <span style={{ fontSize: p.highlight ? 15 : 13, color: "var(--muted)" }}>{p.price}</span>
               </div>
-              <p style={{ fontSize: p.highlight ? 13.5 : 12.5, fontWeight: 600, color: "#C9A449", margin: "4px 0 0" }}>{p.promise}</p>
+              <p style={{ fontSize: p.highlight ? 13.5 : 12.5, fontWeight: 600, color: "#DEC2A3", margin: "4px 0 0" }}>{p.promise}</p>
               <p className="muted" style={{ fontSize: 12, marginTop: 2 }}>{p.desc}</p>
             </div>
-            {p.current ? <span className="zchip" style={{ background: "rgba(201,164,73,0.15)", color: "#C9A449", border: "1px solid rgba(201,164,73,0.3)" }}>Actif</span> : <button onClick={() => choosePlan(p.id)} className="zbtn" style={{ height: 32, padding: "0 12px", fontSize: 12 }} data-testid={`plan-${p.id}-choose`}>Choisir</button>}
+            {p.current ? <span className="zchip" style={{ background: "rgba(222, 194, 163,0.15)", color: "#DEC2A3", border: "1px solid rgba(222, 194, 163,0.3)" }}>Actif</span> : <button onClick={() => choosePlan(p.id)} className="zbtn" style={{ height: 32, padding: "0 12px", fontSize: 12 }} data-testid={`plan-${p.id}-choose`}>Choisir</button>}
           </div>
         ))}
       </div>
@@ -810,7 +810,7 @@ export function HelpModal({ path, onClose }) {
           onClick={e => e.stopPropagation()}>
           <button onClick={onClose} style={{ position: "absolute", top: 14, right: 14, background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: 4 }}><X size={18} /></button>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(201,164,73,0.12)", border: "1px solid rgba(201,164,73,0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(222, 194, 163,0.12)", border: "1px solid rgba(222, 194, 163,0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <span style={{ fontSize: 16 }}>💡</span>
             </div>
             <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--txt)", margin: 0 }}>{help.title}</h3>
@@ -818,7 +818,7 @@ export function HelpModal({ path, onClose }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {help.tips.map((tip, i) => (
               <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                <span style={{ width: 20, height: 20, borderRadius: "50%", background: "rgba(201,164,73,0.15)", color: "#C9A449", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>{i + 1}</span>
+                <span style={{ width: 20, height: 20, borderRadius: "50%", background: "rgba(222, 194, 163,0.15)", color: "#DEC2A3", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>{i + 1}</span>
                 <p style={{ fontSize: 13, color: "var(--txt)", lineHeight: 1.5, margin: 0 }}>{tip}</p>
               </div>
             ))}
@@ -1013,7 +1013,7 @@ export function PageOnboardingModal({ path, onClose }) {
                   <span style={{
                     flexShrink: 0,
                     width: 22, height: 22, lineHeight: "22px", textAlign: "center",
-                    borderRadius: 999, background: "#C9A449", color: "#0a1f4e",
+                    borderRadius: 999, background: "#DEC2A3", color: "#0a1f4e",
                     fontSize: 11, fontWeight: 800,
                     marginTop: 4,
                   }}>{i + 1}</span>
@@ -1023,10 +1023,10 @@ export function PageOnboardingModal({ path, onClose }) {
                     <div style={{
                       display: "inline-flex", alignItems: "center", gap: 7,
                       padding: "6px 12px",
-                      background: "linear-gradient(180deg, rgba(201,164,73,0.22) 0%, rgba(201,164,73,0.14) 100%)",
-                      border: "1px solid rgba(201,164,73,0.55)",
+                      background: "linear-gradient(180deg, rgba(222, 194, 163,0.22) 0%, rgba(222, 194, 163,0.14) 100%)",
+                      border: "1px solid rgba(222, 194, 163,0.55)",
                       borderRadius: 999,
-                      boxShadow: "0 2px 8px rgba(201,164,73,0.15), inset 0 1px 0 rgba(255,255,255,0.08)",
+                      boxShadow: "0 2px 8px rgba(222, 194, 163,0.15), inset 0 1px 0 rgba(255,255,255,0.08)",
                       marginBottom: 6,
                       maxWidth: "100%",
                     }}>
@@ -1034,7 +1034,7 @@ export function PageOnboardingModal({ path, onClose }) {
                         <span style={{
                           display: "flex", alignItems: "center", justifyContent: "center",
                           width: 22, height: 22, borderRadius: 999,
-                          background: "#C9A449", color: "#0a1f4e",
+                          background: "#DEC2A3", color: "#0a1f4e",
                           flexShrink: 0,
                         }}>
                           <Icon size={13} strokeWidth={2.5} />
@@ -1068,7 +1068,7 @@ export function PageOnboardingModal({ path, onClose }) {
                         fontSize: 12, color: "var(--muted)", lineHeight: 1.5, margin: 0,
                         fontStyle: "italic", opacity: 0.85,
                       }}>
-                        <span style={{ color: "#C9A449", fontStyle: "normal", fontWeight: 700 }}>✦ Astuce : </span>{a.tip}
+                        <span style={{ color: "#DEC2A3", fontStyle: "normal", fontWeight: 700 }}>✦ Astuce : </span>{a.tip}
                       </p>
                     )}
                   </div>

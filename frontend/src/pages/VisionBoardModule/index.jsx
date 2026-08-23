@@ -385,7 +385,7 @@ function TabCanvas({ bgImage, onBack }) {
         title: { fr: "Nouvelle image", en: "New image" } };
     } else if (toolId === "color") {
       note = { id, type: "color", x, y, w: 220, h: 100,
-        title: { fr: "Palette", en: "Palette" }, colors: ["#0a1f4e", "#4a6a9e", "#C9A449", "#E5C887"] };
+        title: { fr: "Palette", en: "Palette" }, colors: ["#0a1f4e", "#4a6a9e", "#DEC2A3", "#F1E2CC"] };
     } else if (toolId === "check") {
       note = { id, type: "note", x, y, w: 220, h: 130, color: "#2FB89A",
         title: { fr: "Ma liste", en: "My list" },
@@ -416,7 +416,7 @@ function TabCanvas({ bgImage, onBack }) {
       type: "ai-doc",
       x, y,
       w: 320, h: 260,
-      color: "#C9A449",
+      color: "#DEC2A3",
       docType: docType || "note",
       title: { fr: title, en: title },
       body: { fr: content, en: content },
@@ -567,7 +567,7 @@ function TabCanvas({ bgImage, onBack }) {
       const { quote, author } = await visionApi.inspire();
       const { x, y } = spawn();
       const note = {
-        id: `u_${Date.now()}`, type: "note", x, y, w: 240, h: 130, color: "#C9A449",
+        id: `u_${Date.now()}`, type: "note", x, y, w: 240, h: 130, color: "#DEC2A3",
         title: { fr: "Citation", en: "Quote" },
         body: { fr: `“${quote}”\n— ${author}`, en: `“${quote}”\n— ${author}` },
       };
@@ -651,7 +651,7 @@ function TabCanvas({ bgImage, onBack }) {
       pdf.addImage(imgData, "JPEG", x, y, w, h, undefined, "FAST");
 
       // Titre bas
-      pdf.setTextColor(201, 164, 73);
+      pdf.setTextColor(222, 194, 163);
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(22);
       pdf.text("MA VISION", pageW / 2, pageH - 16, { align: "center" });
@@ -1270,7 +1270,7 @@ function TabPillars() {
   };
 
   // Fix — bouton "+ Ajouter un pilier" n'avait aucun handler (audit fichier par fichier).
-  const PILLAR_COLORS = ["#C9A449", "#1B2A4A", "#3E7C59", "#8A4FFF"];
+  const PILLAR_COLORS = ["#DEC2A3", "#1B2A4A", "#3E7C59", "#8A4FFF"];
   const addPillar = () => {
     const title = (window.prompt("Nom du nouveau pilier stratégique ?") || "").trim();
     if (!title) return;
@@ -1305,7 +1305,7 @@ function TabPillars() {
         <div className="flex items-center gap-3">
           {/* Fix #1 — score de complétion réel, visible en permanence */}
           <div className="flex items-center gap-2 rounded-full bg-[var(--app-surface-2)] px-4 py-2" data-testid="pillars-global-score">
-            <Ring value={globalScore} color="#C9A449" />
+            <Ring value={globalScore} color="#DEC2A3" />
             <span className="text-xs text-[var(--app-text-muted)]">Vision réalisée</span>
           </div>
           <button onClick={addPillar} data-testid="add-pillar-btn"
@@ -2134,7 +2134,7 @@ function TabSwot() {
   ];
 
   const VERDICT_LABELS = { go: "Feu vert", pivot: "À ajuster", abandon: "À reconsidérer" };
-  const VERDICT_COLORS = { go: "#5e8a5a", pivot: "#C9A449", abandon: "#c26b4a" };
+  const VERDICT_COLORS = { go: "#5e8a5a", pivot: "#DEC2A3", abandon: "#c26b4a" };
 
   if (loading) {
     return (
@@ -2181,7 +2181,7 @@ function TabSwot() {
                 <div className="relative w-[76px] h-[76px] shrink-0">
                   <svg width="76" height="76" viewBox="0 0 76 76" className="-rotate-90">
                     <circle cx="38" cy="38" r="32" stroke="var(--app-border)" strokeWidth="7" fill="none" />
-                    <circle cx="38" cy="38" r="32" stroke="#C9A449" strokeWidth="7" fill="none" strokeLinecap="round"
+                    <circle cx="38" cy="38" r="32" stroke="#DEC2A3" strokeWidth="7" fill="none" strokeLinecap="round"
                       strokeDasharray={2 * Math.PI * 32}
                       strokeDashoffset={(2 * Math.PI * 32) * (1 - swot.score / 100)} />
                   </svg>

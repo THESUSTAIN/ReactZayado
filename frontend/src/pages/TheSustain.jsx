@@ -34,7 +34,7 @@ export default function TheSustain() {
       <section className="glass p-6 border border-[#DEC2A3]/30" data-testid="thesustain-discernment">
         <div className="flex items-center gap-2 text-[#DEC2A3] text-[11px] font-semibold uppercase tracking-[.14em]"><BookOpen size={15} /> Temps de discernement</div>
         <blockquote className="font-head text-lg sm:text-xl text-white mt-3 leading-relaxed max-w-3xl">« Tout ce que vous faites, faites-le de tout votre cœur, comme pour le Seigneur. »</blockquote>
-        <p className="text-[#E5C887] text-sm mt-2 font-medium">Colossiens 3:23</p>
+        <p className="text-[#F1E2CC] text-sm mt-2 font-medium">Colossiens 3:23</p>
         <p className="text-white/55 text-sm mt-3 max-w-3xl leading-relaxed">Cette référence est proposée ici, dans l’espace TheSustain activé volontairement. Elle peut nourrir votre discernement ; elle ne remplace ni votre responsabilité, ni une décision professionnelle éclairée.</p>
       </section>
     </div>

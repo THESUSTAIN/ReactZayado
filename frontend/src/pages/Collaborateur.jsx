@@ -89,7 +89,7 @@ export default function Collaborateur() {
 
       <section className="glass p-6" data-testid="collaborateur-roadmap">
         <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/[.06] text-[#E5C887]"><Map size={19} /></span>
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/[.06] text-[#F1E2CC]"><Map size={19} /></span>
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-[#DEC2A3]">Roadmap d’accompagnement</p>
             <h2 className="font-head mt-1 text-xl font-semibold text-white">Votre demande devient une feuille de route à valider.</h2>
@@ -97,7 +97,7 @@ export default function Collaborateur() {
           </div>
         </div>
         <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          {["Clarifier votre objectif", "Cadrer le périmètre et le délai", "Valider avant l’exécution"].map((label, index) => <div key={label} className="flex items-center gap-3 rounded-xl border border-white/12 bg-white/[.04] p-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#DEC2A3]/15 text-xs font-bold text-[#E5C887]">{index + 1}</span><span className="text-sm text-white/75">{label}</span></div>)}
+          {["Clarifier votre objectif", "Cadrer le périmètre et le délai", "Valider avant l’exécution"].map((label, index) => <div key={label} className="flex items-center gap-3 rounded-xl border border-white/12 bg-white/[.04] p-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#DEC2A3]/15 text-xs font-bold text-[#F1E2CC]">{index + 1}</span><span className="text-sm text-white/75">{label}</span></div>)}
         </div>
       </section>
     </div>

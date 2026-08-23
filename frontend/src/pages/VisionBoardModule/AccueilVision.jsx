@@ -12,7 +12,7 @@ import AlignmentCelebration from "../../components/AlignmentCelebration";
 
 const PILLAR_COLOR = {
   Vision: "#E08A4A", Exécution: "#3B6FE0", Finance: "#2FB89A",
-  Impact: "#C9A449", Énergie: "#E0669A", Croissance: "#4AC0E0",
+  Impact: "#DEC2A3", Énergie: "#E0669A", Croissance: "#4AC0E0",
 };
 
 const CARD_ICON = { Vision: Compass, Objectif: Target, CA: Wallet, Impact: TrendingUp, Client: Users };
@@ -21,7 +21,7 @@ function PillarRing({ name, value }) {
   const numericValue = Number.isFinite(Number(value)) ? Number(value) : 0;
   const r = 25;
   const circumference = 2 * Math.PI * r;
-  const color = PILLAR_COLOR[name] || "#C9A449";
+  const color = PILLAR_COLOR[name] || "#DEC2A3";
   return (
     <div className="vision-pillar-ring" data-testid={`pillar-${name}`}>
       <div className="vision-pillar-ring-graphic">
@@ -174,8 +174,8 @@ export default function AccueilVision({ onGoCanvas, onNavigateTab }) {
           ].map((item) => {
             const Icon = item.icon;
             return (
-              <button key={item.key} type="button" onClick={() => openInspiration(item.ask)} data-testid={`vision-resource-${item.key}`} className="group rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left transition hover:border-[#C9A449]/50 hover:bg-white/[0.07]">
-                <span className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-[#C9A449]/15 text-[#E8C96A]"><Icon size={16} /></span>
+              <button key={item.key} type="button" onClick={() => openInspiration(item.ask)} data-testid={`vision-resource-${item.key}`} className="group rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left transition hover:border-[#DEC2A3]/50 hover:bg-white/[0.07]">
+                <span className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-[#DEC2A3]/15 text-[#E8C96A]"><Icon size={16} /></span>
                 <strong className="block text-sm text-white">{item.title}</strong>
                 <span className="mt-1 block text-xs leading-relaxed text-white/55">{item.text}</span>
                 <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#E8C96A]">Ouvrir dans le Copilote <ArrowRight size={13} /></span>

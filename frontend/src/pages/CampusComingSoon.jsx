@@ -26,12 +26,12 @@ export default function CampusComingSoon() {
       </nav>
       <section className="glass flex min-h-[390px] items-center justify-center p-8 text-center sm:p-12">
         <div className="max-w-xl">
-          <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-[#DEC2A3]/30 bg-[#DEC2A3]/10 text-[#E5C887]"><GraduationCap size={30} /></span>
+          <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-[#DEC2A3]/30 bg-[#DEC2A3]/10 text-[#F1E2CC]"><GraduationCap size={30} /></span>
           <p className="mt-6 text-[11px] font-semibold uppercase tracking-[.18em] text-[#DEC2A3]">Campus</p>
           <h2 className="font-head mt-3 text-3xl font-semibold text-white sm:text-4xl">Bientôt disponible</h2>
           <p className="mx-auto mt-4 max-w-lg text-sm leading-7 text-white/60">Cet espace est actuellement en préparation. Les missions, le Coach IA et la progression ne sont pas encore ouverts aux utilisateurs.</p>
-          <div className="mx-auto mt-6 flex max-w-md items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[.04] px-4 py-3 text-xs text-white/50"><LockKeyhole size={15} className="text-[#E5C887]" /> Accès désactivé jusqu’à la prochaine version.</div>
-          <button type="button" disabled={!isProjectAdmin} onClick={() => isProjectAdmin && navigate("/campus/missions")} className="mt-5 inline-flex items-center gap-2 rounded-xl border border-[#DEC2A3]/25 px-4 py-2.5 text-sm font-semibold text-[#E5C887] disabled:cursor-not-allowed disabled:opacity-45" title="Réservé à l’administrateur du projet"><ShieldCheck size={15} /> Ouvrir — admin du projet uniquement</button>
+          <div className="mx-auto mt-6 flex max-w-md items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[.04] px-4 py-3 text-xs text-white/50"><LockKeyhole size={15} className="text-[#F1E2CC]" /> Accès désactivé jusqu’à la prochaine version.</div>
+          <button type="button" disabled={!isProjectAdmin} onClick={() => isProjectAdmin && navigate("/campus/missions")} className="mt-5 inline-flex items-center gap-2 rounded-xl border border-[#DEC2A3]/25 px-4 py-2.5 text-sm font-semibold text-[#F1E2CC] disabled:cursor-not-allowed disabled:opacity-45" title="Réservé à l’administrateur du projet"><ShieldCheck size={15} /> Ouvrir — admin du projet uniquement</button>
         </div>
       </section>
     </div>

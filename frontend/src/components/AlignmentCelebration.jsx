@@ -48,14 +48,14 @@ export default function AlignmentCelebration({ score }) {
         }}
         data-testid="alignment-celebration">
         <div className="glass-card" style={{
-          background: "linear-gradient(135deg, rgba(201,164,73,0.25), rgba(30,60,130,0.35))",
-          border: "1px solid rgba(201,164,73,0.5)", textAlign: "center", position: "relative",
+          background: "linear-gradient(135deg, rgba(222, 194, 163,0.25), rgba(30,60,130,0.35))",
+          border: "1px solid rgba(222, 194, 163,0.5)", textAlign: "center", position: "relative",
         }}>
           <button onClick={() => setMilestone(null)} data-testid="alignment-celebration-close"
             style={{ position: "absolute", top: 10, right: 10, background: "none", border: "none", color: "rgba(255,255,255,0.6)", cursor: "pointer" }}>
             <X size={16} />
           </button>
-          <PartyPopper size={28} style={{ color: "#E5C887", marginBottom: 8 }} />
+          <PartyPopper size={28} style={{ color: "#F1E2CC", marginBottom: 8 }} />
           <p style={{ fontSize: 15, fontWeight: 600, color: "var(--txt)", margin: "0 0 4px" }}>
             {milestone}% d'alignement atteint !
           </p>

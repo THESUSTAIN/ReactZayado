@@ -69,7 +69,7 @@ function FinancialSourceCard({ icon: Icon, title, detail, status, tone = "muted"
   return (
     <div className="rounded-2xl border border-white/15 bg-white/[0.045] p-4" data-testid={`pilotage-source-${title.toLowerCase()}`}>
       <div className="flex items-start justify-between gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#E5C887]/25 bg-[#E5C887]/10 text-[#E5C887]"><Icon size={18} /></div>
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#F1E2CC]/25 bg-[#F1E2CC]/10 text-[#F1E2CC]"><Icon size={18} /></div>
         <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-bold ${tones[tone]}`}>{status}</span>
       </div>
       <p className="mt-4 font-head text-sm font-semibold text-white">{title}</p>
@@ -91,11 +91,11 @@ function FinancialSources() {
     <section className="glass overflow-hidden p-5 sm:p-6" data-testid="pilotage-financial-sources">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="max-w-2xl">
-          <p className="text-[11px] font-bold uppercase tracking-[.17em] text-[#E5C887]">Sources financières</p>
+          <p className="text-[11px] font-bold uppercase tracking-[.17em] text-[#F1E2CC]">Sources financières</p>
           <h2 className="mt-1 font-head text-xl font-semibold text-white">Une lecture consolidée, sans remplacer vos outils.</h2>
           <p className="mt-2 text-sm leading-6 text-white/58">MyExtension rassemble uniquement les comptes, factures, dépenses et encaissements que vous autorisez. Aucune écriture comptable, aucun paiement et aucune donnée inventée.</p>
         </div>
-        <button onClick={openIntegrations} className="inline-flex items-center gap-2 rounded-xl border border-[#E5C887]/45 bg-[#E5C887]/10 px-4 py-2.5 text-sm font-semibold text-[#F4D990] transition hover:bg-[#E5C887]/18" data-testid="pilotage-open-integrations"><Plug size={15} /> Configurer les sources</button>
+        <button onClick={openIntegrations} className="inline-flex items-center gap-2 rounded-xl border border-[#F1E2CC]/45 bg-[#F1E2CC]/10 px-4 py-2.5 text-sm font-semibold text-[#F4D990] transition hover:bg-[#F1E2CC]/18" data-testid="pilotage-open-integrations"><Plug size={15} /> Configurer les sources</button>
       </div>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
@@ -105,7 +105,7 @@ function FinancialSources() {
       </div>
 
       <div className="mt-5 flex flex-wrap items-start gap-3 rounded-xl border border-white/12 bg-white/[0.035] p-3 text-xs leading-5 text-white/58">
-        <ShieldCheck size={17} className="mt-0.5 shrink-0 text-[#E5C887]" />
+        <ShieldCheck size={17} className="mt-0.5 shrink-0 text-[#F1E2CC]" />
         <p className="m-0"><strong className="font-semibold text-white/82">Votre outil source reste la vérité.</strong> Chaque connexion devra indiquer son périmètre, sa dernière synchronisation et pouvoir être révoquée. Les capacités de paiement restent hors du périmètre initial.</p>
       </div>
     </section>
@@ -345,18 +345,18 @@ export default function Pilotage() {
               <AreaChart data={trend} margin={{ left: -10, right: 10, top: 10 }}>
                 <defs>
                   <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#E5C887" stopOpacity={0.55} />
-                    <stop offset="100%" stopColor="#C9A449" stopOpacity={0.02} />
+                    <stop offset="0%" stopColor="#F1E2CC" stopOpacity={0.55} />
+                    <stop offset="100%" stopColor="#DEC2A3" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                 <XAxis dataKey="jour" stroke="rgba(255,255,255,0.4)" fontSize={11} tickLine={false} axisLine={false} />
                 <YAxis stroke="rgba(255,255,255,0.4)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
                 <Tooltip
-                  contentStyle={{ background: "#0B1F3A", border: "1px solid rgba(201,164,73,0.4)", borderRadius: 12, color: "#fff" }}
+                  contentStyle={{ background: "#0B1F3A", border: "1px solid rgba(222, 194, 163,0.4)", borderRadius: 12, color: "#fff" }}
                   formatter={(v) => [euro(v), "Trésorerie"]}
                 />
-                <Area type="monotone" dataKey="valeur" stroke="#E5C887" strokeWidth={3} fill="url(#gold)" dot={{ r: 3, fill: "#E5C887" }} activeDot={{ r: 5 }} isAnimationActive={false} />
+                <Area type="monotone" dataKey="valeur" stroke="#F1E2CC" strokeWidth={3} fill="url(#gold)" dot={{ r: 3, fill: "#F1E2CC" }} activeDot={{ r: 5 }} isAnimationActive={false} />
               </AreaChart>
             </ResponsiveContainer>
           )}

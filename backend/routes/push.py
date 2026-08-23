@@ -30,8 +30,35 @@ from models import User, UserData
 logger = logging.getLogger(__name__)
 push_router = APIRouter(prefix="/push", tags=["push"])
 
-VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
-VAPID_PRIVATE_KEY_PATH = os.environ.get("VAPID_PRIVATE_KEY_PATH", "")
+# Clés VAPID — priorité aux variables d'environnement Railway si définies,
+# sinon repli sur les fichiers keys/ committés dans le projet (générés pour
+# ce déploiement). Corrige la cause racine de "aucune notification jamais
+# reçue" : ni VAPID_PUBLIC_KEY ni VAPID_PRIVATE_KEY_PATH n'étaient définies
+# nulle part, et aucun fichier de clé privée n'existait — l'abonnement
+# échouait dès le départ (clé publique vide), et l'envoi aurait échoué
+# aussi (clé privée vide).
+_KEYS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "keys")
+_PUBLIC_KEY_FILE = os.path.join(_KEYS_DIR, "vapid_public.txt")
+_PRIVATE_KEY_FILE = os.path.join(_KEYS_DIR, "vapid_private.pem")
+
+def _load_vapid_public_key() -> str:
+    env_val = os.environ.get("VAPID_PUBLIC_KEY", "")
+    if env_val:
+        return env_val
+    try:
+        with open(_PUBLIC_KEY_FILE, "r") as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        return ""
+
+def _load_vapid_private_key_path() -> str:
+    env_val = os.environ.get("VAPID_PRIVATE_KEY_PATH", "")
+    if env_val:
+        return env_val
+    return _PRIVATE_KEY_FILE if os.path.exists(_PRIVATE_KEY_FILE) else ""
+
+VAPID_PUBLIC_KEY = _load_vapid_public_key()
+VAPID_PRIVATE_KEY_PATH = _load_vapid_private_key_path()
 VAPID_SUBJECT = os.environ.get("VAPID_SUBJECT", "mailto:hello@zayado.net")
 
 # Familles de notifications (cf. plan utilisateur)

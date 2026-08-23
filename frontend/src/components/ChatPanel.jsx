@@ -535,8 +535,8 @@ export default function ChatPanel({ context, initialAsk, onBack, onMenu }) {
           </div>
         </div>
         <div className="mt-3 grid grid-cols-2 border-b border-white/10" data-testid="copilot-tabs">
-          <button onClick={() => setTab("chat")} className={`inline-flex h-9 items-center justify-center gap-1.5 border-b-2 text-[11.5px] font-medium transition-colors ${tab === "chat" ? "border-[#E5C887] text-[#F0DCA5]" : "border-transparent text-white/50 hover:text-white/75"}`}><MessageCircle size={14} /> Discussion</button>
-          <button onClick={() => setTab("news")} className={`inline-flex h-9 items-center justify-center gap-1.5 border-b-2 text-[11.5px] font-medium transition-colors ${tab === "news" ? "border-[#E5C887] text-[#F0DCA5]" : "border-transparent text-white/50 hover:text-white/75"}`}><Newspaper size={14} /> Actualité</button>
+          <button onClick={() => setTab("chat")} className={`inline-flex h-9 items-center justify-center gap-1.5 border-b-2 text-[11.5px] font-medium transition-colors ${tab === "chat" ? "border-[#F1E2CC] text-[#F0DCA5]" : "border-transparent text-white/50 hover:text-white/75"}`}><MessageCircle size={14} /> Discussion</button>
+          <button onClick={() => setTab("news")} className={`inline-flex h-9 items-center justify-center gap-1.5 border-b-2 text-[11.5px] font-medium transition-colors ${tab === "news" ? "border-[#F1E2CC] text-[#F0DCA5]" : "border-transparent text-white/50 hover:text-white/75"}`}><Newspaper size={14} /> Actualité</button>
         </div>
       </div>
 

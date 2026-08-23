@@ -20,8 +20,8 @@ function ScoreDonut({ value = 0 }) {
           style={{ transition: "stroke-dashoffset 1.1s cubic-bezier(0.22,1,0.36,1)" }} />
         <defs>
           <linearGradient id="brainGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#C9A449" />
-            <stop offset="100%" stopColor="#C9A449" />
+            <stop offset="0%" stopColor="#DEC2A3" />
+            <stop offset="100%" stopColor="#DEC2A3" />
           </linearGradient>
         </defs>
       </svg>
@@ -95,7 +95,7 @@ export default function VisionBrainPanel() {
     <aside className="vbrain-panel" data-testid="vision-ai-panel">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-white/90">
-          <Sparkles size={16} className="text-[#C9A449]" />
+          <Sparkles size={16} className="text-[#DEC2A3]" />
           <span className="text-sm font-semibold">Cerveau IA</span>
         </div>
         <button onClick={load} title="Rafraîchir" data-testid="vision-ai-refresh"
@@ -127,7 +127,7 @@ export default function VisionBrainPanel() {
         {data.opportunities?.map((o, i) => (
           <div key={i} className="rounded-xl border border-white/10 bg-white/[0.03] p-2.5" data-testid={`vision-ai-opp-${i}`}>
             <div className="flex items-start gap-2">
-              <span className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${o.kind === "news" ? "bg-amber-400" : "bg-[#C9A449]"} animate-pulse`} />
+              <span className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${o.kind === "news" ? "bg-amber-400" : "bg-[#DEC2A3]"} animate-pulse`} />
               <div className="min-w-0">
                 <div className="text-sm font-medium text-white leading-snug">{o.title}</div>
                 {o.sub && <div className="text-xs text-white/50">{o.sub}</div>}
@@ -135,7 +135,7 @@ export default function VisionBrainPanel() {
                   type="button"
                   data-testid={`vision-ai-opp-${i}-talk`}
                   onClick={() => window.dispatchEvent(new CustomEvent("zayado:open-cockpit-chat", { detail: { ask: `Aide-moi à agir sur cette opportunité : ${o.title}` } }))}
-                  className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-[#C9A449]/40 bg-[#C9A449]/10 px-2.5 py-1 text-[11px] font-semibold text-[#f0dca5] transition-colors hover:bg-[#C9A449]/20"
+                  className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-[#DEC2A3]/40 bg-[#DEC2A3]/10 px-2.5 py-1 text-[11px] font-semibold text-[#f0dca5] transition-colors hover:bg-[#DEC2A3]/20"
                 >
                   <Sparkles size={11} /> En parler au Copilote
                 </button>
@@ -163,8 +163,8 @@ export default function VisionBrainPanel() {
       <Section title="Actions recommandées" testid="vision-ai-actions">
         {data.actions?.map((a, i) => (
           <button key={i} onClick={() => goModule(a.module)} data-testid={`vision-ai-action-${i}`}
-            className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-left text-sm text-white/90 hover:border-[#C9A449]/50 hover:bg-white/[0.06] transition-colors">
-            <span className="flex items-center gap-2"><Target size={13} className="text-[#C9A449]" /> {a.label}</span>
+            className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-left text-sm text-white/90 hover:border-[#DEC2A3]/50 hover:bg-white/[0.06] transition-colors">
+            <span className="flex items-center gap-2"><Target size={13} className="text-[#DEC2A3]" /> {a.label}</span>
             <ArrowRight size={14} className="text-white/40" />
           </button>
         ))}
@@ -177,8 +177,8 @@ export default function VisionBrainPanel() {
             {data.suggested_modules.map((m, i) => (
               <button key={i} onClick={() => goModule(m.id)} data-testid={`vision-ai-module-${i}`}
                 title={m.reason}
-                className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-white/85 hover:border-[#C9A449]/50 transition-colors">
-                <Compass size={12} className="text-[#C9A449]" /> {m.label}
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-white/85 hover:border-[#DEC2A3]/50 transition-colors">
+                <Compass size={12} className="text-[#DEC2A3]" /> {m.label}
               </button>
             ))}
           </div>

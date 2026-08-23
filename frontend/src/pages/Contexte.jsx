@@ -98,7 +98,7 @@ function AgentsContext() {
   return (
     <section className="glass p-6" data-testid="contexte-agents">
       <div className="flex items-start gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/[.06] text-[#E5C887]"><Bot size={19} /></span>
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/[.06] text-[#F1E2CC]"><Bot size={19} /></span>
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-[#DEC2A3]">Agents IA</p>
           <h1 className="font-head mt-1 text-2xl font-semibold text-white">Des agents au service du contexte, jamais à votre insu.</h1>

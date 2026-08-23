@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-const GOLD = "#C9A449";
+const GOLD = "#DEC2A3";
 const SAGE = "#8fa876";
 const CORAL = "#d98a6a";
 const BLUE = "#4f6fb0";

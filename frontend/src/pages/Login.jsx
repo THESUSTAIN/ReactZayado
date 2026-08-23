@@ -228,7 +228,7 @@ export default function Login() {
 
       {oauthProvider && (
         <div className="login-oauth-overlay" data-testid="login-oauth-overlay">
-          <Loader2 size={34} className="spin" style={{ color: "#E5C887" }} />
+          <Loader2 size={34} className="spin" style={{ color: "#F1E2CC" }} />
           <p>{t.redirecting(oauthProvider)}</p>
         </div>
       )}
@@ -291,7 +291,7 @@ export default function Login() {
                     <span>{t.previewText}</span>
                     <a href={devLink} data-testid="login-dev-link"
                       style={{ display: "inline-block", marginTop: 8, padding: "8px 14px", borderRadius: 999,
-                        background: "#C9A449", color: "#0B1F3A", fontWeight: 700, fontSize: 13, textDecoration: "none", wordBreak: "break-all" }}>
+                        background: "#DEC2A3", color: "#0B1F3A", fontWeight: 700, fontSize: 13, textDecoration: "none", wordBreak: "break-all" }}>
                       {t.connectNow}
                     </a>
                     <div style={{ marginTop: 8 }}>
@@ -332,7 +332,7 @@ export default function Login() {
           <div className="login-sep-thin" />
 
           <button className="login-btn login-btn-social" onClick={openThesustain} data-testid="login-thesustain-btn"
-            style={{ marginTop: 4, borderColor: "rgba(201,164,73,0.5)", color: "var(--gold-strong, #C9A449)" }}>
+            style={{ marginTop: 4, borderColor: "rgba(222, 194, 163,0.5)", color: "var(--gold-strong, #DEC2A3)" }}>
             {t.thesustain}
           </button>
           {!IS_PRODUCTION && (

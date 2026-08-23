@@ -16,7 +16,7 @@ const fullUrl = (u) => (!u ? u : u.startsWith("http") || u.startsWith("data:") ?
 const uid = () => `${Date.now()}_${Math.floor(Math.random() * 9999)}`;
 
 // Palette cohérente charte Zayado (marine / or / sable / vert / terracotta / ardoise)
-const SWATCHES = ["#0a1f4e", "#C9A449", "#d8c9a3", "#3f7d63", "#c26b4a", "#4a6a9e", "#2a2f45", "#8a5a83"];
+const SWATCHES = ["#0a1f4e", "#DEC2A3", "#d8c9a3", "#3f7d63", "#c26b4a", "#4a6a9e", "#2a2f45", "#8a5a83"];
 
 const BOARD_W = 1400, BOARD_H = 2600;
 
@@ -61,7 +61,7 @@ function Card({ card, tv, selected, onSelect, onPointerDown, onToggleObjective, 
             <span className="mb-2 inline-flex items-center gap-1 rounded-full bg-[var(--app-accent-soft)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[var(--app-accent)]"><FileText size={9} /> Doc IA</span>
           )}
           {card.type === "objective" && (
-            <span className="mb-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white" style={{ background: card.color || "#C9A449" }}><Target size={9} /> Objectif</span>
+            <span className="mb-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white" style={{ background: card.color || "#DEC2A3" }}><Target size={9} /> Objectif</span>
           )}
           {title && <p className={`font-head text-[15px] font-semibold leading-snug ${card.type === "note" && card.color ? "text-white" : "text-[var(--app-text)]"}`}>{title}</p>}
           {body && <p className={`mt-1 whitespace-pre-wrap text-[13px] leading-relaxed ${card.type === "note" && card.color ? "text-white/80" : "text-[var(--app-text-muted)]"}`}>{body}</p>}
@@ -376,7 +376,7 @@ export default function VisionCanvaMobile({ onBack }) {
       id: uid(),
       type: "objective",
       w: 260,
-      color: "#C9A449",
+      color: "#DEC2A3",
       title: { fr: title, en: title },
       body: why ? { fr: why, en: why } : undefined,
       checklist: [
@@ -425,7 +425,7 @@ export default function VisionCanvaMobile({ onBack }) {
   }, [notifSettings]);
 
   const addNote = () => { addCards([{ id: uid(), type: "note", w: 220, color: "", title: { fr: "Nouvelle note", en: "New note" }, body: { fr: "", en: "" } }]); setAddOpen(false); };
-  const addObjective = () => { addCards([{ id: uid(), type: "objective", w: 250, color: "#C9A449", title: { fr: "Nouvel objectif", en: "New goal" }, checklist: [{ text: { fr: "Première étape", en: "First step" }, done: false }], progress: 0 }]); setAddOpen(false); };
+  const addObjective = () => { addCards([{ id: uid(), type: "objective", w: 250, color: "#DEC2A3", title: { fr: "Nouvel objectif", en: "New goal" }, checklist: [{ text: { fr: "Première étape", en: "First step" }, done: false }], progress: 0 }]); setAddOpen(false); };
   const addPalette = () => { addCards([{ id: uid(), type: "color", w: 240, title: { fr: "Palette", en: "Palette" }, colors: SWATCHES.slice(0, 4) }]); setAddOpen(false); };
 
   const genImage = async () => {
@@ -457,7 +457,7 @@ export default function VisionCanvaMobile({ onBack }) {
       {/* Canvas scrollable */}
       <div ref={scrollRef} className="absolute inset-0 overflow-auto vb-scroll" onClick={() => { setSelected(null); setPaletteFor(null); }} style={{ WebkitOverflowScrolling: "touch" }}>
         <div style={{ width: BOARD_W * zoom, height: BOARD_H * zoom }}>
-          <div className="relative" style={{ width: BOARD_W, height: BOARD_H, transform: `scale(${zoom})`, transformOrigin: "0 0", backgroundImage: "radial-gradient(rgba(201,164,73,0.14) 1px, transparent 1px)", backgroundSize: "26px 26px" }}>
+          <div className="relative" style={{ width: BOARD_W, height: BOARD_H, transform: `scale(${zoom})`, transformOrigin: "0 0", backgroundImage: "radial-gradient(rgba(222, 194, 163,0.14) 1px, transparent 1px)", backgroundSize: "26px 26px" }}>
           {!loaded && <div className="absolute left-1/2 top-40 -translate-x-1/2 text-white/60"><Loader2 className="animate-spin" /></div>}
           {cards.map((c) => (
             <React.Fragment key={c.id}>
