@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  ArrowLeft, ArrowRight, Camera, Check, CheckCircle2, ChevronDown, Clock, Compass, Copy, ExternalLink, FileText, Folder, Globe, Handshake, HeartPulse, Image, Loader2,
+  ArrowLeft, ArrowRight, Bell, Camera, Check, CheckCircle2, ChevronDown, Clock, Compass, Copy, ExternalLink, FileText, Folder, Globe, Handshake, HeartPulse, Image, Loader2,
   Menu, MessageCircle, Newspaper, Paperclip, Plus, Send, ShieldCheck,
   Sparkles, Sun, Wallet, X,
 } from "lucide-react";
@@ -11,6 +11,7 @@ import {
   getCopilotDecision, getCopilotNews, getNewsHistory, getSavedNews, saveNewsItem, deleteSavedNews, archiveNewsEdition,
   sendCopilotWorkRequest, streamChatMessage, sendCopilotMessage, uploadChatFile, generateChatImage,
   getDriveStatus, connectDrive, listDriveFiles, importDriveFileToChat,
+  getHeaderNotifications, markHeaderNotificationsRead,
 } from "../lib/api";
 
 const SUGGESTIONS = [
@@ -396,6 +397,21 @@ export default function ChatPanel({ context, initialAsk, onBack, onMenu }) {
   const plusRef = useRef(null);
   const [driveConnected, setDriveConnected] = useState(null); // null = pas encore vérifié
   const [driveOpen, setDriveOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifItems, setNotifItems] = useState([]);
+  const notifRef = useRef(null);
+  useEffect(() => { getHeaderNotifications().then((r) => setNotifItems(r?.items || [])).catch(() => {}); }, []);
+  useEffect(() => {
+    if (!notifOpen) return undefined;
+    const onClickOutside = (event) => { if (notifRef.current && !notifRef.current.contains(event.target)) setNotifOpen(false); };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [notifOpen]);
+  const toggleNotifs = () => {
+    setNotifOpen((v) => !v);
+    if (!notifOpen) markHeaderNotificationsRead().then(() => setNotifItems((items) => items.map((i) => ({ ...i, unread: false })))).catch(() => {});
+  };
+  const notifUnreadCount = notifItems.filter((i) => i.unread).length;
   const [driveFiles, setDriveFiles] = useState([]);
   const [driveLoading, setDriveLoading] = useState(false);
   useEffect(() => {
@@ -528,6 +544,26 @@ export default function ChatPanel({ context, initialAsk, onBack, onMenu }) {
             {onMenu && <button type="button" onClick={onMenu} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white/80 hover:border-[#DEC2A3]/60 hover:text-[#F0DCA5]" title="Menu" aria-label="Ouvrir le menu" data-testid="copilot-menu">
               <Menu size={16} />
             </button>}
+            {onMenu && (
+              <div className="relative shrink-0" ref={notifRef}>
+                <button type="button" onClick={toggleNotifs} className="relative flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white/80 hover:border-[#DEC2A3]/60 hover:text-[#F0DCA5]" title="Notifications" aria-label="Notifications" data-testid="copilot-notif-btn">
+                  <Bell size={16} />
+                  {notifUnreadCount > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white">{notifUnreadCount}</span>}
+                </button>
+                {notifOpen && (
+                  <div className="absolute left-0 top-11 z-20 w-72 overflow-hidden rounded-2xl border border-white/15 bg-[#0B1F3A] shadow-2xl" data-testid="copilot-notif-menu">
+                    <div className="border-b border-white/10 px-3.5 py-2.5 text-[12px] font-semibold text-white/85">Notifications</div>
+                    {notifItems.length === 0 && <div className="px-3.5 py-6 text-center text-[12px] text-white/45">Aucune notification pour le moment.</div>}
+                    {notifItems.map((item) => (
+                      <button key={item.id} onClick={() => { setNotifOpen(false); if (item.action_url) navigate(item.action_url); }} className="flex w-full items-start gap-2.5 px-3.5 py-2.5 text-left hover:bg-white/10" data-testid="copilot-notif-item">
+                        <Bell size={13} className="mt-0.5 shrink-0 text-[#E8C96A]" />
+                        <div className="min-w-0"><p className="m-0 text-[12px] font-medium text-white/90">{item.title}</p><p className="m-0 text-[11px] text-white/55">{item.text}</p></div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <div className="gold-bg flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"><Sparkles size={18} className="text-[#0A1128]" /></div><div className="min-w-0"><div className="font-head text-[15px] font-semibold">Cockpit</div><p className="m-0 text-[11px] text-white/55">Votre co-pilote IA</p>{visionContextLabel && <div className="mt-1 inline-flex max-w-full truncate rounded-full border border-[#DEC2A3]/25 bg-[#DEC2A3]/10 px-2 py-0.5 text-[10px] font-medium text-[#F0DCA5]">Vision · {visionContextLabel}</div>}</div></div>
           <div className="flex shrink-0 items-center gap-2">
             {onBack && <button type="button" onClick={onBack} className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 text-[11px] font-semibold text-white hover:border-[#DEC2A3]/60 hover:text-[#F0DCA5]" title="Retour" aria-label="Retour" data-testid="copilot-back"><ArrowLeft size={14} /> <span>Retour</span></button>}
@@ -544,6 +580,14 @@ export default function ChatPanel({ context, initialAsk, onBack, onMenu }) {
 
       {tab === "chat" && <>
         <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4" data-testid="copilot-messages">
+          {!historyLoading && messages.length === 0 && dailyDecisions.length > 0 && (
+            <div className="flex items-start gap-2.5" data-testid="copilot-greeting">
+              <div className="gold-bg flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"><Sparkles size={13} className="text-[#0A1128]" /></div>
+              <div className="max-w-[85%] rounded-2xl rounded-tl-sm border border-white/10 bg-white/[0.06] px-3.5 py-2.5 text-[13px] leading-relaxed text-white/90">
+                Bonjour — j'ai regardé votre activité. {dailyDecisions.length > 1 ? `Voici ${dailyDecisions.length} priorités` : "Voici une priorité"} qui méritent votre attention aujourd'hui.
+              </div>
+            </div>
+          )}
           {!historyLoading && dailyDecisions.length > 0 && (
             <div className="space-y-2.5" data-testid="copilot-decisions-list">
               <div className="flex items-center justify-between gap-2">
