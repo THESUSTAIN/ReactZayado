@@ -1,194 +1,88 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Check, Loader2, Sparkles } from "lucide-react";
+import { Loader2, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { authOnboarding } from "../lib/api";
 
-const STEPS = [
-  { id: 1, label: "Vous" },
-  { id: 2, label: "Votre activité" },
-  { id: 3, label: "Votre cap" },
-];
-
 const INSPIRATIONS = [
-  { id: "universelle", label: "Inspiration universelle", description: "Un espace neutre, centré sur votre activité." },
-  { id: "foi", label: "Foi & vocation", description: "Ajouter cette dimension à votre accompagnement, librement." },
+  { id: "universelle", label: "Inspiration universelle" },
+  { id: "foi", label: "Foi" },
 ];
 const WORKSPACES = ["Solo", "Petite équipe", "Agence / Cabinet"];
-const PROJECT_TYPES = [
-  { id: "NET", label: "En ligne / digital" },
-  { id: "TERRAIN", label: "Terrain / local" },
-  { id: "MIXTE", label: "Les deux" },
-];
-const PRIORITIES = ["Trésorerie", "Ventes", "Organisation", "Énergie", "Croissance"];
+const PROJECT_TYPES = ["Service", "Produit", "Les deux"];
 
 export default function Onboarding() {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1);
   const [firstName, setFirstName] = useState("");
-  const [company, setCompany] = useState("");
-  const [status, setStatus] = useState("");
-  const [sector, setSector] = useState("");
-  const [inspiration, setInspiration] = useState("universelle");
+  const [inspiration, setInspiration] = useState("");
   const [workspace, setWorkspace] = useState("");
-  const [projectType, setProjectType] = useState("NET");
-  const [objective, setObjective] = useState("");
-  const [priorities, setPriorities] = useState([]);
+  const [projectType, setProjectType] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const progress = useMemo(() => `${Math.round((step / STEPS.length) * 100)}%`, [step]);
-  const togglePriority = (item) => setPriorities((current) => current.includes(item) ? current.filter((x) => x !== item) : [...current, item].slice(0, 3));
-
-  const next = () => {
-    if (step === 1 && !firstName.trim()) {
-      toast.error("Indiquez au moins votre prénom pour continuer.");
-      return;
-    }
-    setStep((current) => Math.min(3, current + 1));
-  };
-
-  const previous = () => setStep((current) => Math.max(1, current - 1));
-
   const submit = async () => {
-    if (!firstName.trim()) {
-      toast.error("Indiquez au moins votre prénom pour terminer.");
-      return;
-    }
     setSaving(true);
     try {
-      await authOnboarding({
-        first_name: firstName.trim(),
-        entreprise: company.trim(),
-        statut: status.trim(),
-        secteur: sector.trim(),
-        inspiration,
-        workspace_type: workspace,
-        project_type: projectType,
-        objectif_90j: objective.trim(),
-        priorites: priorities,
-      });
+      await authOnboarding({ first_name: firstName.trim(), inspiration, workspace_type: workspace, project_type: projectType });
       navigate("/");
-    } catch (error) {
-      toast.error(error?.message || "Échec de l'enregistrement. Réessayez.");
-    } finally {
-      setSaving(false);
-    }
+    } catch { toast.error("Échec de l'enregistrement"); }
+    finally { setSaving(false); }
   };
 
   return (
-    <div className="onboarding-page" data-testid="page-onboarding">
-      <div className="onboarding-glow onboarding-glow-a" aria-hidden="true" />
-      <div className="onboarding-glow onboarding-glow-b" aria-hidden="true" />
-      <main className="onboarding-shell">
-        <div className="onboarding-brand">
-          <div className="onboarding-logo">Z</div>
+    <div className="min-h-screen bg-[#0A1128] p-4" data-testid="page-onboarding">
+      <div className="mx-auto max-w-lg py-10">
+        <h1 className="font-head text-2xl font-semibold text-white">Bienvenue</h1>
+        <p className="mt-1 text-sm text-white/55">Quelques informations pour personnaliser votre espace — rien n'est imposé, tout est modifiable ensuite dans les Paramètres.</p>
+
+        <div className="mt-6 glass space-y-5 rounded-2xl p-5">
           <div>
-            <div className="onboarding-brand-name">ZAYADO</div>
-            <div className="onboarding-brand-sub">MyExtension AI</div>
+            <label className="mb-1.5 block text-[12px] font-medium text-white/70">Votre prénom</label>
+            <input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Prénom"
+              className="w-full rounded-xl border border-white/15 bg-white/5 px-3.5 py-2.5 text-sm text-white placeholder:text-white/35 focus:outline-none focus:border-[#DEC2A3]/50" />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-[12px] font-medium text-white/70">Style d'inspiration — au choix, jamais imposé</label>
+            <div className="grid grid-cols-2 gap-2">
+              {INSPIRATIONS.map((i) => (
+                <button key={i.id} onClick={() => setInspiration(i.id)} data-testid={`inspiration-${i.id}`}
+                  className={`rounded-xl border px-3.5 py-2.5 text-sm font-medium ${inspiration === i.id ? "border-[#DEC2A3] bg-[#DEC2A3]/15 text-[#F0DCA5]" : "border-white/15 bg-white/5 text-white/70"}`}>
+                  {i.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-[12px] font-medium text-white/70">Votre espace de travail</label>
+            <div className="grid grid-cols-3 gap-2">
+              {WORKSPACES.map((w) => (
+                <button key={w} onClick={() => setWorkspace(w)}
+                  className={`rounded-xl border px-2 py-2.5 text-xs font-medium ${workspace === w ? "border-[#DEC2A3] bg-[#DEC2A3]/15 text-[#F0DCA5]" : "border-white/15 bg-white/5 text-white/70"}`}>
+                  {w}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-[12px] font-medium text-white/70">Type de projet</label>
+            <div className="grid grid-cols-3 gap-2">
+              {PROJECT_TYPES.map((t) => (
+                <button key={t} onClick={() => setProjectType(t)}
+                  className={`rounded-xl border px-2 py-2.5 text-xs font-medium ${projectType === t ? "border-[#DEC2A3] bg-[#DEC2A3]/15 text-[#F0DCA5]" : "border-white/15 bg-white/5 text-white/70"}`}>
+                  {t}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        <div className="onboarding-card">
-          <div className="onboarding-topline">
-            <span className="onboarding-kicker"><Sparkles size={14} /> Configuration personnalisée</span>
-            <span className="onboarding-step-count">Étape {step} / 3</span>
-          </div>
-          <div className="onboarding-progress"><span style={{ width: progress }} /></div>
-
-          {step === 1 && (
-            <section className="onboarding-step" data-testid="onboarding-step-1">
-              <h1>Commençons par vous.</h1>
-              <p>Quelques repères suffisent pour que votre cockpit parle de votre réalité, pas d'un profil générique.</p>
-              <div className="onboarding-grid-2">
-                <label className="onboarding-field">
-                  <span>Prénom <b>*</b></span>
-                  <input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Ex. Marie" autoFocus />
-                </label>
-                <label className="onboarding-field">
-                  <span>Nom de votre activité</span>
-                  <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Ex. Studio Marie" />
-                </label>
-              </div>
-              <label className="onboarding-field">
-                <span>Votre statut</span>
-                <input value={status} onChange={(e) => setStatus(e.target.value)} placeholder="Ex. freelance, micro-entreprise, dirigeant…" />
-              </label>
-              <div className="onboarding-section-label">Votre manière d'être accompagné</div>
-              <div className="onboarding-option-grid onboarding-option-grid-2">
-                {INSPIRATIONS.map((item) => (
-                  <button key={item.id} type="button" onClick={() => setInspiration(item.id)} className={`onboarding-option ${inspiration === item.id ? "is-selected" : ""}`} data-testid={`inspiration-${item.id}`}>
-                    <span className="onboarding-option-title">{item.label}{inspiration === item.id && <Check size={15} />}</span>
-                    <span className="onboarding-option-description">{item.description}</span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {step === 2 && (
-            <section className="onboarding-step" data-testid="onboarding-step-2">
-              <h1>Parlons de votre activité.</h1>
-              <p>Ces informations servent à contextualiser les recommandations, les écrans et votre accompagnement.</p>
-              <label className="onboarding-field">
-                <span>Secteur d'activité</span>
-                <input value={sector} onChange={(e) => setSector(e.target.value)} placeholder="Ex. conseil, artisanat, finance, création…" autoFocus />
-              </label>
-              <div className="onboarding-section-label">Votre environnement de travail</div>
-              <div className="onboarding-option-grid onboarding-option-grid-3">
-                {WORKSPACES.map((item) => (
-                  <button key={item} type="button" onClick={() => setWorkspace(item)} className={`onboarding-option compact ${workspace === item ? "is-selected" : ""}`}>
-                    <span className="onboarding-option-title">{item}{workspace === item && <Check size={15} />}</span>
-                  </button>
-                ))}
-              </div>
-              <div className="onboarding-section-label">Votre type d'activité principal</div>
-              <div className="onboarding-option-grid onboarding-option-grid-3">
-                {PROJECT_TYPES.map((item) => (
-                  <button key={item.id} type="button" onClick={() => setProjectType(item.id)} className={`onboarding-option compact ${projectType === item.id ? "is-selected" : ""}`}>
-                    <span className="onboarding-option-title">{item.label}{projectType === item.id && <Check size={15} />}</span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {step === 3 && (
-            <section className="onboarding-step" data-testid="onboarding-step-3">
-              <h1>Quel cap voulez-vous donner aux 90 prochains jours ?</h1>
-              <p>Votre réponse sert de fil conducteur au cockpit. Vous pourrez la modifier à tout moment.</p>
-              <label className="onboarding-field">
-                <span>Votre priorité n°1</span>
-                <textarea value={objective} onChange={(e) => setObjective(e.target.value)} placeholder="Ex. Stabiliser ma trésorerie, signer 3 nouveaux clients et mieux organiser mes semaines…" autoFocus />
-              </label>
-              <div className="onboarding-section-label">Choisissez jusqu'à 3 priorités</div>
-              <div className="onboarding-chip-row">
-                {PRIORITIES.map((item) => (
-                  <button key={item} type="button" onClick={() => togglePriority(item)} className={`onboarding-chip ${priorities.includes(item) ? "is-selected" : ""}`}>{item}</button>
-                ))}
-              </div>
-              <div className="onboarding-summary">
-                <div><span>Profil</span><strong>{firstName || "Votre prénom"}{company ? ` · ${company}` : ""}</strong></div>
-                <div><span>Activité</span><strong>{sector || "À préciser"} · {projectType === "TERRAIN" ? "Terrain" : projectType === "MIXTE" ? "Mixte" : "En ligne"}</strong></div>
-                <div><span>Priorités</span><strong>{priorities.length ? priorities.join(" · ") : "À définir ensuite"}</strong></div>
-              </div>
-            </section>
-          )}
-
-          <div className="onboarding-actions">
-            {step > 1 ? (
-              <button type="button" onClick={previous} className="onboarding-back"><ArrowLeft size={15} /> Retour</button>
-            ) : <span />}
-            {step < 3 ? (
-              <button type="button" onClick={next} className="onboarding-primary">Continuer <ArrowRight size={15} /></button>
-            ) : (
-              <button type="button" onClick={submit} disabled={saving} className="onboarding-primary" data-testid="onboarding-submit">
-                {saving ? <Loader2 size={15} className="animate-spin" /> : <>Entrer dans mon cockpit <ArrowRight size={15} /></>}
-              </button>
-            )}
-          </div>
-        </div>
-        <p className="onboarding-note">Vos informations restent modifiables dans Paramètres. Aucune décision n'est prise à votre place.</p>
-      </main>
+        <button onClick={submit} disabled={saving} data-testid="onboarding-submit"
+          className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#DEC2A3] py-3 text-sm font-semibold text-[#0A1128] hover:opacity-90 disabled:opacity-60">
+          {saving ? <Loader2 size={15} className="animate-spin" /> : <>Continuer <ArrowRight size={15} /></>}
+        </button>
+      </div>
     </div>
   );
 }

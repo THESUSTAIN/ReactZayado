@@ -42,7 +42,7 @@ const TEMPLATES = [
 ];
 
 export default function VisionBoardPublic() {
-  const previewBase = (import.meta.env.VITE_API_URL || "") + "/api/vision/board/preview-public?template=";
+  const previewBase = (process.env.REACT_APP_BACKEND_URL || "") + "/api/vision/board/preview-public?template=";
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "#f6f3ee" }} data-testid="vb-public-page">

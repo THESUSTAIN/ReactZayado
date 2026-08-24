@@ -26,7 +26,7 @@ RUN pip install emergentintegrations==0.2.0 --extra-index-url https://d33sy5i8bn
     || echo "⚠️  emergentintegrations non installé (dépôt privé injoignable) — le repli Emergent sera indisponible, Mammouth reste actif."
 
 # Frontend — Vite/React. Le backend sert le build statique sur la même origine.
-# VITE_API_URL peut rester vide : les appels relatifs /api fonctionnent directement derrière FastAPI.
+# VITE_API_URL vide : les appels relatifs /api fonctionnent directement derrière FastAPI.
 RUN cd frontend && yarn install --network-timeout 600000
 RUN cd frontend && VITE_API_URL= VITE_SAAS_URL=https://app.zayado.net VITE_WP_URL=https://cms.zayado.net yarn build
 RUN mkdir -p backend/static && cp -r frontend/dist/* backend/static/

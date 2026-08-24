@@ -2,7 +2,7 @@
  * /tester-son-projet — Page conversion : score audit projet entrepreneurial.
  */
 import React, { useState } from "react";
-import api, { SAAS_URL } from "@/lib/api";
+import { SAAS_URL } from "@/lib/api";
 import { Helmet } from "react-helmet-async";
 import { Sparkles, CheckCircle2, XCircle, ArrowRight, BarChart3, Brain, Target } from "lucide-react";
 import ZayadoLayout from "@/components/ZayadoLayout";
@@ -27,6 +27,7 @@ export default function TesterSonProjet() {
     if (score < 60 || submitted) return;
     setSubmitted(true);
     try {
+      const { default: api } = await import("@/lib/api");
       await api.post("/contact/send", {
         subject: "Audit projet public",
         message: `Score: ${score}/100 — Profil Zayado public`,
