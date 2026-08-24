@@ -55,7 +55,7 @@ export default function Echeances() {
                 au bon moment, dès votre connexion. Des rappels <b className="text-cream">fiables</b>,
                 jamais inventés.
               </p>
-              <a href={APP_URL} data-testid="ec-hero-cta"
+              <a href="/app/login" data-testid="ec-hero-cta"
                 className="inline-flex items-center gap-2 px-7 py-4 rounded-full bg-cream text-navy font-medium text-sm hover:bg-gold-soft transition">
                 <Sparkles className="w-4 h-4" /> Ne plus rien oublier — essai gratuit
               </a>
@@ -207,7 +207,7 @@ export default function Echeances() {
             <p className="text-inkMuted mb-8 max-w-xl mx-auto">
               Concentrez-vous sur votre business. On s'occupe de vous rappeler l'essentiel.
             </p>
-            <a href={APP_URL} data-testid="ec-final-cta"
+            <a href="/app/login" data-testid="ec-final-cta"
               className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-aubergine text-cream font-medium text-sm hover:bg-aubergine-deep transition">
               Commencer gratuitement <ArrowRight className="w-4 h-4" />
             </a>

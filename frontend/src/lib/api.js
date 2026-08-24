@@ -25,7 +25,7 @@ api.interceptors.response.use(
       const path = window.location.pathname;
       const isAuthEndpoint = url.includes("/auth/") || url.includes("/onboarding/status");
       const isSoftEndpoint = url.includes("/account/me");
-      const isLoginPage = path === "/login" || path === "/" || path === "/boutique/connexion";
+      const isLoginPage = path === "/login" || path === "/app/login" || path === "/" || path === "/boutique/connexion";
       const isPublicPage = (
         path.startsWith("/partenaires") ||
         path.startsWith("/devenir-partenaire") ||

@@ -119,7 +119,7 @@ export default function Tarifs() {
       return;
     }
     if (!user) {
-      window.location.href = "https://app.zayado.net/login?next=/app/tarifs";
+      window.location.href = "/login?next=/app/tarifs";
       return;
     }
     setLoading(plan.id);

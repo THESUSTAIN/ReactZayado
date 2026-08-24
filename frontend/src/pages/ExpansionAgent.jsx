@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { UnifiedFooter } from "@/pages/LandingHub";
 
-const APP_URL = "https://app.zayado.net/login";
+const APP_URL = "/login";
 const WHATSAPP_URL = "https://wa.me/33183643999?text=Bonjour%20Zayado%2C%20je%20suis%20intéressé(e)%20par%20Expansion%20Agent.";
 
 // ── Header local ───────────────────────────────────────
@@ -66,7 +66,7 @@ const Hero = () => (
           et vous propose un plan d&apos;action personnalisé pour accélérer votre croissance.
         </p>
         <div className="flex flex-wrap items-center gap-3 mb-7">
-          <a href={APP_URL} data-testid="exp-cta-start"
+          <a href="/app/login" data-testid="exp-cta-start"
              className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-white font-medium text-sm hover:opacity-90 transition"
              style={{ background: "var(--zayado-navy)" }}>
             Démarrer gratuitement <ArrowRight size={16} />
@@ -243,7 +243,7 @@ const FinalCTA = () => (
           Expansion Agent ne remplace pas votre intuition — il l&apos;amplifie avec de la donnée et 5 leviers prouvés.
           Vous décidez. Il prépare, mesure, ajuste.
         </p>
-        <a href={APP_URL} className="inline-flex items-center gap-2 px-7 py-4 rounded-full bg-white text-sm font-medium hover:bg-[var(--zayado-gold-soft)] transition"
+        <a href="/app/login" className="inline-flex items-center gap-2 px-7 py-4 rounded-full bg-white text-sm font-medium hover:bg-[var(--zayado-gold-soft)] transition"
            style={{ color: "var(--zayado-navy)" }} data-testid="exp-navy-cta">
           Activer Expansion Agent <ArrowRight size={16} />
         </a>
@@ -262,7 +262,7 @@ const FinalCTA = () => (
             Rejoignez des milliers d&apos;entrepreneurs qui utilisent déjà Expansion Agent
             pour scaler leur business intelligemment.
           </p>
-          <a href={APP_URL} className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-white font-medium text-sm hover:opacity-90 transition"
+          <a href="/app/login" className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-white font-medium text-sm hover:opacity-90 transition"
              style={{ background: "var(--zayado-navy)" }} data-testid="exp-final-cta-btn">
             Démarrer gratuitement <ArrowRight size={16} />
           </a>

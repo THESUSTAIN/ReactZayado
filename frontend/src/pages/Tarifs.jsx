@@ -53,7 +53,7 @@ function EntryDoors() {
         <a
           href={(typeof window !== "undefined" && window.location.origin.includes("preview.emergentagent")
             ? `${window.location.origin}/login`
-            : "https://app.zayado.net/login")}
+            : "/login")}
           data-testid="door-existante"
           className="group bg-white rounded-3xl p-7 shadow-md hover:shadow-xl hover:-translate-y-1 transition flex flex-col"
         >
@@ -395,7 +395,7 @@ export default function Tarifs() {
       if (data?.checkout_url) {
         window.location.href = data.checkout_url;
       } else {
-        navigate("/login");
+        navigate("/app/login");
       }
     } catch (e) {
       const status = e?.response?.status;

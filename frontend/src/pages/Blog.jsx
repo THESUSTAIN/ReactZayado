@@ -9,6 +9,7 @@ import { Link, useLocation, useParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { Calendar, Clock, ArrowLeft, Loader2, BookOpen } from "lucide-react";
 import api, { SAAS_URL } from "@/lib/api";
+import { ZAYADO_FALLBACK_POSTS } from "@/data_blog_zayado";
 
 const NAVY = "var(--zayado-navy)";
 const GOLD = "var(--zayado-gold)";
@@ -34,7 +35,8 @@ function BlogList() {
 
   useEffect(() => {
     api.get("/blog/posts", { params: { per_page: 24 } })
-      .then((r) => setPosts(r.data?.posts || []))
+      .then((r) => { const remote = r.data?.posts || []; setPosts(remote.length ? remote : ZAYADO_FALLBACK_POSTS); })
+      .catch(() => setPosts(ZAYADO_FALLBACK_POSTS))
       .finally(() => setLoading(false));
   }, []);
 
@@ -160,7 +162,7 @@ function BlogPost() {
     setLoading(true);
     api.get(`/blog/posts/${slug}`)
       .then((r) => setPost(r.data))
-      .catch(() => setNotFound(true))
+      .catch(() => { const local = ZAYADO_FALLBACK_POSTS.find((x) => x.slug === slug); if (local) setPost(local); else setNotFound(true); })
       .finally(() => setLoading(false));
   }, [slug]);
 
@@ -187,6 +189,19 @@ function BlogPost() {
       <Helmet>
         <title>{`${(post.title || "").replace(/<[^>]+>/g, "")} · Journal Zayado`}</title>
         <meta name="description" content={(post.excerpt || "").replace(/<[^>]+>/g, "").slice(0, 160)} />
+        <meta property="og:title" content={(post.title || "").replace(/<[^>]+>/g, "")} />
+        <meta property="og:description" content={(post.excerpt || "").replace(/<[^>]+>/g, "").slice(0, 200)} />
+        <meta property="og:type" content="article" />
+        {post.featured_image && <meta property="og:image" content={`https://zayado.net${post.featured_image.startsWith("/") ? post.featured_image : `/${post.featured_image}`}`} />}
+        <link rel="canonical" href={`https://zayado.net/blog/${post.slug || slug}`} />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context":"https://schema.org","@type":"Article","headline":(post.title || "").replace(/<[^>]+>/g,""),
+          "description":(post.excerpt || "").replace(/<[^>]+>/g,"").slice(0,200),
+          "author":{"@type":"Organization","name":"Zayado"},
+          "publisher":{"@type":"Organization","name":"Zayado","url":"https://zayado.net"},
+          "datePublished":post.date,"image":post.featured_image ? `https://zayado.net${post.featured_image.startsWith("/") ? post.featured_image : `/${post.featured_image}`}` : "https://zayado.net/og-image.svg",
+          "mainEntityOfPage":{"@type":"WebPage","@id":`https://zayado.net/blog/${post.slug || slug}`}
+        })}</script>
       </Helmet>
 
       <div className="max-w-[760px] mx-auto px-4 md:px-6 pt-10 pb-16">
@@ -236,7 +251,7 @@ function BlogPost() {
                 style={{ color: NAVY }}>
             ← Lire les autres articles
           </Link>
-          <a href={SAAS_URL + "/login"}
+          <a href="/app/login"
              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-sm font-medium"
              style={{ background: NAVY }}
              data-testid="article-cta-login">

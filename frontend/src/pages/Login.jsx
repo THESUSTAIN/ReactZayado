@@ -118,16 +118,19 @@ export default function Login() {
     if (!code) return;
     const provider = state.startsWith("microsoft_") ? "microsoft" : "google";
     setOauthProvider(provider === "google" ? "Google" : "Microsoft");
-    const redirectUri = `${window.location.origin}/login`;
+    const redirectPath = window.location.pathname.startsWith("/app/") ? "/app/login" : "/login";
+    const redirectUri = `${window.location.origin}${redirectPath}`;
     oauthExchange(provider, code, redirectUri)
       .then((res) => {
         rememberMethod(provider);
-        window.history.replaceState({}, "", "/login");
+        const loginPath = window.location.pathname.startsWith("/app/") ? "/app/login" : "/login";
+        window.history.replaceState({}, "", loginPath);
         finishLogin(res);
       })
       .catch(() => {
         setOauthProvider(null);
-        window.history.replaceState({}, "", "/login?error=" + (provider === "google" ? "google_failed" : "microsoft_failed"));
+        const loginPath = window.location.pathname.startsWith("/app/") ? "/app/login" : "/login";
+        window.history.replaceState({}, "", loginPath + "?error=" + (provider === "google" ? "google_failed" : "microsoft_failed"));
         toast.error(provider === "google" ? t.errGoogle : t.errMsft);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -160,7 +163,8 @@ export default function Login() {
     rememberMethod(provider);
     setOauthProvider(label);
     try {
-      const redirectUri = `${window.location.origin}/login`;
+      const redirectPath = window.location.pathname.startsWith("/app/") ? "/app/login" : "/login";
+    const redirectUri = `${window.location.origin}${redirectPath}`;
       const res = await oauthStart(provider, redirectUri);
       window.location.href = res.authorization_url;
     } catch {

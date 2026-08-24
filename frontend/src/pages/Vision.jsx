@@ -63,7 +63,7 @@ export default function Vision() {
                 Explorez les Vision Boards d&apos;entrepreneurs à succès qui ont défini leur vision… et la réalisent. Puis créez la vôtre en <b className="text-cream">2 minutes</b>.
               </p>
               <a
-                href={APP_URL}
+                href="/app/login"
                 data-testid="vision-hero-cta"
                 className="inline-flex items-center gap-2 px-7 py-4 rounded-full bg-cream text-navy font-medium text-sm hover:bg-gold-soft transition"
               >
@@ -164,7 +164,7 @@ export default function Vision() {
                   </div>
                 ))}
                 <a
-                  href={APP_URL}
+                  href="/app/login"
                   data-testid="vision-generate-cta"
                   className={`mt-2 w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full font-medium text-sm transition ${ready ? "bg-aubergine text-cream hover:bg-aubergine-deep" : "bg-aubergine/30 text-cream/70 cursor-not-allowed"}`}
                 >
@@ -207,7 +207,7 @@ export default function Vision() {
                     <li key={i} className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-gold-soft shrink-0" />{b}</li>
                   ))}
                 </ul>
-                <a href={APP_URL} className="block w-full bg-cream text-aubergine text-sm font-medium py-2.5 rounded-full hover:bg-gold-soft transition" data-testid="vision-unlock-cta">
+                <a href="/app/login" className="block w-full bg-cream text-aubergine text-sm font-medium py-2.5 rounded-full hover:bg-gold-soft transition" data-testid="vision-unlock-cta">
                   Rejoindre MyExtension AI
                 </a>
                 <p className="text-[10px] text-cream/60 mt-2">Essai gratuit · Sans engagement</p>

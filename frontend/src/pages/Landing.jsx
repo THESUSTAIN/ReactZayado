@@ -37,7 +37,7 @@ const Header = () => (
         <Link to="/contact" className="hover:text-aubergine transition" data-testid="nav-contact">Contact</Link>
       </nav>
       <a
-        href={APP_URL}
+        href="/app/login"
         data-testid="header-cta-join"
         className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition text-cream"
         style={{ background: "var(--zayado-navy-gradient)" }}

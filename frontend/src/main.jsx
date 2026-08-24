@@ -1,4 +1,5 @@
 import React from "react";
+import LegacyApp from "./App.jsx";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
@@ -10,6 +11,7 @@ import { ThemeProvider } from "@/context/ThemeContext";
 import Landing, { PublicHeader, UnifiedFooter } from "@/pages/LandingHub";
 import WPSiteSettings from "@/components/WPSiteSettings";
 import MyExtensionAI from "@/pages/MyExtensionAI";
+import MyExtensionSeoPage from "@/pages/MyExtensionSeoPage";
 import Vision from "@/pages/Vision";
 import AntiBurnout from "@/pages/AntiBurnout";
 import Echeances from "@/pages/Echeances";
@@ -46,9 +48,16 @@ const __basename = typeof window !== "undefined"
   && window.location.pathname.startsWith(__preview_prefix)
   ? __preview_prefix
   : "/";
+const __host = typeof window !== "undefined" ? window.location.hostname.toLowerCase() : "";
+const __isAppHost = /^(app\.)?myextension-ai\.com$/.test(__host) || /^app\.zayado\.net$/.test(__host);
+const __isAppPath = typeof window !== "undefined" && window.location.pathname === "/app" || typeof window !== "undefined" && window.location.pathname.startsWith("/app/");
+const __isAppMode = __isAppHost || __isAppPath;
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
+    {__isAppMode ? (
+      <LegacyApp basename={__isAppPath && !__isAppHost ? "/app" : "/"} />
+    ) : (
     <HelmetProvider>
       <WPSiteSettings />
       <BrowserRouter basename={__basename}>
@@ -59,6 +68,10 @@ ReactDOM.createRoot(document.getElementById("root")).render(
 
               {/* SaaS landings + conversion tunnels */}
               <Route path="/myextension-ai" element={<MyExtensionAI />} />
+              <Route path="/myextension-ai/vision" element={<MyExtensionSeoPage type="vision" />} />
+              <Route path="/myextension-ai/pilotage-financier" element={<MyExtensionSeoPage type="finance" />} />
+              <Route path="/myextension-ai/espace-travail" element={<MyExtensionSeoPage type="work" />} />
+              <Route path="/myextension-ai/energie" element={<MyExtensionSeoPage type="energy" />} />
               <Route path="/vision" element={<Vision />} />
               <Route path="/anti-burnout" element={<AntiBurnout />} />
               <Route path="/echeances" element={<Echeances />} />
@@ -173,6 +186,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
                   <UnifiedFooter />
                 </div>
               } />
+              <Route path="/login" element={<Navigate to="/app/login" replace />} />
               <Route path="/tarifs" element={<Tarifs />} />
               <Route path="/fr/tarifs" element={<Tarifs />} />
               <Route path="/compte" element={<PublicBoutique />} />
@@ -208,5 +222,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         </ThemeProvider>
       </BrowserRouter>
     </HelmetProvider>
+    )}
   </React.StrictMode>
 );

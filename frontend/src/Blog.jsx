@@ -236,7 +236,7 @@ function BlogPost() {
                 style={{ color: NAVY }}>
             ← Lire les autres articles
           </Link>
-          <a href={SAAS_URL + "/login"}
+          <a href="/app/login"
              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-sm font-medium"
              style={{ background: NAVY }}
              data-testid="article-cta-login">

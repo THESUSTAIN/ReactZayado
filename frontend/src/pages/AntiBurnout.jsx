@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import ZayadoLayout from "@/components/ZayadoLayout";
 
-const APP_URL = "https://app.zayado.net/login";
+const APP_URL = "/login";
 
 const SYMPTOMS = [
   { icon: BrainCircuit, title: "Charge mentale permanente", text: "Trop de décisions, trop d'onglets ouverts dans la tête. Vous ne débranchez jamais vraiment." },
@@ -52,7 +52,7 @@ export default function AntiBurnout() {
                 MyExtension AI est le copilote qui transforme votre vision en actions quotidiennes —
                 en préservant votre énergie. Moins de charge mentale, plus d'impact.
               </p>
-              <a href={APP_URL} data-testid="ab-hero-cta"
+              <a href="/app/login" data-testid="ab-hero-cta"
                 className="inline-flex items-center gap-2 px-7 py-4 rounded-full bg-cream text-navy font-medium text-sm hover:bg-gold-soft transition">
                 <Sparkles className="w-4 h-4" /> Reprendre le contrôle — essai gratuit
               </a>
@@ -200,7 +200,7 @@ export default function AntiBurnout() {
                 <li key={i} className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-aubergine" />{b}</li>
               ))}
             </ul>
-            <a href={APP_URL} data-testid="ab-final-cta"
+            <a href="/app/login" data-testid="ab-final-cta"
               className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-aubergine text-cream font-medium text-sm hover:bg-aubergine-deep transition">
               Commencer gratuitement <ArrowRight className="w-4 h-4" />
             </a>
