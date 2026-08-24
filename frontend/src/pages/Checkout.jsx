@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ShieldCheck, ArrowRight, CreditCard, Lock, Check } from "lucide-react";
+import api from "@/lib/api";
 
 const NAVY = "var(--zayado-navy)";
 const GOLD = "var(--zayado-gold)";
@@ -33,7 +34,7 @@ export default function Checkout() {
 
     try {
       // Créer la commande WooCommerce via le backend
-      const r = await import("@/lib/api").then(({ default: api }) =>
+      const r = await (
         api.post("/shop/checkout", {
           email: form.email,
           first_name: form.first_name,
