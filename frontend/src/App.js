@@ -45,7 +45,7 @@ function AppHome() {
   }, [isMobile]);
   if (isMobile) {
     return (
-      <div className="fixed inset-0 z-10 overflow-hidden overscroll-none bg-[#0B1F3A]" data-testid="mobile-copilot-home">
+      <div className="fixed inset-0 z-[150] overflow-hidden overscroll-none bg-[#0B1F3A]" data-testid="mobile-copilot-home">
         <ChatPanel
           context="Accueil quotidien Cap Vivant."
           onMenu={() => window.dispatchEvent(new CustomEvent("cours:open-mobile-nav"))}

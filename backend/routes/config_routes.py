@@ -37,6 +37,11 @@ async def get_public_config():
     result["microsoft_client_id"] = os.environ.get("MICROSOFT_CLIENT_ID", "")
     result["maintenance_mode"] = config.get("maintenance_mode", False)
     result["maintenance_message"] = config.get("maintenance_message", "")
+    # Corrige un vrai bug : le lien WhatsApp du chat (bouton "Discuter sur
+    # WhatsApp") ne pouvait structurellement jamais s'afficher — cette clé
+    # n'était jamais exposée par la config publique, même une fois
+    # configurée côté admin (PUT /admin/config avec {"whatsapp_url": "..."}).
+    result["whatsapp_url"] = config.get("whatsapp_url", "")
     return result
 
 @config_router.get("/migrate-db")

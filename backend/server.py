@@ -35,6 +35,7 @@ from routes.agent      import agent_router
 from routes.dashboard  import router as dashboard_router
 from routes.growth_copilote import router as growth_copilote_router
 from routes.growth import router as growth_router
+from routes.global_search import router as global_search_router
 from routes.prefs import router as prefs_router
 from routes.vision_board import router as vision_board_router
 from routes.vision_cards import router as vision_cards_router
@@ -261,6 +262,7 @@ app.include_router(agent_router,      prefix="/api")
 app.include_router(dashboard_router)
 app.include_router(growth_copilote_router)
 app.include_router(growth_router)
+app.include_router(global_search_router)
 app.include_router(prefs_router)
 app.include_router(vision_board_router)
 app.include_router(vision_cards_router)

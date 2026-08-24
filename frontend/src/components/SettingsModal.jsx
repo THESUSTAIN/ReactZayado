@@ -19,6 +19,7 @@ import {
   getNewsPreferences, setNewsPreferences,
   getOdooConfig, setOdooConfig, syncOdoo,
   getBankAggregatorConfig, setBankAggregatorConfig, syncBankAggregator,
+  authMe,
 } from "../lib/api";
 import { isPushSubscribed, subscribeToPush, unsubscribeFromPush, sendTestPush } from "../lib/pwa";
 import { toast } from "sonner";
@@ -52,8 +53,14 @@ function usePrefs() {
 // (bouton dans l'onglet Facturation).
 function useAuth() {
   const [plan, setPlanState] = useState("free");
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
   useEffect(() => { getPlan().then((r) => setPlanState(r.plan)).catch(() => {}); }, []);
-  return { user: { name: "", email: "", plan }, setPlan: async (p) => { await setPlan(p); setPlanState(p); } };
+  // Corrige un vrai bug : l'email de connexion (Paramètres → Sécurité)
+  // affichait toujours "—" car cet objet renvoyait un email codé en dur,
+  // jamais chargé depuis le serveur.
+  useEffect(() => { authMe().then((u) => { setEmail(u?.email || ""); setName(u?.first_name || u?.name || ""); }).catch(() => {}); }, []);
+  return { user: { name, email, plan }, setPlan: async (p) => { await setPlan(p); setPlanState(p); } };
 }
 
 const growthApi = {

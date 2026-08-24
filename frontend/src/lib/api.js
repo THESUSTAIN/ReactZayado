@@ -284,6 +284,10 @@ export const getCopilotNews = (session = "default", refresh = false) =>
 export const getNewsHistory = (session = "default") =>
   api.get(`/chat/news-history?session_id=${encodeURIComponent(session)}`).then((r) => r.data);
 
+// Recherche globale (Cmd+K) — cherche dans les vraies données (projets,
+// tâches, prospects), pas seulement les pages du menu.
+export const globalSearch = (q) => api.get("/search", { params: { q } }).then((r) => r.data?.results || []);
+
 // Badge de notification "nouvelle actualité" (Layout.jsx) — compare la
 // dernière édition disponible à la dernière vue par l'utilisateur.
 export const getLastSeenNewsId = () => api.get("/prefs").then((r) => r.data?.last_seen_news_id || null);

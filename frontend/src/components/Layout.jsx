@@ -9,7 +9,7 @@ import ChatPanel from "./ChatPanel";
 import SettingsModal from "./SettingsModal";
 import TheSustainModal from "./TheSustainModal";
 import InstallBanner from "./InstallBanner";
-import { authMe, getProfile, getHeaderMessages, getHeaderNotifications, markHeaderMessagesRead, markHeaderNotificationsRead, setLanguage, logoutSession, getNewsHistory, getLastSeenNewsId, setLastSeenNewsId } from "../lib/api";
+import { authMe, getProfile, getHeaderMessages, getHeaderNotifications, markHeaderMessagesRead, markHeaderNotificationsRead, setLanguage, logoutSession, getNewsHistory, getLastSeenNewsId, globalSearch } from "../lib/api";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -57,6 +57,22 @@ function Sidebar({ onSettings, onCopilote }) {
   }, [collapsed]);
   const toggle = useCallback(() => setCollapsed((c) => !c), []);
 
+  // Corrige un vrai bug : l'infobulle au survol d'une icône reste affichée
+  // pendant un scroll de la page (le curseur ne bouge pas, donc :hover
+  // reste actif), et vient masquer le contenu qui a défilé en dessous.
+  // On force sa fermeture dès qu'un scroll se produit n'importe où.
+  const [scrolling, setScrolling] = useState(false);
+  useEffect(() => {
+    let timeout;
+    const onScroll = () => {
+      setScrolling(true);
+      clearTimeout(timeout);
+      timeout = setTimeout(() => setScrolling(false), 150);
+    };
+    window.addEventListener("scroll", onScroll, { capture: true, passive: true });
+    return () => { window.removeEventListener("scroll", onScroll, { capture: true }); clearTimeout(timeout); };
+  }, []);
+
   const isActive = (item) =>
     item.path ? (item.exact ? location.pathname === "/" : location.pathname.startsWith(item.path)) : false;
 
@@ -89,10 +105,10 @@ function Sidebar({ onSettings, onCopilote }) {
               const Icon = item.Icon;
               return (
                 <li key={item.id} className={`w-full flex justify-center ${MENU_GROUP_STARTS.has(item.id) ? "menu-group-start" : ""}`}>
-                  <button onClick={() => onItemClick(item)} data-testid={`side-${item.id}`}
+                  <button onClick={() => onItemClick(item)} data-testid={`side-${item.id}`} aria-label={item.label}
                     className={`menu-link group relative w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 ${active ? "active" : ""} ${item.action ? "menu-link-action" : ""}`}>
                     <Icon size={16} strokeWidth={1.85} />
-                    <span className="menu-tooltip pointer-events-none absolute left-full ml-3 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-md text-white text-xs px-2.5 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-50">
+                    <span className={`menu-tooltip pointer-events-none absolute left-full ml-3 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-md text-white text-xs px-2.5 py-1.5 transition-opacity z-50 ${scrolling ? "!opacity-0" : "opacity-0 group-hover:opacity-100"}`}>
                       {item.label}
                     </span>
                   </button>
@@ -115,7 +131,7 @@ function Sidebar({ onSettings, onCopilote }) {
 }
 
 /* ─────────────── Header (transparent, modèle exact) ─────────────── */
-function Header({ onSettings, profileName, theSustainMember, ambianceFoi, onOpenTheSustain }) {
+function Header({ onSettings, profileName, theSustainMember, ambianceFoi, onOpenTheSustain, onOpenCopilot }) {
   const navigate = useNavigate();
   const [searchOpen, setSearchOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -150,9 +166,19 @@ function Header({ onSettings, profileName, theSustainMember, ambianceFoi, onOpen
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const results = SEARCH_TARGETS
+  const [dataResults, setDataResults] = useState([]);
+  useEffect(() => {
+    const query = q.trim();
+    if (!query) { setDataResults([]); return; }
+    const handle = setTimeout(() => {
+      globalSearch(query).then(setDataResults).catch(() => setDataResults([]));
+    }, 250); // anti-rebond — pas un appel réseau à chaque frappe
+    return () => clearTimeout(handle);
+  }, [q]);
+  const navResults = SEARCH_TARGETS
     .filter((s) => !s.requiresTheSustain || theSustainMember || ambianceFoi)
     .filter((s) => s.label.toLowerCase().includes(q.toLowerCase()));
+  const results = [...dataResults, ...navResults];
   const go = (target) => {
     if (target.action === "settings") onSettings();
     else if (target.path) navigate(target.path);
@@ -175,7 +201,10 @@ function Header({ onSettings, profileName, theSustainMember, ambianceFoi, onOpen
           {isLight ? <Moon size={18} /> : <Sun size={18} />}
         </button>
         <DropdownMenu><DropdownMenuTrigger asChild><button className="header-icon-btn header-icon-badge" title="Messages" aria-label="Messages" data-testid="header-mail-btn" onClick={() => markHeaderMessagesRead(headerSession).then(() => setHeaderMessages((items) => items.map((item) => ({ ...item, unread: false })))).catch(() => {})}><Mail size={18} />{headerMessages.filter((item) => item.unread).length > 0 && <span className="header-badge">{headerMessages.filter((item) => item.unread).length}</span>}</button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-80 bg-[#0B1F3A] border-white/15 text-white"><DropdownMenuLabel>Messages</DropdownMenuLabel><DropdownMenuSeparator className="bg-white/10" />{headerMessages.length === 0 && <div className="px-3 py-6 text-center text-xs text-white/50">Aucun message pour le moment.</div>}{headerMessages.map((item) => <DropdownMenuItem key={item.id} className="flex items-start gap-3 py-3 cursor-pointer"><div className="w-9 h-9 rounded-full gold-bg text-[#0A1128] text-xs font-semibold flex items-center justify-center">{(item.sender || "M").charAt(0).toUpperCase()}</div><div className="min-w-0"><p className="text-sm font-medium">{item.sender}</p><p className="text-xs text-white/60">{item.text}</p></div></DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
-        <DropdownMenu><DropdownMenuTrigger asChild><button className="header-icon-btn header-icon-badge" title="Notifications" aria-label="Notifications" data-testid="header-notifications-btn" onClick={() => markHeaderNotificationsRead(headerSession).then(() => setHeaderNotifications((items) => items.map((item) => ({ ...item, unread: false })))).catch(() => {})}><Bell size={18} />{headerNotifications.filter((item) => item.unread).length > 0 && <span className="header-badge">{headerNotifications.filter((item) => item.unread).length}</span>}</button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-80 bg-[#0B1F3A] border-white/15 text-white"><DropdownMenuLabel>Notifications</DropdownMenuLabel><DropdownMenuSeparator className="bg-white/10" />{headerNotifications.length === 0 && <div className="px-3 py-6 text-center text-xs text-white/50">Aucune notification pour le moment.</div>}{headerNotifications.map((item) => <DropdownMenuItem key={item.id} className="flex items-start gap-3 py-3 cursor-pointer" onClick={() => { if (item.action_url) navigate(item.action_url); }}><Bell className="mt-1 h-4 w-4 shrink-0 text-[#E8C96A]" /><div className="min-w-0"><p className="text-sm font-medium">{item.title}</p><p className="text-xs text-white/60">{item.text}</p></div></DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
+        <button className="header-icon-btn header-icon-badge" title="Notifications — ouvre le chat" aria-label="Notifications" data-testid="header-notifications-btn"
+          onClick={() => { onOpenCopilot?.(); markHeaderNotificationsRead(headerSession).then(() => setHeaderNotifications((items) => items.map((item) => ({ ...item, unread: false })))).catch(() => {}); }}>
+          <Bell size={18} />{headerNotifications.filter((item) => item.unread).length > 0 && <span className="header-badge">{headerNotifications.filter((item) => item.unread).length}</span>}
+        </button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -239,9 +268,9 @@ function Header({ onSettings, profileName, theSustainMember, ambianceFoi, onOpen
             </div>
             <div className="border-t border-white/10 mt-1 pt-1">
               {results.map((r) => (
-                <button key={r.path || r.action} onClick={() => go(r)} data-testid={`search-result-${r.label}`}
+                <button key={r.id || r.path || r.action} onClick={() => go(r)} data-testid={`search-result-${r.label}`}
                   className="block w-full text-left px-3 py-2 rounded-lg text-sm text-white/85 hover:bg-white/10 transition-colors">
-                  {r.label}
+                  {r.label}{r.type && <span className="ml-2 text-[11px] text-white/35">{r.type}</span>}
                 </button>
               ))}
               {results.length === 0 && <p className="px-3 py-2 text-[13px] text-white/40">Aucun résultat.</p>}
@@ -342,31 +371,21 @@ export default function Layout() {
   // Badge "nouvelle actualité" — compare la dernière édition disponible à la
   // dernière vue par l'utilisateur.
   const [hasUnseenNews, setHasUnseenNews] = useState(false);
-  const [latestNewsId, setLatestNewsId] = useState(null);
+  // Corrigé : ne marque plus l'actualité comme "vue" à la simple ouverture
+  // du chat (mobile ou PC) — seulement quand l'utilisateur clique
+  // vraiment sur l'onglet Actualité dans ChatPanel.jsx (markNewsTabSeen).
+  // Ce useEffect se redéclenche à l'ouverture/fermeture du chat pour
+  // refléter ce que ChatPanel a marqué de son côté (état non partagé
+  // entre les deux composants) — couvre aussi le calcul initial au montage.
   useEffect(() => {
     Promise.all([getNewsHistory().catch(() => ({ items: [] })), getLastSeenNewsId().catch(() => null)])
       .then(([history, lastSeen]) => {
         const items = Array.isArray(history?.items) ? history.items : [];
         const latest = items[0]?.id || null;
-        setLatestNewsId(latest);
         setHasUnseenNews(Boolean(latest) && latest !== lastSeen);
       });
-  }, []);
-  const markNewsSeen = () => {
-    if (!latestNewsId || !hasUnseenNews) return;
-    setHasUnseenNews(false);
-    setLastSeenNewsId(latestNewsId).catch(() => {});
-  };
-  // Marque l'actu comme vue dès qu'on arrive sur le chat plein écran mobile.
-  // Ce useEffect DOIT rester après la déclaration de `latestNewsId` et
-  // `markNewsSeen` ci-dessus : y référencer ces deux identifiants avant leur
-  // déclaration provoquait un crash en production ("Cannot access
-  // 'latestNewsId' before initialization"), invisible en dev car masqué par
-  // l'ordre d'exécution différent du hot-reload.
-  useEffect(() => {
-    if (hideChromeForMobileChat) markNewsSeen();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hideChromeForMobileChat, latestNewsId]);
+  }, [copilotOpen, location.pathname]);
+  
   useEffect(() => {
     getProfile().then((profile) => setProfileName(profile?.first_name || "")).catch(() => setProfileName(""));
   }, [settingsOpen]);
@@ -382,7 +401,10 @@ export default function Layout() {
     setSettingsOpen(true);
   };
   const openCopilot = () => {
-    markNewsSeen();
+    // Ne marque plus l'actualité comme vue à la simple ouverture du chat —
+    // seulement quand l'utilisateur clique vraiment sur l'onglet Actualité
+    // (voir markNewsTabSeen dans ChatPanel.jsx). Sinon le compteur exact
+    // tombait à 0 avant même d'avoir consulté quoi que ce soit.
     if (window.innerWidth < 769) { navigate("/"); setCopilotOpen(false); }
     else setCopilotOpen(true);
   };
@@ -403,15 +425,15 @@ export default function Layout() {
 
       <div className="app-body">
         {!hideChromeForMobileChat && (
-          <Header onSettings={openSettings} profileName={profileName} theSustainMember={theSustainMember} ambianceFoi={ambianceFoi} onOpenTheSustain={() => setTheSustainModalOpen(true)} />
+          <Header onSettings={openSettings} profileName={profileName} theSustainMember={theSustainMember} ambianceFoi={ambianceFoi} onOpenTheSustain={() => setTheSustainModalOpen(true)} onOpenCopilot={openCopilot} />
         )}
         <div className="flex">
-          <main className="flex-1 min-w-0 w-full px-4 sm:px-8 pb-28 xl:pb-8 max-w-none">
+          <main className={`flex-1 min-w-0 w-full px-4 sm:px-8 pb-28 xl:pb-8 max-w-none transition-[padding] duration-300 ${copilotOpen ? "md:pr-[396px]" : ""}`}>
             <Outlet />
           </main>
           <button
             type="button"
-            onClick={() => { markNewsSeen(); setCopilotOpen((open) => !open); }}
+            onClick={() => setCopilotOpen((open) => !open)}
             className={`hidden md:flex fixed top-1/2 z-[70] -translate-y-1/2 items-center gap-2 rounded-l-2xl border border-r-0 border-white/20 bg-white/[0.10] px-3 py-3 text-sm font-semibold text-white shadow-2xl backdrop-blur-xl transition-[right] duration-200 ${copilotOpen ? "right-[380px]" : "right-0"}`}
             aria-label={copilotOpen ? "Replier le Copilote" : "Déplier le Copilote"}
             title={copilotOpen ? "Replier le Copilote" : "Déplier le Copilote"}

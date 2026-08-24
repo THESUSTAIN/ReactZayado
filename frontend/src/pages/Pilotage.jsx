@@ -93,7 +93,7 @@ function FinancialSources() {
         <div className="max-w-2xl">
           <p className="text-[11px] font-bold uppercase tracking-[.17em] text-[#F1E2CC]">Sources financières</p>
           <h2 className="mt-1 font-head text-xl font-semibold text-white">Une lecture consolidée, sans remplacer vos outils.</h2>
-          <p className="mt-2 text-sm leading-6 text-white/58">MyExtension rassemble uniquement les comptes, factures, dépenses et encaissements que vous autorisez. Aucune écriture comptable, aucun paiement et aucune donnée inventée.</p>
+          <p className="mt-2 text-sm leading-6 text-white/58">MyExtension AI rassemble uniquement les comptes, factures, dépenses et encaissements que vous autorisez. Aucune écriture comptable, aucun paiement et aucune donnée inventée.</p>
         </div>
         <button onClick={openIntegrations} className="inline-flex items-center gap-2 rounded-xl border border-[#F1E2CC]/45 bg-[#F1E2CC]/10 px-4 py-2.5 text-sm font-semibold text-[#F4D990] transition hover:bg-[#F1E2CC]/18" data-testid="pilotage-open-integrations"><Plug size={15} /> Configurer les sources</button>
       </div>
@@ -143,6 +143,9 @@ function SimulateurTresorerie() {
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div><h3 className="font-head flex items-center gap-2 font-semibold"><Calculator size={16} className="text-[#DEC2A3]" /> Comparateur de scénarios</h3><p className="mt-1 text-[12px] text-white/50">Comparez trois hypothèses avant de décider, sans présenter une projection comme une certitude.</p></div>
         <span className="rounded-full border border-white/15 bg-white/[0.04] px-2.5 py-1 text-[10px] text-white/45">Simulation indicative</span>
+      </div>
+      <div className="mb-1.5 grid grid-cols-3 gap-2 px-3 text-[10px] font-semibold uppercase tracking-wide text-white/40">
+        <span>Contrats</span><span>€ moyen / contrat</span><span>Dépenses supplémentaires</span>
       </div>
       <div className="space-y-3">
         {scenarios.map((scenario) => (
@@ -372,8 +375,12 @@ export default function Pilotage() {
             <span className="text-[#DEC2A3]">✦</span> Analyse de contexte
           </h3>
           <p className="text-sm text-white/70 leading-relaxed">
-            Votre trésorerie est {kpis && kpis.tresorerie > 0 ? "saine" : "à surveiller"}.
-            {kpis && kpis.en_retard > 0 && ` ${euro(kpis.en_retard)} de factures sont en retard.`}
+            {!kpis ? "Aucune source financière connectée pour l'instant — rien à analyser." : (
+              <>
+                Votre trésorerie est {kpis.tresorerie > 0 ? "saine" : "à surveiller"}.
+                {kpis.en_retard > 0 && ` ${euro(kpis.en_retard)} de factures sont en retard.`}
+              </>
+            )}
           </p>
           <div className="mt-4 space-y-2">
             {[

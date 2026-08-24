@@ -113,6 +113,7 @@ function AgentsContext() {
         ].map(([title, detail]) => <div key={title} className="rounded-xl border border-white/12 bg-white/[.04] p-4"><p className="text-sm font-semibold text-white">{title}</p><p className="mt-1 text-xs leading-relaxed text-white/55">{detail}</p></div>)}
       </div>
       <p className="mt-5 rounded-xl border border-dashed border-white/15 px-4 py-3 text-sm text-white/55">Aucun agent n’est encore configuré pour cet espace.</p>
+      <button disabled title="La configuration d'agents IA n'est pas encore construite côté serveur." className="mt-3 rounded-xl border border-white/15 px-4 py-2.5 text-sm font-semibold text-white/40 cursor-not-allowed">Configurer un agent — Bientôt</button>
     </section>
   );
 }
