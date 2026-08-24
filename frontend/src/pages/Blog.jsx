@@ -14,6 +14,7 @@ import { ZAYADO_FALLBACK_POSTS } from "@/data_blog_zayado";
 const NAVY = "var(--zayado-navy)";
 const GOLD = "var(--zayado-gold)";
 const MUTED = "var(--zayado-muted)";
+const AUTHOR_AVATAR = "/avatars/zayado-editorial.svg";
 
 function formatDate(iso) {
   if (!iso) return "";
@@ -103,7 +104,8 @@ function BlogList() {
                     dangerouslySetInnerHTML={{ __html: featured.title }} />
                 <div className="text-sm leading-relaxed mb-4" style={{ color: MUTED }}
                      dangerouslySetInnerHTML={{ __html: featured.excerpt }} />
-                <div className="text-xs flex items-center gap-4" style={{ color: MUTED }}>
+                <div className="text-xs flex items-center gap-4 flex-wrap" style={{ color: MUTED }}>
+                  <span className="inline-flex items-center gap-2"><img src={AUTHOR_AVATAR} alt="Avatar de la rédaction Zayado" className="w-6 h-6 rounded-full" /> Rédaction Zayado</span>
                   <span className="inline-flex items-center gap-1.5"><Calendar size={11} /> {formatDate(featured.date)}</span>
                   <span className="inline-flex items-center gap-1.5"><Clock size={11} /> {readingTime(featured.content_html || featured.excerpt)} min</span>
                 </div>
@@ -136,7 +138,8 @@ function BlogList() {
                       dangerouslySetInnerHTML={{ __html: p.title }} />
                   <div className="text-xs leading-relaxed mb-3 line-clamp-2" style={{ color: MUTED }}
                        dangerouslySetInnerHTML={{ __html: p.excerpt }} />
-                  <div className="text-[11px] flex items-center gap-3" style={{ color: MUTED }}>
+                  <div className="text-[11px] flex items-center gap-3 flex-wrap" style={{ color: MUTED }}>
+                    <span className="inline-flex items-center gap-1.5"><img src={AUTHOR_AVATAR} alt="Rédaction Zayado" className="w-5 h-5 rounded-full" /> Zayado</span>
                     <span>{formatDate(p.date)}</span>
                     <span>·</span>
                     <span>{readingTime(p.content_html || p.excerpt)} min</span>
@@ -219,10 +222,11 @@ function BlogPost() {
             dangerouslySetInnerHTML={{ __html: post.title }}
             data-testid="blog-post-title" />
 
-        <div className="flex items-center gap-4 text-xs mb-8 pb-6 border-b border-[var(--zayado-border)]" style={{ color: MUTED }}>
+        <div className="flex items-center gap-4 text-xs mb-8 pb-6 border-b border-[var(--zayado-border)] flex-wrap" style={{ color: MUTED }}>
+          <span className="inline-flex items-center gap-2"><img src={AUTHOR_AVATAR} alt="Avatar de la rédaction Zayado" className="w-7 h-7 rounded-full" /> Rédaction Zayado</span>
           <span className="inline-flex items-center gap-1.5"><Calendar size={11} /> {formatDate(post.date)}</span>
           <span className="inline-flex items-center gap-1.5"><Clock size={11} /> {readingTime(post.content_html)} min de lecture</span>
-          <span>par {post.author}</span>
+          <span>contenu éditorial Zayado</span>
         </div>
 
         {post.featured_image && (

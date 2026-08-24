@@ -29,8 +29,8 @@ const REVIEWS = [
     title: "Je dis merci à Cindy et à toute son équipe",
     body: "Je dis merci à Cindy et à toute son équipe. Étant entrepreneur et croyante en Dieu, Zayado m'a aidé sur plusieurs plans : création d'entreprise, créations des flyers, structuration des idées, etc. Ils sont vraiment professionnels et sont à l'écoute.",
     color: "#7CC04E",
-    // Avatar photo-like généré (style Dicebear "personas") basé sur le prénom
-    avatarUrl: "https://api.dicebear.com/9.x/personas/svg?seed=Theodora&backgroundColor=bfe7a3&backgroundType=solid",
+    // Avatar éditorial illustré local — ne représente pas la personne réelle
+    avatarUrl: "/avatars/theodora.svg",
     avatarBg: "#bfe7a3",
   },
   {
@@ -43,7 +43,7 @@ const REVIEWS = [
     title: "Une vision ludique du monde de l'entreprise",
     body: "Je suis en contact avec Cindy qui est extrêmement patiente, réactive et très professionnelle. Elle répond à mes nombreuses sollicitations toujours avec beaucoup de bienveillance. Sans elle je n'aurais jamais réussi à me former et à prendre confiance. Elle dédramatise les problèmes ! Merci Cindy 🙏",
     color: "#7CC04E",
-    avatarUrl: "https://api.dicebear.com/9.x/personas/svg?seed=ConsumerFR&backgroundColor=cdb2f3&backgroundType=solid",
+    avatarUrl: "/avatars/consumer.svg",
     avatarBg: "#cdb2f3",
   },
   {
@@ -56,7 +56,7 @@ const REVIEWS = [
     title: "Trop ravis de leur support client !",
     body: "Trop ravis de leur support client ! Merci Zayado !",
     color: "#7CC04E",
-    avatarUrl: "https://api.dicebear.com/9.x/personas/svg?seed=MW-Zayado&backgroundColor=fce2a0&backgroundType=solid",
+    avatarUrl: "/avatars/mw.svg",
     avatarBg: "#fce2a0",
   },
   {
@@ -69,7 +69,7 @@ const REVIEWS = [
     title: "Professionnalisme et efficacité",
     body: "J'ai apprécié le professionnalisme, le support et l'efficacité des équipes de Zayado. Ils m'ont accompagnée du début à la fin avec sérieux et bienveillance.",
     color: "#FFC107",
-    avatarUrl: "https://api.dicebear.com/9.x/personas/svg?seed=SaraDeJesus&backgroundColor=d4b982&backgroundType=solid",
+    avatarUrl: "/avatars/sara.svg",
     avatarBg: "#d4b982",
   },
   {
@@ -82,7 +82,7 @@ const REVIEWS = [
     title: "Service parfait du début à la fin",
     body: "Service parfait du début à la fin. L'équipe était très professionnelle, à l'écoute et a répondu à toutes mes questions. Je recommande vivement.",
     color: "#FFC107",
-    avatarUrl: "https://api.dicebear.com/9.x/personas/svg?seed=NamQuocDang&backgroundColor=a7c7e7&backgroundType=solid",
+    avatarUrl: "/avatars/nam.svg",
     avatarBg: "#a7c7e7",
   },
 ];
@@ -126,7 +126,7 @@ const ReviewCard = ({ r }) => (
         {r.avatarUrl ? (
           <img
             src={r.avatarUrl}
-            alt={r.name}
+            alt={`Avatar illustré de ${r.name}`}
             className="w-full h-full object-cover"
             onError={(e) => {
               e.currentTarget.style.display = "none";
@@ -141,7 +141,7 @@ const ReviewCard = ({ r }) => (
       </div>
       <div className="min-w-0">
         <div className="text-[13px] font-semibold leading-tight" style={{ color: "#1a3a6e" }}>{r.name}</div>
-        <div className="text-[11px]" style={{ color: "#6b6358" }}>{r.location} · {r.date}</div>
+        <div className="text-[11px]" style={{ color: "#6b6358" }}>{r.location} · {r.date} · avatar illustré</div>
       </div>
     </div>
   </article>
