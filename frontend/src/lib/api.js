@@ -481,3 +481,6 @@ export const storeMemory = (content, category = "general") => api.post("/memory/
 export const deleteMemory = (id) => api.delete(`/memory/${id}`).then((r) => r.data);
 export const getAiPermissions = () => api.get("/prefs").then((r) => r.data?.ai_permissions || {});
 export const saveAiPermissions = (permissions) => api.put("/prefs", { ai_permissions: permissions }).then((r) => r.data?.ai_permissions || {});
+
+// Compatibilité avec les modules historiques qui importent le client Axios en défaut.
+export default api;
