@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { useApp } from "./useApp";
 import { visionApi, visionExtApi, studioApi } from "../../lib/finalVisionModuleApi";
 
-const backendBase = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/$/, "");
+const backendBase = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 const fullUrl = (u) => (!u ? u : u.startsWith("http") || u.startsWith("data:") ? u : `${backendBase}${u}`);
 const uid = () => `${Date.now()}_${Math.floor(Math.random() * 9999)}`;
 

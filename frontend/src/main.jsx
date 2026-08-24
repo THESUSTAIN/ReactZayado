@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import "./index.css";
+import App from "./App";
 
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
@@ -47,8 +48,8 @@ const __basename = typeof window !== "undefined"
   ? __preview_prefix
   : "/";
 
-ReactDOM.createRoot(document.getElementById("root")).render(
-  <React.StrictMode>
+function PublicApp() {
+  return (
     <HelmetProvider>
       <WPSiteSettings />
       <BrowserRouter basename={__basename}>
@@ -207,6 +208,13 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           </AuthProvider>
         </ThemeProvider>
       </BrowserRouter>
-    </HelmetProvider>
+    </HelmetProvider>  );
+}
+
+const isAppHost = typeof window !== "undefined" && /(^|\.)app\.zayado\.net$/i.test(window.location.hostname);
+
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <React.StrictMode>
+    {isAppHost ? <App /> : <PublicApp />}
   </React.StrictMode>
 );
