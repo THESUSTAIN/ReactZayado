@@ -1,5 +1,7 @@
 import os
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.engine import make_url
+import json
 from sqlalchemy.orm import DeclarativeBase
 from dotenv import load_dotenv
 from pathlib import Path
@@ -16,10 +18,15 @@ DB_PORT = os.environ.get('DB_PORT') or os.environ.get('DB_PORT_PROD', '3306')
 DB_NAME = (os.environ.get('DB_NAME') or os.environ.get('DB_DATABASE')
            or os.environ.get('DB_NAME_CUSTOM') or os.environ.get('DB_NAME_PROD'))
 NODE_ENV = os.environ.get('NODE_ENV', 'development')
+FORCE_LOCAL_DB = os.environ.get('CAP_VIVANT_LOCAL_DB') == '1'
 
 # ── Priorité 1 : DATABASE_URL fourni directement (Railway MySQL natif ou Hostinger)
 _raw_url = os.environ.get('DATABASE_URL', '')
-if _raw_url:
+if FORCE_LOCAL_DB:
+    db_path = ROOT_DIR / "zayado.db"
+    DATABASE_URL = f"sqlite+aiosqlite:///{db_path}"
+    DB_TYPE = "sqlite"
+elif _raw_url:
     # Railway fournit mysql:// mais asyncmy requiert mysql+asyncmy://
     if _raw_url.startswith('mysql://'):
         _raw_url = _raw_url.replace('mysql://', 'mysql+asyncmy://', 1)
@@ -43,9 +50,42 @@ import logging as _db_logging
 _db_logger = _db_logging.getLogger("database")
 _db_logger.info(f"Database mode: {DB_TYPE}")
 
-_engine_kwargs = {"echo": False, "pool_pre_ping": True}
+# asyncmy attend un dictionnaire pour ``ssl``. Certaines URLs Railway/MySQL
+# portent ``?ssl=true`` ou une valeur sérialisée : SQLAlchemy la transmet alors
+# comme chaîne et asyncmy appelle ``.get`` dessus, ce qui bloque toutes les
+# routes protégées. On retire ce paramètre de l’URL puis on le normalise dans
+# ``connect_args`` sans modifier les secrets fournis par l’environnement.
+_mysql_ssl_options = None
+if DB_TYPE == "mysql":
+    _parsed_url = make_url(DATABASE_URL)
+    _raw_ssl = _parsed_url.query.get("ssl")
+    if _raw_ssl is not None:
+        _query = dict(_parsed_url.query)
+        _query.pop("ssl", None)
+        DATABASE_URL = str(_parsed_url.set(query=_query))
+        if isinstance(_raw_ssl, str):
+            try:
+                _decoded_ssl = json.loads(_raw_ssl)
+            except (TypeError, ValueError):
+                _decoded_ssl = {}
+        else:
+            _decoded_ssl = _raw_ssl
+        _mysql_ssl_options = _decoded_ssl if isinstance(_decoded_ssl, dict) else {}
+
+from sqlalchemy.pool import NullPool
+
+_engine_kwargs = {"echo": False}
 if DB_TYPE != "sqlite":
-    _engine_kwargs.update({"pool_size": 10, "max_overflow": 20, "pool_recycle": 1800, "pool_timeout": 30})
+    # NullPool = fresh connection per request. No stale TCP connections ever.
+    # Slightly higher latency but 100% reliable on Railway/cloud MySQL.
+    _engine_kwargs.update({
+        "poolclass": NullPool,
+        "connect_args": {"connect_timeout": 10},
+    })
+    if DB_TYPE == "mysql" and _mysql_ssl_options is not None:
+        _engine_kwargs["connect_args"]["ssl"] = _mysql_ssl_options
+else:
+    _engine_kwargs["pool_pre_ping"] = True
 engine = create_async_engine(DATABASE_URL, **_engine_kwargs)
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 async_session_factory = async_session
@@ -54,8 +94,18 @@ class Base(DeclarativeBase):
     pass
 
 async def init_db():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # Dispose stale connections from previous server process
+    try:
+        await engine.dispose()
+    except Exception:
+        pass
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    except Exception as e:
+        import logging
+        logging.getLogger("database").error(f"init_db create_all error (non-fatal): {e}")
+        return  # Don't crash the server — health endpoint must be available
     # Verify critical tables exist and migrate columns
     import logging
     logger = logging.getLogger("database")
@@ -123,6 +173,16 @@ async def init_db():
                             logger.info("Added column folders.team_id")
                         except Exception as ae:
                             logger.warning(f"Could not add folders.team_id: {ae}")
+                # user_connections table - ensure updated_at exists
+                if "user_connections" in insp.get_table_names():
+                    existing = {c["name"] for c in insp.get_columns("user_connections")}
+                    if "updated_at" not in existing:
+                        try:
+                            connection.execute(sa_text("ALTER TABLE user_connections ADD COLUMN updated_at TIMESTAMP"))
+                            connection.execute(sa_text("UPDATE user_connections SET updated_at = created_at WHERE updated_at IS NULL"))
+                            logger.info("Added column user_connections.updated_at")
+                        except Exception as ae:
+                            logger.warning(f"Could not add user_connections.updated_at: {ae}")
                 # Projects table - ensure all columns exist
                 if "projects" in insp.get_table_names():
                     existing = {c["name"] for c in insp.get_columns("projects")}
@@ -161,11 +221,18 @@ async def init_db():
                             logger.info("Fixed credit_logs.team_id to nullable")
                         except Exception:
                             pass  # SQLite doesn't support MODIFY, ignore
-                # Api costs table - ensure conversation_id exists
+                # Api costs table - ensure ALL columns exist (production may have partial schema)
                 if "api_costs" in insp.get_table_names():
                     existing = {c["name"] for c in insp.get_columns("api_costs")}
                     ac_migrations = {
                         "conversation_id": "VARCHAR(36)",
+                        "mode": "VARCHAR(30)",
+                        "input_tokens": "INTEGER DEFAULT 0",
+                        "output_tokens": "INTEGER DEFAULT 0",
+                        "credits_charged": "INTEGER DEFAULT 0",
+                        "estimated_cost_eur": "FLOAT DEFAULT 0.0",
+                        "model": "VARCHAR(100)",
+                        "provider": "VARCHAR(50)",
                     }
                     for col, typedef in ac_migrations.items():
                         if col not in existing:
@@ -174,6 +241,88 @@ async def init_db():
                                 logger.info(f"Added column api_costs.{col}")
                             except Exception as ae:
                                 logger.warning(f"Could not add api_costs.{col}: {ae}")
+                # Transactions table - ensure checkout_url exists
+                if "transactions" in insp.get_table_names():
+                    existing = {c["name"] for c in insp.get_columns("transactions")}
+                    tx_migrations = {
+                        "checkout_url": "VARCHAR(500)",
+                        "package_id": "VARCHAR(100)",
+                    }
+                    for col, typedef in tx_migrations.items():
+                        if col not in existing:
+                            try:
+                                connection.execute(sa_text(f"ALTER TABLE transactions ADD COLUMN {col} {typedef}"))
+                                logger.info(f"Added column transactions.{col}")
+                            except Exception as ae:
+                                logger.warning(f"Could not add transactions.{col}: {ae}")
+                # Feedbacks table - ensure ALL columns exist
+                if "feedbacks" in insp.get_table_names():
+                    existing = {c["name"] for c in insp.get_columns("feedbacks")}
+                    fb_migrations = {
+                        "feedback": "VARCHAR(10)",
+                        "comment": "TEXT",
+                        "message_index": "INTEGER DEFAULT 0",
+                        "conversation_id": "VARCHAR(36)",
+                    }
+                    for col, typedef in fb_migrations.items():
+                        if col not in existing:
+                            try:
+                                connection.execute(sa_text(f"ALTER TABLE feedbacks ADD COLUMN {col} {typedef}"))
+                                logger.info(f"Added column feedbacks.{col}")
+                            except Exception as ae:
+                                logger.warning(f"Could not add feedbacks.{col}: {ae}")
+                # Custom agents — ensure all columns exist (critical for prod)
+                if "custom_agents" in insp.get_table_names():
+                    existing = {c["name"] for c in insp.get_columns("custom_agents")}
+                    ca_migrations = {
+                        "use_user_memory":   "BOOLEAN DEFAULT 1",
+                        "webhook_token":     "VARCHAR(64)",
+                        "deployed_channels": "JSON",
+                        "team_id":           "VARCHAR(36)",
+                        "usage_count":       "INTEGER DEFAULT 0",
+                        "is_public":         "BOOLEAN DEFAULT 0",
+                        "is_active":         "BOOLEAN DEFAULT 1",
+                        "temperature":       "FLOAT DEFAULT 0.7",
+                        "max_tokens":        "INTEGER DEFAULT 4096",
+                    }
+                    for col, typedef in ca_migrations.items():
+                        if col not in existing:
+                            try:
+                                connection.execute(sa_text(f"ALTER TABLE custom_agents ADD COLUMN {col} {typedef}"))
+                                logger.info(f"Added column custom_agents.{col}")
+                            except Exception as ae:
+                                logger.warning(f"Could not add custom_agents.{col}: {ae}")
+                # Agent messages — distinction conversation client externe (WhatsApp/Telegram/Web) vs test propriétaire
+                if "agent_messages" in insp.get_table_names():
+                    existing = {c["name"] for c in insp.get_columns("agent_messages")}
+                    am_migrations = {
+                        "contact": "VARCHAR(64)",
+                        "channel": "VARCHAR(20)",
+                    }
+                    for col, typedef in am_migrations.items():
+                        if col not in existing:
+                            try:
+                                connection.execute(sa_text(f"ALTER TABLE agent_messages ADD COLUMN {col} {typedef}"))
+                                logger.info(f"Added column agent_messages.{col}")
+                            except Exception as ae:
+                                logger.warning(f"Could not add agent_messages.{col}: {ae}")
+                # User connections — ensure all columns exist
+                if "user_connections" in insp.get_table_names():
+                    existing = {c["name"] for c in insp.get_columns("user_connections")}
+                    uc_migrations = {
+                        "label":               "VARCHAR(255)",
+                        "is_verified":         "BOOLEAN DEFAULT 0",
+                        "verification_token":  "VARCHAR(100)",
+                        "last_used_at":        "TIMESTAMP",
+                        "revoked_at":          "TIMESTAMP",
+                    }
+                    for col, typedef in uc_migrations.items():
+                        if col not in existing:
+                            try:
+                                connection.execute(sa_text(f"ALTER TABLE user_connections ADD COLUMN {col} {typedef}"))
+                                logger.info(f"Added column user_connections.{col}")
+                            except Exception as ae:
+                                logger.warning(f"Could not add user_connections.{col}: {ae}")
             await conn.run_sync(_check_and_add_columns)
     except Exception as e:
         logger.error(f"Column migration error: {e}")

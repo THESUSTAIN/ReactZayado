@@ -2,26 +2,25 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://zayado.net/</loc></url>
   <url><loc>https://zayado.net/boutique</loc></url>
-  <url><loc>https://zayado.net/avantages</loc></url>
   <url><loc>https://zayado.net/nos-services</loc></url>
+  <url><loc>https://zayado.net/avantages</loc></url>
   <url><loc>https://zayado.net/services/finance-pilotage</loc></url>
-  <url><loc>https://zayado.net/services/gestion-administrative</loc></url>
-  <url><loc>https://zayado.net/services/creation-structuration</loc></url>
-  <url><loc>https://zayado.net/services/cession-reprise</loc></url>
+  <url><loc>https://zayado.net/services/gestion-organisation</loc></url>
+  <url><loc>https://zayado.net/services/developpement</loc></url>
+  <url><loc>https://zayado.net/services/structuration</loc></url>
+  <url><loc>https://zayado.net/creation-entreprise</loc></url>
+  <url><loc>https://zayado.net/valider-son-projet</loc></url>
+  <url><loc>https://zayado.net/tester-son-projet</loc></url>
   <url><loc>https://zayado.net/myextension-ai</loc></url>
-  <url><loc>https://zayado.net/myextension-ai/vision</loc></url>
-  <url><loc>https://zayado.net/myextension-ai/pilotage-financier</loc></url>
-  <url><loc>https://zayado.net/myextension-ai/espace-travail</loc></url>
-  <url><loc>https://zayado.net/myextension-ai/energie</loc></url>
+  <url><loc>https://zayado.net/vision-board</loc></url>
+  <url><loc>https://zayado.net/simulateurs</loc></url>
+  <url><loc>https://zayado.net/simulateur-rentabilite</loc></url>
+  <url><loc>https://zayado.net/simulateur-statut-juridique</loc></url>
+  <url><loc>https://zayado.net/analyse-sante-financiere</loc></url>
   <url><loc>https://zayado.net/blog</loc></url>
-  <url><loc>https://zayado.net/blog/piloter-tresorerie-independant</loc></url>
-  <url><loc>https://zayado.net/blog/vision-entrepreneur-objectifs-90-jours</loc></url>
-  <url><loc>https://zayado.net/blog/organiser-semaine-independant</loc></url>
-  <url><loc>https://zayado.net/blog/prevenir-surcharge-travail-independant</loc></url>
-  <url><loc>https://zayado.net/blog/choisir-outils-bureau-independant</loc></url>
-  <url><loc>https://zayado.net/blog/quand-deleguer-administratif</loc></url>
-  <url><loc>https://zayado.net/blog/marge-nette-independant</loc></url>
-  <url><loc>https://zayado.net/blog/documents-ressources-organisation</loc></url>
-  <url><loc>https://zayado.net/blog/rituels-faciliter-concentration</loc></url>
-  <url><loc>https://zayado.net/blog/ia-decision-entrepreneur</loc></url>
+  <url><loc>https://zayado.net/a-propos</loc></url>
+  <url><loc>https://zayado.net/faq</loc></url>
+  <url><loc>https://zayado.net/partenaires</loc></url>
+  <url><loc>https://zayado.net/tarifs</loc></url>
+  <url><loc>https://zayado.net/contact</loc></url>
 </urlset>

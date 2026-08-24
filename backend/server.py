@@ -650,13 +650,7 @@ if _PUBLIC_SITE_DIST.exists():
         return FileResponse(str(_PUBLIC_SITE_DIST / "index.html"))
 
 if _STATIC_DIR.exists():
-    # Le build Vite place les assets dans /backend/static/assets (et non
-    # /backend/static/static comme l'ancien build CRA). Ne monter /static
-    # que si l'ancien sous-dossier existe afin de préserver la compatibilité
-    # sans empêcher FastAPI de démarrer.
-    _LEGACY_STATIC_DIR = _STATIC_DIR / "static"
-    if _LEGACY_STATIC_DIR.exists():
-        app.mount("/static", StaticFiles(directory=str(_LEGACY_STATIC_DIR)), name="react-static")
+    app.mount("/static", StaticFiles(directory=str(_STATIC_DIR / "static")), name="react-static")
 
     @app.get("/{full_path:path}", include_in_schema=False)
     async def spa_fallback(full_path: str):

@@ -18,6 +18,8 @@ import Collaborateur from "./pages/Collaborateur";
 import TheSustain from "./pages/TheSustain";
 import CampusComingSoon from "./pages/CampusComingSoon";
 import { authMe } from "./lib/api";
+import PublicSiteRoutes from "./publicSite/PublicSiteRoutes";
+import "./publicSite/public.css";
 
 // Accueil : "Aujourd'hui", porte d'entree quotidienne Cap Vivant (tache #21 —
 // avant : le Vision Board abstrait etait l'accueil direct, remplace ici par
@@ -45,7 +47,7 @@ function AppHome() {
   }, [isMobile]);
   if (isMobile) {
     return (
-      <div className="fixed inset-0 z-[150] overflow-hidden overscroll-none bg-[#0B1F3A]" data-testid="mobile-copilot-home">
+      <div className="fixed inset-0 z-[150] overflow-hidden overscroll-none bg-[#0B1F3A] pb-24" data-testid="mobile-copilot-home">
         <ChatPanel
           context="Accueil quotidien Cap Vivant."
           onMenu={() => window.dispatchEvent(new CustomEvent("cours:open-mobile-nav"))}
@@ -82,6 +84,8 @@ class AppErrorBoundary extends React.Component {
 }
 
 function App() {
+  const isPublicHost = typeof window !== "undefined" && (window.location.hostname === "zayado.net" || window.location.hostname === "www.zayado.net" || new URLSearchParams(window.location.search).get("public") === "1");
+  if (isPublicHost) return <PublicSiteRoutes />;
   return (
     <AppErrorBoundary><div className="App">
       <BrowserRouter>

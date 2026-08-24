@@ -277,8 +277,16 @@ export default function ChatPanel({ context, initialAsk, onBack, onMenu }) {
       const question = event?.detail?.ask;
       if (question) setTimeout(() => send(question), 50);
     };
+    const openNews = () => {
+      setTab("news");
+      markNewsTabSeen();
+    };
     window.addEventListener("cours:open-copilot", openFromApp);
-    return () => window.removeEventListener("cours:open-copilot", openFromApp);
+    window.addEventListener("cours:open-news", openNews);
+    return () => {
+      window.removeEventListener("cours:open-copilot", openFromApp);
+      window.removeEventListener("cours:open-news", openNews);
+    };
   });
 
   const send = async (rawMessage) => {
