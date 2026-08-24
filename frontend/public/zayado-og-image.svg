@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">ZAYADO — Marketplace et services pour indépendants</title>
+  <desc id="desc">Entreprendre avec sens, clarté et équilibre.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#08172D"/><stop offset="0.62" stop-color="#102945"/><stop offset="1" stop-color="#1A3A6E"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="1020" cy="115" r="180" fill="#B89855" opacity=".12"/>
+  <circle cx="1080" cy="540" r="260" fill="#D4B982" opacity=".08"/>
+  <text x="82" y="130" font-family="Georgia,serif" font-size="82" font-weight="700" fill="#D4B982">Z</text>
+  <text x="172" y="126" font-family="Arial,sans-serif" font-size="42" font-weight="700" letter-spacing="6" fill="#FFFFFF">ZAYADO</text>
+  <text x="82" y="245" font-family="Georgia,serif" font-size="58" font-weight="700" fill="#FFFFFF">Entreprendre avec</text>
+  <text x="82" y="315" font-family="Georgia,serif" font-size="68" font-weight="700" fill="#D4B982">sens, clarté et équilibre.</text>
+  <text x="82" y="385" font-family="Arial,sans-serif" font-size="27" fill="#FFFFFF" opacity=".78">Marketplace · Services Pro · Avantages · MyExtension AI</text>
+  <rect x="82" y="455" width="390" height="64" rx="32" fill="#D4B982"/>
+  <text x="277" y="496" text-anchor="middle" font-family="Arial,sans-serif" font-size="23" font-weight="700" fill="#0C1D33">ZAYADO.NET</text>
+</svg>
