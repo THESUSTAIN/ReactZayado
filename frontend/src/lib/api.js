@@ -1,9 +1,11 @@
 import axios from "axios";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
+const BACKEND_URL = import.meta.env.VITE_API_URL || "";
 export const API = `${BACKEND_URL}/api`;
+export const SAAS_URL = import.meta.env.VITE_SAAS_URL || "https://app.zayado.net";
+export const WP_URL = (import.meta.env.VITE_WP_URL || "https://cms.zayado.net").replace(/\/$/, "");
 
-export const api = axios.create({ baseURL: API });
+export const api = axios.create({ baseURL: API, withCredentials: false });
 
 const listOf = (payload, key = "items") => Array.isArray(payload) ? payload : (Array.isArray(payload?.[key]) ? payload[key] : []);
 const asEnergyPercent = (value) => {
@@ -56,6 +58,24 @@ api.interceptors.response.use((response) => {
   return response;
 });
 
+api.interceptors.response.use((r) => r, (error) => {
+  const status = error?.response?.status;
+  const url = error?.config?.url || "";
+  if (status === 401) {
+    const path = typeof window !== "undefined" ? window.location.pathname : "";
+    const isAuthEndpoint = url.includes("/auth/") || url.includes("/onboarding/status");
+    const isPublicPage = path === "/" || path.startsWith("/blog") || path.startsWith("/boutique") || path.startsWith("/partenaires") || path === "/contact" || path === "/a-propos" || path === "/faq" || path.startsWith("/services/") || path.startsWith("/avantages");
+    if (!isAuthEndpoint && !isPublicPage && !path.startsWith("/login")) {
+      // On ne redirige l'application que lorsqu'elle est réellement sur une route protégée.
+      // Le site public reste consultable sans session.
+      if (path.startsWith("/vision") || path.startsWith("/mouvement") || path.startsWith("/mindset") || path.startsWith("/contexte") || path.startsWith("/collaborateur") || path === "/onboarding") {
+        window.location.replace("/login");
+      }
+    }
+  }
+  return Promise.reject(error);
+});
+
 // Contrat Final-main réel : l'inscription utilise /api/auth/register.
 export const authSignup = (email, password, first_name) =>
   api.post("/auth/register", { email, password, first_name }).then((r) => r.data);
@@ -65,6 +85,7 @@ export const authMe = () => api.get("/auth/me").then((r) => r.data);
 // URLs de la fenêtre TheSustain — éditables par un admin (PUT /admin/config
 // avec {thesustain_urls: {...}}), lues ici en public.
 export const getPublicConfig = () => api.get("/config/public").then((r) => r.data);
+export const wp = { pageBySlug: (slug) => api.get(`/wp/page/${encodeURIComponent(slug)}`).then((r) => r.data) };
 // Le routeur alias Final-main est monté sous /api/onboarding. Le chemin
 // /auth/onboarding n’existe pas et empêchait l’onboarding frontend de persister.
 export const authOnboarding = (d) => api.post("/onboarding", d).then((r) => r.data);
@@ -460,3 +481,6 @@ export const storeMemory = (content, category = "general") => api.post("/memory/
 export const deleteMemory = (id) => api.delete(`/memory/${id}`).then((r) => r.data);
 export const getAiPermissions = () => api.get("/prefs").then((r) => r.data?.ai_permissions || {});
 export const saveAiPermissions = (permissions) => api.put("/prefs", { ai_permissions: permissions }).then((r) => r.data?.ai_permissions || {});
+
+// Compatibilité avec les modules historiques qui importent le client Axios en défaut.
+export default api;

@@ -2,7 +2,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Compass, Eye, HeartPulse, MessageCircle, Gem, Search, Bell,
-  LayoutGrid, Newspaper, Wallet, ChevronDown, Settings as SettingsIcon, HelpCircle, LogOut, X, Mail, Globe, TrendingUp, Rocket, Briefcase, GraduationCap, Sun, Moon,
+  LayoutGrid, ChevronDown, Settings as SettingsIcon, HelpCircle, LogOut, X, Mail, Globe, TrendingUp, Rocket, Briefcase, GraduationCap, Sun, Moon,
 } from "lucide-react";
 import { toast } from "sonner";
 import ChatPanel from "./ChatPanel";
@@ -16,23 +16,21 @@ import {
 } from "./ui/dropdown-menu";
 
 const ITEMS = [
-  { id: "hub", label: "Hub IA", shortLabel: "Hub", Icon: LayoutGrid, path: "/", exact: true },
-  { id: "vision", label: "Ma Vision", shortLabel: "Vision", Icon: Eye, path: "/vision" },
-  { id: "croissance", label: "Croissance", shortLabel: "Croissance", Icon: TrendingUp, path: "/croissance" },
-  { id: "pilotage", label: "Pilotage DAF IA", shortLabel: "Pilotage", Icon: Wallet, path: "/pilotage" },
-  { id: "espace", label: "Espace de travail", shortLabel: "Espace", Icon: Briefcase, path: "/travail" },
-  { id: "actualite", label: "Actualité", shortLabel: "Actu", Icon: Newspaper, action: "open-news" },
+  { id: "aujourdhui", label: "Aujourd'hui", shortLabel: "Aujourd'hui", Icon: Compass, path: "/", exact: true },
+  { id: "moncap", label: "Ma Vision", shortLabel: "Ma Vision", Icon: Eye, path: "/vision" },
+  { id: "monmouvement", label: "Mon Mouvement", shortLabel: "Mouvement", Icon: Briefcase, path: "/mouvement" },
+  { id: "mindset", label: "Mindset & capacité", shortLabel: "Mindset", Icon: HeartPulse, path: "/mindset" },
+  { id: "contexte", label: "Contexte", shortLabel: "Contexte", Icon: TrendingUp, path: "/contexte" },
 ];
-const MENU_GROUP_STARTS = new Set(["pilotage"]);
+const MENU_GROUP_STARTS = new Set(["contexte"]);
 
 const COLLAPSE_KEY = "mx_sidebar_collapsed";
 const SEARCH_TARGETS = [
-  { label: "Hub IA", path: "/" },
+  { label: "Aujourd'hui", path: "/" },
   { label: "Ma Vision", path: "/vision" },
-  { label: "Croissance", path: "/croissance" },
-  { label: "Pilotage DAF IA", path: "/pilotage" },
-  { label: "Espace de travail", path: "/travail" },
-  { label: "Actualité", action: "open-news" },
+  { label: "Mon Mouvement", path: "/mouvement" },
+  { label: "Mindset & capacité", path: "/mindset" },
+  { label: "Contexte (Pilotage & Croissance)", path: "/contexte" },
   { label: "Campus", path: "/campus" },
   { label: "Collaborateur", path: "/collaborateur" },
   { label: "TheSustain · Foi & vocation", path: "/thesustain", requiresTheSustain: true },
@@ -79,7 +77,7 @@ function Sidebar({ onSettings, onCopilote }) {
     item.path ? (item.exact ? location.pathname === "/" : location.pathname.startsWith(item.path)) : false;
 
   const onItemClick = (item) => {
-    if (item.action === "open-news") { window.dispatchEvent(new CustomEvent("cours:open-news")); return onCopilote(); }
+    if (item.action === "open-kairos") return onCopilote();
     if (item.path) navigate(item.path);
   };
 
@@ -139,6 +137,7 @@ function Header({ onSettings, profileName, theSustainMember, ambianceFoi, onOpen
   const [q, setQ] = useState("");
   const [headerMessages, setHeaderMessages] = useState([]);
   const [headerNotifications, setHeaderNotifications] = useState([]);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const headerSession = "default";
   const [isLight, setIsLight] = useState(() => document.documentElement.classList.contains("ambiance-clarte"));
 
@@ -153,10 +152,34 @@ function Header({ onSettings, profileName, theSustainMember, ambianceFoi, onOpen
     } catch { /* noop */ }
   };
 
-  useEffect(() => {
-    Promise.all([getHeaderMessages(headerSession), getHeaderNotifications(headerSession)])
-      .then(([messages, notifications]) => { setHeaderMessages(messages?.items || []); setHeaderNotifications(notifications?.items || []); })
+  const refreshHeaderNotifications = useCallback(() => {
+    return Promise.all([getHeaderMessages(headerSession), getHeaderNotifications(headerSession)])
+      .then(([messages, notifications]) => {
+        setHeaderMessages(messages?.items || []);
+        setHeaderNotifications(notifications?.items || []);
+      })
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    refreshHeaderNotifications();
+    const timer = setInterval(refreshHeaderNotifications, 60000);
+    return () => clearInterval(timer);
+  }, [refreshHeaderNotifications]);
+
+  useEffect(() => {
+    const onOutside = (event) => {
+      if (!event.target.closest?.('[data-testid="header-notifications-wrap"]')) setNotificationsOpen(false);
+    };
+    const onKey = (event) => {
+      if (event.key === "Escape") setNotificationsOpen(false);
+    };
+    document.addEventListener("pointerdown", onOutside);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onOutside);
+      document.removeEventListener("keydown", onKey);
+    };
   }, []);
 
   useEffect(() => {
@@ -183,7 +206,6 @@ function Header({ onSettings, profileName, theSustainMember, ambianceFoi, onOpen
   const results = [...dataResults, ...navResults];
   const go = (target) => {
     if (target.action === "settings") onSettings();
-    else if (target.action === "open-news") { window.dispatchEvent(new CustomEvent("cours:open-news")); onOpenCopilot?.(); }
     else if (target.path) navigate(target.path);
     setSearchOpen(false); setQ("");
   };
@@ -204,10 +226,62 @@ function Header({ onSettings, profileName, theSustainMember, ambianceFoi, onOpen
           {isLight ? <Moon size={18} /> : <Sun size={18} />}
         </button>
         <DropdownMenu><DropdownMenuTrigger asChild><button className="header-icon-btn header-icon-badge" title="Messages" aria-label="Messages" data-testid="header-mail-btn" onClick={() => markHeaderMessagesRead(headerSession).then(() => setHeaderMessages((items) => items.map((item) => ({ ...item, unread: false })))).catch(() => {})}><Mail size={18} />{headerMessages.filter((item) => item.unread).length > 0 && <span className="header-badge">{headerMessages.filter((item) => item.unread).length}</span>}</button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-80 bg-[#0B1F3A] border-white/15 text-white"><DropdownMenuLabel>Messages</DropdownMenuLabel><DropdownMenuSeparator className="bg-white/10" />{headerMessages.length === 0 && <div className="px-3 py-6 text-center text-xs text-white/50">Aucun message pour le moment.</div>}{headerMessages.map((item) => <DropdownMenuItem key={item.id} className="flex items-start gap-3 py-3 cursor-pointer"><div className="w-9 h-9 rounded-full gold-bg text-[#0A1128] text-xs font-semibold flex items-center justify-center">{(item.sender || "M").charAt(0).toUpperCase()}</div><div className="min-w-0"><p className="text-sm font-medium">{item.sender}</p><p className="text-xs text-white/60">{item.text}</p></div></DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
-        <button className="header-icon-btn header-icon-badge" title="Notifications — ouvre le chat" aria-label="Notifications" data-testid="header-notifications-btn"
-          onClick={() => { onOpenCopilot?.(); markHeaderNotificationsRead(headerSession).then(() => setHeaderNotifications((items) => items.map((item) => ({ ...item, unread: false })))).catch(() => {}); }}>
-          <Bell size={18} />{headerNotifications.filter((item) => item.unread).length > 0 && <span className="header-badge">{headerNotifications.filter((item) => item.unread).length}</span>}
-        </button>
+        <div className="relative" data-testid="header-notifications-wrap">
+          <button type="button" className="header-icon-btn header-icon-badge" title="Notifications" aria-label="Notifications" aria-expanded={notificationsOpen} data-testid="header-notifications-btn"
+            onClick={() => setNotificationsOpen((value) => !value)}>
+            <Bell size={18} />
+            {headerNotifications.filter((item) => item.unread).length > 0 && (
+              <span className="header-badge" data-testid="header-notifications-badge">{headerNotifications.filter((item) => item.unread).length}</span>
+            )}
+          </button>
+          {notificationsOpen && (
+            <div className="header-notifications-popover" role="dialog" aria-label="Vos notifications" data-testid="header-notifications-popover">
+              <div className="header-notifications-head">
+                <div>
+                  <div className="header-notifications-title">Notifications</div>
+                  <div className="header-notifications-subtitle">Les informations qui demandent votre attention.</div>
+                </div>
+                <span className="header-notifications-count">{headerNotifications.filter((item) => item.unread).length}</span>
+              </div>
+              <div className="header-notifications-list">
+                {headerNotifications.length === 0 && (
+                  <div className="header-notifications-empty">Aucune notification pour le moment.</div>
+                )}
+                {headerNotifications.slice(0, 6).map((item) => {
+                  const iconName = String(item.icon || "").toLowerCase();
+                  const Icon = iconName.includes("credit") ? Gem : iconName.includes("spark") ? Rocket : iconName.includes("file") ? Mail : Bell;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={`header-notification-item ${item.unread ? "is-unread" : ""}`}
+                      data-testid={`header-notification-${item.id}`}
+                      onClick={() => {
+                        const ask = `Notification Zayado : ${item.title || "Information"}\n${item.text || ""}\n\nAide-moi à comprendre ce point et à décider de la prochaine action utile.`;
+                        setNotificationsOpen(false);
+                        markHeaderNotificationsRead(headerSession)
+                          .then(() => setHeaderNotifications((items) => items.map((entry) => ({ ...entry, unread: false }))))
+                          .catch(() => {});
+                        onOpenCopilot?.(ask);
+                      }}
+                    >
+                      <span className="header-notification-icon"><Icon size={15} /></span>
+                      <span className="min-w-0 flex-1 text-left">
+                        <span className="flex items-start justify-between gap-2">
+                          <span className="header-notification-title-text">{item.title || "Notification"}</span>
+                          {item.unread && <span className="header-notification-dot" aria-label="Non lue" />}
+                        </span>
+                        <span className="header-notification-text">{item.text || "Ouvrir pour en parler au Copilote."}</span>
+                        <span className="header-notification-time">{item.time || "À l'instant"}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="header-notifications-foot">Sélectionnez une notification pour l’ouvrir dans le Copilote.</div>
+            </div>
+          )}
+        </div>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -296,7 +370,7 @@ function BottomNav({ onCopilote, hasUnseenNews }) {
     <nav className="bottom-nav" data-testid="bottom-nav">
       {ITEMS.map((item) => (
         <button key={item.id} className={`relative ${isActive(item) ? "active" : ""}`} data-testid={`bottomnav-${item.id}`}
-          onClick={() => (item.action === "open-news" ? (window.dispatchEvent(new CustomEvent("cours:open-news")), onCopilote()) : navigate(item.path))}>
+          onClick={() => (item.action ? (location.pathname === "/" ? navigate("/") : onCopilote()) : navigate(item.path))}>
           {item.action && hasUnseenNews && <span className="absolute right-2 top-1 h-2 w-2 rounded-full bg-red-500" data-testid="bottomnav-news-badge" />}
           <item.Icon size={14} /> {item.shortLabel || item.label}
         </button>
@@ -330,7 +404,7 @@ export default function Layout() {
   // (58px) + la bottom nav (72px) autour ("le chat est petit") — on les
   // masque sur cette seule route/largeur et on les remplace par une feuille
   // de nav légère ouverte depuis la petite barre du chat (voir App.js).
-  const hideHeaderForMobileChat = isMobile && location.pathname === "/";
+  const hideChromeForMobileChat = isMobile && location.pathname === "/";
   useEffect(() => {
     const onOpenMobileNav = () => setMobileNavOpen(true);
     window.addEventListener("cours:open-mobile-nav", onOpenMobileNav);
@@ -403,13 +477,13 @@ export default function Layout() {
     setSettingsSection(section);
     setSettingsOpen(true);
   };
-  const openCopilot = () => {
+  const openCopilot = (ask = null) => {
     // Ne marque plus l'actualité comme vue à la simple ouverture du chat —
     // seulement quand l'utilisateur clique vraiment sur l'onglet Actualité
     // (voir markNewsTabSeen dans ChatPanel.jsx). Sinon le compteur exact
     // tombait à 0 avant même d'avoir consulté quoi que ce soit.
     if (window.innerWidth < 769) { navigate("/"); setCopilotOpen(false); }
-    else setCopilotOpen(true);
+    else { setCopilotAsk(ask); setCopilotOpen(true); }
   };
   const baseContext = {
     "/": "Vision de l'entrepreneur: objectifs, alignement, mindset.",
@@ -427,7 +501,7 @@ export default function Layout() {
       <Sidebar onSettings={openSettings} onCopilote={openCopilot} />
 
       <div className="app-body">
-        {!hideHeaderForMobileChat && (
+        {!hideChromeForMobileChat && (
           <Header onSettings={openSettings} profileName={profileName} theSustainMember={theSustainMember} ambianceFoi={ambianceFoi} onOpenTheSustain={() => setTheSustainModalOpen(true)} onOpenCopilot={openCopilot} />
         )}
         <div className="flex">
@@ -449,7 +523,7 @@ export default function Layout() {
             <ChatPanel context={context} initialAsk={copilotAsk} />
           </aside>
         </div>
-        <BottomNav onCopilote={openCopilot} hasUnseenNews={hasUnseenNews} />
+        {!hideChromeForMobileChat && <BottomNav onCopilote={openCopilot} hasUnseenNews={hasUnseenNews} />}
       </div>
 
       {mobileNavOpen && (

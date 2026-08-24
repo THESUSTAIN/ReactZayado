@@ -428,7 +428,7 @@ function TabCanvas({ bgImage, onBack }) {
   const handleStudioGenerated = useCallback(({ kind, url, prompt: gp }) => {
     const { x, y } = spawn();
     const id = `s_${Date.now()}`;
-    const backendBase = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/$/, "");
+    const backendBase = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
     const fullUrl = url.startsWith("http") ? url : `${backendBase}${url}`;
     const title = { fr: (gp || "").slice(0, 60) || (kind === "video" ? "Vidéo IA" : "Image IA"), en: "" };
     if (kind === "video") {
