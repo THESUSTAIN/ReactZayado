@@ -3,7 +3,6 @@
    Permet de retirer un favori et d'ajouter au panier en un clic. */
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Helmet } from "react-helmet-async";
 import { Heart, HeartOff, ShoppingBag, Trash2, ArrowRight } from "lucide-react";
 import api from "@/lib/api";
 import { getFavorites, removeFavorite, clearFavorites } from "@/lib/favorites";
@@ -36,11 +35,6 @@ export default function Favorites() {
   }, [slugs]);
 
   return (
-    <>
-    <Helmet>
-      <title>Mes favoris — Zayado</title>
-      <meta name="robots" content="noindex, follow" />
-    </Helmet>
     <div className="max-w-[1280px] mx-auto px-4 md:px-6 py-8" data-testid="favorites-page">
       <div className="flex items-center justify-between mb-7 gap-4 flex-wrap">
         <div>
@@ -123,6 +117,5 @@ export default function Favorites() {
         </div>
       )}
     </div>
-    </>
   );
 }

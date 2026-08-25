@@ -1,7 +1,6 @@
 /* Page À propos /a-propos — manifeste Zayado */
 import React from "react";
 import { Link } from "react-router-dom";
-import { Helmet } from "react-helmet-async";
 import { Heart, Compass, Sparkles, Leaf, ArrowRight } from "lucide-react";
 import { useWPPage, parseWPContent } from "@/lib/wpContent";
 
@@ -16,12 +15,6 @@ export default function Apropos() {
   const heroTitle = wp?.title || "Entreprendre, <em>autrement.</em>";
   const heroSubtitle = wp?.subtitle || "Zayado est né d'un constat simple : <em>la performance ne devrait pas se faire au détriment du calme.</em> Nous accompagnons les entrepreneurs et leurs équipes à construire leur trajectoire avec lucidité.";
   return (
-    <>
-    <Helmet>
-      <title>À propos — Zayado, entreprendre avec sens, clarté et stabilité</title>
-      <meta name="description" content="Découvrez la vision de Zayado : une marketplace et un accompagnement pensés pour les indépendants et petites structures, entre performance et bien-être." />
-      <link rel="canonical" href="https://zayado.net/a-propos" />
-    </Helmet>
     <div className="max-w-[1100px] mx-auto px-4 md:px-6 py-12" data-testid="apropos-page">
       <section className="text-center mb-16">
         <div className="text-[11px] uppercase tracking-[0.3em] mb-3" style={{ color: GOLD }}>Notre histoire</div>
@@ -131,6 +124,5 @@ export default function Apropos() {
         </div>
       </section>
     </div>
-    </>
   );
 }

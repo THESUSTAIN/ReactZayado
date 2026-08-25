@@ -1,52 +1,144 @@
 import React from "react";
-import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
-import { ArrowRight, Calculator, Building2, FileText, TrendingUp } from "lucide-react";
+import { Helmet } from "react-helmet-async";
+import { Building2, Shield, MapPin, Calculator, Briefcase, FileText, ArrowRight, Check } from "lucide-react";
 import { PublicHeader, UnifiedFooter } from "./LandingHub";
 
-const SERVICES=[
- {title:"Vous ne savez pas vraiment ce que votre activité vous rapporte", href:"/services/finance-pilotage", icon:Calculator, label:"Finance & pilotage", text:"Quand le chiffre d'affaires ne suffit plus à savoir si vous gagnez vraiment, Zayado vous aide à remettre les chiffres au service de vos décisions."},
- {title:"Votre agenda se remplit de tâches qui ne font pas avancer votre activité", href:"/services/gestion-administrative", icon:FileText, label:"Gestion & délégation", text:"Facturation, relances, documents et suivi vous prennent trop de place ? Identifions ce qui peut sortir de votre quotidien sans vous faire perdre la main."},
- {title:"Vous avez une idée ou une activité, mais pas encore une base claire pour avancer", href:"/services/creation-structuration", icon:Building2, label:"Création & structuration", text:"Statut, offre, organisation, priorités : on commence par le point qui bloque vraiment, puis on construit le bon parcours."},
- {title:"Vous envisagez une cession ou une reprise, mais vous ne savez pas encore par où commencer", href:"/services/cession-reprise", icon:TrendingUp, label:"Cession & reprise", text:"Avant de négocier, il faut savoir ce qui est prêt, ce qui manque et quels diagnostics doivent être priorisés."}
+const SERVICES = [
+  {
+    icon: Building2,
+    title: "Banque pro mutualisée",
+    desc: "Comptes pros négociés avec nos partenaires (Qonto, Shine). Tarifs préférentiels grâce au groupement.",
+    perks: ["Tarifs négociés", "Ouverture en 24h", "Accompagnement"],
+    tag: "Partenaire",
+  },
+  {
+    icon: Shield,
+    title: "Mutuelle & Prévoyance",
+    desc: "Mutuelle santé et prévoyance pour dirigeants — couverture optimisée à coût mutualisé.",
+    perks: ["Santé + prévoyance", "Sans questionnaire", "Adapté TNS/SASU"],
+    tag: "30% Humain",
+  },
+  {
+    icon: FileText,
+    title: "RC Pro",
+    desc: "Responsabilité civile professionnelle adaptée à votre activité, négociée pour les membres.",
+    perks: ["Devis sous 24h", "Couverture monde", "Sinistre IA"],
+    tag: "Partenaire",
+  },
+  {
+    icon: MapPin,
+    title: "Adresse de Prestige Paris",
+    desc: "Votre siège social au 10 Rue de la Paix, Paris 2e. Une adresse premium qui valorise votre image dirigeante.",
+    perks: ["10 Rue de la Paix · Paris 2e", "Réexpédition courrier", "Salle de réunion à la demande"],
+    tag: "Service",
+  },
+  {
+    icon: Calculator,
+    title: "DAF à la carte",
+    desc: "Suivi par un DAF externalisé : reporting mensuel, prévisionnel, optimisation fiscale.",
+    perks: ["Reporting mensuel", "Optimisation", "Sur demande"],
+    tag: "Service",
+  },
+  {
+    icon: Briefcase,
+    title: "Supervision compta",
+    desc: "Comptable certifié qui supervise vos exports IA et valide vos déclarations.",
+    perks: ["Bilan annuel", "Validation IA", "100% en ligne"],
+    tag: "Service",
+  },
 ];
 
-export default function NosServices(){
- return <div className="min-h-screen bg-[#f7f2e9] text-[#1d242d]">
-  <Helmet>
-   <title>Services Zayado | Finance, gestion, création, cession & reprise</title>
-   <meta name="description" content="Un problème de trésorerie, trop d'administratif, une activité à structurer ou une cession à préparer ? Zayado commence par votre situation et vous oriente vers le bon parcours."/>
-   <link rel="canonical" href="https://zayado.net/nos-services"/>
-   <meta name="robots" content="index,follow"/>
-  </Helmet>
-  <PublicHeader/>
-  <main>
-   <section className="relative overflow-hidden text-white" style={{background:"linear-gradient(135deg,#071b3a 0%,#173d68 60%,#496c8c 100%)"}}>
-    <div className="absolute inset-0" style={{background:"radial-gradient(circle at 82% 16%,rgba(242,220,176,.35),transparent 28%),radial-gradient(circle at 12% 82%,rgba(255,255,255,.12),transparent 28%)"}}/>
-    <div className="relative max-w-6xl mx-auto px-5 md:px-8 py-16 md:py-24">
-      <div className="text-xs uppercase tracking-[.25em] text-[#f0d9a8]">ZAYADO SERVICES</div>
-      <h1 className="mt-5 max-w-5xl text-4xl md:text-6xl xl:text-7xl font-serif leading-[.98]">Commencez par ce qui vous pèse aujourd'hui. Nous verrons ensuite ce qu'il faut faire.</h1>
-      <p className="mt-6 max-w-3xl text-lg md:text-xl leading-relaxed text-white/75">Pas de catalogue de prestations à parcourir. Décrivez votre situation, votre blocage ou la décision qui vous attend ; le parcours s'adapte ensuite à votre besoin.</p>
-      <a href="#parcours" className="mt-8 inline-flex items-center gap-2 rounded-full px-6 py-3.5 font-semibold text-[#102945] bg-gradient-to-r from-[#f3e4c1] to-[#c99c52]">Trouver mon parcours <ArrowRight size={16}/></a>
+export default function NosServices() {
+  return (
+    <div className="min-h-screen flex flex-col" style={{ background: "var(--zayado-cream)" }}>
+      <Helmet>
+        <title>Nos Services & Mutualisation | Hub Entrepreneur ZAYADO</title>
+        <meta name="description" content="Profitez de tarifs négociés sur vos outils partenaires (banque, assurances) et activez vos services à la carte comme la domiciliation à Paris ou le suivi DAF." />
+        <meta property="og:title" content="Nos Services & Mutualisation | Hub Entrepreneur ZAYADO" />
+        <meta property="og:description" content="Profitez de tarifs négociés sur vos outils partenaires (banque, assurances) et activez vos services à la carte comme la domiciliation à Paris ou le suivi DAF." />
+        <link rel="canonical" href="https://zayado.net/nos-services" />
+      </Helmet>
+
+      <PublicHeader />
+      <main className="flex-1" data-testid="page-nos-services">
+        <section className="relative" style={{ background: "var(--zayado-navy-gradient)", color: "#F6F3EE" }}>
+          <div className="max-w-6xl mx-auto px-6 py-16 sm:py-24">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] tracking-[0.18em] uppercase font-semibold mb-5"
+                 style={{ background: "rgba(255,255,255,0.10)", color: "#F6F3EE", border: "1px solid rgba(255,255,255,0.20)" }}>
+              Hub Entrepreneur
+            </div>
+            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl leading-[1.05] mb-4 max-w-3xl">
+              Tout votre <span style={{ color: "#F6F3EE" }}>écosystème</span> entrepreneur, mutualisé.
+            </h1>
+            <p className="text-lg sm:text-xl opacity-85 max-w-2xl leading-relaxed">
+              Banque, mutuelle, RC Pro, domiciliation, DAF, supervision compta : profitez de tarifs négociés et de services à la carte, sans rester seul.
+            </p>
+          </div>
+        </section>
+
+        <section className="max-w-6xl mx-auto px-6 py-16 sm:py-20" data-testid="services-grid">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {SERVICES.map((s, i) => {
+              const Ic = s.icon;
+              return (
+                <div
+                  key={i}
+                  data-testid={`service-card-${i}`}
+                  className="bg-white rounded-3xl p-7 border border-[var(--zayado-border)] hover:shadow-md transition flex flex-col"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-12 h-12 rounded-2xl grid place-items-center shadow-md"
+                         style={{
+                           background: "linear-gradient(135deg, #1F3B73 0%, #2A4D8F 100%)",
+                           color: "#F6F3EE",
+                           boxShadow: "0 4px 12px rgba(31, 59, 115, 0.25)",
+                         }}>
+                      <Ic size={20} />
+                    </div>
+                    <span className="text-[10.5px] uppercase tracking-[0.18em] font-semibold px-2.5 py-1 rounded-full"
+                          style={{ background: "var(--zayado-cream)", color: "var(--zayado-navy)" }}>
+                      {s.tag}
+                    </span>
+                  </div>
+                  <h2 className="font-display text-xl leading-tight mb-2" style={{ color: "var(--zayado-text)" }}>
+                    {s.title}
+                  </h2>
+                  <p className="text-[14px] opacity-75 leading-relaxed mb-4 flex-1" style={{ color: "var(--zayado-text)" }}>
+                    {s.desc}
+                  </p>
+                  <ul className="space-y-1.5 text-[13px]" style={{ color: "var(--zayado-text)" }}>
+                    {s.perks.map((p, j) => (
+                      <li key={j} className="flex items-start gap-2">
+                        <Check size={14} className="shrink-0 mt-0.5" style={{ color: "var(--zayado-navy)" }} />
+                        <span>{p}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="max-w-4xl mx-auto px-6 pb-20 text-center" data-testid="services-final-cta">
+          <div className="bg-[var(--zayado-navy)] rounded-3xl p-10 sm:p-14" style={{ color: "#F6F3EE" }}>
+            <h2 className="font-display text-3xl sm:text-4xl mb-4">
+              Démarrez avec votre co-pilote ZAYADO
+            </h2>
+            <p className="text-base sm:text-lg opacity-85 mb-7 max-w-xl mx-auto">
+              Tous nos services sont accessibles dès le plan START. Activez-les depuis votre cockpit MyExtension AI.
+            </p>
+            <Link to="/myextension-ai"
+              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full font-semibold transition shadow-lg"
+              style={{ background: "#F6F3EE", color: "var(--zayado-navy)" }}
+              data-testid="services-cta-start">
+              Activer mon compte <ArrowRight size={15} />
+            </Link>
+          </div>
+        </section>
+      </main>
+      <UnifiedFooter />
     </div>
-   </section>
-
-   <section id="parcours" className="max-w-6xl mx-auto px-5 md:px-8 py-16 md:py-20 scroll-mt-20">
-    <div className="max-w-3xl"><div className="text-xs uppercase tracking-[.22em] text-[#9d7a43]">Quel problème cherchez-vous à résoudre ?</div><h2 className="mt-3 text-3xl md:text-5xl font-serif text-[#102945]">Vous n'avez pas besoin de connaître le nom du service. Vous devez simplement reconnaître votre situation.</h2></div>
-    <div className="grid md:grid-cols-2 gap-5 mt-10">
-      {SERVICES.map(({title,href,icon:Icon,label,text})=><Link key={href} to={href} className="group rounded-[30px] bg-white border border-[#e2d9c9] p-7 md:p-8 shadow-sm hover:-translate-y-1 transition hover:shadow-lg">
-        <div className="flex items-center justify-between gap-4"><div className="w-12 h-12 rounded-2xl grid place-items-center bg-[#edf2f7] text-[#173d68]"><Icon size={22}/></div><span className="text-[10px] uppercase tracking-[.18em] text-[#9d7a43]">{label}</span></div>
-        <h3 className="mt-6 text-2xl md:text-3xl font-serif text-[#102945] leading-tight">{title}</h3>
-        <p className="mt-4 text-[#63665f] leading-relaxed">{text}</p>
-        <div className="mt-7 inline-flex items-center gap-2 text-sm font-semibold text-[#173d68]">Voir le parcours <ArrowRight size={16} className="group-hover:translate-x-1 transition"/></div>
-      </Link>)}
-    </div>
-   </section>
-
-   <section className="border-y border-[#e5ddcf] bg-white"><div className="max-w-6xl mx-auto px-5 md:px-8 py-12 grid md:grid-cols-3 gap-7"><div><div className="text-xs uppercase tracking-[.2em] text-[#9d7a43]">01 · Votre situation</div><h3 className="mt-2 text-xl font-semibold text-[#183654]">On part du problème, pas du produit.</h3><p className="mt-2 text-sm text-[#686d68]">Vous expliquez ce qui vous bloque aujourd'hui, avec vos mots.</p></div><div><div className="text-xs uppercase tracking-[.2em] text-[#9d7a43]">02 · Votre cadrage</div><h3 className="mt-2 text-xl font-semibold text-[#183654]">Quelques questions pour éviter le mauvais parcours.</h3><p className="mt-2 text-sm text-[#686d68]">Le diagnostic sert à identifier ce qu'il faut réellement traiter en premier.</p></div><div><div className="text-xs uppercase tracking-[.2em] text-[#9d7a43]">03 · La bonne réponse</div><h3 className="mt-2 text-xl font-semibold text-[#183654]">Zayado ou le bon spécialiste.</h3><p className="mt-2 text-sm text-[#686d68]">Quand le service est opéré par Zayado, l'équipe le prend en charge ; sinon, nous mobilisons la bonne expertise.</p></div></div></section>
-
-   <section className="max-w-6xl mx-auto px-5 md:px-8 py-16"><div className="rounded-[30px] bg-gradient-to-br from-[#102945] to-[#214f77] p-8 md:p-12 text-white flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8"><div><div className="text-xs uppercase tracking-[.22em] text-[#efdbb2]">Sans formulaire générique</div><h2 className="mt-3 text-3xl md:text-4xl font-serif">Votre situation mérite mieux qu'un simple « contactez-nous ».</h2><p className="mt-3 max-w-2xl text-white/70">Choisissez la douleur qui vous ressemble le plus ; le tunnel prend ensuite le relais.</p></div><a href="#parcours" className="shrink-0 inline-flex items-center gap-2 rounded-full px-6 py-3.5 font-semibold text-[#102945] bg-gradient-to-r from-[#f3e4c1] to-[#c99c52]">Commencer <ArrowRight size={16}/></a></div></section>
-  </main>
-  <UnifiedFooter/>
- </div>
+  );
 }

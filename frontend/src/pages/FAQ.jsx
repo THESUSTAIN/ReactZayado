@@ -1,6 +1,5 @@
 /* Page FAQ /faq */
 import React, { useState } from "react";
-import { Helmet } from "react-helmet-async";
 import { ChevronDown, Search } from "lucide-react";
 import { useWPPage, parseWPContent } from "@/lib/wpContent";
 
@@ -60,12 +59,6 @@ export default function FAQ() {
   })).filter((c) => c.items.length > 0);
 
   return (
-    <>
-    <Helmet>
-      <title>FAQ — Questions fréquentes sur Zayado</title>
-      <meta name="description" content="Livraison, commandes, abonnement MyExtension AI, retours : toutes les réponses aux questions fréquentes sur Zayado." />
-      <link rel="canonical" href="https://zayado.net/faq" />
-    </Helmet>
     <div className="max-w-[900px] mx-auto px-4 md:px-6 py-10" data-testid="faq-page">
       <div className="text-[11px] uppercase tracking-[0.25em] mb-2" style={{ color: GOLD }}>Questions fréquentes</div>
       <h1 className="font-display italic mb-3"
@@ -119,6 +112,5 @@ export default function FAQ() {
         </section>
       ))}
     </div>
-    </>
   );
 }

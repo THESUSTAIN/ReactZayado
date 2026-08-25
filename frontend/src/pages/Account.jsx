@@ -12,7 +12,6 @@
    Sous-pages : /compte (hub), /compte/commandes, /compte/profil, /compte/preferences. */
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Helmet } from "react-helmet-async";
 import {
   Package, RotateCcw, Award, FileText, Bell,
   HelpCircle, LogOut, ChevronRight, Sparkles, ArrowLeft,
@@ -440,29 +439,16 @@ export default function Account() {
 
   useEffect(() => { fetchMe(); }, []);
 
-  const seoTitle = { "/compte/commandes": "Mes commandes", "/compte/profil": "Mon profil", "/compte/preferences": "Préférences" }[loc.pathname] || "Mon compte";
-  const AccountSEO = () => (
-    <Helmet>
-      <title>{seoTitle} — Zayado</title>
-      <meta name="robots" content="noindex, follow" />
-    </Helmet>
-  );
-
   if (loading) {
     return (
-      <>
-      <AccountSEO />
       <div className="min-h-[60vh] flex items-center justify-center" style={{ background: "var(--zayado-cream)" }}>
         <Loader2 size={22} className="animate-spin" style={{ color: NAVY }} />
       </div>
-      </>
     );
   }
 
   if (!me) {
     return (
-      <>
-      <AccountSEO />
       <div className="min-h-[60vh] flex flex-col items-center justify-center px-4" style={{ background: "var(--zayado-cream)" }}>
         <UserIcon size={28} className="mb-3" style={{ color: GOLD }} />
         <p className="text-sm mb-4" style={{ color: MUTED }}>Connectez-vous pour accéder à votre espace.</p>
@@ -470,13 +456,12 @@ export default function Account() {
           Se connecter
         </Link>
       </div>
-      </>
     );
   }
 
   const path = loc.pathname;
-  if (path === "/compte/commandes" || path.startsWith("/compte/commandes")) return <><AccountSEO /><AccountOrders /></>;
-  if (path === "/compte/profil") return <><AccountSEO /><AccountProfile me={me} refresh={fetchMe} /></>;
-  if (path === "/compte/preferences") return <><AccountSEO /><AccountProfile me={me} refresh={fetchMe} isPreferences /></>;
-  return <><AccountSEO /><AccountHub me={me} /></>;
+  if (path === "/compte/commandes" || path.startsWith("/compte/commandes")) return <AccountOrders />;
+  if (path === "/compte/profil") return <AccountProfile me={me} refresh={fetchMe} />;
+  if (path === "/compte/preferences") return <AccountProfile me={me} refresh={fetchMe} isPreferences />;
+  return <AccountHub me={me} />;
 }

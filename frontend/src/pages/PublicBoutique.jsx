@@ -49,29 +49,42 @@ const MEGA_MENU = {
   corps: {
     label: "Corps",
     columns: [
-      { title: "Vue", links: ["Lunettes anti-lumière bleue", "Lunettes de lecture", "Étuis & nettoyants"] },
+      { title: "Vue", links: ["Lunettes anti-lumière bleue", "Lunettes lecture", "Étuis & nettoyants"] },
       { title: "Ergonomie", links: ["Supports d'écran", "Souris ergonomiques", "Claviers", "Repose-poignets"] },
-      { title: "Éclairage & énergie", links: ["Lampe luminothérapie", "Réveil simulateur d'aube", "Lampe LED bureau"] },
-      { title: "Détente & récupération", links: ["Masque relaxation yeux", "Coussin cervicales", "Appareil massage bureau", "Casque réduction de bruit"] },
+      { title: "Posture", links: ["Coussins lombaires", "Tapis ergonomiques", "Repose-pieds"] },
+      { title: "Aromathérapie", links: ["Huiles essentielles BIO", "Diffuseurs", "Sprays apaisants", "Coffrets découverte"] },
     ],
-    feature: { img: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&w=500&q=85", title: "Sélection · Z-Focus", desc: "Des outils sélectionnés pour le confort au quotidien." }
+    feature: {
+      img: "https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?auto=format&w=400&q=80",
+      title: "Nouveau · Z-Focus",
+      desc: "La lunette qui filtre la lumière bleue toute la journée.",
+    },
   },
   ame: {
     label: "Âme",
     columns: [
-      { title: "Écriture & réflexion", links: ["Journal entrepreneur 90 jours", "Carnet de gratitude", "Carnet de prière & méditation", "Stylos écriture douce"] },
-      { title: "Ambiance & inspiration", links: ["Bougies artisanales", "Affiches & cadres", "Diffuseurs USB"] },
+      { title: "Méditation", links: ["Coussins zafu", "Tapis de yoga", "Bols tibétains", "Encens & porte-encens"] },
+      { title: "Lithothérapie", links: ["Améthyste", "Quartz rose", "Tourmaline noire", "Coffrets pierres"] },
+      { title: "Bougies & senteurs", links: ["Bougies cire de soja", "Bougies parfumées", "Brumes d'intérieur"] },
+      { title: "Lecture & sons", links: ["Livres essentiels", "Audio focus & sommeil", "Cartes oracle"] },
     ],
-    feature: { img: "https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&w=500&q=85", title: "Produit phare · Journal 90 jours", desc: "La méthode Zayado pour avancer en 5 minutes par jour." }
+    feature: {
+      img: "https://images.unsplash.com/photo-1603006905003-be475563bc59?auto=format&w=400&q=80",
+      title: "Coup de cœur",
+      desc: "Bougie sauge & cèdre, 35h de combustion, mèche en bois.",
+    },
   },
   rituel: {
     label: "Rituel",
     columns: [
-      { title: "Focus & clarté", links: ["Thé matcha", "Thé Sencha", "Tisane Clarté mentale", "Mug isotherme"] },
-      { title: "Sérénité active", links: ["Sablier 5 min", "Carillon pleine conscience", "Plante de bureau"] },
-      { title: "Packs Zayado", links: ["Focus du matin", "Bureau parfait", "Recharge du soir", "Starter entrepreneur", "Sens & Performance"] },
+      { title: "Composez votre rituel", links: ["Matin · Énergie & clarté", "Pause · Recentrage 5min", "Soir · Décompression"] },
+      { title: "Coffrets prêts", links: ["Coffret Entrepreneur Apaisé", "Coffret Bureau Conscient", "Coffret Premier Pas"] },
     ],
-    feature: { img: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&w=500&q=85", title: "Rituel · Focus du matin", desc: "Une sélection pensée pour commencer avec clarté." }
+    feature: {
+      img: "https://images.unsplash.com/photo-1545389336-cf090694435e?auto=format&w=400&q=80",
+      title: "5 minutes le matin",
+      desc: "Découvrir le rituel Zayado.",
+    },
   },
 };
 
@@ -94,7 +107,7 @@ function MegaMenu({ active, onClose }) {
               <ul className="space-y-2">
                 {col.links.map((l) => (
                   <li key={l}>
-                    <Link to={`/boutique?u=${active}&q=${encodeURIComponent(l)}`} className="text-sm hover:underline" style={{ color: "var(--zayado-text)" }}>
+                    <Link to={`/boutique?u=${active}`} className="text-sm hover:underline" style={{ color: "var(--zayado-text)" }}>
                       {l}
                     </Link>
                   </li>
@@ -223,8 +236,8 @@ export default function PublicBoutique() {
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "var(--zayado-cream)" }} data-testid="public-boutique-wrapper">
       <Helmet>
-        <title>Boutique ZAYADO | Ergonomie, bien-être et rituels pour entrepreneurs</title>
-        <meta name="description" content="Découvrez la boutique Zayado : produits sélectionnés pour le confort, l'ergonomie, la concentration, les rituels et le bien-être des indépendants et petites structures." />
+        <title>La Boutique ZAYADO | Performance & Équilibre du Dirigeant</title>
+        <meta name="description" content="Découvrez notre sélection exclusive dédiée à la santé physique et mentale des entrepreneurs. Des outils et rituels concrets pour chasser le stress et optimiser votre espace de travail." />
         <link rel="canonical" href={`https://zayado.net${path}`} />
       </Helmet>
       {/* Bandeau notification admin (broadcast) */}
@@ -235,7 +248,7 @@ export default function PublicBoutique() {
       <div className="text-white text-xs" style={{ background: NAVY }} data-testid="public-topbar">
         <div className="max-w-[1280px] mx-auto px-4 py-1.5 flex items-center justify-between gap-3">
           <div className="hidden md:flex items-center gap-1.5 opacity-90">
-            <Truck size={11} /> <span>Sélection vérifiée · Livraison selon conditions · Retours selon conditions</span>
+            <Truck size={11} /> <span>Livraison offerte dès 50€ · Retours 30j gratuits</span>
           </div>
           <div className="flex items-center gap-4 ml-auto">
             <Link to="/faq" className="hover:underline opacity-90">Aide</Link>
@@ -357,11 +370,11 @@ export default function PublicBoutique() {
             <Link to="/blog" className="px-4 py-3 text-sm font-medium whitespace-nowrap hover:bg-[var(--zayado-cream)] ml-auto" style={{ color: "var(--zayado-text)" }}>
               Le journal
             </Link>
-            <Link to="/nos-services" className="px-4 py-3 text-sm font-medium whitespace-nowrap hover:bg-[var(--zayado-cream)]" style={{ color: "var(--zayado-text)" }} data-testid="nav-services-pro">
+            <Link to="/services-pro" className="px-4 py-3 text-sm font-medium whitespace-nowrap hover:bg-[var(--zayado-cream)]" style={{ color: "var(--zayado-text)" }} data-testid="nav-services-pro">
               Services Pro
             </Link>
-            <Link to="/avantages" className="px-4 py-3 text-sm font-medium whitespace-nowrap hover:bg-[var(--zayado-cream)]" style={{ color: "var(--zayado-text)" }} data-testid="nav-partenaires">
-              Avantages
+            <Link to="/partenaires" className="px-4 py-3 text-sm font-medium whitespace-nowrap hover:bg-[var(--zayado-cream)]" style={{ color: "var(--zayado-text)" }} data-testid="nav-partenaires">
+              Partenaires
             </Link>
             <Link to="/boutique" className="px-4 py-3 text-sm font-bold whitespace-nowrap hover:bg-[var(--zayado-cream)]" style={{ color: "var(--zayado-red)" }}>
               ★ Promos
@@ -543,7 +556,7 @@ export default function PublicBoutique() {
           </div>
           {[
             { title: "Boutique", links: [["Tout voir","/boutique"],["Corps","/boutique?u=corps"],["Âme","/boutique?u=ame"],["Rituel","/boutique?u=rituel"]] },
-            { title: "Réseau", links: [["Services Zayado","/nos-services"],["Avantages","/avantages"],["Devenir partenaire","/devenir-partenaire"],["Roadmap","/roadmap"]] },
+            { title: "Réseau", links: [["Services Pro","/services-pro"],["Partenaires","/partenaires"],["Devenir partenaire","/devenir-partenaire"],["Roadmap","/roadmap"]] },
             { title: "À propos", links: [["L'équipe","/equipe"],["Groupement","/groupement"],["Le journal","/blog"],["Tarifs","/tarifs"]] },
             { title: "Service", links: [["Contact","/contact"],["FAQ","/faq"],["Livraison & retours","/legal/livraison-retours"],["Suivi de commande","/contact"]] },
             { title: "Légal", links: [["CGU","/legal/conditions-utilisation"],["CGV","/legal/cgv"],["Mentions légales","/legal/mentions-legales"],["Confidentialité","/legal/confidentialite"]] },

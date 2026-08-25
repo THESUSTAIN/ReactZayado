@@ -1,7 +1,6 @@
 /* Page panier dédiée /panier — version pleine page (mobile-friendly) */
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Helmet } from "react-helmet-async";
 import { ShoppingBag, Plus, Minus, Trash2, ArrowRight, ShieldCheck, Truck, RotateCcw } from "lucide-react";
 
 const NAVY = "var(--zayado-navy)";
@@ -33,11 +32,6 @@ export default function Cart() {
   const total = subtotal + shipping;
 
   return (
-    <>
-    <Helmet>
-      <title>Votre panier — Zayado</title>
-      <meta name="robots" content="noindex, follow" />
-    </Helmet>
     <div className="max-w-[1100px] mx-auto px-4 md:px-6 py-8" data-testid="cart-page">
       <div className="text-[11px] uppercase tracking-[0.25em] mb-2" style={{ color: GOLD }}>Panier</div>
       <h1 className="font-display italic mb-7"
@@ -119,6 +113,5 @@ export default function Cart() {
         </div>
       )}
     </div>
-    </>
   );
 }

@@ -1,6 +1,5 @@
 /* Page Contact /contact — formulaire + infos */
 import React, { useState } from "react";
-import { Helmet } from "react-helmet-async";
 import { Mail, MapPin, Send, Check } from "lucide-react";
 import api from "@/lib/api";
 import { useWPPage, parseWPContent } from "@/lib/wpContent";
@@ -37,12 +36,6 @@ export default function Contact() {
   };
 
   return (
-    <>
-    <Helmet>
-      <title>Contact — Zayado</title>
-      <meta name="description" content="Une question sur la boutique, votre commande ou MyExtension AI ? Contactez l'équipe Zayado via le formulaire ou par email." />
-      <link rel="canonical" href="https://zayado.net/contact" />
-    </Helmet>
     <div className="max-w-[1100px] mx-auto px-4 md:px-6 py-10" data-testid="contact-page">
       <div className="text-[11px] uppercase tracking-[0.25em] mb-2" style={{ color: GOLD }}>Nous écrire</div>
       <h1 className="font-display italic mb-3"
@@ -120,6 +113,5 @@ export default function Contact() {
         </aside>
       </div>
     </div>
-    </>
   );
 }

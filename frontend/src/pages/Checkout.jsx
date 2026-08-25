@@ -1,9 +1,7 @@
 /* Page checkout simulation /checkout — formulaire adresse + récap + bouton "Payer (simulation)" */
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Helmet } from "react-helmet-async";
 import { ShieldCheck, ArrowRight, CreditCard, Lock, Check } from "lucide-react";
-import api from "@/lib/api";
 
 const NAVY = "var(--zayado-navy)";
 const GOLD = "var(--zayado-gold)";
@@ -35,7 +33,7 @@ export default function Checkout() {
 
     try {
       // Créer la commande WooCommerce via le backend
-      const r = await (
+      const r = await import("@/lib/api").then(({ default: api }) =>
         api.post("/shop/checkout", {
           email: form.email,
           first_name: form.first_name,
@@ -98,11 +96,6 @@ export default function Checkout() {
   }
 
   return (
-    <>
-    <Helmet>
-      <title>Paiement — Zayado</title>
-      <meta name="robots" content="noindex, follow" />
-    </Helmet>
     <div className="max-w-[1100px] mx-auto px-4 md:px-6 py-8" data-testid="checkout-page">
       <div className="text-[11px] uppercase tracking-[0.25em] mb-2" style={{ color: GOLD }}>Paiement</div>
       <h1 className="font-display italic mb-7"
@@ -186,6 +179,5 @@ export default function Checkout() {
         </aside>
       </div>
     </div>
-    </>
   );
 }

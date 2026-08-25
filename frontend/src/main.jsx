@@ -3,7 +3,6 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import "./index.css";
-import App from "./App.jsx";
 
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
@@ -27,8 +26,6 @@ import Contact from "@/pages/Contact";
 import FAQ from "@/pages/FAQ";
 import SimulateursHub from "@/pages/SimulateursHub";
 import NosServices from "@/pages/NosServices";
-import ServiceTunnel from "@/pages/ServiceTunnel";
-import Avantages from "@/pages/Avantages";
 import Temoignages from "@/pages/Temoignages";
 import VisionBoardPublic from "@/pages/VisionBoardPublic";
 import WordPressPage from "@/pages/WordPressPage";
@@ -48,8 +45,8 @@ const __basename = typeof window !== "undefined"
   ? __preview_prefix
   : "/";
 
-function PublicApp() {
-  return (
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <React.StrictMode>
     <HelmetProvider>
       <WPSiteSettings />
       <BrowserRouter basename={__basename}>
@@ -72,11 +69,6 @@ function PublicApp() {
               <Route path="/creation-entreprise" element={<CreationEntreprise />} />
               <Route path="/simulateurs" element={<SimulateursHub />} />
               <Route path="/nos-services" element={<NosServices />} />
-              <Route path="/avantages" element={<Avantages />} />
-              <Route path="/services/finance-pilotage" element={<ServiceTunnel />} />
-              <Route path="/services/gestion-administrative" element={<ServiceTunnel />} />
-              <Route path="/services/creation-structuration" element={<ServiceTunnel />} />
-              <Route path="/services/cession-reprise" element={<ServiceTunnel />} />
               <Route path="/simulateur-rentabilite" element={
                 <LegacyPreview
                   src={`${__basename === "/" ? "" : __basename}/preview/simulateur-rentabilite.html`}
@@ -103,7 +95,6 @@ function PublicApp() {
               <Route path="/fr/creation-entreprise" element={<CreationEntreprise />} />
               <Route path="/fr/simulateurs" element={<SimulateursHub />} />
               <Route path="/fr/nos-services" element={<NosServices />} />
-              <Route path="/fr/avantages" element={<Avantages />} />
               <Route path="/fr/simulateur-rentabilite" element={
                 <LegacyPreview
                   src={`${__basename === "/" ? "" : __basename}/preview/simulateur-rentabilite.html`}
@@ -208,13 +199,6 @@ function PublicApp() {
           </AuthProvider>
         </ThemeProvider>
       </BrowserRouter>
-    </HelmetProvider>  );
-}
-
-const isAppHost = typeof window !== "undefined" && /(^|\.)app\.zayado\.net$/i.test(window.location.hostname);
-
-ReactDOM.createRoot(document.getElementById("root")).render(
-  <React.StrictMode>
-    {isAppHost ? <App /> : <PublicApp />}
+    </HelmetProvider>
   </React.StrictMode>
 );
