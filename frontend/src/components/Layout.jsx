@@ -133,6 +133,13 @@ function Sidebar({ onSettings, onCopilote }) {
 /* ─────────────── Header (transparent, modèle exact) ─────────────── */
 function Header({ onSettings, profileName, theSustainMember, ambianceFoi, onOpenTheSustain, onOpenCopilot }) {
   const navigate = useNavigate();
+  // Corrige AUTH-03 : aucun élément de l'interface ne permettait de savoir
+  // si la session provenait de Google, Microsoft, thesustain ou d'un compte
+  // démo — on lit la méthode déjà mémorisée par Login.jsx à la connexion.
+  const loginProviderLabel = (() => {
+    const method = (() => { try { return localStorage.getItem("zayado_last_login_method"); } catch { return null; } })();
+    return { google: "Connecté avec Google", microsoft: "Connecté avec Microsoft", thesustain: "Accès thesustain.net", demo: "Compte de démonstration", email: "Connecté par e-mail" }[method] || "Espace personnel";
+  })();
   const [searchOpen, setSearchOpen] = useState(false);
   const [q, setQ] = useState("");
   const [headerMessages, setHeaderMessages] = useState([]);
@@ -236,7 +243,7 @@ function Header({ onSettings, profileName, theSustainMember, ambianceFoi, onOpen
             <DropdownMenuLabel>
               <div className="flex items-center gap-3 py-1">
                 <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#DD2A33] to-[#A81D24] text-white text-sm font-bold flex items-center justify-center">{(profileName || "M").trim().charAt(0).toUpperCase()}</div>
-                <div className="min-w-0"><p className="text-sm font-semibold">{profileName || "Mon compte"}</p><p className="text-xs text-white/50">Espace personnel</p></div>
+                <div className="min-w-0"><p className="text-sm font-semibold">{profileName || "Mon compte"}</p><p className="text-xs text-white/50" data-testid="header-login-provider">{loginProviderLabel}</p></div>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-white/10" />
@@ -388,12 +395,23 @@ export default function Layout() {
   }, [copilotOpen, location.pathname]);
   
   useEffect(() => {
-    getProfile().then((profile) => setProfileName(profile?.first_name || "")).catch(() => setProfileName(""));
+    // Ne vide jamais un nom déjà affiché (par ex. déjà rempli par authMe()
+    // ci-dessous, si cet appel se résout en premier) — ne définit que si
+    // /prefs a vraiment un prénom à donner.
+    getProfile().then((profile) => { if (profile?.first_name) setProfileName(profile.first_name); }).catch(() => {});
   }, [settingsOpen]);
   useEffect(() => {
     authMe().then((user) => {
       setTheSustainMember(Boolean(user?.thesustain_member));
       setAmbianceFoi((user?.settings || {}).ambiance === "foi");
+      // Corrige AUTH-03 / DATA-01 : le nom affiché ne venait que de /prefs
+      // (un magasin de préférences facultatif, souvent vide juste après une
+      // connexion OAuth/thesustain/démo), jamais de l'identité réelle
+      // renvoyée par /auth/me — d'où le repli permanent sur "Mon compte".
+      // On complète ici avec le vrai nom du fournisseur si /prefs n'en a
+      // pas donné, sans jamais écraser un prénom que l'utilisateur aurait
+      // lui-même personnalisé dans ses réglages.
+      setProfileName((current) => current || user?.first_name || user?.name || "");
     }).catch(() => { setTheSustainMember(false); setAmbianceFoi(false); });
   }, [settingsOpen]);
 

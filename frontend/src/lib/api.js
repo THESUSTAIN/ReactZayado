@@ -78,14 +78,14 @@ export const demoLogin = (email) => api.post("/auth/demo-login", { email }).then
 // (503 "GOOGLE_CLIENT_ID non configuré") si les clés OAuth ne sont pas encore
 // définies dans Railway — jamais un faux succès silencieux.
 export const oauthStart = (provider, redirectUri) =>
-  api.post(`/auth/oauth/${provider}/start`, { redirect_uri: redirectUri }).then((r) => r.data);
+  api.get(`/oauth/${provider}/start`, { params: { redirect_uri: redirectUri } }).then((r) => r.data);
 
 // Échange le "code" renvoyé par Google/Microsoft (après redirection sur
 // /login?code=...&state=...) contre une session réelle. Sans cet appel, le
 // code atterrit sur /login sans jamais être consommé — la connexion semble
 // "ne rien faire" alors que Google a bien renvoyé un code valide.
 export const oauthExchange = (provider, code, redirectUri) =>
-  api.post(`/auth/oauth/${provider}/exchange`, { code, redirect_uri: redirectUri }).then((r) => r.data);
+  api.post(`/oauth/${provider}`, { code, redirect_uri: redirectUri }).then((r) => r.data);
 
 
 export const getPilotageOverview = () => api.get("/pilotage/overview").then((r) => r.data);

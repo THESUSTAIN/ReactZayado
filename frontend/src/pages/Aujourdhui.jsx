@@ -236,6 +236,20 @@ export default function Aujourdhui() {
           ) : (
             <p className="text-[13px] text-white/55 mt-1.5 leading-relaxed">Commencez par structurer votre Vision ; les décisions pourront ensuite être reliées à un résultat attendu.</p>
           )}
+          {(activeMilestoneIds.length > 0 || pendingDecision) && (
+            <div className="flex flex-wrap items-center gap-2 mt-2.5" data-testid="aujourdhui-vision-liens">
+              {activeMilestoneIds.length > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-400/10 border border-emerald-400/25 px-2.5 py-1 text-[11px] text-emerald-300">
+                  <Target size={11} /> {activeMilestoneIds.length} jalon{activeMilestoneIds.length > 1 ? "s" : ""} en cours
+                </span>
+              )}
+              {pendingDecision && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#DEC2A3]/10 border border-[#DEC2A3]/25 px-2.5 py-1 text-[11px] text-[#F1E2CC]">
+                  <Compass size={11} /> 1 décision à arbitrer
+                </span>
+              )}
+            </div>
+          )}
           <button onClick={() => navigate("/vision")} className="mt-3 inline-flex items-center gap-1 text-sm text-[#DEC2A3] hover:text-[#FFD700] transition-colors">
             Construire ma Vision <ArrowRight size={14} />
           </button>

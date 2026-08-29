@@ -185,3 +185,70 @@ importer tout le hook de langue dans ce composant.
 
 ## Vérifié avant livraison
 Tous les fichiers compilent, aucune régression.
+
+## Bugs d'authentification (audit externe) + points 8/9 (29/08, suite 6)
+
+**AUTH-01 (Bloquant, corrigé)** : le bouton Google pouvait naviguer vers
+`/undefined` quand le serveur répond sans erreur HTTP mais sans
+`authorization_url` exploitable (clés OAuth manquantes côté serveur).
+Ajouté une vraie garde : si le champ est absent ou invalide, une erreur
+claire s'affiche au lieu d'un écran vide.
+
+**AUTH-03 + DATA-01 (Élevé, corrigés)** : le nom affiché ne venait que
+de `/prefs` (souvent vide juste après connexion), jamais de l'identité
+réelle renvoyée par `/auth/me`. Corrigé avec un vrai repli, robuste peu
+importe l'ordre de résolution des deux appels. Ajouté aussi l'affichage
+du fournisseur de connexion (Google/Microsoft/thesustain/démo) dans le
+menu profil, absent jusqu'ici.
+
+**Bug trouvé au passage** : le bouton "compte test" mémorisait la
+méthode de connexion comme `"email"` au lieu de `"demo"` (copier-coller
+resté par erreur) — corrigé, pour que le nouveau badge de fournisseur
+soit exact.
+
+**AUTH-02 / AUTH-04 — non corrigés, honnêtement** : ces deux bugs
+(session thesustain non persistante, `thesustain_member: False` renvoyé
+malgré l'accès) sont structurellement liés au comportement du VRAI
+backend de production — pas corrigeables depuis ce frontend seul avec
+le backend démo de ce zip. Nécessite une vérification côté serveur réel.
+
+**Point 8** : la carte "Impact sur la Vision" affiche désormais un vrai
+indicateur si un jalon actif ou une décision en attente y est déjà
+rattaché — plus seulement le texte brut de la Vision.
+
+**Point 9** : approuver une décision dans Vision affiche maintenant un
+accusé visuel persistant dans la carte elle-même ("Mission créée dans
+Mon Mouvement"), pas seulement un toast furtif.
+
+## Vérifié avant livraison
+Tous les fichiers compilent, aucune régression.
+
+## Fond des pages publiques + vraies captures (29/08, suite 7)
+
+**Fond des pages publiques corrigé** : Landing, Pricing et
+Fonctionnalites partagent toutes le même conteneur `.lp-root`, qui
+utilisait un simple `radial-gradient` à une ellipse — différent de la
+vraie formule de fond de l'app (`.sky-bg`, avec ses halos et son
+dégradé à 4 tons). Une seule correction règle les 3 pages. Bonne
+nouvelle au passage : les variables de couleur (`--lp-gold`,
+`--lp-navy`) étaient déjà identiques à la vraie marque — seul le fond
+lui-même divergeait.
+
+**Vraie découverte en générant les captures** : en rendant le vrai
+composant "Point du jour" avec le vrai CSS du projet pour créer une
+capture honnête, j'ai trouvé un bug non repéré avant — une règle
+générale (`.copilot-daily-summary strong`, pensée pour un gros chiffre
+de métrique) capturait aussi par erreur le petit "Prochain pas :" du
+même bloc, le faisant apparaître démesurément gros. Corrigé avec une
+règle plus spécifique, vérifié par une nouvelle capture avant/après.
+
+**Sur les "vraies captures"** : je n'ai pas de serveur de l'app qui
+tourne pour prendre de vraies captures d'écran de production. Ce que
+j'ai fait à la place : rendre les VRAIS composants avec le VRAI CSS du
+projet et des données réalistes, capturés avec Playwright — ce sont
+donc des rendus fidèles du vrai code, pas des maquettes inventées,
+même si ce n'est pas littéralement une capture de l'app en ligne.
+
+## Vérifié avant livraison
+Tous les fichiers compilent, CSS équilibré, corrections vérifiées
+visuellement par rendu réel avant/après.

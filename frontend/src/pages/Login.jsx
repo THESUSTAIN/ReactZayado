@@ -162,11 +162,16 @@ export default function Login() {
     try {
       const redirectUri = `${window.location.origin}/login`;
       const res = await oauthStart(provider, redirectUri);
-      const authorizationUrl = res?.authorization_url;
-      if (typeof authorizationUrl !== "string" || !authorizationUrl.trim()) {
-        throw new Error("Réponse OAuth invalide : URL d'autorisation absente");
+      // Corrige un vrai bug de production (AUTH-01) : si le serveur répond
+      // sans erreur HTTP mais sans authorization_url exploitable (clés OAuth
+      // manquantes côté serveur, format de réponse inattendu...), le code
+      // naviguait quand même vers window.location.href = undefined, ce que
+      // le navigateur transforme en /undefined — un écran vide, sans aucune
+      // explication pour l'utilisateur.
+      if (!res?.authorization_url || typeof res.authorization_url !== "string") {
+        throw new Error("URL d'autorisation manquante dans la réponse serveur.");
       }
-      window.location.href = authorizationUrl;
+      window.location.href = res.authorization_url;
     } catch {
       toast.error(provider === "google" ? t.errGoogle : t.errMsft);
       setOauthProvider(null);
@@ -179,7 +184,7 @@ export default function Login() {
   const openTestAccount = async () => {
     try {
       const res = await demoLogin("thomas@zayado.fr");
-      rememberMethod("email");
+      rememberMethod("demo");
       toast.success("Compte ouvert");
       finishLogin(res);
     } catch { toast.error("Compte test indisponible ici."); }

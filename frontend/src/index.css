@@ -1406,6 +1406,12 @@ html.ambiance-clarte [data-testid="campus-bottom-nav"] [class*="text-white/"] { 
   [data-testid="mobile-copilot-home"] .copilot-ai-badge { font-size: 10px !important; line-height: 14px !important; font-weight: 600 !important; }
   [data-testid="mobile-copilot-home"] .copilot-daily-summary strong,
   [data-testid="mobile-copilot-home"] .copilot-brief-card .grid > div > :nth-child(2) { font-size: 20px !important; line-height: 24px !important; font-weight: 600 !important; }
+  /* Corrige un vrai bug : la règle ci-dessus visait un grand chiffre de
+     métrique, mais capturait aussi par erreur le petit "Prochain pas :"
+     du même bloc "Point du jour" (descendant de .copilot-daily-summary),
+     le faisant apparaître démesurément gros. Règle plus spécifique pour
+     le ramener à sa vraie taille (10px, cohérente avec le reste du bloc). */
+  [data-testid="mobile-copilot-home"] .copilot-daily-summary .copilot-daily-priority strong { font-size: 10px !important; line-height: 1.4 !important; font-weight: 600 !important; }
   [data-testid="mobile-copilot-home"] .bottom-nav button,
   .app-body:has([data-testid="mobile-copilot-home"]) .bottom-nav button { font-family: Geist, Inter, system-ui, sans-serif !important; font-size: 12px !important; line-height: 16px !important; font-weight: 500 !important; }
 }
@@ -1814,7 +1820,15 @@ html:not(.ambiance-clarte) [data-testid="copilot-panel"] .copilot-composer-shell
 .lp-root {
   --lp-navy: #0B1F3A; --lp-navy-2: #0E2748; --lp-gold: #DEC2A3; --lp-gold-bright: #F1E2CC;
   --lp-red: #E23524; --lp-red-soft: rgba(226, 53, 36, .12);
-  min-height: 100vh; background: radial-gradient(1200px 600px at 70% -10%, #12315e 0%, var(--lp-navy) 55%);
+  min-height: 100vh;
+  /* Corrigé : utilisait un simple radial-gradient à une seule ellipse,
+     différent de la vraie formule de fond de l'app (.sky-bg) — d'où la
+     couleur perçue comme "pas la même" entre les pages publiques et
+     l'application. Même formule exacte réutilisée ici. */
+  background:
+    radial-gradient(ellipse at 20% 10%, rgba(45,81,150,0.45) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 8%, rgba(30,60,110,0.35) 0%, transparent 55%),
+    linear-gradient(180deg, #172C5C 0%, #101F47 42%, #0B1F3A 76%, #081734 100%);
   color: #fff; font-family: 'Geist', 'Inter', system-ui, sans-serif;
 }
 .lp-container { width: 100%; max-width: 1160px; margin: 0 auto; padding: 0 24px; }
