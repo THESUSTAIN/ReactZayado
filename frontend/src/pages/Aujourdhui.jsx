@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Compass, ArrowRight, Sparkles, Target, Lightbulb, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { getVision, getHumeur, getTaches, getStrategicDecisions, getStrategyOverview, createTache } from "../lib/api";
+import { getVision, getHumeur, getTaches, getStrategicDecisions, getStrategyOverview, createTache, getDashboardSummary } from "../lib/api";
+import { NightRecap } from "../components/CockpitSections";
 
 // Accueil quotidien Cap Vivant.
 //
@@ -28,6 +29,9 @@ export default function Aujourdhui() {
   const [loading, setLoading] = useState(true);
   const [quickTitle, setQuickTitle] = useState("");
   const [quickAdding, setQuickAdding] = useState(false);
+  // Bilan « Ce que l'IA a fait pour vous » — remonté ici depuis le Copilote :
+  // c'est un résumé de journée, sa place est sur la page d'accueil.
+  const [dashboard, setDashboard] = useState(null);
 
   useEffect(() => {
     Promise.all([
@@ -36,7 +40,9 @@ export default function Aujourdhui() {
       getTaches().catch(() => []),
       getStrategicDecisions().catch(() => []),
       getStrategyOverview().catch(() => null),
-    ]).then(([v, h, t, decisions, overview]) => {
+      getDashboardSummary().catch(() => null),
+    ]).then(([v, h, t, decisions, overview, summary]) => {
+      setDashboard(summary);
       setVision(v);
       setHumeur(Array.isArray(h) ? h : []);
       setTaches(Array.isArray(t) ? t : []);
@@ -104,8 +110,8 @@ export default function Aujourdhui() {
       {/* Priorité du jour désormais fusionnée dans le hero ci-dessous, plus de bloc séparé. */}
 
       {/* Carte hero : statut + trajectoire + anneau de capacité réel */}
-      <div className="glass p-6 grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-6 items-center" data-testid="aujourdhui-hero">
-        <div>
+      <div className="glass p-6 flex flex-col gap-7 lg:flex-row lg:items-center" data-testid="aujourdhui-hero">
+        <div className="min-w-0 flex-1 lg:max-w-2xl">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/15 border border-emerald-400/25 px-3 py-1 text-[11px] font-semibold text-emerald-300">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> {vision?.value ? "Vision active" : "Vision à définir"}
           </span>
@@ -119,7 +125,14 @@ export default function Aujourdhui() {
           </h2>
           <p className="text-white/55 text-sm mt-1 max-w-lg">La Vision vous aide à choisir une action réaliste plutôt qu'à remplir une liste.</p>
           {!loading && prioritePrincipale && tachesOuvertes.length > 1 && (
-            <p className="text-xs text-white/40 mt-2">+ {tachesOuvertes.length - 1} autre(s) tâche(s) ouverte(s), secondaires pour l'instant.</p>
+            <p className="mt-2.5 inline-flex items-center gap-2 rounded-full border border-[#DEC2A3]/35 bg-[#DEC2A3]/12 px-3 py-1.5 text-xs text-[#F1E2CC]" data-testid="aujourdhui-autres-taches">
+              <span className="relative flex h-2 w-2" aria-hidden="true">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#DEC2A3] opacity-70" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-[#DEC2A3]" />
+              </span>
+              <strong className="font-head text-sm font-bold text-[#F1E2CC]">{tachesOuvertes.length - 1}</strong>
+              autre{tachesOuvertes.length - 1 > 1 ? "s" : ""} tâche{tachesOuvertes.length - 1 > 1 ? "s" : ""} ouverte{tachesOuvertes.length - 1 > 1 ? "s" : ""}, secondaire{tachesOuvertes.length - 1 > 1 ? "s" : ""} pour l'instant
+            </p>
           )}
           {!loading && prioritePrincipale && (
             <button onClick={() => navigate("/mouvement")} data-testid="aujourdhui-goto-mouvement"
@@ -152,7 +165,7 @@ export default function Aujourdhui() {
 
         {/* Anneau de capacité — vraie donnée (dernier check-in Humeur), même
             pattern visuel que les gauges de Mindset & capacité. */}
-        <div className="flex flex-col items-center gap-2 shrink-0">
+        <div className="flex shrink-0 flex-col items-center gap-2 self-center rounded-2xl border border-white/12 bg-white/[0.05] px-7 py-5 lg:w-52">
           <div className="relative w-24 h-24">
             <svg className="w-24 h-24 -rotate-90">
               <circle cx="48" cy="48" r="40" stroke="rgba(255,255,255,0.1)" strokeWidth="8" fill="none" />
@@ -194,6 +207,10 @@ export default function Aujourdhui() {
           <p className="text-[11px] text-white/40 mt-0.5">{vision?.value ? "Relié à vos priorités" : "Reliez une action à votre Vision"}</p>
         </div>
       </div>
+
+      {/* « Ce que l'IA a fait pour vous » — déplacé depuis le Copilote :
+          c'est un bilan de journée, il a sa place sur l'accueil. */}
+      {!loading && dashboard && <NightRecap data={dashboard} onSeeTasks={() => navigate("/mouvement")} />}
 
       {/* Décision à clarifier + Impact sur la Vision — état honnête, pas de décision fabriquée */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

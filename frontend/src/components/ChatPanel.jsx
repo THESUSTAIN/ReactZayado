@@ -5,7 +5,7 @@ import {
   MessageCircle, Moon, Newspaper, Paperclip, Plus, RefreshCw, Send, ShieldCheck,
   Sparkles, Sun, Wallet, X,
 } from "lucide-react";
-import { NightRecap, NextSequence } from "./CockpitSections";
+import { NextSequence } from "./CockpitSections";
 import {
   applyCopilotDecision, getChatHistory, getCopilotBrief, getCopilotConfig,
   getCopilotDecision, getCopilotNews, getNewsHistory, getSavedNews, saveNewsItem, deleteSavedNews, archiveNewsEdition,
@@ -740,7 +740,10 @@ export default function ChatPanel({ context, initialAsk, onBack }) {
           {actionResults.map((result) => <ActionResultCard key={result.id} result={result} onOpenTasks={() => navigate("/mouvement")} />)}
           <BriefCard data={dashboard} />
           {!historyLoading && (dashboard || brief) && <NextSequence data={dashboard || brief} />}
-          {!historyLoading && (dashboard || brief) && <NightRecap data={dashboard || brief} onSeeTasks={() => navigate("/mouvement")} />}
+          {/* « Ce que l'IA a fait pour vous » a été déplacé sur la page
+              d'accueil (pages/Aujourdhui.jsx) : c'est un bilan de la journée,
+              pas un tour de conversation — il alourdissait le fil du Copilote
+              à chaque ouverture. */}
           {!historyLoading && messages.length === 0 && <div className="copilot-suggestions" data-testid="copilot-suggestions-list"><div className="copilot-suggestions-title"><Sparkles size={14} /> Continuer avec le Copilote</div>{SUGGESTIONS.map((suggestion) => <button key={suggestion} onClick={() => send(suggestion)} className="w-full rounded-xl border border-white/15 bg-white/5 px-3.5 py-2.5 text-left text-[13px] text-white/75 transition-colors hover:border-[#DEC2A3]/40 hover:bg-white/10" data-testid="copilot-suggestion">{suggestion}</button>)}</div>}
           {messages.map((message, index) => <div key={message.id || index} className={`copilot-message-event ${message.role === "user" ? "is-user" : "is-assistant"}`}><EventStamp actor={message.role === "user" ? (dashboard?.user?.first_name || dashboard?.user?.name || "Vous") : "MyExtension Business"} at={message.created_at || message.updated_at} /><div className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}><div className={`copilot-chat-bubble max-w-[87%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap ${message.role === "user" ? "is-user" : "is-assistant"}`}>{message.pending && (loading || generatingImage) && !message.content ? <Loader2 size={16} className="animate-spin text-[#DEC2A3]" /> : renderMarkdownLite(message.content)}{message.imageUrl && <img src={message.imageUrl} alt="Générée par le Copilote" className="mt-2 max-w-full rounded-xl border border-white/10" />}{message.role === "assistant" && Array.isArray(message.sources) && message.sources.length > 0 && <div className="mt-3 flex flex-wrap gap-1.5 border-t border-white/10 pt-2" data-testid="copilot-response-sources"><span className="text-[9px] font-bold uppercase tracking-wide text-[#E8C96A]">Sources</span>{message.sources.map((source, sourceIndex) => <span key={`${source.type}-${sourceIndex}`} className="rounded-full border border-white/15 bg-white/[0.05] px-2 py-1 text-[9px] text-white/55">{source.label}</span>)}</div>}</div></div></div>)}
         </div>

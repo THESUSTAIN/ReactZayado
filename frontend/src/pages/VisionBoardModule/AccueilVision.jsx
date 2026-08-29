@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   Activity, AlertTriangle, ArrowRight, BarChart3, Check, ChevronRight,
   CloudSun, Compass, FileText, Focus, Link2, Loader2, Plus, Quote,
-  Share2, Sparkles, Target, TrendingUp, Users, Wallet, Zap,
+  Share2, Sparkles, Target, TrendingUp, Users, Wallet, X, Zap,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { visionBrainApi } from "../../lib/finalVisionModuleApi";
@@ -77,7 +77,7 @@ function MeaningCue({ action, onOpenDecisions }) {
   );
 }
 
-export default function AccueilVision({ onGoCanvas, onNavigateTab }) {
+export default function AccueilVision({ onGoCanvas, onNavigateTab, trajectoryOpen = false, onCloseTrajectory }) {
   const [data, setData] = useState(null);
   const [brief, setBrief] = useState(null);
   const [mirror, setMirror] = useState(null);
@@ -119,30 +119,38 @@ export default function AccueilVision({ onGoCanvas, onNavigateTab }) {
 
   return (
     <div className="vision-home" data-testid="accueil-vision">
-      <section className="vision-home-hero" data-testid="accueil-hero">
-        <div className="vision-home-hero-copy"><span className="vision-eyebrow"><span /> MAISON STRATÉGIQUE</span></div>
-        <div className="vision-home-hero-actions" aria-label="Actions Vision">
-          <button className="vision-studio-cta" onClick={onGoCanvas} data-testid="accueil-open-canvas"><Compass size={16} /> Créer dans le Studio <ArrowRight size={15} /></button>
-          <button className="vision-action-secondary" onClick={() => onNavigateTab?.("decisions")}><Activity size={15} /> Décisions</button>
-          <button className="vision-action-secondary" onClick={() => onNavigateTab?.("pillars")}><Target size={15} /> Piliers</button>
-          <button className="vision-action-secondary" onClick={() => navigate("/")}><Focus size={15} /> Mode Focus</button>
-        </div>
-      </section>
+      {/* Les actions Studio / Décisions / Piliers / Mode Focus ont été remontées
+          dans la barre d'outils de la page (à côté du menu ⋮) : elles étaient
+          noyées au milieu du contenu, alors que ce sont des commandes de page. */}
 
+      {/* Trajectoire déplacée : elle s'ouvre depuis « Ma trajectoire » dans la
+          barre d'outils. Affichée en permanence, elle repoussait plus bas la
+          seule chose vraiment attendue ici — la Vision et sa prochaine étape. */}
+      {trajectoryOpen && (
+        <div className="vision-modal-backdrop" role="dialog" aria-modal="true" aria-label="Votre trajectoire stratégique"
+          data-testid="vision-trajectory-modal" onClick={() => onCloseTrajectory?.()}>
+          <div className="vision-modal" onClick={(event) => event.stopPropagation()}>
+            <button type="button" className="vision-modal-close" onClick={() => onCloseTrajectory?.()} aria-label="Fermer">
+              <X size={18} />
+            </button>
       <section className="vision-trajectory" data-testid="vision-trajectory">
-        <div className="vision-section-title"><div><span>Votre trajectoire stratégique</span><small>Vision → Décision → Action</small></div></div>
-        <div className="vision-trajectory-grid">
-          <article><span className="trajectory-number">01</span><strong>VISION</strong><small>Clarifier la vision</small><div className="trajectory-icon"><CrosshairIcon /></div><div className="trajectory-card"><b>{pillars.length ? `${pillars.length} piliers actifs` : "Piliers à définir"}</b><span>{pillars.length ? pillars.map((p) => p.name).join(" · ") : "Structurez vos axes de décision dans votre Vision."}</span></div></article>
-          <article><span className="trajectory-number">02</span><strong>DÉCISION</strong><small>Choisir vos priorités</small><div className="trajectory-icon"><ScaleIcon /></div><div className="trajectory-card"><b>{opportunities.length ? `${opportunities.length} décisions à traiter` : "Décisions à clarifier"}</b><span>Le Copilote aide à hiérarchiser, vous gardez la validation.</span></div></article>
-          <article><span className="trajectory-number">03</span><strong>ACTION</strong><small>Exécuter et mesurer</small><div className="trajectory-icon"><Zap size={19} /></div><div className="trajectory-card"><b>{actions.length ? `${actions.length} missions recommandées` : "Missions à préparer"}</b><span>Les missions validées font avancer votre Vision.</span></div></article>
+              <div className="vision-section-title"><div><span>Votre trajectoire stratégique</span><small>Vision → Décision → Action</small></div></div>
+              <div className="vision-trajectory-grid">
+                <article><span className="trajectory-number">01</span><strong>VISION</strong><small>Clarifier la vision</small><div className="trajectory-icon"><CrosshairIcon /></div><div className="trajectory-card"><b>{pillars.length ? `${pillars.length} piliers actifs` : "Piliers à définir"}</b><span>{pillars.length ? pillars.map((p) => p.name).join(" · ") : "Structurez vos axes de décision dans votre Vision."}</span></div></article>
+                <article><span className="trajectory-number">02</span><strong>DÉCISION</strong><small>Choisir vos priorités</small><div className="trajectory-icon"><ScaleIcon /></div><div className="trajectory-card"><b>{opportunities.length ? `${opportunities.length} décisions à traiter` : "Décisions à clarifier"}</b><span>Le Copilote aide à hiérarchiser, vous gardez la validation.</span></div></article>
+                <article><span className="trajectory-number">03</span><strong>ACTION</strong><small>Exécuter et mesurer</small><div className="trajectory-icon"><Zap size={19} /></div><div className="trajectory-card"><b>{actions.length ? `${actions.length} missions recommandées` : "Missions à préparer"}</b><span>Les missions validées font avancer votre Vision.</span></div></article>
+              </div>
+              <div className="vision-alignment-row">
+                <div><span>ALIGNEMENT GLOBAL</span><strong>{score ?? "—"}<small>{score == null ? "" : "%"}</small></strong><em><Activity size={12} /> {progressLabel}</em></div>
+                <div><span>PILIERS STRATÉGIQUES</span><div className="vision-pillar-rings">{pillars.length ? pillars.slice(0, 6).map((p) => <PillarRing key={p.name} name={p.name} value={p.value} />) : <small>Données à renseigner</small>}</div></div>
+                <div><span>OBJECTIFS ACTIFS</span>{objectives.length ? objectives.slice(0, 2).map((o, index) => <p key={o.id || index}><i /> {o.title || o.label || "Objectif"}<b>{o.progress ?? "—"}{o.progress != null ? "%" : ""}</b></p>) : <p className="vision-muted">Aucun objectif connecté</p>}</div>
+              </div>
+              <button className="vision-primary-cta" onClick={onGoCanvas}><Sparkles size={16} /> Piloter depuis ma Vision <ArrowRight size={15} /></button>
+            </section>
+
+          </div>
         </div>
-        <div className="vision-alignment-row">
-          <div><span>ALIGNEMENT GLOBAL</span><strong>{score ?? "—"}<small>{score == null ? "" : "%"}</small></strong><em><Activity size={12} /> {progressLabel}</em></div>
-          <div><span>PILIERS STRATÉGIQUES</span><div className="vision-pillar-rings">{pillars.length ? pillars.slice(0, 6).map((p) => <PillarRing key={p.name} name={p.name} value={p.value} />) : <small>Données à renseigner</small>}</div></div>
-          <div><span>OBJECTIFS ACTIFS</span>{objectives.length ? objectives.slice(0, 2).map((o, index) => <p key={o.id || index}><i /> {o.title || o.label || "Objectif"}<b>{o.progress ?? "—"}{o.progress != null ? "%" : ""}</b></p>) : <p className="vision-muted">Aucun objectif connecté</p>}</div>
-        </div>
-        <button className="vision-primary-cta" onClick={onGoCanvas}><Sparkles size={16} /> Piloter depuis ma Vision <ArrowRight size={15} /></button>
-      </section>
+      )}
 
       <ClimateCard data={data} />
 
@@ -153,6 +161,12 @@ export default function AccueilVision({ onGoCanvas, onNavigateTab }) {
         <MeaningCue action={actions[0]} onOpenDecisions={() => onNavigateTab?.("decisions")} />
       </section>
 
+      {/* Tout ce qui suit était affiché d'emblée : sept blocs de cartes après
+          la trajectoire, sur une page dont l'utilisateur attend surtout sa
+          Vision. Regroupé sous un repli, ouvert à la demande. */}
+      <details className="vision-more" data-testid="vision-more-panel">
+        <summary><span>Aller plus loin</span><small>Connexions, cartes reliées, ressources</small></summary>
+        <div className="vision-more-body">
       {linkedCards.length > 0 && <section className="vision-linked-strip" data-testid="accueil-linked-cards"><div className="vision-section-title"><div><span>Cartes intelligentes reliées</span><small>Les données de vos modules alimentent la Vision</small></div><Link2 size={16} /></div><div className="vision-linked-list">{linkedCards.slice(0, 4).map((card) => <LinkedCard key={card.key} card={card} />)}</div></section>}
 
       {connectionChain.length > 0 && <section className="vision-mirror" data-testid="accueil-mirror"><div className="vision-section-title"><div><span>Miroir dynamique</span><small>Vos connexions alimentent la trajectoire</small></div><Link2 size={16} /></div><div className="vision-mirror-chain">{connectionChain.map((node) => <div key={node.key}><span className={node.connected ? "connected" : ""}>{node.provider}</span><small>{node.connected ? node.value : "Non connecté"}</small></div>)}</div></section>}
@@ -184,6 +198,9 @@ export default function AccueilVision({ onGoCanvas, onNavigateTab }) {
           })}
         </div>
       </section>
+        </div>
+      </details>
+
       <QuoteBar data={brief} />
     </div>
   );

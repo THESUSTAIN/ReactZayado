@@ -5,10 +5,9 @@ Ce backend NE REMPLACE PAS le vrai backend ZAYADO (FastAPI + SQLAlchemy,
 ~80 routes, IA Mammouth, OAuth, paiements...). Il sert uniquement à faire
 tourner le FRONTEND ZAYADO en LIVE dans cet environnement de prévisualisation :
 
-  • /api/auth/*        → login démo fonctionnel (compte test « Thomas »,
-                          lien magique preview, OAuth stub) qui renvoie un
-                          utilisateur + un jeton, pour traverser l'écran de
-                          connexion et entrer dans l'app.
+  • /api/auth/*, /api/oauth/*  → authentification RÉELLE (auth_real.py) :
+                          OAuth Google/Microsoft, lien magique envoyé par
+                          email (Brevo), comptes persistés en SQLite.
   • /api/health        → sonde de santé.
   • catch-all /api/*   → réponses vides douces (200 {}) pour éviter les
                           erreurs bruyantes ; les pages affichent alors leurs
@@ -82,62 +81,30 @@ def token_response(email: str = "thomas@zayado.net", name: str = "Thomas") -> Di
 # ── Santé ───────────────────────────────────────────────────────────────
 @api.get("/health")
 async def health():
-    return {"status": "ok", "mode": "demo", "time": _now_iso()}
+    from auth_real import IS_PREVIEW, GOOGLE_CLIENT_ID, MICROSOFT_CLIENT_ID, BREVO_API_KEY
+    return {
+        "status": "ok",
+        "mode": "preview" if IS_PREVIEW else "production",
+        "auth": "real",
+        "google_oauth": bool(GOOGLE_CLIENT_ID),
+        "microsoft_oauth": bool(MICROSOFT_CLIENT_ID),
+        "email_delivery": bool(BREVO_API_KEY),
+        "time": _now_iso(),
+    }
 
 @api.get("/")
 async def root():
     return {"message": "ZAYADO demo backend", "mode": "demo"}
 
 
-# ── Auth (démo) ──────────────────────────────────────────────────────────
+# ── Auth RÉELLE ──────────────────────────────────────────────────────────
+# Les stubs de démonstration (« vous êtes toujours Thomas », aucun email
+# envoyé, chemins OAuth que le frontend n'appelait jamais) ont été retirés :
+# ils sont remplacés par backend/auth_real.py, monté plus bas sous /api.
 class Credentials(BaseModel):
     email: Optional[str] = None
     password: Optional[str] = None
     first_name: Optional[str] = None
-
-@api.post("/auth/demo-login")
-async def demo_login(data: Dict[str, Any] = None):
-    email = (data or {}).get("email") or "thomas@zayado.net"
-    return token_response(email, "Thomas")
-
-@api.post("/auth/login")
-async def login(creds: Credentials):
-    return token_response(creds.email or "thomas@zayado.net", "Thomas")
-
-@api.post("/auth/register")
-async def register(creds: Credentials):
-    return token_response(creds.email or "thomas@zayado.net", creds.first_name or "Thomas")
-
-@api.post("/auth/request-link")
-async def request_link(data: Dict[str, Any] = None):
-    """Lien magique — en preview on renvoie directement le dev_link."""
-    email = (data or {}).get("email") or "thomas@zayado.net"
-    return {
-        "ok": True,
-        "preview": True,
-        "message": "Mode preview : utilisez le lien ci-dessous.",
-        "dev_link": f"/login?token={DEMO_TOKEN}",
-        "email": email,
-    }
-
-@api.post("/auth/verify-link")
-async def verify_link(data: Dict[str, Any] = None):
-    return token_response()
-
-@api.get("/auth/me")
-async def me(request: Request):
-    auth = request.headers.get("authorization", "")
-    if not auth.lower().startswith("bearer "):
-        return JSONResponse(status_code=401, content={"detail": "Non authentifié"})
-    return demo_user()
-
-@api.post("/auth/oauth/{provider}/start")
-async def oauth_start(provider: str, data: Dict[str, Any] = None):
-    return {"authorization_url": f"/login?code=demo&state={provider}_demo", "preview": True}
-
-@api.post("/auth/oauth/{provider}/exchange")
-async def oauth_exchange(provider: str, data: Dict[str, Any] = None):
-    return token_response()
 
 
 # ── Chat / Copilote (démo statique) ─────────────────────────────────────
@@ -235,7 +202,11 @@ DEMO_DECISIONS = [
 
 @api.get("/chat/decision")
 async def chat_decision(session_id: str = "default"):
-    return {"decisions": DEMO_DECISIONS}
+    # Ces décisions sont des EXEMPLES codés en dur : jamais servies en
+    # production, où elles se lisaient comme de vraies données du compte
+    # (« MRR 12 480 € », un prospect nommé) alors que rien ne les produisait.
+    from auth_real import IS_PREVIEW
+    return {"decisions": DEMO_DECISIONS if IS_PREVIEW else []}
 
 @api.post("/chat/decision/{decision_id}")
 async def chat_decision_apply(decision_id: str, data: Dict[str, Any] = None):
@@ -245,6 +216,12 @@ async def chat_decision_apply(decision_id: str, data: Dict[str, Any] = None):
     return {"status": "deferred", "message": "Entendu, je reporte cette décision. Elle réapparaîtra dans votre prochain point du jour."}
 
 
+from auth_real import router as auth_router, init_db  # noqa: E402
+
+init_db()
+# Monté AVANT le catch-all : sans cet ordre, /api/oauth/... serait avalé par
+# la route fourre-tout et renverrait [] (le bug de connexion constaté en prod).
+app.include_router(auth_router, prefix="/api")
 app.include_router(api)
 
 

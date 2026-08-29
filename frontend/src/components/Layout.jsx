@@ -325,23 +325,14 @@ export default function Layout() {
   const [settingsSection, setSettingsSection] = useState("general");
   const [visionContext, setVisionContext] = useState({ tab: "accueil", label: "Accueil Vision" });
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 769);
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   useEffect(() => {
     const update = () => setIsMobile(window.innerWidth < 769);
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
-  // Le chat plein écran (accueil mobile) est trop à l'étroit avec le header
-  // (58px) + la bottom nav (72px) autour ("le chat est petit") — on les
-  // masque sur cette seule route/largeur et on les remplace par une feuille
-  // de nav légère ouverte depuis la petite barre du chat (voir App.js).
-  const hideChromeForMobileChat = isMobile && location.pathname === "/";
-  useEffect(() => {
-    const onOpenMobileNav = () => setMobileNavOpen(true);
-    window.addEventListener("cours:open-mobile-nav", onOpenMobileNav);
-    return () => window.removeEventListener("cours:open-mobile-nav", onOpenMobileNav);
-  }, []);
-  useEffect(() => { setMobileNavOpen(false); }, [location.pathname]);
+  // L'accueil mobile n'est plus le chat plein écran : header et navigation
+  // basse restent visibles sur toutes les routes, comme sur PC. Le Copilote
+  // s'ouvre par-dessus, en plein écran, depuis la navigation basse.
 
   // Bug d'audit : Vision (VisionBoard.jsx) et Bien-être émettent déjà
   // "cours:open-copilot" ("Transformer en action", "Parler au copilote")
@@ -353,8 +344,7 @@ export default function Layout() {
   useEffect(() => {
     const onOpenCopilot = (e) => {
       setCopilotAsk(e.detail?.ask || null);
-      if (window.innerWidth < 769) { navigate("/"); setCopilotOpen(false); }
-      else setCopilotOpen(true);
+      setCopilotOpen(true);
     };
     const onVisionContext = (e) => setVisionContext(e.detail || null);
     window.addEventListener("cours:open-copilot", onOpenCopilot);
@@ -424,8 +414,7 @@ export default function Layout() {
     // seulement quand l'utilisateur clique vraiment sur l'onglet Actualité
     // (voir markNewsTabSeen dans ChatPanel.jsx). Sinon le compteur exact
     // tombait à 0 avant même d'avoir consulté quoi que ce soit.
-    if (window.innerWidth < 769) { navigate("/"); setCopilotOpen(false); }
-    else setCopilotOpen(true);
+    setCopilotOpen(true);
   };
   const baseContext = {
     "/": "Vision de l'entrepreneur: objectifs, alignement, mindset.",
@@ -446,14 +435,12 @@ export default function Layout() {
       <Sidebar onSettings={openSettings} onCopilote={openCopilot} />
 
       <div className="app-body">
-        {!hideChromeForMobileChat && (
-          <Header onSettings={openSettings} profileName={profileName} theSustainMember={theSustainMember} ambianceFoi={ambianceFoi} onOpenTheSustain={() => setTheSustainModalOpen(true)} onOpenCopilot={openCopilot} />
-        )}
+        <Header onSettings={openSettings} profileName={profileName} theSustainMember={theSustainMember} ambianceFoi={ambianceFoi} onOpenTheSustain={() => setTheSustainModalOpen(true)} onOpenCopilot={openCopilot} />
         <div className="flex">
           <main className={`flex-1 min-w-0 w-full px-4 sm:px-8 pb-28 xl:pb-8 max-w-none transition-[padding] duration-300 ${copilotOpen ? "md:pr-[396px]" : ""}`}>
             <Outlet />
           </main>
-          <button
+          {!isMobile && <button
             type="button"
             onClick={() => setCopilotOpen((open) => !open)}
             className={`hidden md:flex fixed top-1/2 z-[70] -translate-y-1/2 items-center gap-2 rounded-l-2xl border border-r-0 border-white/20 bg-white/[0.10] px-3 py-3 text-sm font-semibold text-white shadow-2xl backdrop-blur-xl transition-[right] duration-200 ${copilotOpen ? "right-[380px]" : "right-0"}`}
@@ -463,36 +450,30 @@ export default function Layout() {
           >
             {hasUnseenNews && <span className="absolute -left-1 top-1 h-2.5 w-2.5 rounded-full bg-red-500" data-testid="copilot-news-badge" title="Nouvelle actualité" />}
             <span className="[writing-mode:vertical-rl] rotate-180 tracking-wide">Copilote</span>
-          </button>
-          <aside className={`hidden md:flex fixed right-0 top-0 z-[60] h-screen w-[380px] shrink-0 border-l border-white/20 bg-white/[0.08] backdrop-blur-xl shadow-2xl transition-transform duration-300 ${copilotOpen ? "translate-x-0" : "translate-x-full"}`} data-testid="copilot-right-drawer">
-            <ChatPanel context={context} initialAsk={copilotAsk} />
-          </aside>
+          </button>}
+          {!isMobile && (
+            <aside className={`hidden md:flex fixed right-0 top-0 z-[60] h-screen w-[380px] shrink-0 border-l border-white/20 bg-white/[0.08] backdrop-blur-xl shadow-2xl transition-transform duration-300 ${copilotOpen ? "translate-x-0" : "translate-x-full"}`} data-testid="copilot-right-drawer">
+              <ChatPanel context={context} initialAsk={copilotAsk} />
+            </aside>
+          )}
         </div>
         <BottomNav onCopilote={openCopilot} hasUnseenNews={hasUnseenNews} />
       </div>
 
-      {mobileNavOpen && (
-        <div className="fixed inset-0 z-[90] flex items-end md:hidden" onClick={() => setMobileNavOpen(false)} data-testid="mobile-nav-sheet">
-          <div className="absolute inset-0 bg-black/60" />
-          <div className="relative w-full rounded-t-2xl border-t border-white/15 bg-[#0B1F3A] pb-[env(safe-area-inset-bottom)]" onClick={(e) => e.stopPropagation()}>
-            <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-white/20" />
-            <ul className="grid grid-cols-4 gap-1 px-4 py-4">
-              {ITEMS.map((item) => (
-                <li key={item.id}>
-                  <button onClick={() => { navigate(item.path); setMobileNavOpen(false); }} className="flex w-full flex-col items-center gap-1.5 rounded-xl px-2 py-3 text-white/80 hover:bg-white/10" data-testid={`mobile-nav-${item.id}`}>
-                    <item.Icon size={18} />
-                    <span className="text-[11px] leading-tight text-center">{item.shortLabel || item.label}</span>
-                  </button>
-                </li>
-              ))}
-              <li>
-                <button onClick={() => { openSettings(); setMobileNavOpen(false); }} className="flex w-full flex-col items-center gap-1.5 rounded-xl px-2 py-3 text-white/80 hover:bg-white/10" data-testid="mobile-nav-settings">
-                  <SettingsIcon size={18} />
-                  <span className="text-[11px] leading-tight text-center">Paramètres</span>
-                </button>
-              </li>
-            </ul>
+      {/* Copilote mobile : même composant, même style que le panneau PC —
+          ouvert en plein écran par-dessus l'app, refermable. Avant, il
+          REMPLAÇAIT l'accueil mobile, ce qui faisait disparaître le header
+          et la navigation basse. */}
+      {isMobile && copilotOpen && (
+        <div className="fixed inset-0 z-[120] flex flex-col bg-[#0B1F3A] md:hidden" data-testid="copilot-mobile-fullscreen">
+          <div className="flex items-center justify-between border-b border-white/12 px-4 py-3">
+            <span className="text-sm font-semibold text-white">Copilote</span>
+            <button onClick={() => setCopilotOpen(false)} aria-label="Fermer le Copilote" data-testid="copilot-mobile-close"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 text-white/80">
+              <X size={18} />
+            </button>
           </div>
+          <div className="min-h-0 flex-1"><ChatPanel context={context} initialAsk={copilotAsk} /></div>
         </div>
       )}
 

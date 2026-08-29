@@ -38,7 +38,10 @@ function pillarTitle(pillar) {
   return typeof value === "string" ? value : (value.fr ?? value.en ?? "Axe sans nom");
 }
 
-export function StrategicCapHome({ onOpenHorizon, onOpenDecisions, onOpenPillars }) {
+// onOpenPillars n'est plus utilisé ici : le bouton « Voir mes axes » a été
+// retiré (il chevauchait le menu ⋮) et remplacé par « Piliers » dans la
+// barre d'outils de la page.
+export function StrategicCapHome({ onOpenHorizon, onOpenDecisions }) {
   const [overview, setOverview] = useState(EMPTY);
   const [vision, setVision] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -65,7 +68,7 @@ export function StrategicCapHome({ onOpenHorizon, onOpenDecisions, onOpenPillars
           <h2 className="font-head text-2xl font-semibold text-white md:text-3xl">{visionText(vision)}</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-white/70">Votre Vision se transforme ici en axes, jalons et décisions. Mon Mouvement exécute ; la Vision arbitre le pourquoi.</p>
         </div>
-        <button onClick={onOpenPillars} className="gold-bg inline-flex shrink-0 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-[#0B1F3A]"><Target size={15} /> Voir mes axes</button>
+
       </div>
 
       <div className="mt-5 grid gap-3 lg:grid-cols-[1.15fr_.85fr_.85fr]">

@@ -4,7 +4,6 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-route
 import { Toaster } from "sonner";
 import Layout from "./components/Layout";
 import CampusLayout from "./components/CampusLayout";
-import ChatPanel from "./components/ChatPanel";
 import Pilotage from "./pages/Pilotage";
 import Croissance from "./pages/Croissance";
 import Travail from "./pages/Travail";
@@ -25,42 +24,12 @@ import CopiloteAgent from "./pages/CopiloteAgent";
 import VisionProduit from "./pages/VisionProduit";
 import { authMe } from "./lib/api";
 
-// Accueil : "Aujourd'hui", porte d'entree quotidienne Cap Vivant (tache #21 —
-// avant : le Vision Board abstrait etait l'accueil direct, remplace ici par
-// un vrai point de depart quotidien). Sur mobile, pas de panneau lateral
-// possible a cette largeur : c'est le copilote qui EST l'accueil mobile,
-// en plein ecran (demande explicite conservee).
-function AppHome() {
-  const navigate = useNavigate();
-  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 769);
-  useEffect(() => {
-    const update = () => setIsMobile(window.innerWidth < 769);
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, []);
-  useEffect(() => {
-    if (!isMobile) return undefined;
-    const previousOverflow = document.body.style.overflow;
-    const previousOverscroll = document.documentElement.style.overscrollBehavior;
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overscrollBehavior = "none";
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.documentElement.style.overscrollBehavior = previousOverscroll;
-    };
-  }, [isMobile]);
-  if (isMobile) {
-    return (
-      <div className="fixed inset-0 z-[150] overflow-hidden overscroll-none bg-[#0B1F3A]" data-testid="mobile-copilot-home">
-        <ChatPanel
-          context="Accueil quotidien Cap Vivant."
-          onMenu={() => window.dispatchEvent(new CustomEvent("cours:open-mobile-nav"))}
-        />
-      </div>
-    );
-  }
-  return <Aujourdhui />;
-}
+// Accueil : « Aujourd'hui », porte d'entrée quotidienne — la MÊME page sur
+// mobile et sur PC. Auparavant, sur mobile, "/" affichait le chat en plein
+// écran à la place de l'accueil, ce qui masquait aussi le header et la
+// navigation basse (d'où « le menu mobile a disparu, et le header ? »).
+// Le Copilote reste accessible partout depuis la navigation basse.
+const AppHome = Aujourdhui;
 
 // TheSustain est une entrée volontaire réservée aux comptes liés à
 // l’association. Une valeur absente ou une session inconnue vaut toujours

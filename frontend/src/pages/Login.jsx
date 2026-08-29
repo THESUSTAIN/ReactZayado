@@ -80,6 +80,13 @@ const CGU_URL = "https://zayado.net/cgu";
 const LAST_EMAIL_KEY = "zayado_last_email";
 const LAST_METHOD_KEY = "zayado_last_login_method";
 
+// Remonte le message d'erreur réel du backend (FastAPI le met dans `detail`)
+// quand il y en a un — sinon on retombe sur le libellé générique.
+function serverReason(err) {
+  const detail = err?.response?.data?.detail;
+  return typeof detail === "string" && detail.trim() ? detail : null;
+}
+
 export default function Login() {
   const navigate = useNavigate();
   const [lang, setLang] = useState(() => (typeof window !== "undefined" && localStorage.getItem("zayado_lang")) || "fr");
@@ -99,11 +106,13 @@ export default function Login() {
     if (!token) return;
     verifyMagicLink(token)
       .then((res) => {
-        localStorage.setItem("cours_auth_token", res.access_token || res.token);
-        toast.success("Connexion réussie");
-        navigate(res.user?.onboarding_done ? "/" : "/onboarding");
+        // Le jeton sortait de l'URL directement dans le stockage sans contrôle,
+        // et restait ensuite visible dans la barre d'adresse (et dans
+        // l'historique du navigateur) — nettoyé ici.
+        window.history.replaceState({}, "", "/login");
+        if (finishLogin(res)) toast.success("Connexion réussie");
       })
-      .catch(() => toast.error(t.errLink));
+      .catch((err) => toast.error(serverReason(err) || t.errLink));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -125,10 +134,10 @@ export default function Login() {
         window.history.replaceState({}, "", "/login");
         finishLogin(res);
       })
-      .catch(() => {
+      .catch((err) => {
         setOauthProvider(null);
         window.history.replaceState({}, "", "/login?error=" + (provider === "google" ? "google_failed" : "microsoft_failed"));
-        toast.error(provider === "google" ? t.errGoogle : t.errMsft);
+        toast.error(serverReason(err) || (provider === "google" ? t.errGoogle : t.errMsft));
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -151,9 +160,18 @@ export default function Login() {
   const rememberMethod = (m) => localStorage.setItem(LAST_METHOD_KEY, m);
   const lastMethodLabel = lastMethod === "google" ? "Google" : lastMethod === "microsoft" ? "Microsoft" : lastMethod === "email" ? "Email" : null;
 
+  // Garde-fou : sans jeton exploitable, on écrivait littéralement la chaîne
+  // "undefined" dans le stockage, puis on naviguait vers une app qui se
+  // croyait connectée — un écran vide sans la moindre explication.
   const finishLogin = (res) => {
-    localStorage.setItem("cours_auth_token", res.access_token || res.token);
+    const token = res?.access_token || res?.token;
+    if (!token || typeof token !== "string") {
+      toast.error("Connexion incomplète : le serveur n'a pas renvoyé de session valide.");
+      return false;
+    }
+    localStorage.setItem("cours_auth_token", token);
     navigate(res.user?.onboarding_done ? "/" : "/onboarding");
+    return true;
   };
 
   const doOauthLogin = async (provider, label) => {
@@ -172,8 +190,11 @@ export default function Login() {
         throw new Error("URL d'autorisation manquante dans la réponse serveur.");
       }
       window.location.href = res.authorization_url;
-    } catch {
-      toast.error(provider === "google" ? t.errGoogle : t.errMsft);
+    } catch (err) {
+      // Le serveur explique précisément ce qui manque (ex. « GOOGLE_CLIENT_ID
+      // non configuré ») — le masquer derrière un message générique rendait
+      // le problème indiagnosticable côté utilisateur comme côté support.
+      toast.error(serverReason(err) || (provider === "google" ? t.errGoogle : t.errMsft));
       setOauthProvider(null);
     }
   };
@@ -215,17 +236,22 @@ export default function Login() {
       localStorage.setItem(LAST_EMAIL_KEY, value);
       rememberMethod("email");
       setSent(true);
-      if (res?.delivered_via_email && !res?.dev_link) {
-        toast.success(t.linkSent); setDevLink(null);
+      // L'ordre compte : un échec d'envoi doit être annoncé AVANT tout
+      // message de succès. Le lien de secours « Mode preview » n'existe plus
+      // qu'en préproduction — le backend ne le renvoie plus en production.
+      if (res?.delivery_failed) {
+        setSent(false);
+        toast.error(t.deliveryFail);
       } else if (res?.dev_link) {
         setDevLink(res.dev_link); toast.info(t.previewInfo);
-      } else if (res?.delivery_failed) {
-        setSent(false); toast.error(t.deliveryFail);
-      } else {
+      } else if (res?.delivered_via_email) {
         toast.success(t.linkSent); setDevLink(null);
+      } else {
+        setSent(false);
+        toast.error(t.deliveryFail);
       }
-    } catch {
-      toast.error(t.sendFail);
+    } catch (err) {
+      toast.error(serverReason(err) || t.sendFail);
     } finally {
       setSending(false);
     }

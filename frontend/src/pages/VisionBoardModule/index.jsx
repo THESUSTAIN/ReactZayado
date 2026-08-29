@@ -14,12 +14,12 @@ import {
   Bell, Heart, Clock3,
   Star, Search, ArrowLeft, ArrowRight,
   ExternalLink, Loader2, Upload, Share2, X, MoreVertical, CreditCard,
-  Shield, AlertTriangle, Target, Zap,
+  Shield, AlertTriangle, Target, Zap, Compass, Activity, Focus, Route,
   Printer, FileText, Wand2, Folder, Video, Presentation, LayoutTemplate,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useApp } from "./useApp";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { visionApi, visionExtApi, pilotageApi, wellnessApi, onboardingApi, tasksApi, analyseApi } from "../../lib/finalVisionModuleApi";
 import {
   BOARD_CENTER, BOARD_TOOLS,
@@ -2287,9 +2287,13 @@ export default function VisionBoardModule() {
 function VisionBoardDesktop() {
   const { tv } = useApp();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const initialTab = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState(TABS.some(t => t.id === initialTab) ? initialTab : "accueil");
   const [menuOpen, setMenuOpen] = useState(false);
+  // Trajectoire ouverte à la demande (voir AccueilVision) plutôt qu'affichée
+  // en permanence en haut de page.
+  const [trajectoryOpen, setTrajectoryOpen] = useState(false);
   const [bgImage, setBgImage] = useState(null);
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 769);
   React.useEffect(() => {
@@ -2365,7 +2369,7 @@ function VisionBoardDesktop() {
   const renderTab = () => {
     switch (activeTab) {
       case "accueil":   return <>
-        <StrategicCapHome onOpenHorizon={() => setActiveTab("horizon")} onOpenDecisions={() => setActiveTab("decisions")} onOpenPillars={() => setActiveTab("pillars")} />
+        <StrategicCapHome onOpenHorizon={() => setActiveTab("horizon")} onOpenDecisions={() => setActiveTab("decisions")} />
         {/* Séparateur explicite entre les deux vues : StrategicCapHome (synthèse
             rapide : prochain jalon, décision prioritaire) et AccueilVision
             (vue détaillée : trajectoire complète, climat stratégique,
@@ -2378,7 +2382,8 @@ function VisionBoardDesktop() {
           <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[.14em] text-white/35"><Sparkles size={12} /> Vue détaillée</span>
           <div className="h-px flex-1 bg-white/10" />
         </div>
-        <CoursAccueilVision onGoCanvas={openVisionStudio} onNavigateTab={setActiveTab} />
+        <CoursAccueilVision onGoCanvas={openVisionStudio} onNavigateTab={setActiveTab}
+          trajectoryOpen={trajectoryOpen} onCloseTrajectory={() => setTrajectoryOpen(false)} />
       </>;
       case "canvas":    return isMobile ? <VisionCanvaMobile onBack={returnToAccueil} /> : <TabCanvas bgImage={bgImage} onBack={returnToAccueil} />;
       case "pillars":   return <TabPillars />;
@@ -2399,10 +2404,33 @@ function VisionBoardDesktop() {
       </div>
 
       {/* Navigation secondaire remplacée par des actions contextuelles dans l’accueil Vision. */}
-      <div className="vb-toolbar flex items-center justify-between gap-3">
+      <div className="vb-toolbar flex flex-wrap items-center justify-between gap-3">
         {activeTab !== "accueil" ? (
           <button type="button" onClick={() => setActiveTab("accueil")} className="vision-back-action" data-testid="vision-back-home">← Retour à l’accueil Vision</button>
         ) : <span />}
+        {/* Commandes de page, groupées à côté du menu ⋮ (demande explicite) :
+            elles étaient auparavant enfouies au milieu du contenu de l'accueil. */}
+        <div className="vb-page-actions" data-testid="vision-page-actions">
+          {activeTab === "accueil" && (
+            <>
+              <button type="button" className="vb-page-action is-primary" onClick={openVisionStudio} data-testid="vision-action-studio">
+                <Compass size={15} /> Créer dans le Studio
+              </button>
+              <button type="button" className="vb-page-action" onClick={() => setTrajectoryOpen(true)} data-testid="vision-action-trajectoire">
+                <Route size={15} /> Ma trajectoire
+              </button>
+              <button type="button" className="vb-page-action" onClick={() => setActiveTab("decisions")} data-testid="vision-action-decisions">
+                <Activity size={15} /> Décisions
+              </button>
+              <button type="button" className="vb-page-action" onClick={() => setActiveTab("pillars")} data-testid="vision-action-piliers">
+                <Target size={15} /> Piliers
+              </button>
+              <button type="button" className="vb-page-action" onClick={() => navigate("/")} data-testid="vision-action-focus">
+                <Focus size={15} /> Mode Focus
+              </button>
+            </>
+          )}
+        </div>
         <div className="vb-actions relative shrink-0" ref={menuRef}>
           <button onClick={() => setMenuOpen((o) => !o)} data-testid="vision-actions-menu" title="Actions"
             className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--app-text)] hover:border-[var(--app-accent)] hover:text-[var(--app-accent)]">
