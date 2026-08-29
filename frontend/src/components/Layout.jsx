@@ -2,7 +2,7 @@ import { NavLink, Outlet, useLocation, useNavigate, Navigate } from "react-route
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Compass, Eye, HeartPulse, MessageCircle, Gem, Search, Bell,
-  LayoutGrid, ChevronDown, Settings as SettingsIcon, HelpCircle, LogOut, X, Mail, Globe, TrendingUp, Rocket, Briefcase, GraduationCap, Sun, Moon,
+  LayoutGrid, LayoutDashboard, ChevronDown, Settings as SettingsIcon, HelpCircle, LogOut, X, Mail, Globe, TrendingUp, Rocket, Briefcase, GraduationCap, Sun, Moon,
 } from "lucide-react";
 import { toast } from "sonner";
 import ChatPanel from "./ChatPanel";
@@ -16,7 +16,7 @@ import {
 } from "./ui/dropdown-menu";
 
 const ITEMS = [
-  { id: "aujourdhui", label: "Hub IA", shortLabel: "Hub IA", Icon: MessageCircle, path: "/", exact: true },
+  { id: "aujourdhui", label: "Hub IA", shortLabel: "Hub IA", Icon: MessageCircle, desktopIcon: LayoutDashboard, path: "/", exact: true },
   { id: "moncap", label: "Vision", shortLabel: "Vision", Icon: Eye, path: "/vision" },
   { id: "croissance", label: "Croissance", shortLabel: "Croissance", Icon: TrendingUp, path: "/croissance" },
   { id: "daf", label: "DAF IA", shortLabel: "DAF IA", Icon: Briefcase, path: "/pilotage" },
@@ -102,7 +102,7 @@ function Sidebar({ onSettings, onCopilote }) {
           <ul className="relative z-10 flex flex-col items-center w-full" aria-label="Navigation principale">
             {ITEMS.map((item) => {
               const active = isActive(item);
-              const Icon = item.Icon;
+              const Icon = item.desktopIcon || item.Icon;
               return (
                 <li key={item.id} className={`w-full flex justify-center ${MENU_GROUP_STARTS.has(item.id) ? "menu-group-start" : ""}`}>
                   <button onClick={() => onItemClick(item)} data-testid={`side-${item.id}`} aria-label={item.label}

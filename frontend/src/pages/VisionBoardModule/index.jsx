@@ -2394,7 +2394,7 @@ function VisionBoardDesktop() {
             <MoreVertical size={18} />
           </button>
           {menuOpen && (
-            <div className="absolute right-0 top-12 z-50 w-56 overflow-hidden rounded-xl border border-[var(--app-border)] bg-[var(--app-surface)] p-1 shadow-2xl animate-pop">
+            <div className="absolute right-0 top-12 z-[200] w-56 overflow-hidden rounded-xl border border-[var(--app-border)] bg-[var(--app-surface)] p-1 shadow-2xl animate-pop">
               {menuItems.map((it, i) => (
                 <button key={it.label} onClick={() => { it.onClick(); setMenuOpen(false); }}
                   data-testid={`vision-action-${i}`}

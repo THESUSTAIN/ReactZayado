@@ -854,8 +854,7 @@ html.ambiance-clarte [data-testid="campus-bottom-nav"] [class*="text-white/"] { 
   html.ambiance-clarte [data-testid="mobile-copilot-home"] ~ .bottom-nav button.active { background: linear-gradient(135deg, #0D2345, #294E82) !important; color: #fff !important; }
 
   html:not(.ambiance-clarte) [data-testid="mobile-copilot-home"],
-  html:not(.ambiance-clarte) [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"],
-  html:not(.ambiance-clarte) [data-testid="mobile-copilot-home"] .news-conversation { background: linear-gradient(180deg, #172C5C 0%, #0B1F3A 100%) !important; color: #fff !important; }
+  html:not(.ambiance-clarte) [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] { background: linear-gradient(180deg, #172C5C 0%, #0B1F3A 100%) !important; color: #fff !important; }
   html:not(.ambiance-clarte) [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] > .border-b,
   html:not(.ambiance-clarte) [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] > .border-t,
   html:not(.ambiance-clarte) [data-testid="mobile-copilot-home"] .news-composer { background: #0B1F3A !important; border-color: rgba(159,191,235,.16) !important; }
@@ -1062,8 +1061,7 @@ html.ambiance-clarte [data-testid="campus-bottom-nav"] [class*="text-white/"] { 
 
   /* Dark : surfaces plates de l'application, sans gradients décoratifs dans les cartes/boutons. */
   html:not(.ambiance-clarte) [data-testid="mobile-copilot-home"],
-  html:not(.ambiance-clarte) [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"],
-  html:not(.ambiance-clarte) [data-testid="mobile-copilot-home"] .news-conversation { background: #0B1F3A !important; color: #fff !important; }
+  html:not(.ambiance-clarte) [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] { background: #0B1F3A !important; color: #fff !important; }
   html:not(.ambiance-clarte) [data-testid="mobile-copilot-home"] .glass,
   html:not(.ambiance-clarte) [data-testid="mobile-copilot-home"] [data-testid^="copilot-action-card-"],
   html:not(.ambiance-clarte) [data-testid="mobile-copilot-home"] .copilot-daily-summary,

@@ -54,3 +54,50 @@ un vrai fond, un texte qui ne déborde plus.
 Frontend et backend compilent sans erreur, CSS syntaxiquement
 équilibré, aucune autre règle conflictuelle trouvée sur ces mêmes
 sélecteurs.
+
+## Fond du chat incohérent — corrigé (29/08, suite)
+
+**5 versions différentes** de la même règle de fond (`.news-conversation`
++ conteneur mobile), empilées à travers le fichier, chacune avec
+`!important` — la dernière (une couleur plate `#0B1F3A`, sans le
+dégradé de marque) gagnait sur toutes les autres. Nettoyé : une seule
+règle fait foi désormais, la vraie formule `.sky-bg` (radial-gradients
++ dégradé à 4 tons), identique à celle du reste de l'app.
+
+## Cartes dark/light — un vrai point trouvé, pas totalement résolu
+Testé visuellement (Playwright, HTML réel du composant, pas supposé) :
+- "Point du jour" — correct dans les deux modes
+- Cartes de décision (Approuver/Reporter) — le bouton secondaire
+  "Reporter" a un contraste faible en mode clair (bordure à peine
+  visible). Pas cassé, mais peu lisible.
+
+Je n'ai pas pu auditer les 63 occurrences de règles liées aux cartes
+dans le fichier sans un vrai environnement de build Tailwind complet
+— honnêteté plutôt que fausse certitude.
+
+## Non traité, avec la raison précise
+- **Menu mobile "Kairos"** : l'URL donnée est une app React qui
+  nécessite JavaScript exécuté — mon outil ne peut lire que du contenu
+  statique, impossible de voir à quoi elle ressemble sans capture
+  d'écran.
+- **Couleur de fond des pages publiques Shopify** : hors de ce dépôt
+  (le thème Shopify est un artefact séparé), je ne peux pas le vérifier
+  depuis ce zip.
+- **Images réelles manquantes** : pas assez d'info pour savoir
+  lesquelles ni où.
+
+## Chevauchement menu Vision + icône Hub IA (29/08, suite 2)
+
+- **"Voir mes axes" superposé sur "Changer la photo de fond"** : le menu
+  déroulant Vision avait un z-index (50) trop bas par rapport à d'autres
+  éléments de la page. Remonté à 200 pour qu'il passe toujours par-dessus.
+- **Icône du menu desktop** : "Hub IA" utilisait une bulle de chat
+  (MessageCircle) partout, y compris sur le rail latéral desktop. Ajouté
+  une icône dédiée (LayoutDashboard) pour desktop uniquement — le bottom
+  nav et la feuille de menu mobile gardent bien l'icône chat, comme
+  demandé.
+- **Fond noir du bottom-nav (capture fournie)** : vérifié — la dernière
+  règle CSS du fichier (celle qui gagne la cascade) définit déjà un
+  dégradé bleu marine cohérent, pas de noir. Je n'ai pas trouvé de règle
+  active qui produirait du noir dans ce zip précis. Possible décalage
+  entre ce zip et ce qui tourne réellement en ligne.
