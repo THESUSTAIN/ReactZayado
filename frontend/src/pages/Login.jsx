@@ -162,7 +162,11 @@ export default function Login() {
     try {
       const redirectUri = `${window.location.origin}/login`;
       const res = await oauthStart(provider, redirectUri);
-      window.location.href = res.authorization_url;
+      const authorizationUrl = res?.authorization_url;
+      if (typeof authorizationUrl !== "string" || !authorizationUrl.trim()) {
+        throw new Error("Réponse OAuth invalide : URL d'autorisation absente");
+      }
+      window.location.href = authorizationUrl;
     } catch {
       toast.error(provider === "google" ? t.errGoogle : t.errMsft);
       setOauthProvider(null);
