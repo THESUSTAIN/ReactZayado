@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { Compass, ArrowRight, Zap, ListChecks, Sparkles, Target, Lightbulb } from "lucide-react";
+import { Compass, ArrowRight, Sparkles, Target, Lightbulb, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { getVision, getHumeur, getTaches } from "../lib/api";
-import useIsMobile from "../hooks/useIsMobile";
+import { toast } from "sonner";
+import { getVision, getHumeur, getTaches, getStrategicDecisions, createTache } from "../lib/api";
 
 // Accueil quotidien Cap Vivant.
 //
@@ -20,21 +20,25 @@ import useIsMobile from "../hooks/useIsMobile";
 // fabriquee.
 export default function Aujourdhui() {
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
   const [vision, setVision] = useState(null);
   const [humeur, setHumeur] = useState([]);
   const [taches, setTaches] = useState([]);
+  const [pendingDecision, setPendingDecision] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [quickTitle, setQuickTitle] = useState("");
+  const [quickAdding, setQuickAdding] = useState(false);
 
   useEffect(() => {
     Promise.all([
       getVision().catch(() => null),
       getHumeur().catch(() => []),
       getTaches().catch(() => []),
-    ]).then(([v, h, t]) => {
+      getStrategicDecisions().catch(() => []),
+    ]).then(([v, h, t, decisions]) => {
       setVision(v);
       setHumeur(Array.isArray(h) ? h : []);
       setTaches(Array.isArray(t) ? t : []);
+      setPendingDecision((Array.isArray(decisions) ? decisions : []).find((d) => d.status === "pending") || null);
     }).finally(() => setLoading(false));
   }, []);
 
@@ -45,35 +49,27 @@ export default function Aujourdhui() {
     .slice()
     .sort((a, b) => (a.priorite === "Haute" ? -1 : 1) - (b.priorite === "Haute" ? -1 : 1))[0];
 
-  // Sur mobile, on remonte l'action concrète (Priorité du jour) tout en haut,
-  // avant la carte hero décorative : sur un petit écran, l'utilisateur veut
-  // d'abord "quoi faire maintenant", pas la trajectoire Vision->Décision->Action.
-  const prioriteBlock = (
-    <div className="glass p-5" data-testid="aujourdhui-priorite">
-      <p className="font-head font-semibold flex items-center gap-2 mb-3"><ListChecks size={14} className="text-[#DEC2A3]" /> Priorité du jour</p>
-      {loading ? (
-        <p className="text-sm text-white/40">Chargement…</p>
-      ) : prioritePrincipale ? (
-        <>
-          <p className="text-base font-semibold text-white">{prioritePrincipale.titre}</p>
-          {tachesOuvertes.length > 1 && (
-            <p className="text-xs text-white/40 mt-1">+ {tachesOuvertes.length - 1} autre(s) tâche(s) ouverte(s), secondaires pour l'instant.</p>
-          )}
-          <button onClick={() => navigate("/mouvement")} data-testid="aujourdhui-goto-mouvement"
-            className="mt-3 inline-flex items-center gap-1 text-xs text-[#DEC2A3] hover:text-[#FFD700] transition-colors">
-            Ouvrir Mon Mouvement <ArrowRight size={13} />
-          </button>
-        </>
-      ) : (
-        <>
-          <p className="text-sm text-white/40">Aucune tâche ouverte pour l'instant.</p>
-          <button onClick={() => navigate("/taches")} data-testid="aujourdhui-goto-taches" className="mt-3 inline-flex items-center gap-1 text-xs text-[#DEC2A3] hover:text-[#FFD700] transition-colors">
-            Ouvrir la liste des tâches <ArrowRight size={13} />
-          </button>
-        </>
-      )}
-    </div>
-  );
+  const addQuickTache = async (event) => {
+    event.preventDefault();
+    const titre = quickTitle.trim();
+    if (!titre) return;
+    setQuickAdding(true);
+    try {
+      const created = await createTache({ titre });
+      setTaches((current) => [...current, created]);
+      setQuickTitle("");
+      toast.success("Tâche ajoutée.");
+    } catch {
+      toast.error("Impossible d'ajouter la tâche pour le moment.");
+    } finally {
+      setQuickAdding(false);
+    }
+  };
+
+  // La "Priorité du jour" est désormais fusionnée dans la carte hero
+  // ci-dessous — elle affichait la même tâche en double (hero + ce bloc),
+  // sans info propre à part le lien "Ouvrir Mon Mouvement", repris dans le
+  // hero.
 
   return (
     <div className="space-y-6" data-testid="page-aujourdhui">
@@ -90,8 +86,7 @@ export default function Aujourdhui() {
         </button>
       </div>
 
-      {/* Sur mobile : l'action du jour remonte immédiatement sous l'en-tête. */}
-      {isMobile && prioriteBlock}
+      {/* Priorité du jour désormais fusionnée dans le hero ci-dessous, plus de bloc séparé. */}
 
       {/* Carte hero : statut + trajectoire + anneau de capacité réel */}
       <div className="glass p-6 grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-6 items-center" data-testid="aujourdhui-hero">
@@ -103,13 +98,36 @@ export default function Aujourdhui() {
             {prioritePrincipale ? `Faire avancer « ${prioritePrincipale.titre} ».` : "Faire avancer une action qui mérite votre énergie."}
           </h2>
           <p className="text-white/55 text-sm mt-1 max-w-lg">La Vision vous aide à choisir une action réaliste plutôt qu'à remplir une liste.</p>
+          {!loading && prioritePrincipale && tachesOuvertes.length > 1 && (
+            <p className="text-xs text-white/40 mt-2">+ {tachesOuvertes.length - 1} autre(s) tâche(s) ouverte(s), secondaires pour l'instant.</p>
+          )}
+          {!loading && prioritePrincipale && (
+            <button onClick={() => navigate("/mouvement")} data-testid="aujourdhui-goto-mouvement"
+              className="mt-2 inline-flex items-center gap-1 text-xs text-[#DEC2A3] hover:text-[#FFD700] transition-colors">
+              Ouvrir Mon Mouvement <ArrowRight size={11} />
+            </button>
+          )}
+          {!loading && !prioritePrincipale && (
+            <button onClick={() => navigate("/taches")} data-testid="aujourdhui-goto-taches"
+              className="mt-2 inline-flex items-center gap-1 text-xs text-[#DEC2A3] hover:text-[#FFD700] transition-colors">
+              Ouvrir la liste des tâches <ArrowRight size={11} />
+            </button>
+          )}
           <div className="flex items-center gap-2 mt-4 text-xs text-white/60">
-            <span className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10">Vision</span>
+            <button onClick={() => navigate("/vision")} className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 hover:border-[#DEC2A3]/50 hover:text-[#F1E2CC] transition-colors">Vision</button>
             <ArrowRight size={13} className="text-white/30" />
-            <span className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10">Décision</span>
+            <button onClick={() => navigate("/vision")} className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 hover:border-[#DEC2A3]/50 hover:text-[#F1E2CC] transition-colors">Décision</button>
             <ArrowRight size={13} className="text-white/30" />
-            <span className="px-2.5 py-1 rounded-full gold-bg text-[#0A1128] font-semibold">Action</span>
+            <button onClick={() => navigate("/mouvement")} className="px-2.5 py-1 rounded-full gold-bg text-[#0A1128] font-semibold hover:brightness-105 transition">Action</button>
           </div>
+          <form onSubmit={addQuickTache} className="mt-4 flex items-center gap-2 max-w-sm" data-testid="aujourdhui-quick-add">
+            <input value={quickTitle} onChange={(e) => setQuickTitle(e.target.value)} placeholder="Ajouter une tâche…" data-testid="aujourdhui-quick-add-input"
+              className="flex-1 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/35 outline-none focus:border-[#DEC2A3]/50" />
+            <button type="submit" disabled={quickAdding || !quickTitle.trim()} data-testid="aujourdhui-quick-add-submit"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl gold-bg text-[#0A1128] disabled:opacity-50">
+              <Plus size={16} />
+            </button>
+          </form>
         </div>
 
         {/* Anneau de capacité — vraie donnée (dernier check-in Humeur), même
@@ -162,16 +180,29 @@ export default function Aujourdhui() {
         <div className="glass p-5" data-testid="aujourdhui-decisions">
           <div className="flex items-center gap-2 mb-2">
             <span className="w-8 h-8 rounded-lg gold-bg flex items-center justify-center shrink-0"><Target size={16} className="text-[#0A1128]" /></span>
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-[#DEC2A3]">Décision à clarifier</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-[#DEC2A3]">Décision stratégique</span>
           </div>
-          <h3 className="font-head font-semibold text-white">Quelle action mérite d'être choisie maintenant ?</h3>
-          <p className="text-[13px] text-white/55 mt-1.5 leading-relaxed">
-            Cette fonctionnalité arrive bientôt — le Copilote pourra analyser votre contexte réel pour préparer une proposition, sans jamais rien engager sans votre validation.
-          </p>
-          <button onClick={() => window.dispatchEvent(new CustomEvent("cours:open-copilot"))}
-            className="mt-3 inline-flex items-center gap-1.5 rounded-xl gold-bg px-4 py-2 text-sm font-semibold text-[#0A1128]">
-            Clarifier avec le Copilote <ArrowRight size={14} />
-          </button>
+          {pendingDecision ? (
+            <>
+              <h3 className="font-head font-semibold text-white">{pendingDecision.title}</h3>
+              {pendingDecision.why_now && <p className="text-[13px] text-white/55 mt-1.5 leading-relaxed line-clamp-2"><b className="font-semibold text-[#DEC2A3]">Pourquoi maintenant :</b> {pendingDecision.why_now}</p>}
+              <button onClick={() => navigate("/vision")} data-testid="aujourdhui-goto-decision"
+                className="mt-3 inline-flex items-center gap-1.5 rounded-xl gold-bg px-4 py-2 text-sm font-semibold text-[#0A1128]">
+                Arbitrer dans Vision <ArrowRight size={14} />
+              </button>
+            </>
+          ) : (
+            <>
+              <h3 className="font-head font-semibold text-white">Aucune décision en attente d'arbitrage.</h3>
+              <p className="text-[13px] text-white/55 mt-1.5 leading-relaxed">
+                Les décisions stratégiques se préparent et se valident dans Vision — une fois approuvées, elles deviennent des missions dans Mon Mouvement.
+              </p>
+              <button onClick={() => navigate("/vision")} data-testid="aujourdhui-goto-vision-decisions"
+                className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-white/20 px-4 py-2 text-sm font-semibold text-white/85 hover:bg-white/10">
+                Préparer une décision <ArrowRight size={14} />
+              </button>
+            </>
+          )}
         </div>
 
         <div className="glass p-5" data-testid="aujourdhui-cap-link">
@@ -191,9 +222,6 @@ export default function Aujourdhui() {
         </div>
       </div>
 
-      {/* Sur PC, la priorité du jour reste à sa place d'origine, en bas.
-          Sur mobile, elle est déjà remontée en haut (voir isMobile && prioriteBlock). */}
-      {!isMobile && prioriteBlock}
     </div>
   );
 }

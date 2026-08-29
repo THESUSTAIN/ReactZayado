@@ -101,3 +101,38 @@ dans le fichier sans un vrai environnement de build Tailwind complet
   dégradé bleu marine cohérent, pas de noir. Je n'ai pas trouvé de règle
   active qui produirait du noir dans ce zip précis. Possible décalage
   entre ce zip et ce qui tourne réellement en ligne.
+
+## Améliorations UX Aujourd'hui + Vision (29/08, suite 3)
+
+**Fait, vérifié (syntaxe + rendu visuel testé) :**
+1. "Décision à clarifier" (fausse promesse "bientôt") remplacée par une
+   vraie décision en attente si elle existe (source : le vrai système
+   `getStrategicDecisions` de Vision), sinon un lien clair vers Vision
+   plutôt qu'une promesse vide.
+2. Triple répétition de la priorité principale supprimée : le bloc
+   "Priorité du jour" séparé (dupliquait le hero) a été fusionné dedans
+   — plus doublon entre hero, métriques et bloc dédié.
+3. Le fil Vision → Décision → Action est maintenant cliquable, chaque
+   étape mène vers sa vraie destination (Vision, Vision, Mon Mouvement).
+6. Vraie action rapide ajoutée : formulaire "Ajouter une tâche" dans le
+   hero, branché sur `createTache` (vraie route), avec retour visuel
+   (toast succès/erreur).
+
+**Nettoyage fait au passage** : import et variable `useIsMobile`
+devenus morts après la fusion, retirés. Import `Zap` déjà mort avant
+mes changements, retiré aussi.
+
+**Non fait dans cette passe, honnêtement** :
+4. Unifier la source de "priorité du jour" entre Aujourd'hui (tâches)
+   et Vision (jalons stratégiques) — vrai chantier de fond, pas une
+   correction ponctuelle
+5. Séparer visuellement StrategicCapHome et CoursAccueilVision sur
+   l'accueil Vision
+7. Formulaire "Horizon 90 jours" en étapes plutôt qu'en un bloc
+8. Indicateur de connexion entre jalons/décisions et la Vision affichée
+9. Accusé visuel après décision approuvée (au-delà du toast actuel)
+10. Lien explicite entre "axes" et "jalons"
+
+## Vérifié avant livraison
+Tous les fichiers du projet compilent, rendu visuel du nouveau hero
+testé (pas juste supposé).
