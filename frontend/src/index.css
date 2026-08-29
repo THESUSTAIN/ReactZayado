@@ -1401,10 +1401,10 @@ html.ambiance-clarte [data-testid="campus-bottom-nav"] [class*="text-white/"] { 
   [data-testid="mobile-copilot-home"] .copilot-result-title,
   [data-testid="mobile-copilot-home"] .copilot-suggestions-title { font-size: 16px !important; line-height: 22px !important; font-weight: 600 !important; }
   [data-testid="mobile-copilot-home"] .copilot-suggestions-list button,
+  [data-testid="mobile-copilot-home"] .copilot-composer-shell input { font-size: 14px !important; line-height: 20px !important; }
   [data-testid="mobile-copilot-home"] .news-signal-actions button,
   [data-testid="mobile-copilot-home"] .news-conversation-intro button,
-  [data-testid="mobile-copilot-home"] .copilot-composer-shell input,
-  [data-testid="mobile-copilot-home"] .news-composer input { font-size: 14px !important; line-height: 20px !important; }
+  [data-testid="mobile-copilot-home"] .news-composer input { font-size: 12px !important; line-height: 16px !important; }
   [data-testid="mobile-copilot-home"] .copilot-ai-badge { font-size: 10px !important; line-height: 14px !important; font-weight: 600 !important; }
   [data-testid="mobile-copilot-home"] .copilot-daily-summary strong,
   [data-testid="mobile-copilot-home"] .copilot-brief-card .grid > div > :nth-child(2) { font-size: 20px !important; line-height: 24px !important; font-weight: 600 !important; }

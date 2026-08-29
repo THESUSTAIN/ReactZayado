@@ -30,3 +30,27 @@ une fois précisé lequel des deux repos est la bonne cible.
 ## Vérifié
 Frontend et backend compilent tous les deux sans erreur — aucun autre
 bug trouvé dans ce zip.
+
+## Typo cassée sur l'onglet Actualité mobile (29/08, suite)
+
+**Le vrai bug, trouvé précisément** : une règle CSS tardive (`@media
+max-width: 768px`, ligne ~1404) forçait `font-size: 14px !important`
+sur les boutons de "Signal du jour" (Quel impact pour moi ?, 3 actions
+concrètes, Préparer une publication, Enregistrer) — alors que leur
+gabarit (padding compact, min-height 36px) avait été conçu pour un
+texte à 12px. Le texte débordait visuellement de boutons trop petits
+pour lui, donnant l'effet "typo grosse et bizarre" signalé.
+
+**Corrigé** : ces boutons retirés de la règle à 14px, remis à 12px —
+cohérent avec les autres règles du même composant qui, elles, fixaient
+déjà explicitement 12px pour ces mêmes boutons (aucun conflit créé).
+
+**Vérifié visuellement**, pas juste supposé : le HTML réel du
+composant `NewsConversation` rendu avec le CSS corrigé, capture
+d'écran avant/après — les boutons ont maintenant une vraie bordure,
+un vrai fond, un texte qui ne déborde plus.
+
+## Vérifié avant livraison
+Frontend et backend compilent sans erreur, CSS syntaxiquement
+équilibré, aucune autre règle conflictuelle trouvée sur ces mêmes
+sélecteurs.
