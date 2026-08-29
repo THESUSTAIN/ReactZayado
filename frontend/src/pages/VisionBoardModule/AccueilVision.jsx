@@ -59,7 +59,7 @@ function ClimateCard({ data }) {
       <div className="vision-climate-content">
         <div className="vision-climate-topline"><span><CloudSun size={15} /> CLIMAT STRATÉGIQUE DU JOUR</span><small>Mis à jour par les données du cockpit</small></div>
         <div className="vision-climate-main"><div><h3>{label}</h3><p>{description}</p></div><div className="vision-climate-score"><strong>{score ?? "—"}</strong><span>{score == null ? "" : "/100"}</span></div></div>
-        <div className="vision-climate-bottom"><span><i className="climate-dot" /> Cap stratégique</span><span><AlertTriangle size={13} /> {data?.opportunities?.length || 0} signal{(data?.opportunities?.length || 0) > 1 ? "s" : ""}</span></div>
+        <div className="vision-climate-bottom"><span><i className="climate-dot" /> Vision stratégique</span><span><AlertTriangle size={13} /> {data?.opportunities?.length || 0} signal{(data?.opportunities?.length || 0) > 1 ? "s" : ""}</span></div>
       </div>
     </section>
   );
@@ -70,9 +70,9 @@ function MeaningCue({ action, onOpenDecisions }) {
   return (
     <article data-testid="vision-meaning-cue">
       <span className="focus-label focus-gold"><Quote size={14} /> REPÈRE DE SENS</span>
-      <strong>{hasAction ? "Une priorité utile respecte votre Cap et votre capacité." : "Le Cap reste utile lorsqu’il éclaire une décision concrète."}</strong>
+      <strong>{hasAction ? "Une priorité utile respecte votre Vision et votre capacité." : "La Vision reste utile lorsqu’elle éclaire une décision concrète."}</strong>
       <p>{hasAction ? "Avant d’agir, vérifiez l’impact recherché, l’énergie disponible et ce que vous choisissez de ne pas faire aujourd’hui." : "Commencez par clarifier ce qui compte, puis choisissez un jalon réaliste plutôt qu’une liste supplémentaire."}</p>
-      <button onClick={onOpenDecisions}>{hasAction ? "Relire la décision" : "Clarifier mon Cap"} <ArrowRight size={13} /></button>
+      <button onClick={onOpenDecisions}>{hasAction ? "Relire la décision" : "Clarifier ma Vision"} <ArrowRight size={13} /></button>
     </article>
   );
 }
@@ -132,7 +132,7 @@ export default function AccueilVision({ onGoCanvas, onNavigateTab }) {
       <section className="vision-trajectory" data-testid="vision-trajectory">
         <div className="vision-section-title"><div><span>Votre trajectoire stratégique</span><small>Vision → Décision → Action</small></div></div>
         <div className="vision-trajectory-grid">
-          <article><span className="trajectory-number">01</span><strong>VISION</strong><small>Clarifier le cap</small><div className="trajectory-icon"><CrosshairIcon /></div><div className="trajectory-card"><b>{pillars.length ? `${pillars.length} piliers actifs` : "Piliers à définir"}</b><span>{pillars.length ? pillars.map((p) => p.name).join(" · ") : "Structurez vos axes de décision dans votre Vision."}</span></div></article>
+          <article><span className="trajectory-number">01</span><strong>VISION</strong><small>Clarifier la vision</small><div className="trajectory-icon"><CrosshairIcon /></div><div className="trajectory-card"><b>{pillars.length ? `${pillars.length} piliers actifs` : "Piliers à définir"}</b><span>{pillars.length ? pillars.map((p) => p.name).join(" · ") : "Structurez vos axes de décision dans votre Vision."}</span></div></article>
           <article><span className="trajectory-number">02</span><strong>DÉCISION</strong><small>Choisir vos priorités</small><div className="trajectory-icon"><ScaleIcon /></div><div className="trajectory-card"><b>{opportunities.length ? `${opportunities.length} décisions à traiter` : "Décisions à clarifier"}</b><span>Le Copilote aide à hiérarchiser, vous gardez la validation.</span></div></article>
           <article><span className="trajectory-number">03</span><strong>ACTION</strong><small>Exécuter et mesurer</small><div className="trajectory-icon"><Zap size={19} /></div><div className="trajectory-card"><b>{actions.length ? `${actions.length} missions recommandées` : "Missions à préparer"}</b><span>Les missions validées font avancer votre Vision.</span></div></article>
         </div>

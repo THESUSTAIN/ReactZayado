@@ -22,9 +22,9 @@ const WINDOWS = [
 const EMPTY = { milestones: [], decisions: [], tasks: [] };
 
 function visionText(value) {
-  if (!value) return "Votre Cap n’est pas encore rédigé.";
+  if (!value) return "Votre Vision n’est pas encore rédigée.";
   if (typeof value === "string") return value;
-  return value.value || value.vision || value.content || value.text || "Votre Cap n’est pas encore rédigé.";
+  return value.value || value.vision || value.content || value.text || "Votre Vision n’est pas encore rédigée.";
 }
 
 function strategicStatus(value) {
@@ -54,7 +54,7 @@ export function StrategicCapHome({ onOpenHorizon, onOpenDecisions, onOpenPillars
     <section className="glass mb-5 overflow-hidden p-5 md:p-6" data-testid="strategic-cap-home">
       <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-start">
         <div className="max-w-3xl">
-          <span className="mb-2 inline-flex items-center gap-2 text-[10px] font-bold tracking-[.16em] text-[#F1E2CC]"><Compass size={13} /> MON CAP VIVANT</span>
+          <span className="mb-2 inline-flex items-center gap-2 text-[10px] font-bold tracking-[.16em] text-[#F1E2CC]"><Compass size={13} /> MA VISION</span>
           <h2 className="font-head text-2xl font-semibold text-white md:text-3xl">{visionText(vision)}</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-white/70">Votre Vision se transforme ici en axes, jalons et décisions. Mon Mouvement exécute ; la Vision arbitre le pourquoi.</p>
         </div>
@@ -64,7 +64,7 @@ export function StrategicCapHome({ onOpenHorizon, onOpenDecisions, onOpenPillars
       <div className="mt-5 grid gap-3 lg:grid-cols-[1.15fr_.85fr_.85fr]">
         <article className="rounded-2xl border border-white/20 bg-white/[0.08] p-4">
           <div className="flex items-center justify-between gap-3"><span className="text-[10px] font-bold tracking-[.14em] text-[#F1E2CC]">LE PROCHAIN JALON</span><Flag size={15} className="text-[#F1E2CC]" /></div>
-          {loading ? <div className="mt-5 flex items-center gap-2 text-sm text-white/55"><Loader2 size={15} className="animate-spin" /> Lecture de la trajectoire…</div> : now[0] ? <><h3 className="mt-3 text-base font-semibold text-white">{now[0].title}</h3><p className="mt-1 text-sm text-white/65">{now[0].expected_evidence || "Preuve à préciser"}</p><button onClick={onOpenHorizon} className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-[#F1E2CC]">Voir l’Horizon 90 jours <ArrowRight size={13} /></button></> : <><p className="mt-3 text-sm text-white/65">Aucun jalon actif. Créez la prochaine étape qui rendra votre Cap concret.</p><button onClick={onOpenHorizon} className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-[#F1E2CC]">Créer un jalon <Plus size={13} /></button></>}
+          {loading ? <div className="mt-5 flex items-center gap-2 text-sm text-white/55"><Loader2 size={15} className="animate-spin" /> Lecture de la trajectoire…</div> : now[0] ? <><h3 className="mt-3 text-base font-semibold text-white">{now[0].title}</h3><p className="mt-1 text-sm text-white/65">{now[0].expected_evidence || "Preuve à préciser"}</p><button onClick={onOpenHorizon} className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-[#F1E2CC]">Voir l’Horizon 90 jours <ArrowRight size={13} /></button></> : <><p className="mt-3 text-sm text-white/65">Aucun jalon actif. Créez la prochaine étape qui rendra votre Vision concrète.</p><button onClick={onOpenHorizon} className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-[#F1E2CC]">Créer un jalon <Plus size={13} /></button></>}
         </article>
         <article className="rounded-2xl border border-white/20 bg-white/[0.08] p-4">
           <span className="text-[10px] font-bold tracking-[.14em] text-[#F1E2CC]">DÉCISION PRIORITAIRE</span>
@@ -108,7 +108,7 @@ export function StrategicHorizon() {
   };
 
   return <section className="space-y-4" data-testid="strategic-horizon">
-    <div className="glass p-5"><span className="text-[10px] font-bold tracking-[.16em] text-[#F1E2CC]">HORIZON 90 JOURS</span><h2 className="mt-2 font-head text-2xl font-semibold text-white">Rendre le Cap visible sans transformer chaque idée en urgence.</h2><p className="mt-1 max-w-3xl text-sm text-white/65">Un jalon est une preuve attendue ou une étape stratégique ; une mission ne sera créée qu’après une décision validée.</p></div>
+    <div className="glass p-5"><span className="text-[10px] font-bold tracking-[.16em] text-[#F1E2CC]">HORIZON 90 JOURS</span><h2 className="mt-2 font-head text-2xl font-semibold text-white">Rendre la Vision visible sans transformer chaque idée en urgence.</h2><p className="mt-1 max-w-3xl text-sm text-white/65">Un jalon est une preuve attendue ou une étape stratégique ; une mission ne sera créée qu’après une décision validée.</p></div>
     <form onSubmit={create} className="glass grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-5">
       <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Prochain jalon stratégique" className="rounded-xl border border-white/25 bg-white/[0.08] px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/45 focus:border-[#F1E2CC] xl:col-span-2" />
       <input value={form.pillar_id} onChange={(e) => setForm({ ...form, pillar_id: e.target.value })} placeholder="Axe ou pilier (optionnel)" className="rounded-xl border border-white/25 bg-white/[0.08] px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/45 focus:border-[#F1E2CC]" />

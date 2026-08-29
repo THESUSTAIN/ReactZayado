@@ -313,11 +313,11 @@ export default function BienEtre() {
             <>
               <p className="text-[13px] text-white/70 leading-relaxed line-clamp-3">{vision.value}</p>
               <p className="text-[12px] text-white/45 mt-3">
-                {burnoutRisk === "Élevé" ? "Ton énergie actuelle ne permet pas d'avancer sereinement sur ce Cap — récupère d'abord." : "Ton énergie du jour soutient la progression vers ce Cap."}
+                {burnoutRisk === "Élevé" ? "Ton énergie actuelle ne permet pas d'avancer sereinement sur cette Vision — récupère d'abord." : "Ton énergie du jour soutient la progression vers cette Vision."}
               </p>
             </>
           ) : (
-            <p className="text-sm text-white/40">Aucun Cap défini pour l'instant.</p>
+            <p className="text-sm text-white/40">Aucune Vision définie pour l'instant.</p>
           )}
         </div>
       </div>

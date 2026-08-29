@@ -28,7 +28,7 @@ function ResumeContexte({ onOpenTab }) {
     <>
       <div>
         <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-[#DEC2A3]">Contexte business</p>
-        <h1 className="font-head text-2xl sm:text-3xl font-semibold text-white mt-1">Les données servent le Cap.</h1>
+        <h1 className="font-head text-2xl sm:text-3xl font-semibold text-white mt-1">Les données servent la Vision.</h1>
         <p className="text-white/55 text-sm mt-1 max-w-xl">Pilotage et Croissance éclairent les décisions, sans prendre la place de votre direction.</p>
       </div>
 
@@ -38,7 +38,7 @@ function ResumeContexte({ onOpenTab }) {
             <span className="w-9 h-9 rounded-lg gold-bg flex items-center justify-center shrink-0"><WalletCards size={17} className="text-[#0A1128]" /></span>
             <span className="text-[11px] font-semibold uppercase tracking-wide text-[#DEC2A3]">Pilotage & trésorerie</span>
           </div>
-          <h2 className="font-head text-lg font-semibold text-white">Relier votre trésorerie au Cap.</h2>
+          <h2 className="font-head text-lg font-semibold text-white">Relier votre trésorerie à la Vision.</h2>
           <p className="text-[13px] text-white/55 mt-1.5 leading-relaxed">Comptes, revenus, factures et charges — la lecture est consolidée depuis les sources que vous autorisez.</p>
           {pilotage === null ? (
             <p className="text-sm text-white/40 mt-6">Chargement…</p>

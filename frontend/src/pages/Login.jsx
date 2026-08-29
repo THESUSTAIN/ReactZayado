@@ -194,7 +194,8 @@ export default function Login() {
   };
 
   const _host = (typeof window !== "undefined" && window.location.hostname) || "";
-  const IS_PRODUCTION = /(^|\.)zayado\.net$/i.test(_host) || /(^|\.)myextension-ai\.com$/i.test(_host);
+  // Le compte test (Thomas) ne doit s'afficher QU'EN PREVIEW (ou en local), jamais en prod (Railway, zayado.net, etc.)
+  const IS_PREVIEW = /preview\.emergentagent\.com$/i.test(_host) || /^(localhost|127\.0\.0\.1)$/i.test(_host);
 
   const sendLink = async (addr) => {
     const value = (addr || "").trim();
@@ -336,7 +337,7 @@ export default function Login() {
             style={{ marginTop: 4, borderColor: "rgba(222, 194, 163,0.5)", color: "var(--gold-strong, #DEC2A3)" }}>
             {t.thesustain}
           </button>
-          {!IS_PRODUCTION && (
+          {IS_PREVIEW && (
             <>
               <div className="login-sep-thin" />
               <button className="login-btn login-btn-teal" onClick={openTestAccount} data-testid="login-guest-btn">

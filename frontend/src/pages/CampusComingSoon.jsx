@@ -13,7 +13,7 @@ const TABS = [
 
 export default function CampusComingSoon() {
   const navigate = useNavigate();
-  const isProjectAdmin = import.meta.env.VITE_PREVIEW_ADMIN === "true" && localStorage.getItem("zayado_preview_admin") === "1";
+  const isProjectAdmin = process.env.REACT_APP_PREVIEW_ADMIN === "true" && localStorage.getItem("zayado_preview_admin") === "1";
   return (
     <div className="space-y-6" data-testid="campus-coming-soon">
       <header>

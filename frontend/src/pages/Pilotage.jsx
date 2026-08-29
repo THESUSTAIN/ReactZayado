@@ -313,7 +313,7 @@ export default function Pilotage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-head text-3xl sm:text-4xl font-semibold"><span className="gold-text">Pilotage & trésorerie</span></h1>
-          <p className="text-white/55 text-sm mt-1">Lire vos indicateurs, arbitrer avec le Cap et rester maître de vos outils financiers.</p>
+          <p className="text-white/55 text-sm mt-1">Lire vos indicateurs, arbitrer avec la Vision et rester maître de vos outils financiers.</p>
         </div>
         <a href={exportCsvUrl()} download className="glass glass-hover px-4 py-2 text-sm flex items-center gap-2" data-testid="export-btn">
           <Download size={15} /> Exporter
