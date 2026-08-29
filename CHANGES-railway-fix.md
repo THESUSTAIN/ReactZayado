@@ -252,3 +252,34 @@ même si ce n'est pas littéralement une capture de l'app en ligne.
 ## Vérifié avant livraison
 Tous les fichiers compilent, CSS équilibré, corrections vérifiées
 visuellement par rendu réel avant/après.
+
+## Fond incohérent + titre géant sur la carte de priorité (29/08, suite 8)
+
+**Cause racine majeure trouvée** : un bloc CSS entier de 116 lignes
+(pensé "correctif final du Hub IA") forçait un fond CLAIR (blanc/beige)
+sur tout le chat mobile, SANS AUCUNE condition de thème — donc actif
+même en mode sombre. Un commentaire du fichier lui-même confirmait
+qu'un bloc plus récent, correctement scopé à `html.ambiance-clarte`,
+était "la source de vérité" — ce vieux bloc n'avait simplement jamais
+été nettoyé. Corrigé : chaque sélecteur du bloc (114 au total) préfixé
+individuellement par `html.ambiance-clarte`, pour qu'il ne s'applique
+qu'au thème auquel ses couleurs sont réellement destinées. Vérifié
+visuellement en mode sombre avant/après.
+
+**Titre "PILOTAGE · AUJOURD'HUI" démesurément gros** : une règle à 16px
+était groupée par erreur avec un sélecteur visant un tout autre titre
+(`.copilot-decision-empty-title`), capturant au passage ce petit label
+de catégorie (10px dans le composant source). Séparé, remis à sa vraie
+taille.
+
+**Fausse alerte de ma part, corrigée honnêtement** : j'ai d'abord cru
+que le menu du bas montré dans une capture (icônes bulle/œil/tendance/
+mallette/grille) était un second système de navigation incohérent.
+Vérification faite : ce sont exactement les mêmes 5 destinations que
+partout ailleurs (Hub IA/Vision/Croissance/DAF IA/Espace), avec les
+bonnes icônes du vrai tableau ITEMS — pas un bug, juste une capture
+recadrée sans les labels texte visibles.
+
+## Vérifié avant livraison
+Tous les fichiers compilent, CSS équilibré (1055 accolades ouvertes et
+fermées), corrections vérifiées par rendu visuel réel avant/après.

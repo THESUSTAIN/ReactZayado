@@ -703,122 +703,131 @@ html.ambiance-clarte [data-testid="campus-bottom-nav"] [class*="text-white/"] { 
 /* ZAYADO Chat mobile — reprise du vrai ChatPanel original, surface Kairos.
    Intention : ne modifier que la présentation mobile ; les handlers, données et appels API restent ceux du composant original.
 */
+/* Corrigé : ce bloc entier forçait un fond clair (blanc/beige) sur tout
+   le chat mobile, SANS condition de thème — donc actif même en mode
+   sombre, créant un mélange visuel incohérent (fond clair qui apparaît
+   alors que l'utilisateur n'a jamais choisi ce thème). Un commentaire
+   plus bas dans ce fichier confirme qu'un bloc plus récent, correctement
+   scopé à html.ambiance-clarte, est "la source de vérité" pour le mode
+   clair — ce bloc-ci est son ancêtre non nettoyé. Chaque sélecteur est
+   maintenant préfixé par html.ambiance-clarte pour ne s'appliquer qu'au
+   thème auquel ses couleurs sont réellement destinées. */
 @media (max-width: 768px) {
   /* Correctif final du Hub IA : le Chat doit occuper toute la fenêtre,
      sans réserver l'ancien header navy et sans laisser la PWA masquer le compositeur. */
-  [data-testid="mobile-copilot-home"] { inset: 0 !important; z-index: 170 !important; }
-  .app-body:has([data-testid="mobile-copilot-home"]) .bottom-nav { display: grid !important; grid-template-columns: repeat(5, minmax(0, 1fr)) !important; position: fixed !important; right: 0 !important; bottom: 0 !important; left: 0 !important; z-index: 180 !important; width: 100% !important; height: 57px !important; padding: 0 !important; border: 0 !important; border-top: 1px solid rgba(23,35,58,.10) !important; border-radius: 0 !important; background: rgba(255,255,255,.97) !important; box-shadow: 0 -5px 18px rgba(23,35,58,.045) !important; transform: none !important; }
-  .app-body:has([data-testid="mobile-copilot-home"]) .bottom-nav button { padding: 0 !important; border-radius: 0 !important; color: rgba(23,35,58,.46) !important; font-size: 9px !important; }
-  .app-body:has([data-testid="mobile-copilot-home"]) .bottom-nav button.active { background: #f2e4d0 !important; color: #8b704e !important; }
-  [data-testid="mobile-copilot-home"] { background: #ffffff !important; color: #17233a !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] { --txt: #17233a; --txt-muted: rgba(23,35,58,.60); --glass-soft: #f4eadb; --glass-border: rgba(23,35,58,.11); display: flex !important; height: 100% !important; min-height: 100%; overflow: hidden; background: #ffffff !important; color: #17233a !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] { font-family: 'Geist', 'Outfit', system-ui, sans-serif; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] > .border-b { flex: 0 0 auto; border-bottom-color: rgba(23,35,58,.10) !important; background: #ffffff !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] .text-white { color: #17233a !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] [class*="text-white/"] { color: rgba(23,35,58,.60) !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] [class*="border-white/"] { border-color: rgba(23,35,58,.11) !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] [class*="bg-white/"] { background: rgba(255,255,255,.78) !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] .glass,
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] [data-testid^="copilot-action-card-"] { border-color: rgba(23,35,58,.09) !important; background: #ffffff !important; color: #17233a !important; box-shadow: 0 5px 18px rgba(23,35,58,.055) !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] [data-testid^="copilot-action-card-"] strong,
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] [data-testid^="copilot-action-card-"] p { color: #17233a !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] [data-testid="copilot-messages"] { padding: 15px 14px 126px !important; gap: 12px !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] [data-testid="copilot-messages"] > .flex.justify-end > div { border-color: rgba(23,35,58,.08) !important; background: linear-gradient(120deg, #0d2345, #294e82) !important; color: #fff !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] [data-testid="copilot-messages"] > .flex.justify-start > div { border-color: rgba(23,35,58,.08) !important; background: #fff !important; color: rgba(23,35,58,.78) !important; box-shadow: 0 4px 14px rgba(23,35,58,.045) !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] [data-testid="copilot-messages"] > .flex.justify-start > div [class*="text-white/"] { color: rgba(23,35,58,.70) !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] > .border-t { position: fixed; right: 0; bottom: 57px; left: 0; z-index: 35; padding: 8px 14px calc(8px + env(safe-area-inset-bottom)) !important; border-top-color: rgba(23,35,58,.09) !important; background: rgba(255,255,255,.97) !important; box-shadow: 0 -5px 18px rgba(23,35,58,.045); backdrop-filter: blur(16px); }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] > .border-t > div.relative { border-color: rgba(23,35,58,.14) !important; background: #fff !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] input { color: #17233a !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] input::placeholder { color: rgba(23,35,58,.40) !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-send"],
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-action-approve"] { background: linear-gradient(120deg, #0d2345, #294e82) !important; color: #fff !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-send"] svg,
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-action-approve"] svg { color: #fff !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-tabs"] { border-bottom-color: rgba(23,35,58,.10) !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-tabs"] button { color: rgba(23,35,58,.48) !important; border-bottom-color: transparent !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-tabs"] button:first-child { color: #8b704e !important; border-bottom-color: #c8a46d !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-contact-panel"],
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] .decision-card-body { border-color: rgba(23,35,58,.10) !important; background: #f7f0e5 !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-plus-menu"] { border-color: rgba(23,35,58,.10) !important; background: #fffdfa !important; box-shadow: 0 18px 42px rgba(23,35,58,.15) !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-plus-menu"] button { color: #17233a !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-plus-menu"] button:hover { background: #f7f0e5 !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-menu"] { border-color: rgba(23,35,58,.12) !important; background: #ffffff !important; color: #0B1F3A !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-contact"] { border-color: rgba(139,112,78,.28) !important; background: #f7f0e5 !important; color: #8b704e !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] [class*="text-[#F0DCA5]"],
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] [class*="text-[#E8C96A]"] { color: #8b704e !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] [class*="bg-[#DEC2A3]"] { background: #f2e4d0 !important; color: #17233a !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] [class*="border-[#DEC2A3]"] { border-color: rgba(139,112,78,.28) !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-brief-card"] .grid > div,
-  [data-testid="mobile-copilot-home"] [data-testid="cockpit-night-recap"] { background: #f4eadb !important; border-color: rgba(139,112,78,.22) !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="cockpit-night-recap"] [data-testid^="night-value-"] { background: #eadbc5 !important; border-color: rgba(139,112,78,.18) !important; }
-  [data-testid="mobile-copilot-home"] [data-testid="copilot-suggestions-list"] button { background: #f4eadb !important; color: #17233a !important; border-color: rgba(139,112,78,.18) !important; }
-  [data-testid="mobile-copilot-home"] .copilot-event-stamp { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; color: rgba(23,35,58,.52); font-size: 9px; font-weight: 500; }
-  [data-testid="mobile-copilot-home"] .copilot-event-dot { width: 4px; height: 4px; border-radius: 999px; background: #c8a46d; }
-  [data-testid="mobile-copilot-home"] .copilot-daily-summary,
-  [data-testid="mobile-copilot-home"] .copilot-action-result,
-  [data-testid="mobile-copilot-home"] .copilot-recent-timeline { padding: 13px; border: 1px solid rgba(23,35,58,.10); border-radius: 14px; background: #fff; box-shadow: 0 5px 18px rgba(23,35,58,.045); }
-  [data-testid="mobile-copilot-home"] .copilot-daily-summary-title,
-  [data-testid="mobile-copilot-home"] .copilot-result-title { display: flex; align-items: center; gap: 7px; color: #17233a; font-size: 13px; font-weight: 600; }
-  [data-testid="mobile-copilot-home"] .copilot-daily-summary-title svg,
-  [data-testid="mobile-copilot-home"] .copilot-result-title svg { color: #8b704e; }
-  [data-testid="mobile-copilot-home"] .copilot-daily-date { margin-top: 3px; color: rgba(23,35,58,.48); font-size: 10px; }
-  [data-testid="mobile-copilot-home"] .copilot-daily-summary p,
-  [data-testid="mobile-copilot-home"] .copilot-action-result p { margin: 8px 0 0; color: rgba(23,35,58,.68); font-size: 11px; line-height: 1.5; }
-  [data-testid="mobile-copilot-home"] .copilot-daily-priority { margin-top: 9px; padding: 8px 9px; border-radius: 9px; background: #f4eadb; color: rgba(23,35,58,.70); font-size: 10px; line-height: 1.4; }
-  [data-testid="mobile-copilot-home"] .copilot-daily-priority strong { color: #8b704e; }
-  [data-testid="mobile-copilot-home"] .copilot-action-result button { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 7px 10px; border-radius: 9px; background: linear-gradient(120deg, #0d2345, #294e82); color: #fff; font-size: 10px; font-weight: 600; }
-  [data-testid="mobile-copilot-home"] .copilot-timeline-row { padding: 8px 0; border-top: 1px solid rgba(23,35,58,.08); }
-  [data-testid="mobile-copilot-home"] .copilot-timeline-row:first-of-type { margin-top: 9px; }
-  [data-testid="mobile-copilot-home"] .copilot-timeline-row span { display: block; color: rgba(23,35,58,.70); font-size: 11px; line-height: 1.4; }
-  [data-testid="mobile-copilot-home"] .copilot-message-event.is-user .copilot-event-stamp { justify-content: flex-end; }
-  [data-testid="mobile-copilot-home"] .news-conversation { display: flex; flex-direction: column; gap: 12px; background: #fff; color: #17233a; }
-  [data-testid="mobile-copilot-home"] .news-conversation-intro,
-  [data-testid="mobile-copilot-home"] .news-signal-card,
-  [data-testid="mobile-copilot-home"] .news-message-bubble { border: 1px solid rgba(23,35,58,.10); border-radius: 14px; background: #fff; box-shadow: 0 5px 18px rgba(23,35,58,.045); }
-  [data-testid="mobile-copilot-home"] .news-conversation-intro { padding: 12px; }
-  [data-testid="mobile-copilot-home"] .news-conversation-intro p { margin: 0; color: rgba(23,35,58,.72); font-size: 12px; line-height: 1.5; }
-  [data-testid="mobile-copilot-home"] .news-conversation-intro button { margin-top: 9px; color: #8b704e; font-size: 10px; font-weight: 600; }
-  [data-testid="mobile-copilot-home"] .news-conversation-status,
-  [data-testid="mobile-copilot-home"] .news-conversation-error { border-radius: 10px; padding: 9px 10px; background: #f4eadb; color: rgba(23,35,58,.72); font-size: 10px; line-height: 1.4; }
-  [data-testid="mobile-copilot-home"] .news-conversation-error { border: 1px solid rgba(139,112,78,.24); }
-  [data-testid="mobile-copilot-home"] .news-signal-card { padding: 13px; }
-  [data-testid="mobile-copilot-home"] .news-signal-heading { display: flex; align-items: center; gap: 7px; color: #17233a; font-size: 13px; font-weight: 600; }
-  [data-testid="mobile-copilot-home"] .news-signal-heading svg { color: #8b704e; }
-  [data-testid="mobile-copilot-home"] .news-signal-scope { margin-top: 3px; color: rgba(23,35,58,.48); font-size: 10px; }
-  [data-testid="mobile-copilot-home"] .news-signal-copy { margin-top: 10px; color: rgba(23,35,58,.72); font-size: 11px; line-height: 1.55; }
-  [data-testid="mobile-copilot-home"] .news-signal-copy p { margin: 0 0 7px; }
-  [data-testid="mobile-copilot-home"] .news-inline-sources { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; padding-top: 9px; border-top: 1px solid rgba(23,35,58,.08); }
-  [data-testid="mobile-copilot-home"] .news-inline-sources > span:first-child { color: rgba(23,35,58,.46); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
-  [data-testid="mobile-copilot-home"] .news-inline-sources a,
-  [data-testid="mobile-copilot-home"] .news-inline-sources span:not(:first-child) { display: inline-flex; align-items: center; gap: 4px; max-width: 150px; overflow: hidden; border: 1px solid rgba(139,112,78,.20); border-radius: 999px; padding: 4px 7px; color: #8b704e; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
-  [data-testid="mobile-copilot-home"] .news-signal-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 11px; }
-  [data-testid="mobile-copilot-home"] .news-signal-actions button { border: 1px solid rgba(139,112,78,.20); border-radius: 9px; padding: 7px 8px; background: #f4eadb; color: #17233a; font-size: 10px; font-weight: 600; }
-  [data-testid="mobile-copilot-home"] .news-signal-actions button:first-child { background: linear-gradient(120deg, #0d2345, #294e82); color: #fff; }
-  [data-testid="mobile-copilot-home"] .news-message { margin-top: 2px; }
-  [data-testid="mobile-copilot-home"] .news-message.is-user .copilot-event-stamp { justify-content: flex-end; }
-  [data-testid="mobile-copilot-home"] .news-message.is-user .news-message-bubble { margin-left: auto; background: #0d2345; color: #fff; }
-  [data-testid="mobile-copilot-home"] .news-message-bubble { max-width: 87%; padding: 11px 12px; color: rgba(23,35,58,.74); font-size: 12px; line-height: 1.5; }
-  [data-testid="mobile-copilot-home"] .news-message-bubble p { margin: 0 0 7px; }
-  [data-testid="mobile-copilot-home"] .news-composer { display: flex; align-items: center; gap: 8px; position: sticky; bottom: 0; padding: 8px; border: 1px solid rgba(23,35,58,.11); border-radius: 14px; background: rgba(255,255,255,.96); box-shadow: 0 -5px 18px rgba(23,35,58,.04); }
-  [data-testid="mobile-copilot-home"] .news-composer input { min-width: 0; flex: 1; border: 0; background: transparent; color: #17233a; font-size: 12px; outline: 0; }
-  [data-testid="mobile-copilot-home"] .news-composer input::placeholder { color: rgba(23,35,58,.42); }
-  [data-testid="mobile-copilot-home"] .news-composer button { display: flex; width: 32px; height: 32px; align-items: center; justify-content: center; border-radius: 999px; background: linear-gradient(120deg, #0d2345, #294e82); color: #fff; }
-  [data-testid="mobile-copilot-home"] .news-composer button:disabled { opacity: .45; }
-  [data-testid="mobile-copilot-home"] .news-secondary-panel { border-top: 1px solid rgba(23,35,58,.09); padding-top: 10px; color: rgba(23,35,58,.72); }
-  [data-testid="mobile-copilot-home"] .news-secondary-panel summary { display: flex; align-items: center; justify-content: space-between; cursor: pointer; color: #17233a; font-size: 11px; font-weight: 600; }
-  [data-testid="mobile-copilot-home"] .news-secondary-panel summary span { color: #8b704e; font-size: 10px; }
-  [data-testid="mobile-copilot-home"] .news-history-item { margin-top: 8px; border: 1px solid rgba(23,35,58,.09); border-radius: 10px; padding: 9px; font-size: 10px; }
-  [data-testid="mobile-copilot-home"] .news-history-item summary { font-size: 10px; }
-  [data-testid="mobile-copilot-home"] .news-history-item p { color: rgba(23,35,58,.45); font-size: 9px; }
-  [data-testid="mobile-copilot-home"] .news-saved-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; border: 1px solid rgba(23,35,58,.09); border-radius: 10px; padding: 9px; }
-  [data-testid="mobile-copilot-home"] .news-saved-item strong,
-  [data-testid="mobile-copilot-home"] .news-saved-item small { display: block; max-width: 175px; overflow: hidden; color: #17233a; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
-  [data-testid="mobile-copilot-home"] .news-saved-item small { margin-top: 2px; color: rgba(23,35,58,.45); font-size: 9px; }
-  [data-testid="mobile-copilot-home"] .news-saved-item a,
-  [data-testid="mobile-copilot-home"] .news-saved-item button { margin-left: 7px; color: #8b704e; font-size: 9px; font-weight: 600; }
-  [data-testid="mobile-copilot-home"] ~ .bottom-nav { display: grid !important; position: fixed !important; right: 0; bottom: 0; left: 0; z-index: 40; height: 57px; background: rgba(255,255,255,.97) !important; border-top-color: rgba(23,35,58,.10) !important; box-shadow: 0 -5px 18px rgba(23,35,58,.045); }
-  [data-testid="mobile-copilot-home"] ~ .bottom-nav button { color: rgba(23,35,58,.46) !important; }
-  [data-testid="mobile-copilot-home"] ~ .bottom-nav button.active { background: #f2e4d0 !important; color: #8b704e !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] { inset: 0 !important; z-index: 170 !important; }
+  html.ambiance-clarte .app-body:has([data-testid="mobile-copilot-home"]) .bottom-nav { display: grid !important; grid-template-columns: repeat(5, minmax(0, 1fr)) !important; position: fixed !important; right: 0 !important; bottom: 0 !important; left: 0 !important; z-index: 180 !important; width: 100% !important; height: 57px !important; padding: 0 !important; border: 0 !important; border-top: 1px solid rgba(23,35,58,.10) !important; border-radius: 0 !important; background: rgba(255,255,255,.97) !important; box-shadow: 0 -5px 18px rgba(23,35,58,.045) !important; transform: none !important; }
+  html.ambiance-clarte .app-body:has([data-testid="mobile-copilot-home"]) .bottom-nav button { padding: 0 !important; border-radius: 0 !important; color: rgba(23,35,58,.46) !important; font-size: 9px !important; }
+  html.ambiance-clarte .app-body:has([data-testid="mobile-copilot-home"]) .bottom-nav button.active { background: #f2e4d0 !important; color: #8b704e !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] { background: #ffffff !important; color: #17233a !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] { --txt: #17233a; --txt-muted: rgba(23,35,58,.60); --glass-soft: #f4eadb; --glass-border: rgba(23,35,58,.11); display: flex !important; height: 100% !important; min-height: 100%; overflow: hidden; background: #ffffff !important; color: #17233a !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] { font-family: 'Geist', 'Outfit', system-ui, sans-serif; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] > .border-b { flex: 0 0 auto; border-bottom-color: rgba(23,35,58,.10) !important; background: #ffffff !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] .text-white { color: #17233a !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] [class*="text-white/"] { color: rgba(23,35,58,.60) !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] [class*="border-white/"] { border-color: rgba(23,35,58,.11) !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] [class*="bg-white/"] { background: rgba(255,255,255,.78) !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] .glass,
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] [data-testid^="copilot-action-card-"] { border-color: rgba(23,35,58,.09) !important; background: #ffffff !important; color: #17233a !important; box-shadow: 0 5px 18px rgba(23,35,58,.055) !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] [data-testid^="copilot-action-card-"] strong,
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] [data-testid^="copilot-action-card-"] p { color: #17233a !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] [data-testid="copilot-messages"] { padding: 15px 14px 126px !important; gap: 12px !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] [data-testid="copilot-messages"] > .flex.justify-end > div { border-color: rgba(23,35,58,.08) !important; background: linear-gradient(120deg, #0d2345, #294e82) !important; color: #fff !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] [data-testid="copilot-messages"] > .flex.justify-start > div { border-color: rgba(23,35,58,.08) !important; background: #fff !important; color: rgba(23,35,58,.78) !important; box-shadow: 0 4px 14px rgba(23,35,58,.045) !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] [data-testid="copilot-messages"] > .flex.justify-start > div [class*="text-white/"] { color: rgba(23,35,58,.70) !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] > .border-t { position: fixed; right: 0; bottom: 57px; left: 0; z-index: 35; padding: 8px 14px calc(8px + env(safe-area-inset-bottom)) !important; border-top-color: rgba(23,35,58,.09) !important; background: rgba(255,255,255,.97) !important; box-shadow: 0 -5px 18px rgba(23,35,58,.045); backdrop-filter: blur(16px); }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] > .border-t > div.relative { border-color: rgba(23,35,58,.14) !important; background: #fff !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] input { color: #17233a !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] input::placeholder { color: rgba(23,35,58,.40) !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-send"],
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-action-approve"] { background: linear-gradient(120deg, #0d2345, #294e82) !important; color: #fff !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-send"] svg,
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-action-approve"] svg { color: #fff !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-tabs"] { border-bottom-color: rgba(23,35,58,.10) !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-tabs"] button { color: rgba(23,35,58,.48) !important; border-bottom-color: transparent !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-tabs"] button:first-child { color: #8b704e !important; border-bottom-color: #c8a46d !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-contact-panel"],
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] .decision-card-body { border-color: rgba(23,35,58,.10) !important; background: #f7f0e5 !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-plus-menu"] { border-color: rgba(23,35,58,.10) !important; background: #fffdfa !important; box-shadow: 0 18px 42px rgba(23,35,58,.15) !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-plus-menu"] button { color: #17233a !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-plus-menu"] button:hover { background: #f7f0e5 !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-menu"] { border-color: rgba(23,35,58,.12) !important; background: #ffffff !important; color: #0B1F3A !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-contact"] { border-color: rgba(139,112,78,.28) !important; background: #f7f0e5 !important; color: #8b704e !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] [class*="text-[#F0DCA5]"],
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] [class*="text-[#E8C96A]"] { color: #8b704e !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] [class*="bg-[#DEC2A3]"] { background: #f2e4d0 !important; color: #17233a !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-panel"] [class*="border-[#DEC2A3]"] { border-color: rgba(139,112,78,.28) !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-brief-card"] .grid > div,
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="cockpit-night-recap"] { background: #f4eadb !important; border-color: rgba(139,112,78,.22) !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="cockpit-night-recap"] [data-testid^="night-value-"] { background: #eadbc5 !important; border-color: rgba(139,112,78,.18) !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] [data-testid="copilot-suggestions-list"] button { background: #f4eadb !important; color: #17233a !important; border-color: rgba(139,112,78,.18) !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .copilot-event-stamp { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; color: rgba(23,35,58,.52); font-size: 9px; font-weight: 500; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .copilot-event-dot { width: 4px; height: 4px; border-radius: 999px; background: #c8a46d; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .copilot-daily-summary,
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .copilot-action-result,
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .copilot-recent-timeline { padding: 13px; border: 1px solid rgba(23,35,58,.10); border-radius: 14px; background: #fff; box-shadow: 0 5px 18px rgba(23,35,58,.045); }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .copilot-daily-summary-title,
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .copilot-result-title { display: flex; align-items: center; gap: 7px; color: #17233a; font-size: 13px; font-weight: 600; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .copilot-daily-summary-title svg,
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .copilot-result-title svg { color: #8b704e; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .copilot-daily-date { margin-top: 3px; color: rgba(23,35,58,.48); font-size: 10px; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .copilot-daily-summary p,
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .copilot-action-result p { margin: 8px 0 0; color: rgba(23,35,58,.68); font-size: 11px; line-height: 1.5; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .copilot-daily-priority { margin-top: 9px; padding: 8px 9px; border-radius: 9px; background: #f4eadb; color: rgba(23,35,58,.70); font-size: 10px; line-height: 1.4; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .copilot-daily-priority strong { color: #8b704e; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .copilot-action-result button { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 7px 10px; border-radius: 9px; background: linear-gradient(120deg, #0d2345, #294e82); color: #fff; font-size: 10px; font-weight: 600; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .copilot-timeline-row { padding: 8px 0; border-top: 1px solid rgba(23,35,58,.08); }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .copilot-timeline-row:first-of-type { margin-top: 9px; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .copilot-timeline-row span { display: block; color: rgba(23,35,58,.70); font-size: 11px; line-height: 1.4; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .copilot-message-event.is-user .copilot-event-stamp { justify-content: flex-end; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-conversation { display: flex; flex-direction: column; gap: 12px; background: #fff; color: #17233a; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-conversation-intro,
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-signal-card,
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-message-bubble { border: 1px solid rgba(23,35,58,.10); border-radius: 14px; background: #fff; box-shadow: 0 5px 18px rgba(23,35,58,.045); }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-conversation-intro { padding: 12px; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-conversation-intro p { margin: 0; color: rgba(23,35,58,.72); font-size: 12px; line-height: 1.5; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-conversation-intro button { margin-top: 9px; color: #8b704e; font-size: 10px; font-weight: 600; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-conversation-status,
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-conversation-error { border-radius: 10px; padding: 9px 10px; background: #f4eadb; color: rgba(23,35,58,.72); font-size: 10px; line-height: 1.4; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-conversation-error { border: 1px solid rgba(139,112,78,.24); }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-signal-card { padding: 13px; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-signal-heading { display: flex; align-items: center; gap: 7px; color: #17233a; font-size: 13px; font-weight: 600; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-signal-heading svg { color: #8b704e; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-signal-scope { margin-top: 3px; color: rgba(23,35,58,.48); font-size: 10px; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-signal-copy { margin-top: 10px; color: rgba(23,35,58,.72); font-size: 11px; line-height: 1.55; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-signal-copy p { margin: 0 0 7px; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-inline-sources { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; padding-top: 9px; border-top: 1px solid rgba(23,35,58,.08); }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-inline-sources > span:first-child { color: rgba(23,35,58,.46); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-inline-sources a,
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-inline-sources span:not(:first-child) { display: inline-flex; align-items: center; gap: 4px; max-width: 150px; overflow: hidden; border: 1px solid rgba(139,112,78,.20); border-radius: 999px; padding: 4px 7px; color: #8b704e; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-signal-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 11px; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-signal-actions button { border: 1px solid rgba(139,112,78,.20); border-radius: 9px; padding: 7px 8px; background: #f4eadb; color: #17233a; font-size: 10px; font-weight: 600; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-signal-actions button:first-child { background: linear-gradient(120deg, #0d2345, #294e82); color: #fff; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-message { margin-top: 2px; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-message.is-user .copilot-event-stamp { justify-content: flex-end; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-message.is-user .news-message-bubble { margin-left: auto; background: #0d2345; color: #fff; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-message-bubble { max-width: 87%; padding: 11px 12px; color: rgba(23,35,58,.74); font-size: 12px; line-height: 1.5; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-message-bubble p { margin: 0 0 7px; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-composer { display: flex; align-items: center; gap: 8px; position: sticky; bottom: 0; padding: 8px; border: 1px solid rgba(23,35,58,.11); border-radius: 14px; background: rgba(255,255,255,.96); box-shadow: 0 -5px 18px rgba(23,35,58,.04); }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-composer input { min-width: 0; flex: 1; border: 0; background: transparent; color: #17233a; font-size: 12px; outline: 0; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-composer input::placeholder { color: rgba(23,35,58,.42); }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-composer button { display: flex; width: 32px; height: 32px; align-items: center; justify-content: center; border-radius: 999px; background: linear-gradient(120deg, #0d2345, #294e82); color: #fff; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-composer button:disabled { opacity: .45; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-secondary-panel { border-top: 1px solid rgba(23,35,58,.09); padding-top: 10px; color: rgba(23,35,58,.72); }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-secondary-panel summary { display: flex; align-items: center; justify-content: space-between; cursor: pointer; color: #17233a; font-size: 11px; font-weight: 600; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-secondary-panel summary span { color: #8b704e; font-size: 10px; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-history-item { margin-top: 8px; border: 1px solid rgba(23,35,58,.09); border-radius: 10px; padding: 9px; font-size: 10px; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-history-item summary { font-size: 10px; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-history-item p { color: rgba(23,35,58,.45); font-size: 9px; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-saved-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; border: 1px solid rgba(23,35,58,.09); border-radius: 10px; padding: 9px; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-saved-item strong,
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-saved-item small { display: block; max-width: 175px; overflow: hidden; color: #17233a; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-saved-item small { margin-top: 2px; color: rgba(23,35,58,.45); font-size: 9px; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-saved-item a,
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] .news-saved-item button { margin-left: 7px; color: #8b704e; font-size: 9px; font-weight: 600; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] ~ .bottom-nav { display: grid !important; position: fixed !important; right: 0; bottom: 0; left: 0; z-index: 40; height: 57px; background: rgba(255,255,255,.97) !important; border-top-color: rgba(23,35,58,.10) !important; box-shadow: 0 -5px 18px rgba(23,35,58,.045); }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] ~ .bottom-nav button { color: rgba(23,35,58,.46) !important; }
+  html.ambiance-clarte [data-testid="mobile-copilot-home"] ~ .bottom-nav button.active { background: #f2e4d0 !important; color: #8b704e !important; }
 }
 
 /* Correctif final Hub IA : cette couche suit les anciens essais beige et est
@@ -1421,8 +1430,12 @@ html.ambiance-clarte [data-testid="campus-bottom-nav"] [class*="text-white/"] { 
   [data-testid="mobile-copilot-home"] .copilot-contact-button,
   [data-testid="mobile-copilot-home"] .copilot-contact-button.is-open { background: #F1E2CC !important; border-color: #DEC2A3 !important; color: #0B1F3A !important; box-shadow: none !important; }
   [data-testid="mobile-copilot-home"] .copilot-contact-button * { color: #0B1F3A !important; }
-  [data-testid="mobile-copilot-home"] [data-testid^="copilot-action-card-"] > button > div > div:first-child,
   [data-testid="mobile-copilot-home"] .copilot-decision-empty-title { font-size: 16px !important; line-height: 22px !important; font-weight: 600 !important; }
+  /* Corrigé : ce sélecteur était groupé par erreur avec le titre ci-dessus
+     (pensé pour un vrai titre de section), alors qu'il cible en réalité le
+     petit label de catégorie ("PILOTAGE · AUJOURD'HUI") — le faisant
+     apparaître à 16px au lieu des 10px prévus dans le composant source. */
+  [data-testid="mobile-copilot-home"] [data-testid^="copilot-action-card-"] > button > div > div:first-child { font-size: 10px !important; line-height: 14px !important; font-weight: 700 !important; }
   [data-testid="mobile-copilot-home"] [data-testid^="copilot-action-card-"] .decision-card-body p,
   [data-testid="mobile-copilot-home"] [data-testid^="copilot-action-card-"] .decision-card-body span,
   [data-testid="mobile-copilot-home"] .copilot-decision-empty p { font-size: 14px !important; line-height: 21px !important; }
