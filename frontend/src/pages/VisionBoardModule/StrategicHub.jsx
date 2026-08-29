@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ArrowRight, CheckCircle2, CircleDot, Compass, Flag, Loader2, Plus, Sparkles, Target, TimerReset, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
+import { visionExtApi } from "../../lib/finalVisionModuleApi";
 import {
   applyStrategicDecision,
   createStrategicDecision,
@@ -29,6 +30,12 @@ function visionText(value) {
 
 function strategicStatus(value) {
   return ({ active: "En mouvement", planned: "À préparer", watch: "À surveiller", complete: "Prouvé", deferred: "Reporté", abandoned: "Abandonné" })[value] || "À préciser";
+}
+
+function pillarTitle(pillar) {
+  const value = pillar?.title;
+  if (value == null) return pillar?.name || "Axe sans nom";
+  return typeof value === "string" ? value : (value.fr ?? value.en ?? "Axe sans nom");
 }
 
 export function StrategicCapHome({ onOpenHorizon, onOpenDecisions, onOpenPillars }) {
@@ -84,13 +91,15 @@ export function StrategicCapHome({ onOpenHorizon, onOpenDecisions, onOpenPillars
 export function StrategicHorizon() {
   const [milestones, setMilestones] = useState([]);
   const [projects, setProjects] = useState([]);
+  const [pillars, setPillars] = useState([]);
   const [form, setForm] = useState({ title: "", pillar_id: "", time_window: "now", expected_evidence: "", project_id: "" });
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
-    const [savedMilestones, savedProjects] = await Promise.allSettled([getStrategicMilestones(), getProjets()]);
+    const [savedMilestones, savedProjects, savedPillars] = await Promise.allSettled([getStrategicMilestones(), getProjets(), visionExtApi.getPillars()]);
     if (savedMilestones.status === "fulfilled") setMilestones(savedMilestones.value || []);
     if (savedProjects.status === "fulfilled") setProjects(Array.isArray(savedProjects.value) ? savedProjects.value : (savedProjects.value?.items || []));
+    if (savedPillars.status === "fulfilled" && Array.isArray(savedPillars.value)) setPillars(savedPillars.value);
   };
   useEffect(() => { load(); }, []);
 
@@ -111,13 +120,16 @@ export function StrategicHorizon() {
     <div className="glass p-5"><span className="text-[10px] font-bold tracking-[.16em] text-[#F1E2CC]">HORIZON 90 JOURS</span><h2 className="mt-2 font-head text-2xl font-semibold text-white">Rendre la Vision visible sans transformer chaque idée en urgence.</h2><p className="mt-1 max-w-3xl text-sm text-white/65">Un jalon est une preuve attendue ou une étape stratégique ; une mission ne sera créée qu’après une décision validée.</p></div>
     <form onSubmit={create} className="glass grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-5">
       <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Prochain jalon stratégique" className="rounded-xl border border-white/25 bg-white/[0.08] px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/45 focus:border-[#F1E2CC] xl:col-span-2" />
-      <input value={form.pillar_id} onChange={(e) => setForm({ ...form, pillar_id: e.target.value })} placeholder="Axe ou pilier (optionnel)" className="rounded-xl border border-white/25 bg-white/[0.08] px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/45 focus:border-[#F1E2CC]" />
+      <select value={form.pillar_id} onChange={(e) => setForm({ ...form, pillar_id: e.target.value })} className="rounded-xl border border-white/25 bg-[#172C5C] px-3 py-2.5 text-sm text-white outline-none focus:border-[#F1E2CC]" data-testid="horizon-pillar-select">
+        <option value="">Axe ou pilier (optionnel)</option>
+        {pillars.map((p) => <option key={p.id} value={p.id}>{pillarTitle(p)}</option>)}
+      </select>
       <select value={form.time_window} onChange={(e) => setForm({ ...form, time_window: e.target.value })} className="rounded-xl border border-white/25 bg-[#172C5C] px-3 py-2.5 text-sm text-white outline-none focus:border-[#F1E2CC]"><option value="now">Maintenant</option><option value="next">Ensuite</option><option value="later">Plus tard</option></select>
       <select value={form.project_id} onChange={(e) => setForm({ ...form, project_id: e.target.value })} className="rounded-xl border border-white/25 bg-[#172C5C] px-3 py-2.5 text-sm text-white outline-none focus:border-[#F1E2CC]"><option value="">Projet lié (optionnel)</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.nom || project.name || project.title}</option>)}</select>
       <input value={form.expected_evidence} onChange={(e) => setForm({ ...form, expected_evidence: e.target.value })} placeholder="Quelle preuve attendue ?" className="rounded-xl border border-white/25 bg-white/[0.08] px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/45 focus:border-[#F1E2CC] md:col-span-2 xl:col-span-4" />
       <button disabled={saving} className="gold-bg inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-[#0B1F3A] disabled:opacity-60">{saving ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />} Créer le jalon</button>
     </form>
-    <div className="grid gap-4 xl:grid-cols-3">{WINDOWS.map((window) => <section key={window.id} className="glass min-h-64 p-4"><div className="flex items-start justify-between gap-3"><div><span className="text-[10px] font-bold tracking-[.14em] text-[#F1E2CC]">{window.label.toUpperCase()}</span><p className="mt-1 text-xs leading-5 text-white/55">{window.hint}</p></div><TimerReset size={15} className="text-white/50" /></div><div className="mt-4 space-y-2">{milestones.filter((item) => item.time_window === window.id).map((item) => <article key={item.id} className="rounded-xl border border-white/20 bg-white/[0.08] p-3"><div className="flex gap-2"><CircleDot size={14} className="mt-0.5 shrink-0 text-[#F1E2CC]" /><div><strong className="text-sm text-white">{item.title}</strong><p className="mt-1 text-xs text-white/60">{item.expected_evidence || "Preuve à préciser"}</p><span className="mt-2 inline-block text-[10px] font-semibold text-[#F1E2CC]">{strategicStatus(item.status)}</span></div></div></article>)}{!milestones.some((item) => item.time_window === window.id) && <p className="rounded-xl border border-dashed border-white/20 p-3 text-xs leading-5 text-white/50">Aucun jalon ici. Cette fenêtre reste volontairement vide tant que vous ne l’avez pas choisi.</p>}</div></section>)}</div>
+    <div className="grid gap-4 xl:grid-cols-3">{WINDOWS.map((window) => <section key={window.id} className="glass min-h-64 p-4"><div className="flex items-start justify-between gap-3"><div><span className="text-[10px] font-bold tracking-[.14em] text-[#F1E2CC]">{window.label.toUpperCase()}</span><p className="mt-1 text-xs leading-5 text-white/55">{window.hint}</p></div><TimerReset size={15} className="text-white/50" /></div><div className="mt-4 space-y-2">{milestones.filter((item) => item.time_window === window.id).map((item) => { const linkedPillar = pillars.find((p) => p.id === item.pillar_id); return <article key={item.id} className="rounded-xl border border-white/20 bg-white/[0.08] p-3"><div className="flex gap-2"><CircleDot size={14} className="mt-0.5 shrink-0 text-[#F1E2CC]" /><div><strong className="text-sm text-white">{item.title}</strong><p className="mt-1 text-xs text-white/60">{item.expected_evidence || "Preuve à préciser"}</p><div className="mt-2 flex flex-wrap items-center gap-2"><span className="inline-block text-[10px] font-semibold text-[#F1E2CC]">{strategicStatus(item.status)}</span>{linkedPillar && <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/70" data-testid={`milestone-pillar-${item.id}`}><Compass size={10} /> {pillarTitle(linkedPillar)}</span>}</div></div></div></article>; })}{!milestones.some((item) => item.time_window === window.id) && <p className="rounded-xl border border-dashed border-white/20 p-3 text-xs leading-5 text-white/50">Aucun jalon ici. Cette fenêtre reste volontairement vide tant que vous ne l’avez pas choisi.</p>}</div></section>)}</div>
   </section>;
 }
 

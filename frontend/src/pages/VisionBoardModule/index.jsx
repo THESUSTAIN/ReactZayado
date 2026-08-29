@@ -2364,7 +2364,22 @@ function VisionBoardDesktop() {
 
   const renderTab = () => {
     switch (activeTab) {
-      case "accueil":   return <><StrategicCapHome onOpenHorizon={() => setActiveTab("horizon")} onOpenDecisions={() => setActiveTab("decisions")} onOpenPillars={() => setActiveTab("pillars")} /><CoursAccueilVision onGoCanvas={openVisionStudio} onNavigateTab={setActiveTab} /></>;
+      case "accueil":   return <>
+        <StrategicCapHome onOpenHorizon={() => setActiveTab("horizon")} onOpenDecisions={() => setActiveTab("decisions")} onOpenPillars={() => setActiveTab("pillars")} />
+        {/* Séparateur explicite entre les deux vues : StrategicCapHome (synthèse
+            rapide : prochain jalon, décision prioritaire) et AccueilVision
+            (vue détaillée : trajectoire complète, climat stratégique,
+            ressources). Les deux couvrent en partie le même terrain sous des
+            noms différents — une vraie fusion resterait à faire, mais cette
+            séparation évite au moins qu'elles se lisent comme un seul bloc
+            confus et surchargé. */}
+        <div className="my-6 flex items-center gap-3 px-1" data-testid="vision-accueil-separator">
+          <div className="h-px flex-1 bg-white/10" />
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[.14em] text-white/35"><Sparkles size={12} /> Vue détaillée</span>
+          <div className="h-px flex-1 bg-white/10" />
+        </div>
+        <CoursAccueilVision onGoCanvas={openVisionStudio} onNavigateTab={setActiveTab} />
+      </>;
       case "canvas":    return isMobile ? <VisionCanvaMobile onBack={returnToAccueil} /> : <TabCanvas bgImage={bgImage} onBack={returnToAccueil} />;
       case "pillars":   return <TabPillars />;
       case "horizon":   return <StrategicHorizon />;

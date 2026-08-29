@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Compass, ArrowRight, Sparkles, Target, Lightbulb, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { getVision, getHumeur, getTaches, getStrategicDecisions, createTache } from "../lib/api";
+import { getVision, getHumeur, getTaches, getStrategicDecisions, getStrategyOverview, createTache } from "../lib/api";
 
 // Accueil quotidien Cap Vivant.
 //
@@ -24,6 +24,7 @@ export default function Aujourdhui() {
   const [humeur, setHumeur] = useState([]);
   const [taches, setTaches] = useState([]);
   const [pendingDecision, setPendingDecision] = useState(null);
+  const [activeMilestoneIds, setActiveMilestoneIds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [quickTitle, setQuickTitle] = useState("");
   const [quickAdding, setQuickAdding] = useState(false);
@@ -34,20 +35,34 @@ export default function Aujourdhui() {
       getHumeur().catch(() => []),
       getTaches().catch(() => []),
       getStrategicDecisions().catch(() => []),
-    ]).then(([v, h, t, decisions]) => {
+      getStrategyOverview().catch(() => null),
+    ]).then(([v, h, t, decisions, overview]) => {
       setVision(v);
       setHumeur(Array.isArray(h) ? h : []);
       setTaches(Array.isArray(t) ? t : []);
       setPendingDecision((Array.isArray(decisions) ? decisions : []).find((d) => d.status === "pending") || null);
+      // Unifie la priorité avec Vision : un jalon marqué "maintenant" dans
+      // Vision doit faire remonter automatiquement la tâche qui lui est
+      // rattachée, plutôt que d'avoir deux priorités différentes affichées
+      // le même jour selon la page consultée.
+      const nowMilestones = (overview?.milestones || []).filter((m) => m.time_window === "now" && !["complete", "abandoned"].includes(m.status));
+      setActiveMilestoneIds(nowMilestones.map((m) => m.id));
     }).finally(() => setLoading(false));
   }, []);
 
   const dernierHumeur = humeur[0];
   const capaciteValue = dernierHumeur ? dernierHumeur.energie : null;
   const tachesOuvertes = taches.filter((t) => t.statut !== "Terminé");
-  const prioritePrincipale = tachesOuvertes
-    .slice()
-    .sort((a, b) => (a.priorite === "Haute" ? -1 : 1) - (b.priorite === "Haute" ? -1 : 1))[0];
+  const prioritePrincipale =
+    // Une tâche déjà reliée à un jalon "maintenant" de Vision passe
+    // toujours devant — cohérent avec ce que Vision affiche elle-même
+    // comme priorité, pour ne plus avoir deux réponses différentes à
+    // "c'est quoi ma priorité aujourd'hui ?" selon la page consultée.
+    tachesOuvertes.find((t) => activeMilestoneIds.includes(t.strategic_milestone_id)) ||
+    tachesOuvertes
+      .slice()
+      .sort((a, b) => (a.priorite === "Haute" ? -1 : 1) - (b.priorite === "Haute" ? -1 : 1))[0];
+  const prioriteEstStrategique = Boolean(prioritePrincipale && activeMilestoneIds.includes(prioritePrincipale.strategic_milestone_id));
 
   const addQuickTache = async (event) => {
     event.preventDefault();
@@ -94,6 +109,11 @@ export default function Aujourdhui() {
           <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/15 border border-emerald-400/25 px-3 py-1 text-[11px] font-semibold text-emerald-300">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> {vision?.value ? "Vision active" : "Vision à définir"}
           </span>
+          {prioriteEstStrategique && (
+            <span className="ml-2 inline-flex items-center gap-1.5 rounded-full bg-[#DEC2A3]/15 border border-[#DEC2A3]/30 px-3 py-1 text-[11px] font-semibold text-[#F1E2CC]" data-testid="aujourdhui-priorite-strategique">
+              <Compass size={11} /> Priorité de Vision
+            </span>
+          )}
           <h2 className="font-head text-xl font-semibold text-white mt-3">
             {prioritePrincipale ? `Faire avancer « ${prioritePrincipale.titre} ».` : "Faire avancer une action qui mérite votre énergie."}
           </h2>

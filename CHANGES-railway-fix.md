@@ -136,3 +136,52 @@ mes changements, retiré aussi.
 ## Vérifié avant livraison
 Tous les fichiers du projet compilent, rendu visuel du nouveau hero
 testé (pas juste supposé).
+
+## Points 4 et 5 — unification priorité + séparation Vision (29/08, suite 4)
+
+**Point 4 — Unifié, vérifié** : Aujourd'hui appelle maintenant aussi
+`getStrategyOverview()`. Une tâche déjà reliée à un jalon marqué
+"maintenant" dans Vision (via `strategic_milestone_id`, champ confirmé
+préservé par `normalizeTask`) passe désormais automatiquement en
+priorité principale, avec un badge visible "Priorité de Vision" pour
+que l'utilisateur comprenne d'où vient ce choix. Fini les deux
+priorités différentes possibles le même jour selon la page consultée.
+
+**Point 5 — Vraie ampleur découverte, corrigé partiellement, honnêtement** :
+en lisant `AccueilVision.jsx` en entier, j'ai trouvé que la duplication
+est plus profonde qu'un simple manque d'espacement — ce composant
+contient lui-même un second fil "Vision → Décision → Action" complet
+(section `vision-trajectory`) et une seconde carte de décision
+prioritaire ("PROCHAINE DÉCISION" dans `vision-focus-grid`), sous des
+noms différents de ce que fait déjà `StrategicCapHome` juste au-dessus.
+
+Une vraie fusion demanderait de choisir laquelle des deux
+implémentations garder, avec une vraie analyse de laquelle des sources
+de données est la bonne — pas fait ici pour ne rien casser sans
+validation. Corrigé plus modestement : un vrai séparateur visuel avec
+titre ("Vue détaillée") entre les deux blocs, pour qu'ils ne se lisent
+plus comme un seul bloc confus.
+
+## Vérifié avant livraison
+Tous les fichiers compilent, aucune régression introduite.
+
+## Point 10 — lien réel entre axes et jalons (29/08, suite 5)
+
+**Vraie cause trouvée** : deux systèmes de "pilier" différents
+coexistaient sans lien. `TabPillars` (les vrais axes, avec scores et
+objectifs) utilise `visionExtApi.getPillars()`. Le formulaire de jalon
+dans `StrategicHorizon`, lui, n'avait qu'un simple **champ texte
+libre** pour "l'axe" — jamais connecté aux vrais piliers.
+
+**Corrigé** : `StrategicHorizon` charge maintenant les vrais piliers
+(même source que `TabPillars`), le champ texte est devenu un vrai menu
+déroulant listant les axes réels. Chaque carte de jalon affiche
+désormais aussi le nom de son pilier lié, quand il y en a un — le lien
+est visible dans les deux sens.
+
+Gestion des titres multilingues (`{fr, en}` ou simple texte) reprise
+sur le même principe que `useApp().tv()`, en local pour ne pas
+importer tout le hook de langue dans ce composant.
+
+## Vérifié avant livraison
+Tous les fichiers compilent, aucune régression.
