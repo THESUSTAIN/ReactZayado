@@ -24,6 +24,21 @@ import CopiloteAgent from "./pages/CopiloteAgent";
 import VisionProduit from "./pages/VisionProduit";
 import { authMe } from "./lib/api";
 
+// Un utilisateur déjà connecté qui ouvre la page de vente ou l'écran de
+// connexion est renvoyé dans son espace. Sans cette garde, un client inscrit
+// qui tapait simplement votre domaine retombait sur la page marketing —
+// et l'écran de connexion s'affichait à quelqu'un déjà connecté.
+function PublicOnly({ children }) {
+  const hasSession = typeof window !== "undefined" && localStorage.getItem("cours_auth_token");
+  // Exception nécessaire : un retour de lien magique (?token=) ou de
+  // Google/Microsoft (?code=) atterrit sur /login. Rediriger à cet instant
+  // parce qu'un ancien jeton traîne encore empêcherait la nouvelle session
+  // de s'ouvrir — l'utilisateur resterait bloqué sur une session périmée.
+  const authCallback = typeof window !== "undefined"
+    && /[?&](token|code)=/.test(window.location.search);
+  return hasSession && !authCallback ? <Navigate to="/" replace /> : children;
+}
+
 // Accueil : « Aujourd'hui », porte d'entrée quotidienne — la MÊME page sur
 // mobile et sur PC. Auparavant, sur mobile, "/" affichait le chat en plein
 // écran à la place de l'accueil, ce qui masquait aussi le header et la
@@ -86,8 +101,8 @@ function App() {
             <Route path="/campus/portfolio" element={<CampusComingSoon />} />
             <Route path="/campus/alternance" element={<CampusComingSoon />} />
           </Route>
-          <Route path="/login" element={<Login />} />
-          <Route path="/bienvenue" element={<Landing />} />
+          <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
+          <Route path="/bienvenue" element={<PublicOnly><Landing /></PublicOnly>} />
           <Route path="/tarifs" element={<Pricing />} />
           <Route path="/fonctionnalites" element={<Fonctionnalites />} />
           <Route path="/demo" element={<Demo />} />

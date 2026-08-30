@@ -23,7 +23,7 @@ export default function TheSustain() {
             Prière, discernement, service, amour du prochain et intégrité dans les affaires restent proposés librement, sans mesurer votre qualité spirituelle ni imposer la foi au parcours Zayado.
           </p>
           <button disabled
-            className="mt-4 inline-flex items-center gap-1.5 rounded-xl border border-white/15 px-4 py-2.5 text-sm font-semibold text-white/40 cursor-not-allowed"
+            className="mt-4 inline-flex items-center gap-1.5 rounded-xl border border-white/15 px-4 py-2.5 text-sm font-semibold text-white/60 cursor-not-allowed"
             title="L'activation TheSustain n'est pas encore connectée côté serveur">
             Activer l'espace TheSustain
           </button>

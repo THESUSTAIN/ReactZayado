@@ -41,16 +41,16 @@ function ResumeContexte({ onOpenTab }) {
           <h2 className="font-head text-lg font-semibold text-white">Relier votre trésorerie à la Vision.</h2>
           <p className="text-[13px] text-white/55 mt-1.5 leading-relaxed">Comptes, revenus, factures et charges — la lecture est consolidée depuis les sources que vous autorisez.</p>
           {pilotage === null ? (
-            <p className="text-sm text-white/40 mt-6">Chargement…</p>
+            <p className="text-sm text-white/60 mt-6">Chargement…</p>
           ) : aDesDonneesFinancieres ? (
             <div className="mt-6">
               <p className="text-2xl font-head font-semibold text-white">{tresorerie.toLocaleString("fr-FR")} €</p>
-              <p className="text-[11px] text-white/40 mt-0.5">Trésorerie déclarée</p>
+              <p className="text-[11px] text-white/60 mt-0.5">Trésorerie déclarée</p>
             </div>
           ) : (
             <div className="flex items-center gap-2 mt-6">
               <span className="w-6 h-0.5 bg-[#DEC2A3]" />
-              <span className="text-sm text-white/45">aucune donnée importée</span>
+              <span className="text-sm text-white/62">aucune donnée importée</span>
             </div>
           )}
           <button onClick={() => onOpenTab("pilotage")} className="mt-5 inline-flex items-center gap-1.5 rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold text-white/80 hover:bg-white/5 transition-colors">
@@ -66,16 +66,16 @@ function ResumeContexte({ onOpenTab }) {
           <h2 className="font-head text-lg font-semibold text-white">Rechercher les bons signaux.</h2>
           <p className="text-[13px] text-white/55 mt-1.5 leading-relaxed">Prospects, pipeline et prochaines actions — vue synthétique, le détail complet reste dans l'onglet Croissance.</p>
           {prospects === null ? (
-            <p className="text-sm text-white/40 mt-6">Chargement…</p>
+            <p className="text-sm text-white/60 mt-6">Chargement…</p>
           ) : prospects.length > 0 ? (
             <div className="mt-6">
               <p className="text-2xl font-head font-semibold text-white">{prospects.length}</p>
-              <p className="text-[11px] text-white/40 mt-0.5">prospect(s) dans le pipeline</p>
+              <p className="text-[11px] text-white/60 mt-0.5">prospect(s) dans le pipeline</p>
             </div>
           ) : (
             <div className="flex items-center gap-2 mt-6">
               <span className="w-6 h-0.5 bg-[#DEC2A3]" />
-              <span className="text-sm text-white/45">aucun prospect connecté</span>
+              <span className="text-sm text-white/62">aucun prospect connecté</span>
             </div>
           )}
           <button onClick={() => onOpenTab("croissance")} className="mt-5 inline-flex items-center gap-1.5 rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold text-white/80 hover:bg-white/5 transition-colors">
@@ -113,7 +113,7 @@ function AgentsContext() {
         ].map(([title, detail]) => <div key={title} className="rounded-xl border border-white/12 bg-white/[.04] p-4"><p className="text-sm font-semibold text-white">{title}</p><p className="mt-1 text-xs leading-relaxed text-white/55">{detail}</p></div>)}
       </div>
       <p className="mt-5 rounded-xl border border-dashed border-white/15 px-4 py-3 text-sm text-white/55">Aucun agent n’est encore configuré pour cet espace.</p>
-      <button disabled title="La configuration d'agents IA n'est pas encore construite côté serveur." className="mt-3 rounded-xl border border-white/15 px-4 py-2.5 text-sm font-semibold text-white/40 cursor-not-allowed">Configurer un agent — Bientôt</button>
+      <button disabled title="La configuration d'agents IA n'est pas encore construite côté serveur." className="mt-3 rounded-xl border border-white/15 px-4 py-2.5 text-sm font-semibold text-white/60 cursor-not-allowed">Configurer un agent — Bientôt</button>
     </section>
   );
 }
@@ -122,7 +122,10 @@ export default function Contexte() {
   const [tab, setTab] = useState("resume");
   return (
     <div className="space-y-6" data-testid="page-contexte">
-      <nav className="flex gap-2">
+      {/* Bug réel : quatre onglets en flex sans retour à la ligne ni défilement.
+          Sur mobile, « Croissance » et « Agents IA » sortaient de l'écran et
+          étaient tout simplement inatteignables. */}
+      <nav className="flex flex-wrap gap-2">
         {TABS.map(({ id, label, Icon }) => (
           <button key={id} onClick={() => setTab(id)} data-testid={`contexte-tab-${id}`}
             className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${tab === id ? "gold-bg text-[#0A1128]" : "bg-white/5 border border-white/15 text-white/70"}`}>

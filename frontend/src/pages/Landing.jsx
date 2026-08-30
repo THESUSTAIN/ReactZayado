@@ -14,10 +14,16 @@ const FEATURES = [
   { Icon: ShieldCheck, title: "DAF IA", desc: "Trésorerie, validations de paiements et arbitrages financiers, sous votre contrôle.", tag: "Finance" },
 ];
 
+// Ces trois étapes décrivent le parcours RÉEL de l'application, vérifié
+// écran par écran. L'étape 02 promettait « L'IA structure votre vision en
+// priorités concrètes » alors que l'onboarding se contentait d'enregistrer
+// une phrase : la promesse est désormais tenue (l'IA propose piliers, jalon
+// et première action, l'utilisateur valide) et la formulation le dit
+// exactement — ni plus, ni moins.
 const STEPS = [
-  { n: "01", title: "Créez votre compte", desc: "Inscription en un clic. Votre espace est prêt en moins d'une minute." },
-  { n: "02", title: "Définissez votre vision", desc: "L'IA structure votre vision en priorités concrètes et rentables." },
-  { n: "03", title: "Avancez chaque jour", desc: "Le Copilote vous propose la prochaine action qui compte vraiment." },
+  { n: "01", title: "Créez votre compte", desc: "Google, Microsoft ou un lien par email. Aucun mot de passe à retenir." },
+  { n: "02", title: "Écrivez votre vision en une phrase", desc: "L'IA la transforme en axes, en premier jalon et en première action — vous validez ou vous modifiez." },
+  { n: "03", title: "Avancez chaque jour", desc: "Le Copilote propose la prochaine action qui compte, en tenant compte de votre capacité du moment." },
 ];
 
 export default function Landing() {

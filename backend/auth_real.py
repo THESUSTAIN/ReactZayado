@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import os
 import secrets
 import sqlite3
@@ -574,3 +575,225 @@ async def auth_config():
         "demo_login_allowed": ALLOW_DEMO_LOGIN,
         "persistent_storage": bool(os.environ.get("DATA_DIR")),
     }
+
+
+# ── Configuration du cockpit par l'IA ────────────────────────────────────
+# La landing promet « L'IA structure votre vision en priorités concrètes ».
+# Jusqu'ici l'onboarding se contentait d'enregistrer une phrase : l'utilisateur
+# arrivait sur une application vide, sans savoir quoi faire. C'est le premier
+# motif d'abandon d'un SaaS.
+#
+# Principe retenu, cohérent avec la posture du produit (« l'IA prépare, vous
+# décidez ») : l'IA PROPOSE une structure, l'utilisateur VALIDE. Rien n'est
+# écrit sans son accord, et rien n'est inventé si l'IA est indisponible —
+# dans ce cas la route le dit honnêtement plutôt que de fabriquer un contenu
+# générique qui se ferait passer pour une analyse.
+
+STRUCTURE_PROMPT = """Tu es le copilote stratégique de MyExtension Business, pour des solopreneurs \
+et petites entreprises francophones.
+
+L'utilisateur vient d'écrire sa Vision. Transforme-la en une structure de départ SOBRE et RÉALISTE.
+
+Contraintes strictes :
+- Exactement 3 piliers stratégiques. Un pilier = un axe de travail durable, pas une tâche.
+- Exactement 1 jalon : une étape vérifiable atteignable en moins de 90 jours.
+- Exactement 1 première action : concrète, faisable en moins de 2 heures, dès aujourd'hui.
+- N'invente aucun chiffre, aucun montant, aucune date, aucun nom de client.
+- Reste au niveau de ce que la Vision dit réellement. Si elle est vague, propose une structure
+  qui aide à la préciser plutôt que d'inventer un business plan.
+- Français, ton direct, pas de jargon de consultant.
+
+Réponds UNIQUEMENT par un objet JSON valide, sans texte autour, à ce format exact :
+{"pillars":[{"name":"...","why":"..."},{"name":"...","why":"..."},{"name":"...","why":"..."}],
+ "milestone":{"title":"...","evidence":"..."},
+ "first_action":{"title":"...","why_now":"..."}}"""
+
+
+def _extract_json(text: str) -> Optional[Dict[str, Any]]:
+    """Un modèle renvoie parfois le JSON entouré de texte ou d'un bloc ```."""
+    if not text:
+        return None
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```[a-zA-Z]*\s*|\s*```$", "", cleaned).strip()
+    start, end = cleaned.find("{"), cleaned.rfind("}")
+    if start == -1 or end <= start:
+        return None
+    try:
+        return json.loads(cleaned[start:end + 1])
+    except Exception:
+        return None
+
+
+def _valid_structure(data: Any) -> bool:
+    """Une proposition incomplète ne doit jamais être présentée comme une analyse."""
+    if not isinstance(data, dict):
+        return False
+    pillars = data.get("pillars")
+    if not isinstance(pillars, list) or len(pillars) != 3:
+        return False
+    if not all(isinstance(p, dict) and str(p.get("name", "")).strip() for p in pillars):
+        return False
+    for key in ("milestone", "first_action"):
+        node = data.get(key)
+        if not isinstance(node, dict) or not str(node.get("title", "")).strip():
+            return False
+    return True
+
+
+@router.post("/onboarding/structure")
+async def structure_vision(payload: Dict[str, Any] = Body(default={}),
+                           authorization: Optional[str] = Header(default=None)):
+    """Propose une structure de départ à partir de la Vision. Ne persiste RIEN."""
+    user = current_user(authorization)
+    vision = (payload or {}).get("vision") or (_get_data(user["id"], "vision", {}) or {}).get("value") or ""
+    vision = str(vision).strip()
+    if not vision:
+        raise HTTPException(status_code=400, detail="Aucune Vision à structurer.")
+
+    api_key = os.environ.get("MAMMOUTH_API_KEY") or os.environ.get("MAMMOTH_API_KEY", "")
+    if not api_key:
+        # Pas de contenu générique déguisé en analyse : on le dit.
+        return {"available": False,
+                "reason": "Le service IA n'est pas configuré sur ce serveur (MAMMOUTH_API_KEY manquante)."}
+
+    base_url = os.environ.get("MAMMOUTH_BASE_URL", "https://api.mammouth.ai/v1").rstrip("/")
+    model = os.environ.get("MAMMOUTH_MODEL", "claude-haiku-4-5-20251001")
+    context = []
+    settings = user.get("settings") or {}
+    if settings.get("workspace_type"):
+        context.append(f"Structure : {settings['workspace_type']}")
+    if settings.get("project_type"):
+        context.append(f"Vend : {settings['project_type']}")
+    user_content = f"Vision : {vision}"
+    if context:
+        user_content += "\nContexte : " + " · ".join(context)
+
+    try:
+        async with httpx.AsyncClient(timeout=45.0) as client:
+            resp = await client.post(
+                f"{base_url}/chat/completions",
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json={"model": model, "max_tokens": 900, "temperature": 0.4, "stream": False,
+                      "messages": [{"role": "system", "content": STRUCTURE_PROMPT},
+                                   {"role": "user", "content": user_content}]},
+            )
+        if resp.status_code != 200:
+            logger.error(f"[structure] HTTP {resp.status_code}: {resp.text[:300]}")
+            return {"available": False, "reason": "Le service IA est momentanément indisponible."}
+        content = (resp.json().get("choices", [{}])[0].get("message", {}).get("content") or "")
+    except Exception as exc:
+        logger.error(f"[structure] exception: {exc}")
+        return {"available": False, "reason": "Le service IA n'a pas répondu."}
+
+    data = _extract_json(content)
+    if not _valid_structure(data):
+        logger.error(f"[structure] réponse inexploitable : {content[:200]}")
+        return {"available": False, "reason": "La proposition reçue était incomplète."}
+
+    return {"available": True, "proposal": data}
+
+
+@router.post("/onboarding/apply-structure")
+async def apply_structure(payload: Dict[str, Any] = Body(default={}),
+                          authorization: Optional[str] = Header(default=None)):
+    """Enregistre la structure APRÈS validation explicite par l'utilisateur."""
+    user = current_user(authorization)
+    proposal = (payload or {}).get("proposal")
+    if not _valid_structure(proposal):
+        raise HTTPException(status_code=400, detail="Structure invalide.")
+
+    _put_data(user["id"], "vision_pillars", [
+        {"name": str(p.get("name", "")).strip(), "why": str(p.get("why", "")).strip(), "value": 0}
+        for p in proposal["pillars"]
+    ])
+    milestone_id = secrets.token_urlsafe(8)
+    _put_data(user["id"], "strategic_milestones", [{
+        "id": milestone_id,
+        "title": str(proposal["milestone"].get("title", "")).strip(),
+        "expected_evidence": str(proposal["milestone"].get("evidence", "")).strip(),
+        "time_window": "now", "status": "active", "created_at": _now(), "source": "onboarding_ia",
+    }])
+    first_label = str(proposal["first_action"].get("title", "")).strip()
+    _put_data(user["id"], "taches", [{
+        "id": secrets.token_urlsafe(8),
+        "label": first_label, "titre": first_label,
+        "why_now": str(proposal["first_action"].get("why_now", "")).strip(),
+        "priorite": "high", "done": False,
+        "strategic_milestone_id": milestone_id,
+        "created_at": _now(), "source": "onboarding_ia",
+    }])
+    update_settings(user["id"], {"cockpit_structured": True})
+    return {"ok": True}
+
+
+# ── Lecture des données créées par l'onboarding ──────────────────────────
+# Sans ces routes, la structure validée serait écrite puis jamais relue :
+# la route fourre-tout de server.py répondrait [] et l'application
+# resterait vide malgré la validation de l'utilisateur.
+@router.get("/vision/pillars")
+async def get_pillars(authorization: Optional[str] = Header(default=None)):
+    return _get_data(current_user(authorization)["id"], "vision_pillars", [])
+
+
+@router.get("/strategy/overview")
+async def strategy_overview(authorization: Optional[str] = Header(default=None)):
+    user = current_user(authorization)
+    return {
+        "milestones": _get_data(user["id"], "strategic_milestones", []),
+        "decisions": _get_data(user["id"], "strategic_decisions", []),
+        "tasks": _get_data(user["id"], "taches", []),
+        "pillars": _get_data(user["id"], "vision_pillars", []),
+    }
+
+
+# Le frontend appelle /api/tasks avec le champ `label` (vérifié dans
+# lib/api.js : getTaches → GET /tasks, createTache → POST /tasks {label,
+# priority}). Servir /api/taches aurait laissé la tâche créée par l'IA
+# invisible sur l'accueil : bien enregistrée, jamais relue.
+@router.get("/tasks")
+async def get_tasks(authorization: Optional[str] = Header(default=None)):
+    return _get_data(current_user(authorization)["id"], "taches", [])
+
+
+@router.post("/tasks")
+async def create_task(payload: Dict[str, Any] = Body(default={}),
+                      authorization: Optional[str] = Header(default=None)):
+    user = current_user(authorization)
+    payload = payload or {}
+    label = str(payload.get("label") or payload.get("titre") or "").strip()
+    if not label:
+        raise HTTPException(status_code=400, detail="Titre manquant.")
+    tasks = _get_data(user["id"], "taches", [])
+    task = {
+        "id": secrets.token_urlsafe(8), "label": label, "titre": label,
+        "priorite": payload.get("priority") or "normal", "done": False,
+        "strategic_milestone_id": payload.get("strategic_milestone_id"),
+        "vision_pillar_id": payload.get("vision_pillar_id"),
+        "created_at": _now(),
+    }
+    tasks.insert(0, task)
+    _put_data(user["id"], "taches", tasks)
+    return task
+
+
+@router.patch("/tasks/{task_id}")
+@router.put("/tasks/{task_id}")
+async def update_task(task_id: str, payload: Dict[str, Any] = Body(default={}),
+                      authorization: Optional[str] = Header(default=None)):
+    user = current_user(authorization)
+    tasks = _get_data(user["id"], "taches", [])
+    for task in tasks:
+        if task.get("id") == task_id:
+            task.update({k: v for k, v in (payload or {}).items() if k != "id"})
+            _put_data(user["id"], "taches", tasks)
+            return task
+    raise HTTPException(status_code=404, detail="Tâche introuvable.")
+
+
+@router.delete("/tasks/{task_id}")
+async def delete_task(task_id: str, authorization: Optional[str] = Header(default=None)):
+    user = current_user(authorization)
+    tasks = [t for t in _get_data(user["id"], "taches", []) if t.get("id") != task_id]
+    _put_data(user["id"], "taches", tasks)
+    return {"ok": True}

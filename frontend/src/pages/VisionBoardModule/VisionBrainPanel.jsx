@@ -108,7 +108,7 @@ export default function VisionBrainPanel() {
       <div className="mt-3 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3" data-testid="vision-ai-score">
         <ScoreDonut value={data.alignment_score} />
         <div className="min-w-0">
-          <div className="text-xs uppercase tracking-wide text-white/40">Alignement</div>
+          <div className="text-xs uppercase tracking-wide text-white/60">Alignement</div>
           <div className="text-sm font-medium text-white">{data.live_analysis?.label}</div>
           {data.delta_week === null || data.delta_week === undefined ? (
             <div className="mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold bg-white/10 text-white/50">
@@ -165,7 +165,7 @@ export default function VisionBrainPanel() {
           <button key={i} onClick={() => goModule(a.module)} data-testid={`vision-ai-action-${i}`}
             className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-left text-sm text-white/90 hover:border-[#DEC2A3]/50 hover:bg-white/[0.06] transition-colors">
             <span className="flex items-center gap-2"><Target size={13} className="text-[#DEC2A3]" /> {a.label}</span>
-            <ArrowRight size={14} className="text-white/40" />
+            <ArrowRight size={14} className="text-white/60" />
           </button>
         ))}
       </Section>
@@ -220,7 +220,7 @@ export default function VisionBrainPanel() {
 function Section({ title, testid, children }) {
   return (
     <div className="mt-4" data-testid={testid}>
-      <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-white/40">{title}</div>
+      <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-white/60">{title}</div>
       <div className="space-y-2">{children}</div>
     </div>
   );

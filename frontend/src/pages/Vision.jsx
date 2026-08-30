@@ -49,7 +49,7 @@ function ObjectifDialog({ onSaved, existing }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {existing ? (
-          <button data-testid={`edit-objectif-${existing.id}`} className="text-white/40 hover:text-[#DEC2A3] transition-colors"><Pencil size={14} /></button>
+          <button data-testid={`edit-objectif-${existing.id}`} className="text-white/60 hover:text-[#DEC2A3] transition-colors"><Pencil size={14} /></button>
         ) : (
           <button data-testid="add-objectif-btn" className="glass glass-hover flex flex-col items-center justify-center gap-2 p-6 text-white/60 hover:text-white min-h-[160px]">
             <Plus size={22} /> <span className="text-sm">Ajouter un objectif</span>
@@ -219,9 +219,9 @@ export default function Vision({ onChanged }) {
                   <div className="flex items-center gap-2">
                     <button onClick={async () => { await objectifToAction(o.id); toast.success("Action créée dans vos rituels ✦"); }}
                       data-testid={`objectif-to-action-${o.id}`} title="Transformer en action"
-                      className="text-white/40 hover:text-[#DEC2A3] transition-colors"><ArrowRight size={14} /></button>
+                      className="text-white/60 hover:text-[#DEC2A3] transition-colors"><ArrowRight size={14} /></button>
                     <ObjectifDialog existing={o} onSaved={load} />
-                    <button onClick={async () => { await deleteObjectif(o.id); load(); }} data-testid={`delete-objectif-${o.id}`} className="text-white/40 hover:text-rose-400 transition-colors"><Trash2 size={14} /></button>
+                    <button onClick={async () => { await deleteObjectif(o.id); load(); }} data-testid={`delete-objectif-${o.id}`} className="text-white/60 hover:text-rose-400 transition-colors"><Trash2 size={14} /></button>
                   </div>
                 </div>
                 <div className="mt-3 text-[11px] uppercase tracking-wider" style={{ color: meta.color }}>{o.categorie}</div>
@@ -249,7 +249,7 @@ export default function Vision({ onChanged }) {
             </button>
           </div>
           {!swot ? (
-            <p className="text-sm text-white/45 py-6 text-center">
+            <p className="text-sm text-white/62 py-6 text-center">
               Pas encore d'analyse — générez un SWOT basé sur votre vision et vos objectifs réels (pas un modèle générique).
             </p>
           ) : (
@@ -290,7 +290,7 @@ export default function Vision({ onChanged }) {
           </button>
         </div>
         {!document ? (
-          <p className="text-sm text-white/45 py-6 text-center">
+          <p className="text-sm text-white/62 py-6 text-center">
             Demandez au copilote de préparer un plan d'action concret sur 30 jours, basé sur votre vision et vos objectifs.
           </p>
         ) : (

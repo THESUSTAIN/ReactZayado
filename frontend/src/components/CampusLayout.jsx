@@ -55,7 +55,7 @@ export default function CampusLayout() {
         <button onClick={() => navigate("/")} className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/20 bg-white/[.08]" aria-label="Retour à MyExtension Business">
           <img src="/logo-zayado.png" alt="MyExtension Campus" className="h-8 w-8 object-contain" />
         </button>
-        <div className="mt-3 text-center"><p className="text-[9px] font-bold uppercase tracking-[.18em] text-[#F1E2CC]">Campus</p><p className="mt-1 text-[9px] leading-tight text-white/45">Pratique & progrès</p></div>
+        <div className="mt-3 text-center"><p className="text-[9px] font-bold uppercase tracking-[.18em] text-[#F1E2CC]">Campus</p><p className="mt-1 text-[9px] leading-tight text-white/62">Pratique & progrès</p></div>
         <nav className="mt-8 flex w-full flex-1 flex-col items-center gap-2" aria-label="Navigation Campus">
           {CAMPUS_ITEMS.map((item) => {
             const Icon = item.Icon;

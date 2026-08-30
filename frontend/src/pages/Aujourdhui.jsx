@@ -148,9 +148,9 @@ export default function Aujourdhui() {
           )}
           <div className="flex items-center gap-2 mt-4 text-xs text-white/60">
             <button onClick={() => navigate("/vision")} className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 hover:border-[#DEC2A3]/50 hover:text-[#F1E2CC] transition-colors">Vision</button>
-            <ArrowRight size={13} className="text-white/30" />
+            <ArrowRight size={13} className="text-white/55" />
             <button onClick={() => navigate("/vision")} className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 hover:border-[#DEC2A3]/50 hover:text-[#F1E2CC] transition-colors">Décision</button>
-            <ArrowRight size={13} className="text-white/30" />
+            <ArrowRight size={13} className="text-white/55" />
             <button onClick={() => navigate("/mouvement")} className="px-2.5 py-1 rounded-full gold-bg text-[#0A1128] font-semibold hover:brightness-105 transition">Action</button>
           </div>
           <form onSubmit={addQuickTache} className="mt-4 flex items-center gap-2 max-w-sm" data-testid="aujourdhui-quick-add">
@@ -194,17 +194,17 @@ export default function Aujourdhui() {
         <div className="glass p-4">
           <p className="text-xs text-white/50">Priorité principale</p>
           <p className="font-head text-lg font-semibold text-white mt-1 truncate">{prioritePrincipale ? prioritePrincipale.titre : "À définir"}</p>
-          <p className="text-[11px] text-white/40 mt-0.5">{tachesOuvertes.length} tâche(s) ouverte(s)</p>
+          <p className="text-[11px] text-white/60 mt-0.5">{tachesOuvertes.length} tâche(s) ouverte(s)</p>
         </div>
         <div className="glass p-4">
           <p className="text-xs text-white/50">Capacité disponible</p>
           <p className="font-head text-lg font-semibold text-white mt-1">{capaciteValue != null ? `${capaciteValue}/100` : "—"}</p>
-          <p className="text-[11px] text-white/40 mt-0.5">{capaciteValue == null ? "Check-in facultatif" : capaciteValue >= 70 ? "Marge disponible" : "À surveiller"}</p>
+          <p className="text-[11px] text-white/60 mt-0.5">{capaciteValue == null ? "Check-in facultatif" : capaciteValue >= 70 ? "Marge disponible" : "À surveiller"}</p>
         </div>
         <div className="glass p-4">
           <p className="text-xs text-white/50">Ma Vision</p>
           <p className="font-head text-lg font-semibold text-white mt-1 truncate">{vision?.value ? "Défini" : "À définir"}</p>
-          <p className="text-[11px] text-white/40 mt-0.5">{vision?.value ? "Relié à vos priorités" : "Reliez une action à votre Vision"}</p>
+          <p className="text-[11px] text-white/60 mt-0.5">{vision?.value ? "Relié à vos priorités" : "Reliez une action à votre Vision"}</p>
         </div>
       </div>
 

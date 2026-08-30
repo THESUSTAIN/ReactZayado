@@ -68,6 +68,11 @@ export const getPublicConfig = () => api.get("/config/public").then((r) => r.dat
 // Le routeur alias Final-main est monté sous /api/onboarding. Le chemin
 // /auth/onboarding n’existe pas et empêchait l’onboarding frontend de persister.
 export const authOnboarding = (d) => api.post("/onboarding", d).then((r) => r.data);
+// L'IA propose une structure de départ à partir de la Vision. Elle ne
+// persiste RIEN : c'est applyVisionStructure, déclenché par la validation
+// explicite de l'utilisateur, qui écrit.
+export const structureVision = (vision) => api.post("/onboarding/structure", { vision }).then((r) => r.data);
+export const applyVisionStructure = (proposal) => api.post("/onboarding/apply-structure", { proposal }).then((r) => r.data);
 
 // Ajoutés — routes réelles côté backend (auth.py), jamais reliées côté
 // frontend jusqu'ici : lien magique, compte de démo, OAuth Google/Microsoft.

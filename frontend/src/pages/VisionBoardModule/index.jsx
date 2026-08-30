@@ -1651,7 +1651,7 @@ function CeoDashboardPreview() {
       <div className="mt-auto flex items-center gap-2">
         <span className="text-[11px] text-white/50">Marge : </span>
         <span className="text-sm font-bold text-[#5DCAA5]">{marge}%</span>
-        <span className="ml-auto text-[10px] text-white/30">Zayado · MyExtension AI</span>
+        <span className="ml-auto text-[10px] text-white/55">Zayado · MyExtension AI</span>
       </div>
     </div>
   );
@@ -1692,7 +1692,7 @@ function TrajectoirePreview() {
           </div>
         ))}
       </div>
-      <span className="absolute bottom-4 right-5 text-[10px] text-white/30">Zayado · MyExtension AI</span>
+      <span className="absolute bottom-4 right-5 text-[10px] text-white/55">Zayado · MyExtension AI</span>
     </div>
   );
 }
@@ -1754,7 +1754,7 @@ function EquilibreVieePreview() {
         <text x={CX} y={CY - 2} textAnchor="middle" fontSize="20" fontWeight="700" fill="#D6A85F">{globalScore}</text>
         <text x={CX} y={CY + 13} textAnchor="middle" fontSize="8" fill="rgba(255,255,255,0.4)">/100</text>
       </svg>
-      <span className="mt-auto text-[10px] text-white/30">Zayado · MyExtension AI</span>
+      <span className="mt-auto text-[10px] text-white/55">Zayado · MyExtension AI</span>
     </div>
   );
 }
@@ -2379,7 +2379,7 @@ function VisionBoardDesktop() {
             confus et surchargé. */}
         <div className="my-6 flex items-center gap-3 px-1" data-testid="vision-accueil-separator">
           <div className="h-px flex-1 bg-white/10" />
-          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[.14em] text-white/35"><Sparkles size={12} /> Vue détaillée</span>
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[.14em] text-white/55"><Sparkles size={12} /> Vue détaillée</span>
           <div className="h-px flex-1 bg-white/10" />
         </div>
         <CoursAccueilVision onGoCanvas={openVisionStudio} onNavigateTab={setActiveTab}

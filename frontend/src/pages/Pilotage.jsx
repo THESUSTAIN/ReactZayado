@@ -142,15 +142,15 @@ function SimulateurTresorerie() {
     <div className="glass p-5" data-testid="simulateur-tresorerie">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div><h3 className="font-head flex items-center gap-2 font-semibold"><Calculator size={16} className="text-[#DEC2A3]" /> Comparateur de scénarios</h3><p className="mt-1 text-[12px] text-white/50">Comparez trois hypothèses avant de décider, sans présenter une projection comme une certitude.</p></div>
-        <span className="rounded-full border border-white/15 bg-white/[0.04] px-2.5 py-1 text-[10px] text-white/45">Simulation indicative</span>
+        <span className="rounded-full border border-white/15 bg-white/[0.04] px-2.5 py-1 text-[10px] text-white/62">Simulation indicative</span>
       </div>
-      <div className="mb-1.5 grid grid-cols-3 gap-2 px-3 text-[10px] font-semibold uppercase tracking-wide text-white/40">
+      <div className="mb-1.5 grid grid-cols-3 gap-2 px-3 text-[10px] font-semibold uppercase tracking-wide text-white/60">
         <span>Contrats</span><span>€ moyen / contrat</span><span>Dépenses supplémentaires</span>
       </div>
       <div className="space-y-3">
         {scenarios.map((scenario) => (
           <div key={scenario.id} className="rounded-2xl border border-white/10 bg-white/[0.035] p-3" data-testid={`simulation-scenario-${scenario.id}`}>
-            <div className="mb-2 flex items-center justify-between"><strong className="text-sm text-white">{scenario.name}</strong><span className="text-[10px] uppercase tracking-wide text-white/40">Hypothèse</span></div>
+            <div className="mb-2 flex items-center justify-between"><strong className="text-sm text-white">{scenario.name}</strong><span className="text-[10px] uppercase tracking-wide text-white/60">Hypothèse</span></div>
             <div className="grid grid-cols-3 gap-2">
               <input type="number" value={scenario.nbContrats} onChange={(e) => updateScenario(scenario.id, "nbContrats", e.target.value)} aria-label={`${scenario.name} contrats`} placeholder="Contrats" className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-2 text-sm text-white" />
               <input type="number" value={scenario.montant} onChange={(e) => updateScenario(scenario.id, "montant", e.target.value)} aria-label={`${scenario.name} montant`} placeholder="€ moyen" className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-2 text-sm text-white" />
@@ -340,7 +340,7 @@ export default function Pilotage() {
             <span className="text-xs text-white/50">Historique réel</span>
           </div>
           {trend.length < 2 ? (
-            <p className="text-sm text-white/40 py-16 text-center">
+            <p className="text-sm text-white/60 py-16 text-center">
               Pas encore assez d'historique — un point est enregistré chaque jour. Revenez dans quelques jours pour voir la courbe se dessiner.
             </p>
           ) : (
@@ -393,7 +393,7 @@ export default function Pilotage() {
               </div>
             ))}
             {kpis && !kpis.en_retard && kpis.marge_nette >= 20 && (
-              <p className="text-[13px] text-white/45">Rien à signaler — vos indicateurs sont sains.</p>
+              <p className="text-[13px] text-white/62">Rien à signaler — vos indicateurs sont sains.</p>
             )}
           </div>
         </div>
@@ -411,18 +411,18 @@ export default function Pilotage() {
               <div key={f.id} className="flex items-center justify-between rounded-xl bg-white/5 border border-white/10 px-3.5 py-2.5 group">
                 <div className="min-w-0">
                   <div className="text-sm font-medium truncate">{f.client}</div>
-                  <div className="text-[11px] text-white/45">#{f.reference || "—"}</div>
+                  <div className="text-[11px] text-white/62">#{f.reference || "—"}</div>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className={`text-[10px] px-2 py-0.5 rounded-full border ${STATUT_COLORS[f.statut] || ""}`}>{f.statut}</span>
                   <span className="text-sm font-semibold">{euro(f.montant)}</span>
-                  <button onClick={async () => { await deleteFacture(f.id); load(); }} data-testid={`delete-facture-${f.id}`} className="text-white/30 hover:text-rose-400 transition-colors">
+                  <button onClick={async () => { await deleteFacture(f.id); load(); }} data-testid={`delete-facture-${f.id}`} className="text-white/55 hover:text-rose-400 transition-colors">
                     <Trash2 size={15} />
                   </button>
                 </div>
               </div>
             ))}
-            {factures.length === 0 && <p className="text-sm text-white/40 py-4 text-center">Aucune facture.</p>}
+            {factures.length === 0 && <p className="text-sm text-white/60 py-4 text-center">Aucune facture.</p>}
           </div>
         </div>
 
@@ -436,17 +436,17 @@ export default function Pilotage() {
               <div key={d.id} className="flex items-center justify-between rounded-xl bg-white/5 border border-white/10 px-3.5 py-2.5">
                 <div className="min-w-0">
                   <div className="text-sm font-medium truncate">{d.libelle}</div>
-                  <div className="text-[11px] text-white/45">{d.categorie}</div>
+                  <div className="text-[11px] text-white/62">{d.categorie}</div>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-semibold text-rose-300">-{euro(d.montant)}</span>
-                  <button onClick={async () => { await deleteDepense(d.id); load(); }} data-testid={`delete-depense-${d.id}`} className="text-white/30 hover:text-rose-400 transition-colors">
+                  <button onClick={async () => { await deleteDepense(d.id); load(); }} data-testid={`delete-depense-${d.id}`} className="text-white/55 hover:text-rose-400 transition-colors">
                     <Trash2 size={15} />
                   </button>
                 </div>
               </div>
             ))}
-            {depenses.length === 0 && <p className="text-sm text-white/40 py-4 text-center">Aucune dépense.</p>}
+            {depenses.length === 0 && <p className="text-sm text-white/60 py-4 text-center">Aucune dépense.</p>}
           </div>
         </div>
       </div>

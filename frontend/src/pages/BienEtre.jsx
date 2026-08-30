@@ -112,9 +112,9 @@ function WellnessCorrelations() {
       <h3 className="font-head font-semibold flex items-center gap-2 mb-1"><TrendingUp size={17} className="text-[#DEC2A3]" /> Corrélation énergie / performance</h3>
       <p className="text-[12px] text-white/50 mb-4">Votre énergie du jour comparée à votre chiffre d'affaires du même jour.</p>
       {loading ? (
-        <div className="flex justify-center py-10"><Loader2 size={20} className="animate-spin text-white/40" /></div>
+        <div className="flex justify-center py-10"><Loader2 size={20} className="animate-spin text-white/60" /></div>
       ) : !data?.has_data ? (
-        <p className="text-sm text-white/45 py-8 text-center">
+        <p className="text-sm text-white/62 py-8 text-center">
           Pas encore assez de jours avec un check-in énergie ET des données financières le même jour. Continuez vos check-ins quotidiens.
         </p>
       ) : (
@@ -163,7 +163,7 @@ function YearInPixels() {
       <h3 className="font-head font-semibold flex items-center gap-2 mb-1"><CalendarDays size={17} className="text-[#DEC2A3]" /> Year in Pixels — {year}</h3>
       <p className="text-[12px] text-white/50 mb-4">Un pixel par jour de check-in — vert = bonne énergie, or = moyenne, rouge = basse.</p>
       {loading ? (
-        <div className="flex justify-center py-10"><Loader2 size={20} className="animate-spin text-white/40" /></div>
+        <div className="flex justify-center py-10"><Loader2 size={20} className="animate-spin text-white/60" /></div>
       ) : (
         <div className="grid gap-[3px]" style={{ gridTemplateColumns: "repeat(53, minmax(0, 1fr))" }}>
           {cells.map((c) => (
@@ -300,10 +300,10 @@ export default function BienEtre() {
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-white/40">Aucune tâche ouverte dans Mon Mouvement.</p>
+            <p className="text-sm text-white/60">Aucune tâche ouverte dans Mon Mouvement.</p>
           )}
           {tachesOuvertes.length > planDuJour.length && (
-            <p className="text-[11px] text-white/40 mt-3">+ {tachesOuvertes.length - planDuJour.length} autre(s) tâche(s) — volontairement pas affichée(s) aujourd'hui vu ta capacité.</p>
+            <p className="text-[11px] text-white/60 mt-3">+ {tachesOuvertes.length - planDuJour.length} autre(s) tâche(s) — volontairement pas affichée(s) aujourd'hui vu ta capacité.</p>
           )}
         </div>
 
@@ -312,12 +312,12 @@ export default function BienEtre() {
           {vision?.value ? (
             <>
               <p className="text-[13px] text-white/70 leading-relaxed line-clamp-3">{vision.value}</p>
-              <p className="text-[12px] text-white/45 mt-3">
+              <p className="text-[12px] text-white/62 mt-3">
                 {burnoutRisk === "Élevé" ? "Ton énergie actuelle ne permet pas d'avancer sereinement sur cette Vision — récupère d'abord." : "Ton énergie du jour soutient la progression vers cette Vision."}
               </p>
             </>
           ) : (
-            <p className="text-sm text-white/40">Aucune Vision définie pour l'instant.</p>
+            <p className="text-sm text-white/60">Aucune Vision définie pour l'instant.</p>
           )}
         </div>
       </div>
@@ -337,7 +337,7 @@ export default function BienEtre() {
               <Tooltip contentStyle={{ background: "#0A1128", border: "1px solid rgba(52,211,153,0.4)", borderRadius: 12, color: "#fff" }} formatter={(v) => [`${v}/100`, "Énergie"]} labelFormatter={(label) => label} />
               <Line type="monotone" dataKey="energie" stroke="#34d399" strokeWidth={2.5} dot={{ r: 3, fill: "#34d399" }} activeDot={{ r: 5 }} />
             </LineChart>
-          </ResponsiveContainer> : <div className="flex h-[240px] items-center justify-center text-center text-sm text-white/45">Enregistre tes premiers check-ins pour démarrer une timeline réelle.</div>}
+          </ResponsiveContainer> : <div className="flex h-[240px] items-center justify-center text-center text-sm text-white/62">Enregistre tes premiers check-ins pour démarrer une timeline réelle.</div>}
         </div>
 
         <div className="glass p-6 flex flex-col fade-in relative overflow-hidden">
@@ -377,14 +377,14 @@ export default function BienEtre() {
                   {r.done && <Check size={15} className="text-[#0A1128]" />}
                 </button>
                 <div className="flex-1 min-w-0">
-                  <div className={`text-sm font-medium ${r.done ? "line-through text-white/40" : ""}`}>{r.nom}</div>
-                  {r.detail && <div className="text-[11px] text-white/40">{r.detail}</div>}
+                  <div className={`text-sm font-medium ${r.done ? "line-through text-white/60" : ""}`}>{r.nom}</div>
+                  {r.detail && <div className="text-[11px] text-white/60">{r.detail}</div>}
                 </div>
                 <span className="flex items-center gap-1 text-xs text-amber-400"><Flame size={13} /> {r.streak}</span>
-                <button onClick={async () => { await deleteRituel(r.id); load(); }} data-testid={`delete-rituel-${r.id}`} className="text-white/30 hover:text-rose-400 transition-colors"><Trash2 size={15} /></button>
+                <button onClick={async () => { await deleteRituel(r.id); load(); }} data-testid={`delete-rituel-${r.id}`} className="text-white/55 hover:text-rose-400 transition-colors"><Trash2 size={15} /></button>
               </div>
             ))}
-            {rituels.length === 0 && <p className="text-sm text-white/40 py-4 text-center">Aucun rituel. Ajoutez-en un ci-dessous.</p>}
+            {rituels.length === 0 && <p className="text-sm text-white/60 py-4 text-center">Aucun rituel. Ajoutez-en un ci-dessous.</p>}
           </div>
           <div className="flex items-center gap-2 mt-4 bg-white/5 border border-white/15 rounded-full pl-4 pr-1.5 py-1.5">
             <input

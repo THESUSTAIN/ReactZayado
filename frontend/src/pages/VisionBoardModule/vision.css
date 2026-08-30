@@ -9,7 +9,7 @@
   position: relative;
   z-index: 1;
   padding: 4px 2px 40px;
-  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
 
   /* Mapping Final-main -> thème Cours-main : navy, or discret, verre blanc. */
   --app-text: #F8FAFC;
@@ -35,7 +35,7 @@
   --app-surface: rgba(255,255,255,0.12);
   --app-surface-2: rgba(255,255,255,0.08);
   --app-border: rgba(255, 255, 255, 0.25);
-  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
 }
 
 /* Pleine largeur (page pro, pas confinée dans content-wrapper) */
@@ -63,7 +63,7 @@
 }
 @media (min-width: 768px) { .vb-root .vb-title { font-size: 34px; } }
 .vb-root .vb-subtitle {
-  font-family: 'Manrope', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 500;
   font-size: 14px;
   color: var(--txt-muted);

@@ -1,6 +1,20 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Cormorant+Garamond:ital, wght@0, 400;0, 500;0, 600;1, 400;1, 500&family=Manrope:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400;1,500&display=swap');
 
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap');
+/* ═══════════════════════════════════════════════════════════════════════
+   SYSTÈME TYPOGRAPHIQUE — 2 familles, 1 accent. Rien d'autre.
+   ───────────────────────────────────────────────────────────────────────
+   Outfit ................ titres (h1–h4, .font-head)
+   Plus Jakarta Sans ..... texte courant, interface, boutons
+   Cormorant Garamond .... UNIQUEMENT la citation de Vision (.font-vision)
+
+   Avant : 7 familles se disputaient les pages (Outfit, Manrope, Plus Jakarta
+   Sans, Cormorant, Geist, Sora, Inter). Deux d'entre elles — Sora et Inter —
+   n'étaient même pas chargées : le navigateur les remplaçait en silence par
+   une police système. L'impression de « trop de typographies » venait donc en
+   partie de polices que personne n'avait choisies.
+   N'ajoutez pas de quatrième famille sans supprimer l'une de celles-ci.
+   ═══════════════════════════════════════════════════════════════════════ */
+
 
 @tailwind base;
 @tailwind components;
@@ -23,11 +37,30 @@
   --glass-bg: linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.07) 55%, rgba(120,160,225,0.09));
   --glass-border: rgba(255,255,255,0.28);
   --glass-soft: rgba(255,255,255,0.08);
+
+  /* ROUGE — il y en avait DEUX dans le produit : #E23524 sur la landing,
+     #DD2A33 dans l'application. Deux marques pour un même utilisateur, au
+     moment précis où il passe de la page de vente à son espace. Un seul
+     rouge de marque désormais, repris du logo.
+     Le rouge d'ALERTE est volontairement différent : confondre « nouveau »
+     et « en retard » dans la même couleur est une faute d'interface. */
+  --brand-red: #E23524;
+  --brand-red-soft: rgba(226, 53, 36, .12);
+  --danger: #F2707A;
+
+  /* Fond profond de l'application — formule unique, reprise à l'identique
+     par le Copilote, l'onboarding et les fenêtres modales. Chacun avait
+     jusqu'ici son propre dégradé, d'où l'impression que le chat et les
+     modales étaient « plus sombres » que le reste. */
+  --app-deep:
+    radial-gradient(ellipse at 20% 10%, rgba(45,81,150,0.45) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 8%, rgba(30,60,110,0.35) 0%, transparent 55%),
+    linear-gradient(180deg, #172C5C 0%, #101F47 42%, #0B1F3A 76%, #081734 100%);
 }
 * { box-sizing: border-box; }
 body {
   margin: 0;
-  font-family: 'Plus Jakarta Sans', 'Manrope', sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   color: #fff;
@@ -154,8 +187,15 @@ les boutons, champs de saisie ou indicateurs de statut. */
 .menu-link:hover { background: rgba(255,255,255,0.16); color: #fff; }
 .menu-link.active { background: rgba(255,255,255,0.95); color: var(--blue-slate); box-shadow: 0 4px 14px rgba(0,0,0,0.22), inset 0 0 0 2px rgba(222,194,163,0.55); }
 .menu-tooltip { background: var(--blue-slate); border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 10px 24px rgba(0,0,0,0.45); }
-.menu-link-action { border: 1px dashed rgba(255,255,255,0.35) !important; }
-.menu-link-action:hover { border-color: rgba(255,255,255,0.6) !important; }
+/* Entrée Copilote de la barre latérale PC — même statut que le bouton central
+   du menu mobile. La bordure en pointillés faisait penser à un emplacement
+   vide ou à une fonctionnalité désactivée, pas à l'assistant du produit. */
+.menu-link-action {
+  background: linear-gradient(135deg, #F1E2CC, #DEC2A3) !important;
+  color: #0A1128 !important;
+  box-shadow: 0 6px 16px rgba(222,194,163,.28) !important;
+}
+.menu-link-action:hover { filter: brightness(1.06); }
 .menu-group-start { position: relative; margin-top: 0; padding-top: 18px; }
 .menu-group-start::before {
   content: ""; position: absolute; top: 0; left: 50%; width: 24px; height: 1px; transform: translateX(-50%); background: linear-gradient(90deg, transparent, rgba(255,255,255,.42), transparent);
@@ -302,7 +342,7 @@ sous 768px, quand la sidebar elle-même disparaît. */
 .header-icon-badge { position: relative; }
 .header-badge {
   position: absolute; top: -3px; right: -3px; min-width: 16px; height: 16px; padding: 0 4px;
-  border-radius: 999px; background: #DD2A33; color: #fff; font-size: 10px; font-weight: 700;
+  border-radius: 999px; background: var(--brand-red); color: #fff; font-size: 10px; font-weight: 700;
   display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.3);
 }
 .header-profile {
@@ -313,7 +353,7 @@ sous 768px, quand la sidebar elle-même disparaît. */
 .header-profile:hover { background: rgba(255,255,255,0.14); }
 .header-avatar {
   width: 34px; height: 34px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #DD2A33 0%, #A81D24 100%); color: #fff; font-weight: 700; font-size: 15px; flex-shrink: 0;
+  background: linear-gradient(135deg, #E23524 0%, #B5251A 100%); color: #fff; font-weight: 700; font-size: 15px; flex-shrink: 0;
 }
 .header-profile-info { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; }
 .header-profile-name { font-size: 13px; font-weight: 600; color: var(--txt); }
@@ -456,8 +496,11 @@ sous 768px, quand la sidebar elle-même disparaît. */
   .copilot-mobile-overlay { background: #0B1F3A !important; }
   .copilot-mobile-overlay > div:first-child { backdrop-filter: none; -webkit-backdrop-filter: none; background: #0B1F3A !important; }
   .copilot-mobile-shell { overflow: hidden; border-radius: 0; background: #0B1F3A !important; }
-  [data-testid="copilot-panel"] { border-radius: 0 !important; background: linear-gradient(180deg, #172C5C 0%, #0B1F3A 100%) !important; }
-  .copilot-mobile-shell [data-testid="copilot-panel"] { background: linear-gradient(180deg, #172C5C 0%, #0B1F3A 100%) !important; }
+  /* Même fond exact que l'application : le dégradé à deux arrêts utilisé
+     ici auparavant rendait le chat visiblement plus sombre et plus plat
+     que les pages autour. */
+  [data-testid="copilot-panel"] { border-radius: 0 !important; background: var(--app-deep) !important; }
+  .copilot-mobile-shell [data-testid="copilot-panel"] { background: var(--app-deep) !important; }
   .copilot-mobile-shell [data-testid="copilot-messages"] { padding-top: 12px; padding-bottom: 108px !important; }
   .copilot-mobile-shell [data-testid="copilot-panel"] { padding-bottom: 86px; box-sizing: border-box; }
   .copilot-mobile-shell [data-testid="copilot-panel"] > .border-t { padding: 7px 12px 8px; background: transparent !important; border-top-color: rgba(255,255,255,.14) !important; }
@@ -468,7 +511,8 @@ sous 768px, quand la sidebar elle-même disparaît. */
     left: 8px; right: 8px; bottom: 16px; width: auto; transform: none; justify-content: space-around; gap: 0; padding: 8px 4px; border: 1px solid rgba(255,255,255,.22); border-radius: 999px; background: linear-gradient(180deg, #172C5C 0%, #101F47 100%); box-shadow: 0 10px 30px rgba(0,0,0,.28); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
   }
   .bottom-nav button { padding: 7px 6px 6px; font-size: 9.5px; font-weight: 600; gap: 2px; border-radius: 18px; line-height: 1.1; }
-  .bottom-nav button span { display: block; max-width: 62px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* 62px tronquait « Mouvement » en « Mouveme… » alors que la place existe. */
+  .bottom-nav button span { display: block; max-width: 78px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .bottom-nav button svg { width: 19px; height: 19px; }
   .bottom-nav button.active { background: rgba(255,255,255,.95); color: #0B1F3A; }
 }
@@ -848,6 +892,7 @@ dans les couleurs & formes ZAYADO (navy + or). N'affecte pas le
 mobile (le mobile hérite désormais du même style que le PC).
 ════════════════════════════════════════════════════════════════ */
 [data-testid="copilot-panel"] {
+  background: var(--app-deep);
   --hub-gold: #DEC2A3;
   --hub-gold-bright: #F1E2CC;
   --hub-gold-soft: #F0DCA5;
@@ -979,7 +1024,7 @@ html:not(.ambiance-clarte) [data-testid="copilot-panel"] .copilot-composer-shell
 }
 .copilot-md-hr { border: 0; border-top: 1px solid rgba(222,194,163,.35); margin: 10px 0; }
 .copilot-md-gap { height: 6px; }
-.copilot-md-code { font-family: 'Geist', monospace; font-size: .92em; padding: 1px 5px; border-radius: 5px; background: rgba(255,255,255,.12); }
+.copilot-md-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .92em; padding: 1px 5px; border-radius: 5px; background: rgba(255,255,255,.12); }
 .copilot-chat-bubble.is-user .copilot-md-code { background: rgba(10,17,40,.10); }
 /* Sécurité anti-« typographie immense » : jamais de titre HTML géant dans une bulle */
 .copilot-chat-bubble h1, .copilot-chat-bubble h2, .copilot-chat-bubble h3 { font-size: 14px !important; margin: 4px 0 !important; }
@@ -988,7 +1033,7 @@ LANDING / TUNNEL DE VENTE — navy + or, touche de rouge (logo)
 ═══════════════════════════════════════════════════════════════ */
 .lp-root {
   --lp-navy: #0B1F3A; --lp-navy-2: #0E2748; --lp-gold: #DEC2A3; --lp-gold-bright: #F1E2CC;
-  --lp-red: #E23524; --lp-red-soft: rgba(226, 53, 36, .12);
+  --lp-red: var(--brand-red); --lp-red-soft: var(--brand-red-soft);
   min-height: 100vh;
   /* Corrigé : utilisait un simple radial-gradient à une seule ellipse,
      différent de la vraie formule de fond de l'app (.sky-bg) — d'où la
@@ -998,7 +1043,7 @@ LANDING / TUNNEL DE VENTE — navy + or, touche de rouge (logo)
     radial-gradient(ellipse at 20% 10%, rgba(45,81,150,0.45) 0%, transparent 50%),
     radial-gradient(ellipse at 80% 8%, rgba(30,60,110,0.35) 0%, transparent 55%),
     linear-gradient(180deg, #172C5C 0%, #101F47 42%, #0B1F3A 76%, #081734 100%);
-  color: #fff; font-family: 'Geist', 'Inter', system-ui, sans-serif;
+  color: #fff; font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
 }
 .lp-container { width: 100%; max-width: 1160px; margin: 0 auto; padding: 0 24px; }
 .lp-gold { color: var(--lp-gold-bright); }
@@ -1400,7 +1445,7 @@ html.ambiance-clarte [data-testid="copilot-panel"] .news-composer button { backg
 .vision-modal {
   position: relative; width: min(880px, 100%); max-height: 88vh; overflow-y: auto;
   border: 1px solid var(--glass-border); border-radius: 24px; padding: 26px;
-  background: linear-gradient(180deg, #14284F, #0B1F3A);
+  background: var(--app-deep);
   box-shadow: 0 30px 80px rgba(0,0,0,.45);
 }
 .vision-modal .vision-trajectory { border: 0; background: none; box-shadow: none; padding: 0; }
@@ -1425,3 +1470,118 @@ html.ambiance-clarte [data-testid="copilot-panel"] .news-composer button { backg
 .vision-more > summary span { color: #fff; font-size: 14px; font-weight: 650; }
 .vision-more > summary small { color: rgba(255,255,255,.45); font-size: 11.5px; }
 .vision-more-body { display: grid; gap: 16px; padding: 0 20px 20px; }
+
+/* Onboarding — même fond que l'application.
+   Il utilisait #0A1128, un navy quasi noir qui n'existe nulle part ailleurs
+   dans le produit : le premier écran après l'inscription ne ressemblait donc
+   pas à l'application dans laquelle il fait entrer. */
+.onboarding-screen { background: var(--app-deep); background-attachment: fixed; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Fenêtre COLLABORER — styles de base reconstruits
+   ───────────────────────────────────────────────────────────────────────
+   Ses 44 règles n'existaient que dans les blocs mobiles supprimés : la
+   fenêtre s'affichait donc en texte brut, sans fond ni bordure — sur PC
+   comme sur mobile, et ce AVANT le nettoyage (personne ne l'avait ouverte
+   sur grand écran). Reconstruite ici une seule fois, pour les deux.
+   ═══════════════════════════════════════════════════════════════════════ */
+.copilot-collab-backdrop {
+  position: fixed; inset: 0; z-index: 320; display: flex; align-items: center; justify-content: center;
+  padding: 20px; background: rgba(6,15,32,.72);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+}
+.copilot-collab-modal {
+  position: relative; width: min(460px, 100%); max-height: 88vh; overflow-y: auto;
+  border: 1px solid var(--glass-border); border-radius: 22px; padding: 22px;
+  background: var(--app-deep); box-shadow: 0 30px 80px rgba(0,0,0,.45);
+  color: #fff;
+}
+.copilot-collab-modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.copilot-collab-eyebrow { color: var(--hub-gold, #DEC2A3); font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+.copilot-collab-modal-header h2 { margin: 4px 0 0; font-family: 'Outfit', sans-serif; font-size: 19px; font-weight: 650; color: #fff; }
+.copilot-collab-close {
+  display: inline-flex; width: 34px; height: 34px; flex-shrink: 0; align-items: center; justify-content: center;
+  border: 1px solid rgba(255,255,255,.18); border-radius: 999px;
+  background: rgba(255,255,255,.07); color: rgba(255,255,255,.8); cursor: pointer;
+}
+.copilot-collab-close:hover { border-color: rgba(222,194,163,.5); color: #F1E2CC; }
+.copilot-collab-description { margin: 12px 0 0; color: rgba(255,255,255,.66); font-size: 12.5px; line-height: 1.6; }
+.copilot-collab-whatsapp {
+  display: inline-flex; align-items: center; gap: 7px; margin-top: 14px;
+  border: 1px solid rgba(255,255,255,.18); border-radius: 999px; padding: 8px 14px;
+  background: rgba(255,255,255,.07); color: rgba(255,255,255,.85);
+  font-size: 12px; font-weight: 600; text-decoration: none;
+}
+.copilot-collab-whatsapp:hover { border-color: rgba(222,194,163,.5); color: #F1E2CC; }
+.copilot-collab-label { display: block; margin: 18px 0 7px; color: rgba(255,255,255,.7); font-size: 12px; font-weight: 600; }
+.copilot-collab-textarea {
+  width: 100%; resize: vertical; min-height: 96px;
+  border: 1px solid rgba(255,255,255,.16); border-radius: 14px; padding: 11px 13px;
+  background: rgba(255,255,255,.06); color: #fff; font-family: inherit; font-size: 13px; line-height: 1.55; outline: 0;
+}
+.copilot-collab-textarea::placeholder { color: rgba(255,255,255,.38); }
+.copilot-collab-textarea:focus { border-color: rgba(222,194,163,.55); background: rgba(255,255,255,.09); }
+.copilot-collab-submit {
+  display: inline-flex; width: 100%; align-items: center; justify-content: center; gap: 8px;
+  margin-top: 14px; border: 0; border-radius: 14px; padding: 12px 18px;
+  background: linear-gradient(135deg, #F1E2CC, #DEC2A3); color: #0A1128;
+  font-family: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer;
+}
+.copilot-collab-submit:disabled { opacity: .5; cursor: default; }
+.copilot-collab-submit:not(:disabled):hover { filter: brightness(1.06); }
+/* Passerelle vers la page Collaborateur — la fenêtre recueille un besoin,
+   la page montre le suivi : les deux doivent être reliées. */
+.copilot-collab-link {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 14px;
+  color: var(--hub-gold-soft, #F0DCA5); font-size: 12px; font-weight: 600;
+  background: none; border: 0; cursor: pointer;
+}
+.copilot-collab-link:hover { color: #fff; }
+
+html.ambiance-clarte .copilot-collab-modal { background: #fff; border-color: rgba(23,35,58,.12); color: #17233a; }
+html.ambiance-clarte .copilot-collab-modal-header h2 { color: #17233a; }
+html.ambiance-clarte .copilot-collab-description { color: rgba(23,35,58,.7); }
+html.ambiance-clarte .copilot-collab-textarea { border-color: rgba(23,35,58,.14); background: #f6f7fa; color: #17233a; }
+html.ambiance-clarte .copilot-collab-submit { background: linear-gradient(135deg, #172C5C, #294E82); color: #fff; }
+html.ambiance-clarte .copilot-collab-close { border-color: rgba(23,35,58,.14); background: #f6f7fa; color: #17233a; }
+
+/* Navigation basse — bouton Copilote central et surélevé.
+   Le Copilote est l'argument central du produit ; il n'avait aucune entrée
+   de menu. Il prend ici la place centrale, traitement distinct, comme le
+   bouton d'action principal des applications mobiles. */
+.bottom-nav button.is-center { position: relative; }
+.bottom-nav button.is-center svg {
+  display: flex; align-items: center; justify-content: center;
+  box-sizing: content-box; width: 21px; height: 21px; padding: 9px;
+  margin-top: -20px; border-radius: 999px;
+  background: linear-gradient(135deg, #F1E2CC, #DEC2A3); color: #0A1128;
+  box-shadow: 0 8px 20px rgba(222,194,163,.30), 0 0 0 4px var(--navy-900);
+}
+.bottom-nav button.is-center { color: var(--gold); }
+.bottom-nav button.is-center:hover svg { filter: brightness(1.06); }
+.bottom-nav button.is-center.active { background: transparent; }
+.bottom-nav-dot {
+  position: absolute; top: -14px; right: 50%; margin-right: -17px;
+  width: 9px; height: 9px; border-radius: 999px;
+  background: var(--brand-red); border: 2px solid var(--navy-900);
+}
+@media (max-width: 640px) {
+  .bottom-nav button.is-center svg { margin-top: -22px; box-shadow: 0 8px 20px rgba(222,194,163,.30), 0 0 0 4px #101F47; }
+  .bottom-nav-dot { border-color: #101F47; }
+}
+
+/* Rangées d'onglets défilables (Mon Mouvement, Croissance) — indice visuel.
+   Le conteneur défile bien horizontalement, mais rien n'indiquait que des
+   onglets existaient hors écran : sur mobile, l'utilisateur voyait quatre
+   onglets dont deux invisibles, sans savoir qu'il pouvait faire défiler. */
+@media (max-width: 768px) {
+  [data-testid="page-travail"] .overflow-x-auto,
+  [data-testid="page-croissance-radar"] .overflow-x-auto {
+    position: relative;
+    -webkit-mask-image: linear-gradient(to right, #000 88%, transparent 100%);
+    mask-image: linear-gradient(to right, #000 88%, transparent 100%);
+    scrollbar-width: none;
+  }
+  [data-testid="page-travail"] .overflow-x-auto::-webkit-scrollbar,
+  [data-testid="page-croissance-radar"] .overflow-x-auto::-webkit-scrollbar { display: none; }
+}

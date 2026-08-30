@@ -2,7 +2,7 @@ import { NavLink, Outlet, useLocation, useNavigate, Navigate } from "react-route
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Compass, Eye, HeartPulse, MessageCircle, Gem, Search, Bell,
-  LayoutGrid, LayoutDashboard, ChevronDown, Settings as SettingsIcon, HelpCircle, LogOut, X, Mail, Globe, TrendingUp, Rocket, Briefcase, GraduationCap, Sun, Moon,
+  LayoutGrid, LayoutDashboard, ListChecks, Handshake, ChevronDown, Settings as SettingsIcon, HelpCircle, LogOut, X, Mail, Globe, TrendingUp, Rocket, Briefcase, GraduationCap, Sun, Moon,
 } from "lucide-react";
 import { toast } from "sonner";
 import ChatPanel from "./ChatPanel";
@@ -15,12 +15,24 @@ import {
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 
+// Navigation principale — refondue.
+//
+// Avant : « Hub IA · Vision · Croissance · DAF IA · Espace ».
+//   • « Espace » portait une icône de grille et ouvrait en réalité la page
+//     Collaborateur : ni le nom ni l'icône ne disaient où l'on allait.
+//   • « Mon Mouvement » — l'exécution, le cœur quotidien du produit —
+//     n'était accessible par AUCUNE entrée de menu.
+//   • Le Copilote, argument central du produit, n'avait pas d'entrée non plus.
+//
+// Maintenant : l'exécution entre, le Copilote prend la place centrale
+// surélevée (le geste réflexe des applications mobiles), le pilotage
+// financier rejoint le menu profil où se trouvent déjà les autres modules.
 const ITEMS = [
-  { id: "aujourdhui", label: "Hub IA", shortLabel: "Hub IA", Icon: MessageCircle, desktopIcon: LayoutDashboard, path: "/", exact: true },
+  { id: "aujourdhui", label: "Aujourd'hui", shortLabel: "Aujourd'hui", Icon: LayoutDashboard, path: "/", exact: true },
   { id: "moncap", label: "Vision", shortLabel: "Vision", Icon: Eye, path: "/vision" },
+  { id: "copilote", label: "Copilote", shortLabel: "Copilote", Icon: MessageCircle, action: "copilot", center: true },
+  { id: "mouvement", label: "Mon Mouvement", shortLabel: "Mouvement", Icon: ListChecks, path: "/mouvement" },
   { id: "croissance", label: "Croissance", shortLabel: "Croissance", Icon: TrendingUp, path: "/croissance" },
-  { id: "daf", label: "DAF IA", shortLabel: "DAF IA", Icon: Briefcase, path: "/pilotage" },
-  { id: "espace", label: "Espace", shortLabel: "Espace", Icon: LayoutGrid, path: "/collaborateur" },
 ];
 const MENU_GROUP_STARTS = new Set(["contexte"]);
 
@@ -38,7 +50,11 @@ const SEARCH_TARGETS = [
 ];
 
 const ECOSYSTEM_ITEMS = [
-  { id: "collaborateur", label: "Collaborateur", path: "/collaborateur", Icon: Compass, available: true },
+  // DAF IA quitte la navigation principale (cinq entrées maximum sur mobile)
+  // mais devait rester atteignable : il manquait ici.
+  { id: "pilotage", label: "DAF IA · Pilotage", path: "/pilotage", Icon: Briefcase, available: true },
+  { id: "mindset", label: "Mindset & capacité", path: "/mindset", Icon: HeartPulse, available: true },
+  { id: "collaborateur", label: "Collaborateur", path: "/collaborateur", Icon: Handshake, available: true },
   { id: "campus", label: "Campus", path: "/campus", Icon: GraduationCap, available: true },
   { id: "business", label: "Équiper mon business", path: "https://zayado.net/boutique", Icon: Gem, available: true, external: true },
   { id: "espace", label: "Espace", path: "https://espace.zayado.net", Icon: Briefcase, available: true, external: true },
@@ -77,7 +93,9 @@ function Sidebar({ onSettings, onCopilote }) {
     item.path ? (item.exact ? location.pathname === "/" : location.pathname.startsWith(item.path)) : false;
 
   const onItemClick = (item) => {
-    if (item.action === "open-kairos") return onCopilote();
+    // "open-kairos" n'a jamais existé dans ITEMS : le test ne se déclenchait
+    // jamais. L'action réelle est "copilot".
+    if (item.action) return onCopilote();
     if (item.path) navigate(item.path);
   };
 
@@ -266,21 +284,21 @@ function Header({ onSettings, profileName, theSustainMember, ambianceFoi, onOpen
         <div className="search-overlay" onClick={() => setSearchOpen(false)} data-testid="global-search-modal">
           <div className="search-box" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2 px-2.5 py-2">
-              <Search size={16} className="text-white/40" />
+              <Search size={16} className="text-white/60" />
               <input autoFocus value={q} onChange={(e) => setQ(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && results[0] && go(results[0])}
                 placeholder="Aller à…" data-testid="global-search-input"
                 className="flex-1 bg-transparent border-none outline-none text-[15px] text-white placeholder:text-white/40" />
-              <kbd className="text-[11px] text-white/40 border border-white/15 rounded px-1.5">Esc</kbd>
+              <kbd className="text-[11px] text-white/60 border border-white/15 rounded px-1.5">Esc</kbd>
             </div>
             <div className="border-t border-white/10 mt-1 pt-1">
               {results.map((r) => (
                 <button key={r.id || r.path || r.action} onClick={() => go(r)} data-testid={`search-result-${r.label}`}
                   className="block w-full text-left px-3 py-2 rounded-lg text-sm text-white/85 hover:bg-white/10 transition-colors">
-                  {r.label}{r.type && <span className="ml-2 text-[11px] text-white/35">{r.type}</span>}
+                  {r.label}{r.type && <span className="ml-2 text-[11px] text-white/55">{r.type}</span>}
                 </button>
               ))}
-              {results.length === 0 && <p className="px-3 py-2 text-[13px] text-white/40">Aucun résultat.</p>}
+              {results.length === 0 && <p className="px-3 py-2 text-[13px] text-white/60">Aucun résultat.</p>}
             </div>
           </div>
         </div>
@@ -293,16 +311,18 @@ function Header({ onSettings, profileName, theSustainMember, ambianceFoi, onOpen
 function BottomNav({ onCopilote, hasUnseenNews }) {
   const location = useLocation();
   const navigate = useNavigate();
+  // Le Copilote n'est pas une route : il ne doit jamais s'afficher comme
+  // l'onglet actif (il l'était dès qu'on se trouvait sur l'accueil).
   const isActive = (item) => item.action
-    ? location.pathname === "/"
+    ? false
     : (item.exact ? location.pathname === item.path : location.pathname.startsWith(item.path));
   return (
     <nav className="bottom-nav" data-testid="bottom-nav">
       {ITEMS.map((item) => (
-        <button key={item.id} className={`relative ${isActive(item) ? "active" : ""}`} data-testid={`bottomnav-${item.id}`}
-          onClick={() => (item.action ? (location.pathname === "/" ? navigate("/") : onCopilote()) : navigate(item.path))}>
-          {item.action && hasUnseenNews && <span className="absolute right-2 top-1 h-2 w-2 rounded-full bg-red-500" data-testid="bottomnav-news-badge" />}
-          <item.Icon size={17} strokeWidth={1.8} />
+        <button key={item.id} className={`relative ${item.center ? "is-center" : ""} ${isActive(item) ? "active" : ""}`} data-testid={`bottomnav-${item.id}`}
+          onClick={() => (item.action ? onCopilote() : navigate(item.path))}>
+          {item.action && hasUnseenNews && <span className="bottom-nav-dot" data-testid="bottomnav-news-badge" />}
+          <item.Icon size={item.center ? 21 : 17} strokeWidth={1.8} />
           <span>{item.shortLabel || item.label}</span>
         </button>
       ))}
