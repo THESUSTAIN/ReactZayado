@@ -30,6 +30,16 @@ export default function Aujourdhui() {
   const [guideMasque, setGuideMasque] = useState(() => {
     try { return localStorage.getItem(CLE_GUIDE_MASQUE) === "1"; } catch { return false; }
   });
+  // Le guide « Premiers pas » s'affiche désormais en fenêtre modale plutôt
+  // qu'en bloc inséré dans la page : l'ancien bloc arrivait après la carte
+  // hero et les métriques à 0, donc souvent hors champ au premier
+  // chargement — l'utilisateur voyait les zéros avant l'explication. La
+  // modale capte l'attention immédiatement, dans l'ordre.
+  // `modalOuverte` ne persiste pas : fermer la modale (X, Échap, clic hors
+  // cadre) ne fait que la refermer pour la session — un rappel discret
+  // permet de la rouvrir. Seul « Ne plus afficher » persiste dans
+  // localStorage et masque le guide définitivement.
+  const [modalOuverte, setModalOuverte] = useState(true);
 
   useEffect(() => {
     Promise.all([
@@ -45,6 +55,7 @@ export default function Aujourdhui() {
 
   const masquerGuide = () => {
     setGuideMasque(true);
+    setModalOuverte(false);
     try { localStorage.setItem(CLE_GUIDE_MASQUE, "1"); } catch { /* noop */ }
   };
 
@@ -81,6 +92,15 @@ export default function Aujourdhui() {
     },
   ];
   const compteNeuf = etapesDemarrage.some((etape) => !etape.fait);
+  const afficherModalGuide = !loading && !guideMasque && compteNeuf && modalOuverte;
+  const afficherRappelGuide = !loading && !guideMasque && compteNeuf && !modalOuverte;
+
+  useEffect(() => {
+    if (!afficherModalGuide) return;
+    const onKeyDown = (e) => { if (e.key === "Escape") setModalOuverte(false); };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [afficherModalGuide]);
 
   // Sur mobile, on remonte l'action concrète (Priorité du jour) tout en haut,
   // avant la carte hero décorative : sur un petit écran, l'utilisateur veut
@@ -127,52 +147,90 @@ export default function Aujourdhui() {
         </button>
       </div>
 
-      {/* Guide de démarrage.
+      {/* Rappel discret : affiché uniquement quand la modale a été refermée
+          pour la session (X / Échap / clic hors cadre) sans que le guide
+          soit fini ni définitivement masqué. Sans lui, fermer la modale par
+          réflexe ferait perdre l'accès aux trois gestes de démarrage. */}
+      {afficherRappelGuide && (
+        <button onClick={() => setModalOuverte(true)} data-testid="premiers-pas-rappel"
+          className="w-full flex items-center justify-between gap-3 rounded-xl border border-[#DEC2A3]/25 bg-[#DEC2A3]/[.06] px-4 py-3 text-left hover:bg-[#DEC2A3]/[.1] transition-colors">
+          <span className="flex items-center gap-2 text-sm text-white/80">
+            <Sparkles size={15} className="text-[#DEC2A3] shrink-0" />
+            La configuration de votre cockpit n'est pas terminée.
+          </span>
+          <span className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-[#DEC2A3]">
+            Reprendre <ArrowRight size={12} />
+          </span>
+        </button>
+      )}
+
+      {/* Guide de démarrage, en fenêtre modale.
           Un compte neuf affichait un cockpit rempli de « 0 », « — » et
           « À définir » : rien n'expliquait dans quel ordre remplir ces cases,
-          ni pourquoi. Ce bloc énonce les trois gestes fondateurs, indique
-          lesquels sont déjà faits, et disparaît dès qu'ils le sont tous —
-          ou dès que l'utilisateur le referme. */}
-      {!loading && !guideMasque && compteNeuf && (
-        <section className="glass p-5 sm:p-6 border-[#DEC2A3]/30" data-testid="aujourdhui-premiers-pas">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-[#DEC2A3]">Premiers pas</p>
-              <h2 className="font-head text-lg font-semibold text-white mt-1">Trois gestes pour que le cockpit se remplisse.</h2>
-              <p className="text-[13px] text-white/55 mt-1 max-w-2xl leading-relaxed">
-                Les chiffres de cette page sont calculés à partir de vos données. Tant que vous n'avez rien saisi,
-                ils restent volontairement à zéro — ce n'est pas une panne. Voici par quoi commencer.
-              </p>
+          ni pourquoi. Cette modale s'ouvre automatiquement avant que
+          l'utilisateur ne voie les zéros, énonce les trois gestes fondateurs,
+          indique lesquels sont déjà faits, et disparaît dès qu'ils le sont
+          tous. Fermer la modale (X, Échap, clic hors cadre) ne fait que la
+          reporter — voir le rappel ci-dessus ; seul « Ne plus afficher »
+          la masque définitivement. */}
+      {afficherModalGuide && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#050B1A]/70 backdrop-blur-sm"
+          data-testid="aujourdhui-premiers-pas-modal-backdrop"
+          onClick={() => setModalOuverte(false)}>
+          <section role="dialog" aria-modal="true" aria-labelledby="premiers-pas-titre"
+            className="glass w-full max-w-xl p-5 sm:p-6 border-[#DEC2A3]/30 max-h-[90vh] overflow-y-auto"
+            data-testid="aujourdhui-premiers-pas"
+            onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-[#DEC2A3]">Premiers pas</p>
+                <h2 id="premiers-pas-titre" className="font-head text-lg font-semibold text-white mt-1">Trois gestes pour que le cockpit se remplisse.</h2>
+                <p className="text-[13px] text-white/55 mt-1 leading-relaxed">
+                  Les chiffres de cette page sont calculés à partir de vos données. Tant que vous n'avez rien saisi,
+                  ils restent volontairement à zéro — ce n'est pas une panne. Voici par quoi commencer.
+                </p>
+              </div>
+              <button onClick={() => setModalOuverte(false)} aria-label="Fermer, me le rappeler plus tard"
+                className="shrink-0 rounded-lg p-1.5 text-white/35 hover:bg-white/10 hover:text-white/70 transition-colors"
+                data-testid="premiers-pas-close">
+                <X size={16} />
+              </button>
             </div>
-            <button onClick={masquerGuide} aria-label="Masquer le guide de démarrage"
-              className="shrink-0 rounded-lg p-1.5 text-white/35 hover:bg-white/10 hover:text-white/70 transition-colors"
-              data-testid="premiers-pas-close">
-              <X size={16} />
-            </button>
-          </div>
 
-          <ol className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-3 list-none p-0 m-0">
-            {etapesDemarrage.map((etape, index) => (
-              <li key={etape.titre}
-                className={`rounded-xl border p-4 ${etape.fait ? "border-emerald-400/30 bg-emerald-400/[.07]" : "border-white/12 bg-white/[.04]"}`}
-                data-testid={`premiers-pas-etape-${index + 1}`}>
-                <div className="flex items-center gap-2">
-                  <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${etape.fait ? "bg-emerald-400/25 text-emerald-200" : "gold-bg text-[#0A1128]"}`}>
-                    {etape.fait ? "✓" : index + 1}
-                  </span>
-                  <p className="m-0 text-sm font-semibold text-white">{etape.titre}</p>
-                </div>
-                <p className="m-0 mt-2 text-[12.5px] leading-relaxed text-white/55">{etape.detail}</p>
-                {!etape.fait && (
-                  <button onClick={etape.action}
-                    className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#DEC2A3] hover:text-[#FFD700] transition-colors">
-                    {etape.cta} <ArrowRight size={12} />
-                  </button>
-                )}
-              </li>
-            ))}
-          </ol>
-        </section>
+            <ol className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3 list-none p-0 m-0">
+              {etapesDemarrage.map((etape, index) => (
+                <li key={etape.titre}
+                  className={`rounded-xl border p-4 ${etape.fait ? "border-emerald-400/30 bg-emerald-400/[.07]" : "border-white/12 bg-white/[.04]"}`}
+                  data-testid={`premiers-pas-etape-${index + 1}`}>
+                  <div className="flex items-center gap-2">
+                    <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${etape.fait ? "bg-emerald-400/25 text-emerald-200" : "gold-bg text-[#0A1128]"}`}>
+                      {etape.fait ? "✓" : index + 1}
+                    </span>
+                    <p className="m-0 text-sm font-semibold text-white">{etape.titre}</p>
+                  </div>
+                  <p className="m-0 mt-2 text-[12.5px] leading-relaxed text-white/55">{etape.detail}</p>
+                  {!etape.fait && (
+                    <button onClick={etape.action}
+                      className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#DEC2A3] hover:text-[#FFD700] transition-colors">
+                      {etape.cta} <ArrowRight size={12} />
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ol>
+
+            <div className="mt-5 flex items-center justify-between gap-3 border-t border-white/10 pt-4">
+              <button onClick={() => setModalOuverte(false)}
+                className="text-xs text-white/45 hover:text-white/70 transition-colors">
+                Plus tard
+              </button>
+              <button onClick={masquerGuide} data-testid="premiers-pas-ne-plus-afficher"
+                className="text-xs text-white/45 hover:text-white/70 transition-colors underline underline-offset-2">
+                Ne plus afficher
+              </button>
+            </div>
+          </section>
+        </div>
       )}
 
       {/* Sur mobile : l'action du jour remonte immédiatement sous l'en-tête. */}
