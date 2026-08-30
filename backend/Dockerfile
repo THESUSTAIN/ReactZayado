@@ -21,10 +21,8 @@ RUN pip install emergentintegrations==0.2.0 --extra-index-url https://d33sy5i8bn
 # REACT_APP_BACKEND_URL laissé vide : le backend sert le SPA sur la même origine,
 # donc les appels API relatifs (/api) fonctionnent quel que soit le domaine (Railway ou custom).
 RUN cd frontend && yarn install --network-timeout 600000
-RUN cd frontend && CI=false GENERATE_SOURCEMAP=false \
-    REACT_APP_BACKEND_URL= \
-    yarn build
-RUN mkdir -p backend/static && cp -r frontend/build/* backend/static/
+RUN cd frontend && VITE_API_URL= VITE_SAAS_URL=https://app.zayado.net VITE_WP_URL=https://cms.zayado.net yarn build
+RUN mkdir -p backend/static && cp -r frontend/dist/* backend/static/
 
 EXPOSE $PORT
 
