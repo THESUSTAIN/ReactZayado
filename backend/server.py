@@ -650,7 +650,15 @@ if _PUBLIC_SITE_DIST.exists():
         return FileResponse(str(_PUBLIC_SITE_DIST / "index.html"))
 
 if _STATIC_DIR.exists():
-    app.mount("/static", StaticFiles(directory=str(_STATIC_DIR / "static")), name="react-static")
+    _REACT_STATIC = _STATIC_DIR / "static"
+    if _REACT_STATIC.exists():
+        app.mount("/static", StaticFiles(directory=str(_REACT_STATIC)), name="react-static")
+    else:
+        # Avant ce correctif : app.mount() levait RuntimeError si ce dossier
+        # manquait (build frontend incomplet/pas encore copié), ce qui faisait
+        # planter TOUT uvicorn au démarrage — API comprise. Un build frontend
+        # cassé ne doit jamais empêcher l'API de répondre.
+        logger.warning(f"'{_REACT_STATIC}' introuvable — assets statiques du frontend non montés, l'API reste disponible.")
 
     @app.get("/{full_path:path}", include_in_schema=False)
     async def spa_fallback(full_path: str):

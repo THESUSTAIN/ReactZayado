@@ -215,7 +215,7 @@ function Header({ onSettings, profileName, theSustainMember, ambianceFoi, onOpen
       <button type="button" className="header-mobile-brand" onClick={() => navigate("/")} aria-label="Accueil MyExtension" data-testid="header-mobile-brand">
         <img src="/logo-zayado.png" alt="myextension-ai by zayado" />
       </button>
-      <div className="header-cockpit-chip" data-testid="header-mobile-cockpit-status"><Rocket size={14} /> Cockpit <span>0/8</span></div>
+      <button type="button" className="header-cockpit-chip" onClick={() => onOpenCopilot()} data-testid="header-mobile-cockpit-status"><Rocket size={14} /> Cockpit</button>
       <div className="header-search" data-testid="header-search" onClick={() => setSearchOpen(true)}>
         <Search size={16} className="header-search-icon" />
         <input type="text" placeholder="Rechercher (Cmd+K)" readOnly data-testid="header-search-input" style={{ cursor: "pointer" }} />
