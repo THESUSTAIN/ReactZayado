@@ -18,6 +18,7 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+from routes.growth import _get_kv, _save_kv
 
 from database import get_db
 from deps import get_current_user
@@ -437,16 +438,35 @@ NEWS_SYSTEM = (
 )
 
 
+NEWS_DIGEST_KEY = "news_digest_cache"
+NEWS_DIGEST_CADENCE_DAYS = 7  # défaut Paramètres : 1x/semaine
+
+
 @router.get("/news-digest")
 async def news_digest(
     user_id: str = Query("default"),
+    refresh: bool = Query(False),
     db: AsyncSession = Depends(get_db),
 ):
-    """Résumé IA des actualités du secteur (le résumé se fait via le chat)."""
+    """Résumé IA des actualités du secteur (le résumé se fait via le chat).
+    Mis en cache selon la cadence réglée dans Paramètres (7 jours par
+    défaut) — sans ce garde-fou, chaque appel (chaque ouverture du chat)
+    régénérait un digest neuf via le LLM, sans aucune limite."""
+    cached = await _get_kv(db, user_id, NEWS_DIGEST_KEY)
+    if cached and not refresh:
+        try:
+            generated_at = datetime.fromisoformat(cached["generated_at"])
+        except Exception:
+            generated_at = None
+        if generated_at and (datetime.now(timezone.utc) - generated_at).days < NEWS_DIGEST_CADENCE_DAYS:
+            return {"ok": True, "digest": cached["digest"], "sources": cached.get("sources", []), "sector": cached.get("sector"), "cached": True}
+
     sector = await _fetch_sector(db, user_id)
     items = await _fetch_news(_news_query(sector))
     if not items:
         # ok=False -> le frontend NE DOIT PAS écraser une actualité déjà affichée
+        if cached:
+            return {"ok": True, "digest": cached["digest"], "sources": cached.get("sources", []), "sector": cached.get("sector"), "cached": True}
         return {"ok": False, "digest": "Je n'ai pas pu récupérer l'actualité à l'instant. Réessayez dans un moment.", "sources": []}
 
     headlines = "\n".join(f"- {it['title']}" + (f" ({it['source']})" if it.get("source") else "") for it in items)
@@ -461,6 +481,10 @@ async def news_digest(
     digest = await _llm_reply(NEWS_SYSTEM, prompt)
     if not digest:
         digest = "Actualités du jour :\n" + "\n".join(f"• {it['title']}" for it in items)
+    await _save_kv(db, user_id, NEWS_DIGEST_KEY, {
+        "digest": digest, "sources": items, "sector": sector,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    })
     return {"ok": True, "digest": digest, "sources": items, "sector": sector}
 
 
