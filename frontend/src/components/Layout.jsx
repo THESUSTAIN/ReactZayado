@@ -63,7 +63,7 @@ const ECOSYSTEM_ITEMS = [
 ];
 
 /* ─────────────── Sidebar (rail 96px, modèle exact) ─────────────── */
-function Sidebar({ onSettings, onCopilote }) {
+function Sidebar({ onSettings, onCopilote, unseenNewsCount }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(() => {
@@ -127,6 +127,9 @@ function Sidebar({ onSettings, onCopilote }) {
                   <button onClick={() => onItemClick(item)} data-testid={`side-${item.id}`} aria-label={item.label}
                     className={`menu-link group relative w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 ${active ? "active" : ""} ${item.action ? "menu-link-action" : ""}`}>
                     <Icon size={16} strokeWidth={1.85} />
+                    {item.action === "copilot" && unseenNewsCount > 0 && (
+                      <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white" data-testid="side-copilote-badge">{unseenNewsCount}</span>
+                    )}
                     <span className={`menu-tooltip pointer-events-none absolute left-full ml-3 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-md text-white text-xs px-2.5 py-1.5 transition-opacity z-50 ${scrolling ? "!opacity-0" : "opacity-0 group-hover:opacity-100"}`}>
                       {item.label}
                     </span>
@@ -134,6 +137,21 @@ function Sidebar({ onSettings, onCopilote }) {
                 </li>
               );
             })}
+            {/* Desktop uniquement : Contexte et Mindset ont leur place dans ce rail
+                (contrairement à la barre mobile plafonnée à 5 icônes) — avant,
+                seul le menu Écosystème (un clic de plus) les exposait. */}
+            <li className="w-full flex justify-center menu-group-start">
+              <button onClick={() => navigate("/contexte")} data-testid="side-contexte" aria-label="Contexte" className={`menu-link group relative w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 ${location.pathname.startsWith("/contexte") ? "active" : ""}`}>
+                <Gauge size={16} strokeWidth={1.85} />
+                <span className={`menu-tooltip pointer-events-none absolute left-full ml-3 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-md text-white text-xs px-2.5 py-1.5 transition-opacity z-50 ${scrolling ? "!opacity-0" : "opacity-0 group-hover:opacity-100"}`}>Contexte</span>
+              </button>
+            </li>
+            <li className="w-full flex justify-center">
+              <button onClick={() => navigate("/mindset")} data-testid="side-mindset" aria-label="Mindset & capacité" className={`menu-link group relative w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 ${location.pathname.startsWith("/mindset") ? "active" : ""}`}>
+                <HeartPulse size={16} strokeWidth={1.85} />
+                <span className={`menu-tooltip pointer-events-none absolute left-full ml-3 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-md text-white text-xs px-2.5 py-1.5 transition-opacity z-50 ${scrolling ? "!opacity-0" : "opacity-0 group-hover:opacity-100"}`}>Mindset & capacité</span>
+              </button>
+            </li>
           </ul>
         </div>
 
@@ -421,6 +439,26 @@ export default function Layout() {
         setUnseenNewsCount(idx === -1 ? items.length : idx);
       });
   }, [copilotOpen, location.pathname]);
+
+  // Petit son quand le décompte augmente vraiment (nouvelle notification
+  // pendant que l'app est ouverte) — jamais au chargement initial de la
+  // page, sinon chaque rechargement "sonnerait" pour du contenu déjà vu.
+  const prevNotifCountRef = useRef(null);
+  useEffect(() => {
+    const total = unseenNewsCount + headerNotifications.filter((item) => item.unread).length;
+    if (prevNotifCountRef.current !== null && total > prevNotifCountRef.current) {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator(); const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = "sine"; osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+        osc.start(); osc.stop(ctx.currentTime + 0.25);
+      } catch { /* audio non disponible (autoplay bloqué, etc.) — silencieux */ }
+    }
+    prevNotifCountRef.current = total;
+  }, [unseenNewsCount, headerNotifications]);
   
   useEffect(() => {
     // Ne vide jamais un nom déjà affiché (par ex. déjà rempli par authMe()
@@ -470,7 +508,7 @@ export default function Layout() {
   return (
     <div className="App layout-left" data-testid="app-root">
       <div className="sky-bg" />
-      <Sidebar onSettings={openSettings} onCopilote={openCopilot} />
+      <Sidebar onSettings={openSettings} onCopilote={openCopilot} unseenNewsCount={unseenNewsCount} />
 
       <div className="app-body">
         <Header onSettings={openSettings} profileName={profileName} theSustainMember={theSustainMember} ambianceFoi={ambianceFoi} onOpenTheSustain={() => setTheSustainModalOpen(true)} onOpenCopilot={openCopilot} unseenNewsCount={unseenNewsCount} />
