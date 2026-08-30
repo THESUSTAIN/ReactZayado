@@ -72,7 +72,15 @@ if DB_TYPE == "mysql":
             _decoded_ssl = _raw_ssl
         _mysql_ssl_options = _decoded_ssl if isinstance(_decoded_ssl, dict) else {}
 
-from sqlalchemy.pool import QueuePool
+# AsyncAdaptedQueuePool, PAS QueuePool.
+# QueuePool est le pool SYNCHRONE : passé à create_async_engine, SQLAlchemy 2.x
+# le refuse au chargement du module — « Pool class QueuePool cannot be used with
+# asyncio engine » — et le conteneur redémarre en boucle sans jamais servir une
+# seule requête. C'est le crash observé en production le 30/08.
+# L'intention du réglage ci-dessous (un petit pool réutilisable plutôt que
+# NullPool) est conservée à l'identique : seule la classe de pool change pour
+# sa variante asynchrone.
+from sqlalchemy.pool import AsyncAdaptedQueuePool
 
 _engine_kwargs = {"echo": False}
 if DB_TYPE != "sqlite":
@@ -87,7 +95,7 @@ if DB_TYPE != "sqlite":
     # Un petit pool réutilisable réduit ce flot de ~100x tout en gardant
     # pool_pre_ping + pool_recycle pour ne jamais servir de connexion morte.
     _engine_kwargs.update({
-        "poolclass": QueuePool,
+        "poolclass": AsyncAdaptedQueuePool,
         "pool_size": 3,
         "max_overflow": 5,
         "pool_recycle": 1800,   # recycle les connexions après 30 min
