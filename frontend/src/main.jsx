@@ -213,8 +213,91 @@ function PublicApp() {
 
 const isAppHost = typeof window !== "undefined" && /(^|\.)app\.zayado\.net$/i.test(window.location.hostname);
 
+/* ─────────────────────────────────────────────────────────────────────────
+ * Filet de sécurité anti-écran-blanc.
+ *
+ * Sans limite d'erreur au-dessus de la racine, la moindre exception pendant
+ * un rendu fait démonter tout l'arbre par React : l'utilisateur se retrouve
+ * face à une page entièrement blanche, sans message, sans moyen de savoir
+ * quoi faire. C'est exactement ce qui se produisait sur app.zayado.net.
+ *
+ * Ce composant garantit qu'une panne reste lisible et récupérable : on
+ * explique ce qui se passe, on propose de recharger, et on conserve le
+ * détail technique replié pour le support.
+ * ──────────────────────────────────────────────────────────────────────── */
+class RootErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+
+  componentDidCatch(error, info) {
+    // Trace conservée pour le support ; jamais affichée telle quelle en grand.
+    console.error("[Zayado] Erreur non rattrapée :", error, info?.componentStack);
+  }
+
+  render() {
+    if (!this.state.error) return this.props.children;
+    return (
+      <div style={{
+        minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+        background: "#FDFBF6", padding: 24, fontFamily: "Inter, system-ui, sans-serif", color: "#0B1B3A",
+      }}>
+        <div style={{
+          maxWidth: 520, width: "100%", background: "#fff", border: "1px solid #E8E2D8",
+          borderRadius: 20, padding: "32px 28px", boxShadow: "0 10px 40px rgba(11,27,58,.08)",
+        }}>
+          <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>La page n'a pas pu s'afficher</h1>
+          <p style={{ fontSize: 14, lineHeight: 1.6, color: "#5C6472", marginTop: 10 }}>
+            Un incident technique a interrompu le chargement. Vos données ne sont pas perdues.
+            Rechargez la page : dans la plupart des cas, cela suffit.
+          </p>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 20 }}>
+            <button
+              onClick={() => window.location.reload()}
+              style={{ background: "#0B1B3A", color: "#fff", border: "none", borderRadius: 999, padding: "11px 20px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+            >
+              Recharger la page
+            </button>
+            <button
+              onClick={() => { window.location.href = "/"; }}
+              style={{ background: "transparent", color: "#0B1B3A", border: "1px solid #D9D2C6", borderRadius: 999, padding: "11px 20px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+            >
+              Revenir à l'accueil
+            </button>
+          </div>
+          <p style={{ fontSize: 12.5, color: "#8A8578", marginTop: 20 }}>
+            Si le problème persiste, écrivez à <a href="mailto:support@zayado.net" style={{ color: "#0B1B3A" }}>support@zayado.net</a> en
+            copiant le détail ci-dessous.
+          </p>
+          <details style={{ marginTop: 12 }}>
+            <summary style={{ fontSize: 12.5, color: "#8A8578", cursor: "pointer" }}>Détail technique</summary>
+            <pre style={{ fontSize: 11, whiteSpace: "pre-wrap", color: "#8A8578", marginTop: 8, maxHeight: 180, overflow: "auto" }}>
+              {String(this.state.error?.stack || this.state.error?.message || this.state.error)}
+            </pre>
+          </details>
+        </div>
+      </div>
+    );
+  }
+}
+
+// Le loader de index.html s'appuyait sur root.children.length > 1, condition
+// jamais vraie une fois React monté : on le retire explicitement ici.
+if (typeof document !== "undefined") {
+  const bootLoader = document.getElementById("boot-loader");
+  if (bootLoader) bootLoader.remove();
+  window.__ZAYADO_MOUNTED__ = true;
+}
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    {isAppHost ? <App /> : <PublicApp />}
+    <RootErrorBoundary>
+      {isAppHost ? <App /> : <PublicApp />}
+    </RootErrorBoundary>
   </React.StrictMode>
 );

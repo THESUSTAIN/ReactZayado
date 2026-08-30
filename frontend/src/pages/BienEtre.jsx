@@ -32,22 +32,43 @@ const AFFIRMATIONS = [
 const HUMEURS = ["Épuisé", "Fatigué", "Bien", "Motivé", "En feu"];
 
 
-function Gauge({ value, color, label, sub }) {
+/* `hint` remplace le chiffre par une phrase quand il n'y a rien à compter :
+ * un « 0 » sec ou un « 0/0 » se lit comme une panne, alors qu'il signifie
+ * simplement « vous n'avez encore rien enregistré ». `onAction` propose alors
+ * le geste qui remplira la jauge. */
+function Gauge({ value, color, label, sub, hint, actionLabel, onAction, loading }) {
   return (
     <div className="glass glass-hover p-5 flex items-center gap-4 fade-in" data-testid={`gauge-${label}`}>
       <div className="relative w-20 h-20 shrink-0">
         <svg className="w-20 h-20 -rotate-90">
           <circle cx="40" cy="40" r="34" stroke="rgba(255,255,255,0.1)" strokeWidth="7" fill="none" />
-          <circle cx="40" cy="40" r="34" stroke={color} strokeWidth="7" fill="none"
-            strokeDasharray={2 * Math.PI * 34}
-            strokeDashoffset={2 * Math.PI * 34 * (1 - value / 100)}
-            strokeLinecap="round" />
+          {!hint && !loading && (
+            <circle cx="40" cy="40" r="34" stroke={color} strokeWidth="7" fill="none"
+              strokeDasharray={2 * Math.PI * 34}
+              strokeDashoffset={2 * Math.PI * 34 * (1 - value / 100)}
+              strokeLinecap="round" />
+          )}
         </svg>
-        <div className="absolute inset-0 flex items-center justify-center font-head font-semibold text-lg">{value}</div>
+        <div className="absolute inset-0 flex items-center justify-center font-head font-semibold text-lg">
+          {loading ? <Loader2 size={18} className="animate-spin text-white/40" /> : hint ? <span className="text-white/30 text-xl">—</span> : value}
+        </div>
       </div>
-      <div>
+      <div className="min-w-0">
         <div className="text-sm text-white/60">{label}</div>
-        <div className="font-head font-semibold text-lg">{sub}</div>
+        {loading ? (
+          <div className="font-head text-sm text-white/40">Chargement…</div>
+        ) : hint ? (
+          <>
+            <div className="text-[13px] leading-snug text-white/55">{hint}</div>
+            {actionLabel && onAction && (
+              <button type="button" onClick={onAction} className="mt-1.5 text-xs font-semibold text-[#DEC2A3] hover:text-[#FFD700] transition-colors">
+                {actionLabel} →
+              </button>
+            )}
+          </>
+        ) : (
+          <div className="font-head font-semibold text-lg">{sub}</div>
+        )}
       </div>
     </div>
   );
@@ -184,10 +205,17 @@ export default function BienEtre() {
   const [vision, setVision] = useState(null);
   const [taches, setTaches] = useState([]);
 
+  // `null` = pas encore chargé. Sans cette distinction, un chargement en cours
+  // était indiscernable d'une absence de données : l'écran affichait « 0 »
+  // pendant la requête, ce que les utilisateurs lisaient comme une panne.
+  const [chargement, setChargement] = useState(true);
+  const [erreurChargement, setErreurChargement] = useState(false);
+
   const load = async () => {
+    setErreurChargement(false);
     try {
       const [nextRituels, nextHumeurs, nextVision, nextTaches] = await Promise.all([
-        getRituels().catch(() => []),
+        getRituels(),
         getHumeur().catch(() => []),
         getVision().catch(() => null),
         getTaches().catch(() => []),
@@ -197,10 +225,43 @@ export default function BienEtre() {
       setVision(nextVision);
       setTaches(Array.isArray(nextTaches) ? nextTaches : []);
     } catch {
-      setRituels([]); setHumeurs([]); setVision(null); setTaches([]);
+      // Un échec réseau était auparavant avalé en silence : la page se
+      // contentait d'afficher des zéros, sans jamais dire que rien n'avait
+      // pu être récupéré.
+      setErreurChargement(true);
+    } finally {
+      setChargement(false);
     }
   };
   useEffect(() => { load(); }, []);
+
+  // Bascule optimiste : la case se coche immédiatement, puis on confirme
+  // auprès du serveur. Avant, l'interface attendait un aller-retour complet
+  // sans le moindre retour visuel — le clic semblait ne rien faire — et un
+  // échec ne produisait aucun message.
+  const basculerRituel = async (rituel) => {
+    const precedent = rituels;
+    setRituels((liste) => liste.map((r) => (r.id === rituel.id ? { ...r, done: !r.done } : r)));
+    try {
+      await toggleRituel(rituel.id);
+      await load();
+    } catch {
+      setRituels(precedent);
+      toast.error("Impossible d'enregistrer ce rituel. Vérifiez votre connexion, puis réessayez.");
+    }
+  };
+
+  const supprimerRituel = async (rituel) => {
+    const precedent = rituels;
+    setRituels((liste) => liste.filter((r) => r.id !== rituel.id));
+    try {
+      await deleteRituel(rituel.id);
+      await load();
+    } catch {
+      setRituels(precedent);
+      toast.error("Suppression impossible pour l'instant. Réessayez dans un instant.");
+    }
+  };
 
   const latest = humeurs[0];
   const energie = latest ? latest.energie : 0;
@@ -252,9 +313,16 @@ export default function BienEtre() {
 
   const addRituel = async () => {
     if (!newRituel.trim()) return;
-    await createRituel({ nom: newRituel });
-    setNewRituel("");
-    load();
+    try {
+      await createRituel({ nom: newRituel.trim() });
+      setNewRituel("");
+      await load();
+      toast.success("Rituel ajouté. Cochez-le une fois fait pour lancer votre série.");
+    } catch {
+      // Auparavant, une erreur ici laissait le champ rempli sans aucun message :
+      // l'utilisateur cliquait plusieurs fois en pensant que rien ne partait.
+      toast.error("Le rituel n'a pas pu être enregistré. Réessayez dans un instant.");
+    }
   };
 
   return (
@@ -269,11 +337,42 @@ export default function BienEtre() {
         <CheckinDialog onSaved={load} />
       </div>
 
-      {/* Gauges */}
+      {erreurChargement && (
+        <div className="rounded-2xl border border-amber-400/35 bg-amber-400/10 px-4 py-3 flex flex-wrap items-center justify-between gap-3" data-testid="wellness-load-error">
+          <p className="m-0 text-sm text-white/80">
+            Vos données n'ont pas pu être récupérées. Les chiffres affichés ne reflètent donc pas votre situation réelle.
+          </p>
+          <button onClick={load} className="rounded-xl border border-amber-300/40 bg-amber-300/15 px-3 py-1.5 text-xs font-semibold text-amber-100 hover:bg-amber-300/25">
+            Réessayer
+          </button>
+        </div>
+      )}
+
+      {/* Gauges — chaque jauge sans donnée explique quoi faire plutôt que
+          d'afficher un zéro que l'utilisateur interprète comme un bug. */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Gauge value={energie} color="#34d399" label="Énergie actuelle" sub={latest ? latest.humeur : "—"} />
-        <Gauge value={focusPct} color="#DEC2A3" label="Rituels du jour" sub={`${doneCount}/${rituels.length}`} />
-        <Gauge value={Math.min(100, bestStreak * 10)} color="#f472b6" label="Meilleure série" sub={`${bestStreak} jours`} />
+        <Gauge
+          value={energie} color="#34d399" label="Énergie actuelle" sub={latest ? latest.humeur : "—"}
+          loading={chargement}
+          hint={!chargement && !latest ? "Aucun check-in enregistré pour l'instant." : null}
+          actionLabel="Faire mon premier check-in"
+          onAction={() => document.querySelector('[data-testid="checkin-btn"]')?.click()}
+        />
+        <Gauge
+          value={focusPct} color="#DEC2A3" label="Rituels du jour" sub={`${doneCount}/${rituels.length} coché(s)`}
+          loading={chargement}
+          hint={!chargement && rituels.length === 0 ? "Aucun rituel créé pour l'instant." : null}
+          actionLabel="Créer mon premier rituel"
+          onAction={() => {
+            document.getElementById("missions")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            setTimeout(() => document.querySelector('[data-testid="new-rituel-input"]')?.focus(), 400);
+          }}
+        />
+        <Gauge
+          value={Math.min(100, bestStreak * 10)} color="#f472b6" label="Meilleure série" sub={`${bestStreak} jour(s)`}
+          loading={chargement}
+          hint={!chargement && rituels.length === 0 ? "La série démarre au premier rituel coché." : null}
+        />
       </div>
 
       <div className={`rounded-2xl border p-4 sm:p-5 ${burnoutRisk === "Élevé" ? "border-rose-400/35 bg-rose-400/10" : burnoutRisk === "Modéré" ? "border-amber-400/35 bg-amber-400/10" : "border-emerald-400/25 bg-emerald-400/10"}`} data-testid="wellness-verdict">
@@ -370,9 +469,11 @@ export default function BienEtre() {
             {rituels.map((r) => (
               <div key={r.id} className="flex items-center gap-3 rounded-xl bg-white/5 border border-white/10 px-3.5 py-2.5">
                 <button
-                  onClick={async () => { await toggleRituel(r.id); load(); }}
+                  onClick={() => basculerRituel(r)}
+                  aria-pressed={Boolean(r.done)}
+                  aria-label={r.done ? `Décocher ${r.nom}` : `Cocher ${r.nom}`}
                   data-testid={`toggle-rituel-${r.id}`}
-                  className={`w-6 h-6 rounded-lg flex items-center justify-center transition-colors ${r.done ? "gold-bg" : "border border-white/25"}`}
+                  className={`w-6 h-6 rounded-lg flex items-center justify-center transition-colors ${r.done ? "gold-bg" : "border border-white/25 hover:border-[#DEC2A3]/70"}`}
                 >
                   {r.done && <Check size={15} className="text-[#0A1128]" />}
                 </button>
@@ -381,10 +482,19 @@ export default function BienEtre() {
                   {r.detail && <div className="text-[11px] text-white/40">{r.detail}</div>}
                 </div>
                 <span className="flex items-center gap-1 text-xs text-amber-400"><Flame size={13} /> {r.streak}</span>
-                <button onClick={async () => { await deleteRituel(r.id); load(); }} data-testid={`delete-rituel-${r.id}`} className="text-white/30 hover:text-rose-400 transition-colors"><Trash2 size={15} /></button>
+                <button onClick={() => supprimerRituel(r)} aria-label={`Supprimer ${r.nom}`} data-testid={`delete-rituel-${r.id}`} className="text-white/30 hover:text-rose-400 transition-colors"><Trash2 size={15} /></button>
               </div>
             ))}
-            {rituels.length === 0 && <p className="text-sm text-white/40 py-4 text-center">Aucun rituel. Ajoutez-en un ci-dessous.</p>}
+            {chargement && <p className="text-sm text-white/40 py-4 text-center">Chargement de vos rituels…</p>}
+            {!chargement && rituels.length === 0 && (
+              <div className="rounded-xl border border-dashed border-white/15 px-4 py-6 text-center" data-testid="rituels-empty">
+                <p className="m-0 text-sm font-semibold text-white/75">Vous n'avez pas encore de rituel.</p>
+                <p className="m-0 mt-1.5 text-[13px] leading-relaxed text-white/50">
+                  Un rituel est une petite action que vous répétez chaque jour — « 20 min de marche », « relire mon Cap ».
+                  Écrivez le premier dans le champ ci-dessous : la jauge « Rituels du jour » se remplira dès que vous le cocherez.
+                </p>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2 mt-4 bg-white/5 border border-white/15 rounded-full pl-4 pr-1.5 py-1.5">
             <input

@@ -58,19 +58,40 @@ api.interceptors.response.use((response) => {
   return response;
 });
 
+// Le cockpit SaaS vit sur app.zayado.net ; le site public vit sur les autres
+// domaines. La distinction est indispensable ici : « / » est une page publique
+// sur zayado.net, mais c'est l'accueil PROTÉGÉ du cockpit sur app.zayado.net.
+export const isAppHost = typeof window !== "undefined"
+  && /(^|\.)app\.zayado\.net$/i.test(window.location.hostname);
+
+// Chemins consultables sans session, y compris depuis le domaine applicatif.
+const CHEMINS_PUBLICS = ["/login", "/login-boutique", "/legal", "/wp/", "/page/", "/preview"];
+const estCheminPublic = (path) => CHEMINS_PUBLICS.some((p) => path === p || path.startsWith(p));
+
 api.interceptors.response.use((r) => r, (error) => {
   const status = error?.response?.status;
   const url = error?.config?.url || "";
-  if (status === 401) {
-    const path = typeof window !== "undefined" ? window.location.pathname : "";
+  if (status === 401 && typeof window !== "undefined") {
+    const path = window.location.pathname;
+    // /auth/me sert justement à TESTER la session : un 401 y est une réponse
+    // normale, pas une raison de rediriger en boucle.
     const isAuthEndpoint = url.includes("/auth/") || url.includes("/onboarding/status");
-    const isPublicPage = path === "/" || path.startsWith("/blog") || path.startsWith("/boutique") || path.startsWith("/partenaires") || path === "/contact" || path === "/a-propos" || path === "/faq" || path.startsWith("/services/") || path.startsWith("/avantages");
-    if (!isAuthEndpoint && !isPublicPage && !path.startsWith("/login")) {
-      // On ne redirige l'application que lorsqu'elle est réellement sur une route protégée.
-      // Le site public reste consultable sans session.
-      if (path.startsWith("/vision") || path.startsWith("/mouvement") || path.startsWith("/mindset") || path.startsWith("/contexte") || path.startsWith("/collaborateur") || path === "/onboarding") {
-        window.location.replace("/login");
-      }
+
+    // Ancien comportement : « / » figurait dans la liste des pages publiques,
+    // donc sur app.zayado.net un utilisateur déconnecté restait sur l'accueil
+    // du cockpit. Chaque appel repartait en 401, chaque compteur retombait à
+    // zéro et aucun bouton ne répondait — sans qu'aucun message n'explique
+    // qu'il fallait simplement se reconnecter.
+    const surRouteProtegee = isAppHost
+      ? !estCheminPublic(path)
+      : ["/vision", "/mouvement", "/taches", "/mindset", "/bien-etre", "/travail",
+         "/contexte", "/pilotage", "/croissance", "/collaborateur", "/thesustain",
+         "/campus", "/onboarding"].some((p) => path === p || path.startsWith(`${p}/`));
+
+    if (!isAuthEndpoint && surRouteProtegee) {
+      // On mémorise la destination pour y revenir après connexion.
+      try { sessionStorage.setItem("zay_redirect_after_login", path + window.location.search); } catch { /* noop */ }
+      window.location.replace("/login");
     }
   }
   return Promise.reject(error);

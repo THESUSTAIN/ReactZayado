@@ -99,9 +99,8 @@ export default function Login() {
     if (!token) return;
     verifyMagicLink(token)
       .then((res) => {
-        localStorage.setItem("cours_auth_token", res.access_token || res.token);
         toast.success("Connexion réussie");
-        navigate(res.user?.onboarding_done ? "/" : "/onboarding");
+        finishLogin(res);
       })
       .catch(() => toast.error(t.errLink));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -153,7 +152,22 @@ export default function Login() {
 
   const finishLogin = (res) => {
     localStorage.setItem("cours_auth_token", res.access_token || res.token);
-    navigate(res.user?.onboarding_done ? "/" : "/onboarding");
+    if (!res.user?.onboarding_done) {
+      navigate("/onboarding");
+      return;
+    }
+    // Après une déconnexion en cours de route, on rouvre la page que
+    // l'utilisateur consultait plutôt que de le renvoyer systématiquement à
+    // l'accueil — il perdait sinon le fil de ce qu'il était en train de faire.
+    let destination = "/";
+    try {
+      const memorisee = sessionStorage.getItem("zay_redirect_after_login");
+      sessionStorage.removeItem("zay_redirect_after_login");
+      if (memorisee && memorisee.startsWith("/") && !memorisee.startsWith("//") && !memorisee.startsWith("/login")) {
+        destination = memorisee;
+      }
+    } catch { /* noop */ }
+    navigate(destination, { replace: true });
   };
 
   const doOauthLogin = async (provider, label) => {

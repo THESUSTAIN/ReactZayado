@@ -27,11 +27,14 @@ export default function Checkout() {
   const total = subtotal + shipping;
 
   const [submitError, setSubmitError] = useState("");
+  // `setBusy` était appelé sans jamais avoir été déclaré : le clic sur
+  // « Payer » levait un ReferenceError et la commande ne partait jamais.
+  const [busy, setBusy] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault();
     setSubmitError("");
-    setBusy && setBusy(true);
+    setBusy(true);
 
     try {
       // Créer la commande WooCommerce via le backend
@@ -65,6 +68,10 @@ export default function Checkout() {
     } catch (err) {
       const msg = err?.response?.data?.detail || err?.message || "Erreur lors de la commande.";
       setSubmitError(msg);
+    } finally {
+      // Sans ce finally, un échec réseau laissait le bouton bloqué en
+      // « Traitement… » sans jamais permettre de réessayer.
+      setBusy(false);
     }
   };
 
@@ -149,9 +156,11 @@ export default function Checkout() {
               ❌ {submitError}
             </div>
           )}
-          <button type="submit" className="w-full py-3.5 rounded-full text-white font-medium btn-press"
+          <button type="submit" disabled={busy || cart.length === 0}
+                  className="w-full py-3.5 rounded-full text-white font-medium btn-press disabled:opacity-60 disabled:cursor-not-allowed"
                   style={{ background: NAVY }} data-testid="checkout-submit">
-            <Lock size={14} className="inline mr-2" /> Payer {total.toFixed(2)}€
+            <Lock size={14} className="inline mr-2" />
+            {busy ? "Traitement en cours…" : cart.length === 0 ? "Votre panier est vide" : `Payer ${total.toFixed(2)}€`}
           </button>
         </form>
 

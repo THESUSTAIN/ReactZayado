@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { Compass, ArrowRight, Zap, ListChecks, Sparkles, Target, Lightbulb } from "lucide-react";
+import { Compass, ArrowRight, Zap, ListChecks, Sparkles, Target, Lightbulb, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getVision, getHumeur, getTaches } from "../lib/api";
 import useIsMobile from "../hooks/useIsMobile";
+
+const CLE_GUIDE_MASQUE = "zay_guide_premiers_pas_masque";
 
 // Accueil quotidien Cap Vivant.
 //
@@ -25,6 +27,9 @@ export default function Aujourdhui() {
   const [humeur, setHumeur] = useState([]);
   const [taches, setTaches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [guideMasque, setGuideMasque] = useState(() => {
+    try { return localStorage.getItem(CLE_GUIDE_MASQUE) === "1"; } catch { return false; }
+  });
 
   useEffect(() => {
     Promise.all([
@@ -38,12 +43,44 @@ export default function Aujourdhui() {
     }).finally(() => setLoading(false));
   }, []);
 
+  const masquerGuide = () => {
+    setGuideMasque(true);
+    try { localStorage.setItem(CLE_GUIDE_MASQUE, "1"); } catch { /* noop */ }
+  };
+
   const dernierHumeur = humeur[0];
   const capaciteValue = dernierHumeur ? dernierHumeur.energie : null;
   const tachesOuvertes = taches.filter((t) => t.statut !== "Terminé");
   const prioritePrincipale = tachesOuvertes
     .slice()
     .sort((a, b) => (a.priorite === "Haute" ? -1 : 1) - (b.priorite === "Haute" ? -1 : 1))[0];
+
+  // Les trois gestes qui alimentent réellement le cockpit. « fait » est lu
+  // dans les vraies données : la coche ne se déclenche jamais par elle-même.
+  const etapesDemarrage = [
+    {
+      titre: "Définir votre Cap",
+      detail: "En une phrase, ce vers quoi vous allez. C'est ce qui permet à l'appli de trier vos priorités au lieu d'empiler une liste.",
+      cta: "Ouvrir ma Vision",
+      fait: Boolean(vision?.value),
+      action: () => navigate("/vision"),
+    },
+    {
+      titre: "Noter une première action",
+      detail: "Une seule tâche concrète suffit. Elle apparaîtra ensuite ici, dans « Priorité du jour ».",
+      cta: "Ouvrir Mon Mouvement",
+      fait: taches.length > 0,
+      action: () => navigate("/taches"),
+    },
+    {
+      titre: "Faire un check-in d'énergie",
+      detail: "Dix secondes. C'est ce qui alimente l'anneau de capacité et adapte le nombre de tâches proposées chaque jour.",
+      cta: "Ouvrir Mindset & capacité",
+      fait: humeur.length > 0,
+      action: () => navigate("/mindset"),
+    },
+  ];
+  const compteNeuf = etapesDemarrage.some((etape) => !etape.fait);
 
   // Sur mobile, on remonte l'action concrète (Priorité du jour) tout en haut,
   // avant la carte hero décorative : sur un petit écran, l'utilisateur veut
@@ -89,6 +126,54 @@ export default function Aujourdhui() {
           <Sparkles size={15} className="text-[#DEC2A3]" /> Ouvrir le Copilote
         </button>
       </div>
+
+      {/* Guide de démarrage.
+          Un compte neuf affichait un cockpit rempli de « 0 », « — » et
+          « À définir » : rien n'expliquait dans quel ordre remplir ces cases,
+          ni pourquoi. Ce bloc énonce les trois gestes fondateurs, indique
+          lesquels sont déjà faits, et disparaît dès qu'ils le sont tous —
+          ou dès que l'utilisateur le referme. */}
+      {!loading && !guideMasque && compteNeuf && (
+        <section className="glass p-5 sm:p-6 border-[#DEC2A3]/30" data-testid="aujourdhui-premiers-pas">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-[#DEC2A3]">Premiers pas</p>
+              <h2 className="font-head text-lg font-semibold text-white mt-1">Trois gestes pour que le cockpit se remplisse.</h2>
+              <p className="text-[13px] text-white/55 mt-1 max-w-2xl leading-relaxed">
+                Les chiffres de cette page sont calculés à partir de vos données. Tant que vous n'avez rien saisi,
+                ils restent volontairement à zéro — ce n'est pas une panne. Voici par quoi commencer.
+              </p>
+            </div>
+            <button onClick={masquerGuide} aria-label="Masquer le guide de démarrage"
+              className="shrink-0 rounded-lg p-1.5 text-white/35 hover:bg-white/10 hover:text-white/70 transition-colors"
+              data-testid="premiers-pas-close">
+              <X size={16} />
+            </button>
+          </div>
+
+          <ol className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-3 list-none p-0 m-0">
+            {etapesDemarrage.map((etape, index) => (
+              <li key={etape.titre}
+                className={`rounded-xl border p-4 ${etape.fait ? "border-emerald-400/30 bg-emerald-400/[.07]" : "border-white/12 bg-white/[.04]"}`}
+                data-testid={`premiers-pas-etape-${index + 1}`}>
+                <div className="flex items-center gap-2">
+                  <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${etape.fait ? "bg-emerald-400/25 text-emerald-200" : "gold-bg text-[#0A1128]"}`}>
+                    {etape.fait ? "✓" : index + 1}
+                  </span>
+                  <p className="m-0 text-sm font-semibold text-white">{etape.titre}</p>
+                </div>
+                <p className="m-0 mt-2 text-[12.5px] leading-relaxed text-white/55">{etape.detail}</p>
+                {!etape.fait && (
+                  <button onClick={etape.action}
+                    className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#DEC2A3] hover:text-[#FFD700] transition-colors">
+                    {etape.cta} <ArrowRight size={12} />
+                  </button>
+                )}
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
 
       {/* Sur mobile : l'action du jour remonte immédiatement sous l'en-tête. */}
       {isMobile && prioriteBlock}
@@ -140,20 +225,34 @@ export default function Aujourdhui() {
 
       {/* Métriques du jour — vraies données */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" data-testid="aujourdhui-metrics">
+        {/* Chaque métrique sans donnée dit ce qui la remplira, au lieu
+            d'afficher un « 0 » ou un tiret muet pris pour une panne. */}
         <div className="glass p-4">
           <p className="text-xs text-white/50">Priorité principale</p>
-          <p className="font-head text-lg font-semibold text-white mt-1 truncate">{prioritePrincipale ? prioritePrincipale.titre : "À définir"}</p>
-          <p className="text-[11px] text-white/40 mt-0.5">{tachesOuvertes.length} tâche(s) ouverte(s)</p>
+          <p className="font-head text-lg font-semibold text-white mt-1 truncate">
+            {loading ? "…" : prioritePrincipale ? prioritePrincipale.titre : "Aucune action notée"}
+          </p>
+          <p className="text-[11px] text-white/40 mt-0.5">
+            {loading ? "Chargement…" : tachesOuvertes.length ? `${tachesOuvertes.length} tâche(s) ouverte(s)` : "Notez une action pour la voir ici"}
+          </p>
         </div>
         <div className="glass p-4">
           <p className="text-xs text-white/50">Capacité disponible</p>
-          <p className="font-head text-lg font-semibold text-white mt-1">{capaciteValue != null ? `${capaciteValue}/100` : "—"}</p>
-          <p className="text-[11px] text-white/40 mt-0.5">{capaciteValue == null ? "Check-in facultatif" : capaciteValue >= 70 ? "Marge disponible" : "À surveiller"}</p>
+          <p className="font-head text-lg font-semibold text-white mt-1">
+            {loading ? "…" : capaciteValue != null ? `${capaciteValue}/100` : "Pas encore mesurée"}
+          </p>
+          <p className="text-[11px] text-white/40 mt-0.5">
+            {loading ? "Chargement…" : capaciteValue == null ? "Un check-in de 10 s la calcule" : capaciteValue >= 70 ? "Marge disponible" : "À surveiller"}
+          </p>
         </div>
         <div className="glass p-4">
           <p className="text-xs text-white/50">Ma Vision</p>
-          <p className="font-head text-lg font-semibold text-white mt-1 truncate">{vision?.value ? "Défini" : "À définir"}</p>
-          <p className="text-[11px] text-white/40 mt-0.5">{vision?.value ? "Relié à vos priorités" : "Reliez une action à votre Vision"}</p>
+          <p className="font-head text-lg font-semibold text-white mt-1 truncate">
+            {loading ? "…" : vision?.value ? "Définie" : "Pas encore définie"}
+          </p>
+          <p className="text-[11px] text-white/40 mt-0.5">
+            {loading ? "Chargement…" : vision?.value ? "Reliée à vos priorités" : "Écrivez votre Cap en une phrase"}
+          </p>
         </div>
       </div>
 

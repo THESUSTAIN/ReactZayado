@@ -502,29 +502,43 @@ def _today_str():
     return date.today().isoformat()
 
 
+def _decorate_habit(h: dict) -> dict:
+    """Ajoute les champs calculés `done_today` et `streak` à une habitude.
+
+    Ces deux champs n'étaient calculés que dans la liste. La création et le
+    basculement renvoyaient la ligne brute, sans eux : toute interface qui
+    faisait confiance à la réponse voyait une habitude « non faite » avec un
+    streak à 0, y compris juste après l'avoir cochée. D'où un compteur de
+    rituels bloqué à 0 quel que soit le nombre de cases cochées.
+    """
+    if not isinstance(h, dict):
+        return h
+    done = h.get("done_dates") or []
+    dates = set(done)
+    h["done_today"] = _today_str() in dates
+    # Série en cours : jours consécutifs jusqu'à aujourd'hui (ou hier, pour ne
+    # pas casser la série d'un utilisateur qui n'a pas encore coché du jour).
+    s = 0
+    d = date.today()
+    if d.isoformat() not in dates and (d - timedelta(days=1)).isoformat() in dates:
+        d = d - timedelta(days=1)
+    while d.isoformat() in dates:
+        s += 1
+        d = d - timedelta(days=1)
+    h["streak"] = s
+    return h
+
+
 @missing_router.get("/wellness/habits")
 async def list_habits(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     items = await _list_rows(db, "user_habits", user.id)
-    today = _today_str()
-    for h in items:
-        done = h.get("done_dates") or []
-        h["done_today"] = today in done
-        # streak courant (jours consécutifs jusqu'à aujourd'hui/hier)
-        s = 0
-        d = date.today()
-        dates = set(done)
-        if d.isoformat() not in dates and (d - timedelta(days=1)).isoformat() in dates:
-            d = d - timedelta(days=1)
-        while d.isoformat() in dates:
-            s += 1
-            d = d - timedelta(days=1)
-        h["streak"] = s
-    return {"items": items}
+    return {"items": [_decorate_habit(h) for h in items]}
 
 
 @missing_router.post("/wellness/habits")
 async def create_habit(body: HabitIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    return await _insert_row(db, "user_habits", user.id, {"name": body.name, "icon": body.icon or "target", "done_dates": []})
+    row = await _insert_row(db, "user_habits", user.id, {"name": body.name, "icon": body.icon or "target", "done_dates": []})
+    return _decorate_habit(row)
 
 
 CHRISTIAN_HABITS = [
@@ -545,7 +559,7 @@ async def seed_christian_habits(user: User = Depends(get_current_user), db: Asyn
     for n in CHRISTIAN_HABITS:
         if n.strip().lower() in names:
             continue
-        created.append(await _insert_row(db, "user_habits", user.id, {"name": n, "icon": "cross", "done_dates": [], "source": "thesustain"}))
+        created.append(_decorate_habit(await _insert_row(db, "user_habits", user.id, {"name": n, "icon": "cross", "done_dates": [], "source": "thesustain"})))
     return {"items": created, "count": len(created)}
 
 
@@ -562,7 +576,7 @@ async def toggle_habit(hid: str, user: User = Depends(get_current_user), db: Asy
     else:
         done.add(today)
     res = await _update_row(db, "user_habits", user.id, hid, {"done_dates": sorted(done)})
-    return res or {"id": hid, "done_dates": sorted(done)}
+    return _decorate_habit(res or {"id": hid, "done_dates": sorted(done)})
 
 
 @missing_router.delete("/wellness/habits/{hid}")
