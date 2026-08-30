@@ -34,20 +34,20 @@ export function TheSustainModal({ open, onClose }) {
             <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-[#DEC2A3]">TheSustain</p>
             <h2 className="font-head text-lg font-semibold text-white mt-0.5">Votre espace foi</h2>
           </div>
-          <button onClick={onClose} data-testid="thesustain-modal-close" className="text-white/60 hover:text-white/80"><X size={18} /></button>
+          <button onClick={onClose} data-testid="thesustain-modal-close" className="text-white/40 hover:text-white/80"><X size={18} /></button>
         </div>
         <p className="text-white/50 text-[13px] mb-4">Chaque section ouvre thesustain.net dans un nouvel onglet.</p>
 
         {!urls ? (
-          <div className="flex justify-center py-8"><Loader2 size={20} className="animate-spin text-white/60" /></div>
+          <div className="flex justify-center py-8"><Loader2 size={20} className="animate-spin text-white/40" /></div>
         ) : (
           <div className="grid grid-cols-2 gap-2.5">
             {TILES.map(({ key, label, desc, Icon }) => (
               <a key={key} href={urls[key] || "https://thesustain.net"} target="_blank" rel="noreferrer" data-testid={`thesustain-tile-${key}`}
                 className="rounded-xl border border-white/10 bg-white/[0.03] p-3.5 hover:border-[#DEC2A3]/40 hover:bg-white/[0.06] transition-colors">
                 <Icon size={18} className="text-[#DEC2A3] mb-2" />
-                <p className="text-sm font-semibold text-white flex items-center gap-1">{label} <ExternalLink size={11} className="text-white/55" /></p>
-                <p className="text-[11px] text-white/60 mt-0.5 leading-snug">{desc}</p>
+                <p className="text-sm font-semibold text-white flex items-center gap-1">{label} <ExternalLink size={11} className="text-white/30" /></p>
+                <p className="text-[11px] text-white/40 mt-0.5 leading-snug">{desc}</p>
               </a>
             ))}
           </div>

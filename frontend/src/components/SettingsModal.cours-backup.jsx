@@ -143,7 +143,7 @@ export default function SettingsModal({ open, onClose }) {
                     onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} placeholder="Votre prénom"
                     data-testid="settings-firstname-input"
                     className="flex-1 bg-white/5 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/35 focus:outline-none focus:border-[#D4AF37]/50" />
-                  {saving && <Loader2 size={16} className="animate-spin text-white/60" />}
+                  {saving && <Loader2 size={16} className="animate-spin text-white/40" />}
                 </div>
               </div>
             )}
@@ -151,12 +151,12 @@ export default function SettingsModal({ open, onClose }) {
             {tab === "vision" && (
               <div>
                 <label className="block text-[12px] font-medium text-white/70 mb-1.5">Image d'inspiration (URL)</label>
-                <p className="text-[11.5px] text-white/62 mb-2">Affichée en fond de votre page Vision pour vous motiver au quotidien.</p>
+                <p className="text-[11.5px] text-white/45 mb-2">Affichée en fond de votre page Vision pour vous motiver au quotidien.</p>
                 <div className="flex items-center gap-2">
                   <input value={inspirationUrl} onChange={(e) => setInspirationUrlState(e.target.value)} onBlur={saveInspiration}
                     placeholder="https://…" data-testid="settings-inspiration-input"
                     className="flex-1 bg-white/5 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/35 focus:outline-none focus:border-[#D4AF37]/50" />
-                  {savingInspiration && <Loader2 size={16} className="animate-spin text-white/60" />}
+                  {savingInspiration && <Loader2 size={16} className="animate-spin text-white/40" />}
                 </div>
                 {inspirationUrl && (
                   <img src={inspirationUrl} alt="" className="mt-3 h-28 w-full rounded-xl object-cover border border-white/10"
@@ -180,7 +180,7 @@ export default function SettingsModal({ open, onClose }) {
 
                 <div>
                   <p className="text-[12px] font-medium text-white/70 mb-2">Notifications push</p>
-                  <p className="text-[11.5px] text-white/62 mb-2">Encouragements et alertes envoyés même l'application fermée (énergie basse, factures en retard, vision oubliée).</p>
+                  <p className="text-[11.5px] text-white/45 mb-2">Encouragements et alertes envoyés même l'application fermée (énergie basse, factures en retard, vision oubliée).</p>
                   <div className="flex items-center gap-2">
                     <button onClick={togglePush} disabled={pushLoading} data-testid="settings-push-toggle"
                       className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2.5 text-[13px] font-semibold bg-white/5 border border-white/15 hover:border-[#D4AF37]/30 text-white/85 disabled:opacity-50">

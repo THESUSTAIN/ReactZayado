@@ -1,1587 +1,453 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400;1,500&display=swap');
-
-/* ═══════════════════════════════════════════════════════════════════════
-   SYSTÈME TYPOGRAPHIQUE — 2 familles, 1 accent. Rien d'autre.
-   ───────────────────────────────────────────────────────────────────────
-   Outfit ................ titres (h1–h4, .font-head)
-   Plus Jakarta Sans ..... texte courant, interface, boutons
-   Cormorant Garamond .... UNIQUEMENT la citation de Vision (.font-vision)
-
-   Avant : 7 familles se disputaient les pages (Outfit, Manrope, Plus Jakarta
-   Sans, Cormorant, Geist, Sora, Inter). Deux d'entre elles — Sora et Inter —
-   n'étaient même pas chargées : le navigateur les remplaçait en silence par
-   une police système. L'impression de « trop de typographies » venait donc en
-   partie de polices que personne n'avait choisies.
-   N'ajoutez pas de quatrième famille sans supprimer l'une de celles-ci.
-   ═══════════════════════════════════════════════════════════════════════ */
-
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Hide Emergent-injected badge on preview/deploy */
+#emergent-badge { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
+
+/* Carousel — hide horizontal scrollbar on mobile snap rows */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Google Translate widget — masque la barre native, garde la traduction du contenu */
+.goog-te-banner-frame.skiptranslate,
+.goog-te-gadget-icon,
+.goog-te-balloon-frame,
+iframe.goog-te-menu-frame { display: none !important; }
+body { top: 0 !important; position: static !important; }
+.goog-tooltip, .goog-tooltip:hover { display: none !important; }
+.goog-text-highlight { background: transparent !important; box-shadow: none !important; }
+#zay-google-translate-hidden { display: none !important; }
+
+
 :root {
-  --blue-slate: #0B1F3A;
-  --navy-900: #0B1F3A;
-  --navy-800: #172C5C;
-  --gold: #DEC2A3;
-  --gold-bright: #F1E2CC;
-  --txt: #ffffff;
-  --txt-soft: rgba(255,255,255,0.8);
-  --txt-muted: rgba(255,255,255,0.72);
-  /* Verre BLANC transparent. La valeur précédente partait d'un bleu opaque
-     (rgba(69,103,164,.20)) : sur un fond déjà navy, les cartes lisaient
-     « bleu transparent » et non « blanc transparent » — l'écart signalé
-     avec la version cours-final. Une pointe de bleu est conservée en fin
-     de dégradé pour la profondeur, pas au départ. */
-  --glass-bg: linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.07) 55%, rgba(120,160,225,0.09));
-  --glass-border: rgba(255,255,255,0.28);
-  --glass-soft: rgba(255,255,255,0.08);
+  /* V5 palette — bleu TheSustain (conservé) + or doré (#D4B982) corrigé d'après l'image ref */
+  --zayado-cream: #f6f3ee;
+  --zayado-cream-dark: #f2ecdc;
+  --zayado-navy: #1a3a6e;
+  --zayado-navy-dark: #102945;
+  --zayado-navy-deep: #0c1d33;
+  --zayado-navy-gradient: linear-gradient(135deg, #1a3a6e 0%, #102945 60%, #0c1d33 100%);
+  --zayado-gold: #b89855;
+  --zayado-gold-soft: #d4b982;
+  --zayado-gold-bg: #f3e9d0;
+  --zayado-red: #a01722;
+  --zayado-text: #1a1815;
+  --zayado-muted: #6b6358;
+  --zayado-border: #e2dac7;
+  --zayado-white: #ffffff;
 
-  /* ROUGE — il y en avait DEUX dans le produit : #E23524 sur la landing,
-     #DD2A33 dans l'application. Deux marques pour un même utilisateur, au
-     moment précis où il passe de la page de vente à son espace. Un seul
-     rouge de marque désormais, repris du logo.
-     Le rouge d'ALERTE est volontairement différent : confondre « nouveau »
-     et « en retard » dans la même couleur est une faute d'interface. */
-  --brand-red: #E23524;
-  --brand-red-soft: rgba(226, 53, 36, .12);
-  --danger: #F2707A;
+  /* Hauteur du header AppLayout (sticky top) — utilisée par CollabPanel pour
+     ne pas chevaucher l'en-tête. Mobile = 65px, desktop = 61px. */
+  --app-header-h: 65px;
 
-  /* Fond profond de l'application — formule unique, reprise à l'identique
-     par le Copilote, l'onboarding et les fenêtres modales. Chacun avait
-     jusqu'ici son propre dégradé, d'où l'impression que le chat et les
-     modales étaient « plus sombres » que le reste. */
-  --app-deep:
-    radial-gradient(ellipse at 20% 10%, rgba(45,81,150,0.45) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 8%, rgba(30,60,110,0.35) 0%, transparent 55%),
-    linear-gradient(180deg, #172C5C 0%, #101F47 42%, #0B1F3A 76%, #081734 100%);
+  /* --background mapped to --zayado-cream (#f6f3ee) */
+  --background: 42 60% 98%;
+  --foreground: 30 10% 9%;
+  --card: 0 0% 100%;
+  --card-foreground: 30 10% 9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 30 10% 9%;
+  --primary: 213 51% 25%;
+  --primary-foreground: 0 0% 98%;
+  --secondary: 41 49% 93%;
+  --secondary-foreground: 30 10% 9%;
+  --muted: 41 38% 90%;
+  --muted-foreground: 30 8% 38%;
+  --accent: 41 36% 39%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 354 75% 36%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 36 30% 83%;
+  --input: 36 30% 83%;
+  --ring: 213 51% 25%;
+  --radius: 0.75rem;
 }
-* { box-sizing: border-box; }
+
+/* ────────────────────────────────────────────────────────────────────
+ * DARK MODE — appliqué via [data-theme="dark"] sur <html> (ThemeContext)
+ * Palette inspirée navy/charbon, conserve les accents gold pour la marque.
+ * ────────────────────────────────────────────────────────────────────*/
+html[data-theme="dark"] {
+  --zayado-cream: #1a1f2e;
+  --zayado-cream-dark: #232a3d;
+  --zayado-navy: #6ea7e0;
+  --zayado-navy-dark: #8fc1ef;
+  --zayado-gold: #d4b97a;
+  --zayado-gold-soft: #b89858;
+  --zayado-gold-bg: #2c2618;
+  --zayado-red: #f87171;
+  --zayado-text: #e8e6e0;
+  --zayado-muted: #95918a;
+  --zayado-border: #2e3447;
+  --zayado-white: #1f2536;
+
+  --background: 220 28% 14%;
+  --foreground: 40 12% 90%;
+  --card: 220 24% 18%;
+  --card-foreground: 40 12% 90%;
+  --popover: 220 24% 18%;
+  --popover-foreground: 40 12% 90%;
+  --primary: 213 60% 65%;
+  --primary-foreground: 220 28% 14%;
+  --secondary: 220 18% 24%;
+  --secondary-foreground: 40 12% 90%;
+  --muted: 220 18% 24%;
+  --muted-foreground: 40 8% 60%;
+  --accent: 41 36% 55%;
+  --accent-foreground: 220 28% 14%;
+  --destructive: 354 75% 60%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 220 20% 28%;
+  --input: 220 20% 28%;
+  --ring: 213 60% 65%;
+}
+html[data-theme="dark"] body { background: #1a1f2e !important; color: var(--zayado-text); }
+html[data-theme="dark"] #root { background: #1a1f2e; }
+html[data-theme="dark"] .card-soft { background: #232a3d; border-color: #2e3447; }
+
 body {
   margin: 0;
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f6f3ee !important;
+  color: var(--zayado-text);
+  font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color: #fff;
-  background-color: var(--navy-900);
 }
-/* MyExtension Business — Hub IA mobile : le clair reste blanc ; les anciennes
-surfaces beiges deviennent navy. Le dark utilise uniquement les bleus ZAYADO. */
-h1, h2, h3, h4, .font-head { font-family: 'Outfit', sans-serif; letter-spacing: -0.02em; }
-.font-vision { font-family: 'Cormorant Garamond', serif; }
-/* ─────────── Immersive sky background (navy Zayado) ─────────── */
-.App { position: relative; z-index: 0; min-height: 100vh; overflow-x: hidden; }
-.sky-bg {
-  position: fixed; inset: 0; z-index: 0; overflow: hidden;
-  background:
-    radial-gradient(ellipse at 20% 10%, rgba(45,81,150,0.45) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 8%, rgba(30,60,110,0.35) 0%, transparent 55%),
-    linear-gradient(180deg, #172C5C 0%, #101F47 42%, #0B1F3A 76%, #081734 100%);
+html { background: #f6f3ee; }
+#root { background: #f6f3ee; min-height: 100vh; }
+
+/* All headings: Inter BOLD with tight negative tracking (signal-desk style) */
+h1, .font-display {
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.0;
+  font-style: normal;
 }
-.sky-bg::before {
-  content: ""; position: absolute; inset: 0;
-  background-image:
-    radial-gradient(ellipse 800px 300px at 15% 25%, rgba(255,255,255,0.10) 0%, transparent 55%),
-    radial-gradient(ellipse 900px 250px at 40% 60%, rgba(255,255,255,0.05) 0%, transparent 60%);
-  filter: blur(20px);
-  animation: cloudDrift 90s ease-in-out infinite alternate;
+h2 {
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  font-style: normal;
 }
-@keyframes cloudDrift { 0% { transform: translate(0,0); } 100% { transform: translate(-40px,-10px); } }
-/* ambiance claire (toggle thème) — subtile, garde l'app lisible */
-.ambiance-clarte .sky-bg {
-  background:
-    radial-gradient(ellipse at 84% 8%, rgba(255,245,230,0.30) 0%, transparent 55%),
-    linear-gradient(180deg, #172C5C 0%, #101F47 55%, #0B1F3A 100%);
+h3 {
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.12;
+  font-style: normal;
 }
-/* ─────────── App body (offset sidebar) ─────────── */
-.app-body { position: relative; z-index: 1; min-height: 100vh; }
-@media (min-width: 769px) {
-  .layout-left .app-body { margin-left: 96px !important; }
-  .layout-left .app-body > .flex > main {
-    width: min(1200px, calc(100% - 96px)) !important; max-width: 1200px !important;
-    margin-left: auto !important; margin-right: auto !important;
-    padding-left: 0 !important; padding-right: 0 !important;
-  }
+h4, h5, h6 {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
-/* ─────────── Glass surfaces ─────────── */
-.glass {
-  /* Verre Cours-main : une surface blanche transparente sur navy, jamais une carte blanche opaque. */
-  background: var(--glass-bg);
-  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
-  border: 1px solid var(--glass-border); border-radius: 20px;
-  transition: transform 180ms cubic-bezier(0.23, 1, 0.32, 1), border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+/* Italic in <em> stays italic (Zayado brand mark) — same heavy weight + navy accent */
+h1 em, h2 em, h3 em, .font-display em, .editorial em {
+  font-style: italic;
+  color: var(--zayado-navy);
+  font-weight: 700;
 }
-.glass-hover { transition: background-color .3s ease, border-color .3s ease, transform .3s ease; }
-.glass-hover:hover { background: linear-gradient(135deg, rgba(255,255,255,0.22), rgba(255,255,255,0.11) 55%, rgba(120,160,225,0.13)); border-color: rgba(255,255,255,0.42); transform: translateY(-3px); }
-/* Certaines sous-cartes utilisaient directement un fond Tailwind blanc/gris.
-Elles deviennent du verre Cours-main à leur tour : aucun changement sur
-les boutons, champs de saisie ou indicateurs de statut. */
-.app-body div[class*="rounded-"][class*="bg-white/"] {
-  background: var(--glass-bg) !important;
-  border-color: var(--glass-border) !important;
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  transition: transform 180ms cubic-bezier(0.23, 1, 0.32, 1), border-color 180ms ease, box-shadow 180ms ease;
+
+/* Override : pages Presta-Partenaire by TheSustain → typo Inter sans-serif */
+.ts-page,
+.ts-page h1,
+.ts-page h2,
+.ts-page h3,
+.ts-page h4,
+.ts-page h5,
+.ts-page h6 {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+  font-style: normal !important;
+  letter-spacing: -0.01em;
 }
-@media (hover: hover) and (pointer: fine) {
-  .app-body .glass:hover, .app-body div[class*="rounded-"][class*="bg-white/"]:hover {
-    transform: translateY(-5px);
-    border-color: rgba(255,255,255,0.52) !important;
-    box-shadow: 0 22px 42px rgba(3, 12, 32, 0.28), inset 0 1px 0 rgba(255,255,255,0.12);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .glass, .app-body div[class*="rounded-"][class*="bg-white/"] { transition: none; }
-}
-.gold-text { background: linear-gradient(90deg, #F1E2CC, #DEC2A3); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-.gold-bg { background: linear-gradient(135deg, #F1E2CC, #DEC2A3); }
-/* ─────────── Sidebar (rail 96px — modèle exact) ─────────── */
-.side-nav {
-  position: fixed; left: 0; top: 0; bottom: 0; width: 96px; z-index: 40;
-  display: flex; flex-direction: column; align-items: center;
-  transition: transform 320ms cubic-bezier(.2,.9,.3,1.2);
-  overflow: visible; pointer-events: none;
-}
-.side-nav > * { pointer-events: auto; }
-.side-logo-btn {
-  background: transparent; border: none; padding: 0; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  width: 60px; height: 60px; border-radius: 16px; margin: 14px 0 24px;
-  transition: transform .18s ease; position: relative; z-index: 20; flex-shrink: 0;
-}
-.side-logo-btn:hover { transform: scale(1.05); }
-.side-logo-img { width: 46px; height: 46px; object-fit: contain; border-radius: 13px; filter: drop-shadow(0 5px 14px rgba(0,0,0,0.32)); }
-.side-inner {
-  position: relative; flex: 1 1 auto; width: 100%;
-  display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-  padding-top: 60px; transition: opacity 180ms ease, transform 240ms ease;
-}
-.side-edge-strip {
-  position: absolute; left: 0; top: 88px; bottom: 12px; width: 6px;
-  border: none; padding: 0; cursor: pointer; border-radius: 0 6px 6px 0;
-  background: rgba(255,255,255,0.18); backdrop-filter: blur(10px);
-  opacity: 0; pointer-events: none; transition: opacity 220ms ease, width 180ms ease; z-index: 30;
-}
-.side-edge-strip:hover { background: rgba(255,255,255,0.28); width: 8px; }
-.side-collapse-handle {
-  position: absolute; top: 50%; right: -14px; transform: translateY(-50%);
-  width: 22px; height: 46px; border-radius: 0 12px 12px 0;
-  background: rgba(20,30,50,0.55); backdrop-filter: blur(12px);
-  color: rgba(255,255,255,0.75); border: 1px solid rgba(222, 194, 163,0.28); border-left: none;
-  cursor: pointer; display: flex; align-items: center; justify-content: center;
-  font-size: 18px; transition: background .18s ease, color .18s ease; z-index: 25;
-}
-.side-collapse-handle:hover { background: rgba(20,30,50,0.75); color: #fff; }
-.side-nav.is-collapsed .side-inner { transform: translateX(-140%); opacity: 0; pointer-events: none; }
-.side-nav.is-collapsed .side-edge-strip { opacity: 1; pointer-events: auto; }
-.menu-island {
-  width: 96px; min-height: 392px; padding: 30px 0 28px !important;
-  background: linear-gradient(180deg, #172C5C 0%, #101F47 100%);
-  border-radius: 0 30px 30px 0 !important; box-shadow: 0 16px 34px rgba(4,13,34,.28);
-}
-.menu-island ul { min-height: 326px; justify-content: space-between; gap: 0 !important; }
-.menu-scoop-top { fill: #172C5C; }
-.menu-scoop-bottom { fill: #101F47; }
-.menu-link { color: rgba(255,255,255,0.76); background: transparent; border: none; cursor: pointer; margin: 0; }
-.menu-link:hover { background: rgba(255,255,255,0.16); color: #fff; }
-.menu-link.active { background: rgba(255,255,255,0.95); color: var(--blue-slate); box-shadow: 0 4px 14px rgba(0,0,0,0.22), inset 0 0 0 2px rgba(222,194,163,0.55); }
-.menu-tooltip { background: var(--blue-slate); border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 10px 24px rgba(0,0,0,0.45); }
-/* Entrée Copilote de la barre latérale PC — même statut que le bouton central
-   du menu mobile. La bordure en pointillés faisait penser à un emplacement
-   vide ou à une fonctionnalité désactivée, pas à l'assistant du produit. */
-.menu-link-action {
-  background: linear-gradient(135deg, #F1E2CC, #DEC2A3) !important;
-  color: #0A1128 !important;
-  box-shadow: 0 6px 16px rgba(222,194,163,.28) !important;
-}
-.menu-link-action:hover { filter: brightness(1.06); }
-.menu-group-start { position: relative; margin-top: 0; padding-top: 18px; }
-.menu-group-start::before {
-  content: ""; position: absolute; top: 0; left: 50%; width: 24px; height: 1px; transform: translateX(-50%); background: linear-gradient(90deg, transparent, rgba(255,255,255,.42), transparent);
-}
-.side-settings-zone { position: relative; margin-top: 60px; }
-.side-settings-zone::before { display: none; }
-/* ─────────── Mode Light : surfaces réellement distinctes ─────────── */
-html.ambiance-clarte { color-scheme: light; }
-html.ambiance-clarte body { background: #edf3fa; color: #0B1F3A; }
-html.ambiance-clarte .sky-bg {
-  background:
-    radial-gradient(ellipse at 12% 6%, rgba(79,121,181,.22) 0%, transparent 42%),
-    radial-gradient(ellipse at 88% 12%, rgba(241, 226, 204,.34) 0%, transparent 36%),
-    linear-gradient(180deg, #f8fbff 0%, #edf3fa 48%, #dfeaf7 100%);
-}
-html.ambiance-clarte .sky-bg::before {
-  opacity: .55; background-image: radial-gradient(ellipse 780px 300px at 12% 20%, rgba(69,103,164,.13) 0%, transparent 60%), radial-gradient(ellipse 850px 280px at 70% 60%, rgba(255,255,255,.95) 0%, transparent 65%);
-}
-html.ambiance-clarte .glass {
-  background: linear-gradient(135deg, rgba(255,255,255,.88), rgba(232,241,251,.70)) !important;
-  border-color: rgba(23,44,92,.19) !important; box-shadow: 0 14px 34px rgba(30,58,105,.10);
-}
-html.ambiance-clarte .app-body { color: #0B1F3A; }
-html.ambiance-clarte .app-header { background: transparent; border-bottom: 1px solid transparent; box-shadow: none; backdrop-filter: none; }
-html.ambiance-clarte .header-search, html.ambiance-clarte .header-icon-btn, html.ambiance-clarte .header-profile { background: rgba(255,255,255,.72); border-color: rgba(23,44,92,.15); color: #0B1F3A; }
-html.ambiance-clarte .header-search input, html.ambiance-clarte .header-profile-name { color: #0B1F3A; }
-html.ambiance-clarte .header-search input::placeholder { color: rgba(11,31,58,.44); }
-html.ambiance-clarte .header-profile-role, html.ambiance-clarte .header-profile-chevron { color: rgba(11,31,58,.58); }
-html.ambiance-clarte .app-body .text-white { color: #0B1F3A !important; }
-html.ambiance-clarte .app-body [class*="text-white/"] { color: rgba(11,31,58,.67) !important; }
-html.ambiance-clarte .app-body [class*="border-white/"] { border-color: rgba(23,44,92,.16) !important; }
-html.ambiance-clarte .app-body [class*="bg-white/"] { background-color: rgba(255,255,255,.64) !important; }
-/* Corrige un vrai risque de texte invisible : le chat plein écran sur
-mobile (accueil, route "/") est rendu par App.js, EN DEHORS de
-.app-body — les règles ci-dessus ne l'atteignaient jamais. Sans ceci,
-soit le texte restait blanc sur fond blanc si un futur correctif
-changeait juste le fond, soit (comme ici) le fond figé en navy masquait
-le problème sans le résoudre. On traite ce conteneur explicitement,
-fond ET texte ensemble, pour qu'il reste cohérent avec le thème choisi
-au lieu de rester figé en sombre quel que soit le thème.  */
-html.ambiance-clarte .menu-island { background: linear-gradient(180deg, #5679b7 0%, #4567A4 48%, #31578f 100%) !important; box-shadow: 0 16px 34px rgba(45,78,130,.18); }
-html.ambiance-clarte .menu-scoop-top { fill: #5679b7; }
-html.ambiance-clarte .menu-scoop-bottom { fill: #31578f; }
-html.ambiance-clarte .menu-link { color: rgba(255,255,255,.78) !important; }
-html.ambiance-clarte .menu-link.active { color: #0B1F3A !important; }
-html.ambiance-clarte .bottom-nav { background: linear-gradient(180deg, #5679b7 0%, #31578f 100%); border-color: rgba(255,255,255,.55); }
-html.ambiance-clarte .bottom-nav button { color: rgba(255,255,255,.68); }
-html.ambiance-clarte .bottom-nav button.active { background: rgba(255,255,255,.95); color: #0B1F3A; }
-@media (max-width: 768px) {
-  html.ambiance-clarte .app-header { background: linear-gradient(135deg, rgba(86,121,183,.94), rgba(49,87,143,.96)); border-bottom-color: rgba(255,255,255,.28); }
-  html.ambiance-clarte .header-cockpit-chip { background: rgba(11,31,58,.32); color: #F1E2CC; }
-  html.ambiance-clarte .header-icon-btn { color: white; background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.20); }
-}
-/* Light Cours-main complet : #4567A4 est le bleu du verre de référence
-(rgba(69,103,164,.20)) ; il est éclairci ici pour dissocier Light de Dark. */
-html.ambiance-clarte [data-testid="copilot-right-drawer"] {
-  background: linear-gradient(180deg, rgba(250,253,255,.98), rgba(228,239,251,.98)) !important; border-left-color: rgba(23,44,92,.16) !important; box-shadow: -12px 0 36px rgba(30,58,105,.11) !important;
-}
-html.ambiance-clarte [data-testid="copilot-drawer-toggle"] { background: linear-gradient(180deg, #5679b7, #31578f) !important; border-color: rgba(23,44,92,.18) !important; color: #fff !important; }
-html.ambiance-clarte [data-testid="copilot-panel"] .glass, html.ambiance-clarte [data-testid="copilot-panel"] [data-testid^="copilot-action-card-"] {
-  background: linear-gradient(135deg, rgba(255,255,255,.96), rgba(231,241,252,.86)) !important; border-color: rgba(23,44,92,.17) !important; box-shadow: 0 8px 20px rgba(40,72,120,.08) !important;
-}
-html.ambiance-clarte [data-testid="copilot-panel"] input, html.ambiance-clarte [data-testid="copilot-panel"] textarea { background: rgba(255,255,255,.88) !important; color: #0B1F3A !important; border-color: rgba(23,44,92,.18) !important; }
-html.ambiance-clarte .search-overlay { background: rgba(17,38,74,.28); }
-html.ambiance-clarte .search-box { background: #fff; border-color: rgba(23,44,92,.18); box-shadow: 0 20px 60px rgba(30,58,105,.20); }
-html.ambiance-clarte .search-box, html.ambiance-clarte .search-box input, html.ambiance-clarte .search-box button { color: #0B1F3A !important; }
-html.ambiance-clarte .settings-shell { color: #0B1F3A; }
-html.ambiance-clarte .settings-nav-wrap { background: rgba(241,247,254,.80); border-right-color: rgba(23,44,92,.14); }
-html.ambiance-clarte .settings-search-box, html.ambiance-clarte .settings-completion { background: rgba(255,255,255,.80); border-color: rgba(23,44,92,.16); }
-html.ambiance-clarte .settings-search-box input, html.ambiance-clarte .settings-input, html.ambiance-clarte .zinput { color: #0B1F3A; background: rgba(255,255,255,.88); border-color: rgba(23,44,92,.18); }
-html.ambiance-clarte .settings-search-box input::placeholder, html.ambiance-clarte .settings-input::placeholder, html.ambiance-clarte .zinput::placeholder { color: rgba(11,31,58,.42); }
-html.ambiance-clarte .settings-completion-ring::after { background: #f4f8fd; }
-html.ambiance-clarte .settings-nav-item { color: rgba(11,31,58,.68); }
-html.ambiance-clarte .settings-nav-item:hover, html.ambiance-clarte .settings-nav-item.active { color: #0B1F3A; background: rgba(69,103,164,.13); border-color: rgba(69,103,164,.24); }
-html.ambiance-clarte .settings-glass-card, html.ambiance-clarte .glass-card {
-  background: linear-gradient(135deg, rgba(255,255,255,.94), rgba(231,241,252,.80)); border-color: rgba(23,44,92,.17); box-shadow: 0 8px 26px rgba(30,58,105,.09);
-}
-html.ambiance-clarte .settings-card-title, html.ambiance-clarte .card-label, html.ambiance-clarte .settings-row-label { color: #0B1F3A; }
-html.ambiance-clarte .settings-muted, html.ambiance-clarte .muted { color: rgba(11,31,58,.66); }
-html.ambiance-clarte .settings-row { border-bottom-color: rgba(23,44,92,.12); }
-html.ambiance-clarte .settings-action-button, html.ambiance-clarte .zbtn { color: #0B1F3A; background: rgba(255,255,255,.82); border-color: rgba(23,44,92,.18); }
-html.ambiance-clarte [data-radix-popper-content-wrapper] > div { background: #fff !important; color: #0B1F3A !important; border-color: rgba(23,44,92,.16) !important; box-shadow: 0 14px 36px rgba(30,58,105,.16) !important; }
-html.ambiance-clarte [data-radix-popper-content-wrapper] .text-white { color: #0B1F3A !important; }
-html.ambiance-clarte [data-radix-popper-content-wrapper] [class*="text-white/"] { color: rgba(11,31,58,.64) !important; }
-@media (max-width: 768px) {
-  html.ambiance-clarte .copilot-mobile-overlay, html.ambiance-clarte .copilot-mobile-shell { background: #edf4fc !important; }
-  html.ambiance-clarte [data-testid="copilot-panel"], html.ambiance-clarte .copilot-mobile-shell [data-testid="copilot-panel"] { background: linear-gradient(180deg, #f8fbff 0%, #e5effa 100%) !important; }
-  html.ambiance-clarte .copilot-mobile-shell [data-testid="copilot-panel"] > .border-t { border-top-color: rgba(23,44,92,.16) !important; }
-}
-/* ─────────── Campus : déclinaison Light complète ─────────── */
-html.ambiance-clarte [data-testid="campus-app-root"] { background: #edf3fa !important; color: #0B1F3A !important; }
-html.ambiance-clarte [data-testid="campus-app-root"] > div[aria-hidden="true"] {
-  background: radial-gradient(circle at 82% 0%, rgba(241, 226, 204,.36), transparent 28%), radial-gradient(circle at 10% 90%, rgba(86,121,183,.18), transparent 32%), linear-gradient(180deg, #f8fbff, #e7f0fa 58%, #dbe8f6) !important;
-}
-html.ambiance-clarte [data-testid="campus-sidebar"] { background: linear-gradient(180deg, rgba(86,121,183,.96), rgba(49,87,143,.98)) !important; border-right-color: rgba(255,255,255,.35) !important; }
-html.ambiance-clarte [data-testid="campus-header"] { background: rgba(248,252,255,.74) !important; border-bottom-color: rgba(23,44,92,.14) !important; }
-html.ambiance-clarte [data-testid="campus-bottom-nav"] { background: linear-gradient(180deg, #5679b7, #31578f) !important; border-top-color: rgba(255,255,255,.45) !important; }
-html.ambiance-clarte [data-testid="campus-app-root"] .text-white { color: #0B1F3A !important; }
-html.ambiance-clarte [data-testid="campus-app-root"] [class*="text-white/"] { color: rgba(11,31,58,.68) !important; }
-html.ambiance-clarte [data-testid="campus-app-root"] [class*="border-white/"] { border-color: rgba(23,44,92,.16) !important; }
-html.ambiance-clarte [data-testid="campus-app-root"] [class*="bg-white/"] { background-color: rgba(255,255,255,.68) !important; }
-html.ambiance-clarte [data-testid="campus-bottom-nav"] [class*="text-white/"] { color: rgba(255,255,255,.72) !important; }
-@media (max-width: 768px) {
-  .side-nav { display: none; }
-}
-/* ─────────── Header (transparent — modèle exact) ─────────── */
-.app-header {
-  position: relative; z-index: 30; display: flex; align-items: center;
-  justify-content: space-between; gap: 16px; padding: 18px 24px; background: transparent;
-}
-@media (min-width: 900px) {
-  .app-header { padding: 22px 40px; }
-}
-.app-header .header-search { margin-left: auto; margin-right: auto; }
-.layout-left .app-header { padding-left: 12px; }
-.header-logo { height: 38px; width: auto; object-fit: contain; cursor: pointer; flex-shrink: 0; }
-/* Le rail latéral (.side-nav) affiche déjà le logo tout en haut — sans cette
-règle, le Header affiche un DEUXIÈME logo juste à côté, collé au premier
-(bug déjà signalé et corrigé sur une branche précédente de ce projet,
-repéré ici de nouveau). Masqué quand la sidebar est présente ; ré-affiché
-sous 768px, quand la sidebar elle-même disparaît. */
-.layout-left .header-logo { display: none; }
-@media (max-width: 768px) {
-  .layout-left .header-logo { display: block; }
-}
-.header-search {
-  display: flex; align-items: center; gap: 10px; flex: 1; max-width: 360px;
-  padding: 9px 16px; border-radius: 999px; background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.12); transition: background .2s ease, border-color .2s ease; cursor: pointer;
-}
-.header-search:focus-within { background: rgba(255,255,255,0.13); border-color: var(--txt-muted); }
-.header-search-icon { color: var(--txt-muted); flex-shrink: 0; }
-.header-search input { flex: 1; min-width: 0; background: transparent; border: none; outline: none; color: var(--txt); font-family: inherit; font-size: 14px; }
-.header-search input::placeholder { color: var(--txt-muted); }
-.header-actions { display: flex; align-items: center; gap: 8px; }
-.header-icon-btn {
-  width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: var(--txt);
-  cursor: pointer; transition: background .2s ease, transform .2s ease, color .2s ease; position: relative;
-}
-.header-icon-btn:hover { background: rgba(255,255,255,0.16); transform: translateY(-1px); }
-@keyframes headerIconFlash { 0% { background: rgba(222, 194, 163,0.55); } 100% { background: rgba(255,255,255,0.08); } }
-.header-icon-flash { animation: headerIconFlash 0.35s ease-out; }
-.header-icon-badge { position: relative; }
-.header-badge {
-  position: absolute; top: -3px; right: -3px; min-width: 16px; height: 16px; padding: 0 4px;
-  border-radius: 999px; background: var(--brand-red); color: #fff; font-size: 10px; font-weight: 700;
-  display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.3);
-}
-.header-profile {
-  display: flex; align-items: center; gap: 10px; margin-left: 4px; padding: 5px 12px 5px 5px;
-  border-radius: 999px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
-  cursor: pointer; font-family: inherit; transition: background .2s ease;
-}
-.header-profile:hover { background: rgba(255,255,255,0.14); }
-.header-avatar {
-  width: 34px; height: 34px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #E23524 0%, #B5251A 100%); color: #fff; font-weight: 700; font-size: 15px; flex-shrink: 0;
-}
-.header-profile-info { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; }
-.header-profile-name { font-size: 13px; font-weight: 600; color: var(--txt); }
-.header-profile-role { font-size: 11px; color: var(--txt-muted); }
-.header-profile-chevron { color: var(--txt-muted); }
-.header-mobile-brand, .header-cockpit-chip { display: none; }
-@media (max-width: 620px) {
-  .header-actions { gap: 3px; }
-  .header-profile-info, .header-profile-chevron { display: none; }
-  .header-logo { width: 42px; height: 42px; }
-}
-/* ─────────── Search modal ─────────── */
-.search-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(6px); z-index: 2000; display: flex; align-items: flex-start; justify-content: center; padding-top: 12vh;
-}
-.search-box {
-  width: 100%; max-width: 480px; background: #0B1F3A; border: 1px solid rgba(255,255,255,0.14); border-radius: 16px; padding: 8px; box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-}
-/* ─────────── Bottom nav (mobile pill) ─────────── */
-.bottom-nav {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 120;
-  display: flex; gap: 2px; padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
-  background: linear-gradient(180deg, #172C5C 0%, #101F47 100%); border-top: 1px solid rgba(255,255,255,0.18);
-}
-.bottom-nav button {
-  flex: 1; background: transparent; border: none; color: rgba(255,255,255,0.55);
-  padding: 6px 4px; border-radius: 12px; cursor: pointer;
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  font-size: 10px; font-family: inherit; transition: color .2s ease, background .2s ease;
-}
-.bottom-nav button:hover { color: #fff; }
-.bottom-nav button.active { background: rgba(222,194,163,0.12); color: #DEC2A3; }
-@media (min-width: 769px) {
-  .bottom-nav { display: none; }
-}
-/* Hub Copilote : une seule surface Cours-main, sur PC comme sur mobile. */
-[data-testid="copilot-right-drawer"] {
-  background: linear-gradient(180deg, rgba(24,53,111,.96), rgba(10,17,40,.99)) !important;
-  border-left-color: rgba(255,255,255,.14) !important;
-}
-[data-testid="copilot-drawer-toggle"] {
-  background: linear-gradient(180deg, rgba(24,53,111,.96), rgba(10,17,40,.99)) !important;
-  border-color: rgba(222,194,163,.36) !important;
-}
-/* ─────────── Utils ─────────── */
+.ts-page h1 { font-weight: 800; }
+.ts-page h2 { font-weight: 700; }
+.ts-page h3 { font-weight: 700; }
+
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 8px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(222, 194, 163,0.5); }
-::selection { background: rgba(222, 194, 163,0.35); color: #fff; }
-.fade-in { animation: fadeIn 0.5s ease both; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
-.pulse-dot { animation: pulse-dot 1.6s ease-in-out infinite; }
-/* ─────────── Paramètres Final-main adaptés au thème Cours-main ─────────── */
-.settings-shell { display: flex; min-height: 0; width: 100%; height: 100%; color: #fff; }
-.settings-nav-wrap { width: 242px; flex: 0 0 242px; padding: 18px 14px; overflow-y: auto; border-right: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.025); }
-.settings-search-box {
-  display: flex; align-items: center; gap: 8px; padding: 9px 11px; border: 1px solid rgba(255,255,255,.15); border-radius: 12px; background: rgba(255,255,255,.05); margin-bottom: 12px;
-}
-.settings-search-box input { width: 100%; border: 0; outline: 0; background: transparent; color: #fff; font: inherit; font-size: 12px; }
-.settings-search-box input::placeholder { color: rgba(255,255,255,.45); }
-.settings-completion {
-  display: flex; align-items: center; gap: 10px; margin: 2px 0 14px; padding: 10px; border: 1px solid rgba(255,255,255,.12); border-radius: 14px; background: rgba(255,255,255,.04); cursor: pointer;
-}
-.settings-completion-ring {
-  --size: 34px; width: var(--size); height: var(--size); border-radius: 50%; display: grid; place-items: center; flex: 0 0 var(--size); background: conic-gradient(#DEC2A3 calc(var(--pct) * 1%), rgba(255,255,255,.14) 0); position: relative;
-}
-.settings-completion-ring::after { content: ""; position: absolute; inset: 4px; border-radius: inherit; background: #0A1128; }
-.settings-completion-ring span { position: relative; z-index: 1; font-size: 9px; font-weight: 700; }
-.settings-nav-desktop { display: grid; gap: 4px; }
-.settings-nav-mobile { display: none; }
-.settings-nav-item {
-  width: 100%; display: flex; align-items: center; gap: 9px; border: 1px solid transparent; border-radius: 10px; padding: 10px; color: rgba(255,255,255,.66); background: transparent; font: inherit; font-size: 12px; font-weight: 600; text-align: left; cursor: pointer; transition: background .18s ease, color .18s ease, border-color .18s ease;
-}
-.settings-nav-item:hover { background: rgba(255,255,255,.07); color: #fff; }
-.settings-nav-item.active { color: #fff; background: rgba(174,193,220,.16); border-color: rgba(255,255,255,.16); }
-.settings-nav-badge { margin-left: auto; min-width: 17px; text-align: center; padding: 1px 5px; border-radius: 999px; color: #0A1128; background: #DEC2A3; font-size: 10px; }
-.settings-panel { flex: 1 1 auto; min-width: 0; overflow-y: auto; padding: 20px; }
-.settings-glass-card, .glass-card {
-  padding: 16px; border: 1px solid rgba(255,255,255,.23); border-radius: 16px; background: var(--glass-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: 0 8px 26px rgba(0,0,0,.14);
-}
-.settings-glass-card + .settings-glass-card { margin-top: 16px; }
-.settings-card-title, .card-label { display: flex; align-items: center; gap: 8px; margin: 0 0 7px; color: #fff; font-size: 13px; font-weight: 700; }
-.settings-muted, .muted { color: rgba(255,255,255,.70); }
-.settings-field-row { display: flex; align-items: center; gap: 10px; margin-top: 11px; }
-.settings-input, .zinput {
-  width: 100%; border: 1px solid rgba(255,255,255,.16); border-radius: 10px; padding: 10px 12px; outline: 0; color: #fff; background: rgba(255,255,255,.055); font: inherit; font-size: 13px;
-}
-.settings-input::placeholder, .zinput::placeholder { color: rgba(255,255,255,.36); }
-.settings-input:focus, .zinput:focus { border-color: rgba(222,194,163,.65); }
-.settings-inspiration-preview { display: block; width: 100%; max-height: 176px; object-fit: cover; margin-top: 12px; border: 1px solid rgba(255,255,255,.15); border-radius: 12px; }
-.settings-row { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,.1); }
-.settings-row-last { border-bottom: 0; }
-.settings-row-label { margin: 0 0 2px; color: rgba(255,255,255,.9); font-size: 13px; font-weight: 600; }
-.settings-row .settings-muted { margin: 0; font-size: 11.5px; line-height: 1.4; }
-.settings-action-button, .zbtn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid rgba(255,255,255,.16); border-radius: 10px; padding: 9px 12px; color: rgba(255,255,255,.9); background: rgba(255,255,255,.065); font: inherit; font-size: 12px; font-weight: 700; text-decoration: none; cursor: pointer; transition: border-color .18s ease, background .18s ease, transform .16s ease;
-}
-.settings-action-button:hover, .zbtn:hover { border-color: rgba(222,194,163,.55); background: rgba(222,194,163,.11); }
-.settings-action-button:active, .zbtn:active { transform: scale(.97); }
-.settings-link-button { margin-top: 2px; border: 0; background: transparent; color: #DEC2A3; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
-.zbtn-primary { color: #0A1128; border-color: #DEC2A3; background: #DEC2A3; }
-.zchip { display: inline-flex; align-items: center; border-radius: 999px; padding: 4px 8px; }
-@media (max-width: 720px) {
-  .settings-shell { display: block; overflow-y: auto; }
-  .settings-nav-wrap { width: 100%; padding: 14px 14px 6px; border-right: 0; border-bottom: 1px solid rgba(255,255,255,.12); overflow: visible; }
-  .settings-completion, .settings-nav-desktop { display: none; }
-  .settings-nav-mobile { display: flex; gap: 7px; overflow-x: auto; padding-bottom: 8px; }
-  .settings-nav-item-mobile {
-    white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,.13); border-radius: 999px; padding: 7px 10px; color: rgba(255,255,255,.65); background: rgba(255,255,255,.04); font: inherit; font-size: 11px; font-weight: 700; cursor: pointer;
-  }
-  .settings-nav-item-mobile.active { color: #fff; border-color: rgba(255,255,255,.22); background: rgba(174,193,220,.16); }
-  .settings-panel { overflow: visible; padding: 14px; }
-}
-/* ─────────── Mobile : shell repris du comportement Final-main ─────────── */
-@media (max-width: 768px) {
-  .app-header {
-    display: flex; position: sticky; top: 0; z-index: 130; height: 58px; padding: 8px 10px; gap: 8px; background: linear-gradient(135deg, #172C5C 0%, #0B1F3A 100%); border-bottom: 1px solid rgba(255,255,255,.16); box-shadow: 0 8px 22px rgba(3,12,32,.18); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
-  }
-  .header-mobile-brand {
-    display: inline-flex; width: 42px; height: 42px; padding: 0; overflow: hidden; flex: 0 0 42px; border: 0; border-radius: 12px; background: transparent; box-shadow: 0 4px 14px rgba(0,0,0,.2); cursor: pointer;
-  }
-  .header-mobile-brand img { width: 100%; height: 100%; object-fit: contain; }
-  .header-cockpit-chip {
-    display: inline-flex; align-items: center; gap: 6px; min-width: 0; margin-left: auto; border: 1px solid rgba(241, 226, 204,.42); border-radius: 999px; background: rgba(11,31,58,.32); color: #F1E2CC; padding: 8px 11px; font-size: 12px; font-weight: 700; white-space: nowrap;
-  }
-  .header-cockpit-chip span { color: rgba(241, 226, 204,.72); }
-  .header-logo { flex-shrink: 0; max-width: 142px; }
-  .header-search { display: none; }
-  .header-actions { gap: 4px; min-width: 0; margin-left: 0; }
-  .header-icon-btn { width: 38px; height: 38px; flex-shrink: 0; background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.20); }
-  [data-testid="header-mail-btn"], [data-testid="header-apps-btn"] { display: none !important; }
-  .header-profile { padding: 0; flex-shrink: 0; border: 0; background: transparent; }
-  .header-avatar { width: 38px; height: 38px; border-radius: 50%; box-shadow: 0 0 0 2px rgba(255,255,255,.12); }
-  .header-profile-info, .header-profile-chevron { display: none; }
-  .layout-left .app-body { margin-left: 0; }
-}
-@media (max-width: 768px) {
-  .copilot-mobile-overlay { background: #0B1F3A !important; }
-  .copilot-mobile-overlay > div:first-child { backdrop-filter: none; -webkit-backdrop-filter: none; background: #0B1F3A !important; }
-  .copilot-mobile-shell { overflow: hidden; border-radius: 0; background: #0B1F3A !important; }
-  /* Même fond exact que l'application : le dégradé à deux arrêts utilisé
-     ici auparavant rendait le chat visiblement plus sombre et plus plat
-     que les pages autour. */
-  [data-testid="copilot-panel"] { border-radius: 0 !important; background: var(--app-deep) !important; }
-  .copilot-mobile-shell [data-testid="copilot-panel"] { background: var(--app-deep) !important; }
-  .copilot-mobile-shell [data-testid="copilot-messages"] { padding-top: 12px; padding-bottom: 108px !important; }
-  .copilot-mobile-shell [data-testid="copilot-panel"] { padding-bottom: 86px; box-sizing: border-box; }
-  .copilot-mobile-shell [data-testid="copilot-panel"] > .border-t { padding: 7px 12px 8px; background: transparent !important; border-top-color: rgba(255,255,255,.14) !important; }
-  .layout-left main { padding-top: 12px; padding-bottom: 76px; }
-}
-@media (max-width: 640px) {
-  .bottom-nav {
-    left: 8px; right: 8px; bottom: 16px; width: auto; transform: none; justify-content: space-around; gap: 0; padding: 8px 4px; border: 1px solid rgba(255,255,255,.22); border-radius: 999px; background: linear-gradient(180deg, #172C5C 0%, #101F47 100%); box-shadow: 0 10px 30px rgba(0,0,0,.28); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-  }
-  .bottom-nav button { padding: 7px 6px 6px; font-size: 9.5px; font-weight: 600; gap: 2px; border-radius: 18px; line-height: 1.1; }
-  /* 62px tronquait « Mouvement » en « Mouveme… » alors que la place existe. */
-  .bottom-nav button span { display: block; max-width: 78px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .bottom-nav button svg { width: 19px; height: 19px; }
-  .bottom-nav button.active { background: rgba(255,255,255,.95); color: #0B1F3A; }
-}
-/* Copilote : une seule surface bleue/verre. Aucune carte noire ni blur
-indépendant ne doit réapparaître selon le wrapper PC ou mobile. */
-[data-testid="copilot-panel"] .glass, [data-testid="copilot-panel"] [data-testid^="copilot-action-card-"] {
-  background: linear-gradient(135deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, .08) 55%, rgba(120, 160, 225, .12)) !important;
-  border-color: rgba(255, 255, 255, .28) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  box-shadow: 0 8px 22px rgba(3, 12, 32, .18) !important;
-}
-[data-testid="copilot-panel"] [data-testid^="copilot-action-card-"][data-urgent="true"] {
-  background: linear-gradient(135deg, rgba(190, 55, 72, .28), rgba(255, 255, 255, .10)) !important;
-  border-color: rgba(248, 113, 113, .82) !important;
-}
-[data-testid="copilot-panel"] input, [data-testid="copilot-panel"] textarea {
-  background: rgba(31, 64, 120, .42) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-@keyframes mission-created-exit {
-  0% { opacity: 1; transform: translateY(0); max-height: 420px; }
-  65% { opacity: .35; transform: translateY(-4px); max-height: 420px; }
-  100% { opacity: 0; transform: translateY(-10px); max-height: 0; margin-top: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; border-width: 0; overflow: hidden; }
-}
-.mission-created-exit { animation: mission-created-exit .52s ease forwards; pointer-events: none; }
-@media (prefers-reduced-motion: reduce) {
-  .mission-created-exit { animation-duration: .01ms; }
-}
-/* ─────────── Accueil Vision fusionné depuis la maquette interactive ─────────── */
-.vision-home { position: relative; display: grid; gap: 18px; color: var(--txt); }
-.vision-home-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; padding: 8px 4px 2px; }
-.vision-home-hero-copy h1 {
-  margin: 8px 0 4px; color: var(--gold-bright); font-family: 'Cormorant Garamond', serif; font-size: clamp(40px, 4vw, 66px); font-weight: 600; line-height: .95; letter-spacing: -.045em;
-}
-.vision-home-hero-copy p { margin: 0; color: var(--txt-soft); font-size: 14px; }
-.vision-eyebrow { display: inline-flex; align-items: center; gap: 8px; color: var(--gold-bright); font-size: 10px; font-weight: 800; letter-spacing: .16em; }
-.vision-eyebrow span, .climate-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--gold-bright); box-shadow: 0 0 14px rgba(241, 226, 204,.9); }
-.vision-studio-cta, .vision-primary-cta {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid rgba(241, 226, 204,.65); border-radius: 999px; background: linear-gradient(135deg, #F1E2CC, #B0851F); color: #0A1128; padding: 11px 18px; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; box-shadow: 0 8px 22px rgba(222, 194, 163,.18); transition: transform .18s ease, filter .18s ease;
-}
-.vision-studio-cta:hover, .vision-primary-cta:hover { filter: brightness(1.07); transform: translateY(-1px); }
-.vision-trajectory, .vision-linked-strip, .vision-mirror {
-  position: relative; overflow: hidden; border: 1px solid var(--glass-border); border-radius: 24px; background: var(--glass-bg); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); box-shadow: 0 18px 50px rgba(0,0,0,.14);
-}
-.vision-trajectory { padding: 22px 22px 18px; }
-.vision-trajectory::before {
-  content: ''; position: absolute; inset: -80px 25% auto; height: 150px; background: radial-gradient(circle, rgba(222, 194, 163,.16), transparent 70%); pointer-events: none;
-}
-.vision-section-title { position: relative; z-index: 1; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
-.vision-section-title > div { display: grid; gap: 3px; }
-.vision-section-title span { font-family: 'Outfit', sans-serif; font-size: 17px; font-weight: 700; }
-.vision-section-title small, .vision-data-note { color: var(--txt-muted); font-size: 11px; }
-.vision-trajectory-grid { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-.vision-trajectory-grid::before { content: ''; position: absolute; top: 29px; left: 12%; right: 12%; border-top: 1px solid rgba(241, 226, 204,.65); box-shadow: 0 0 14px rgba(241, 226, 204,.4); }
-.vision-trajectory-grid article { position: relative; display: grid; justify-items: center; gap: 4px; text-align: center; }
-.trajectory-number {
-  position: relative; z-index: 1; display: grid; place-items: center; width: 31px; height: 31px; border: 1px solid var(--gold-bright); border-radius: 50%; background: #101f47; color: var(--gold-bright); font-size: 11px; font-weight: 800;
-}
-.vision-trajectory-grid article > strong { margin-top: 9px; color: var(--gold-bright); font-size: 12px; letter-spacing: .11em; }
-.vision-trajectory-grid article > small { color: var(--txt-muted); font-size: 11px; }
-.trajectory-icon {
-  display: grid; place-items: center; width: 43px; height: 43px; margin: 5px 0 2px; border: 1px solid rgba(241, 226, 204,.6); border-radius: 50%; background: rgba(10,17,40,.48); color: var(--gold-bright);
-}
-.vision-scale-icon { color: var(--gold-bright); font-size: 20px; line-height: 1; }
-.trajectory-card {
-  display: grid; gap: 4px; width: 100%; min-height: 65px; padding: 10px; border: 1px solid rgba(255,255,255,.16); border-radius: 14px; background: rgba(10,17,40,.32); text-align: left;
-}
-.trajectory-card b { color: var(--txt); font-size: 12px; }
-.trajectory-card span { color: var(--txt-muted); font-size: 10px; line-height: 1.35; }
-.vision-alignment-row {
-  display: grid; grid-template-columns: .8fr 1.2fr 1.3fr; gap: 14px; align-items: stretch; margin-top: 20px; padding: 15px; border: 1px solid rgba(255,255,255,.14); border-radius: 18px; background: rgba(10,17,40,.28);
-}
-.vision-alignment-row > div { min-width: 0; padding: 0 13px; border-right: 1px solid rgba(255,255,255,.14); }
-.vision-alignment-row > div:last-child { border-right: 0; }
-.vision-alignment-row > div > span { display: block; margin-bottom: 7px; color: var(--gold-bright); font-size: 10px; font-weight: 800; letter-spacing: .08em; }
-.vision-alignment-row strong { display: block; color: var(--txt); font-family: 'Outfit', sans-serif; font-size: 31px; line-height: 1; }
-.vision-alignment-row strong small { margin-left: 2px; color: var(--gold-bright); font-size: 15px; }
-.vision-alignment-row em { display: inline-flex; align-items: center; gap: 4px; margin-top: 7px; color: #8ee7bb; font-size: 10px; font-style: normal; }
-.vision-pillar-rings { display: flex; flex-wrap: wrap; gap: 9px; align-items: start; }
-.vision-pillar-ring { display: grid; justify-items: center; gap: 2px; min-width: 45px; }
-.vision-pillar-ring-graphic { position: relative; width: 42px; height: 42px; }
-.vision-pillar-ring-graphic svg { width: 42px; height: 42px; transform: rotate(-90deg); }
-.vision-pillar-ring-graphic strong { position: absolute; inset: 0; display: grid; place-items: center; color: var(--txt); font-size: 10px; }
-.vision-pillar-ring span { max-width: 54px; overflow: hidden; color: var(--txt-muted); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
-.vision-alignment-row p { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; color: var(--txt-soft); font-size: 11px; }
-.vision-alignment-row p i { width: 8px; height: 8px; border: 2px solid #8ee7bb; border-radius: 50%; }
-.vision-alignment-row p b { margin-left: auto; color: var(--txt-muted); font-size: 10px; }
-.vision-muted { color: var(--txt-muted) !important; }
-.vision-primary-cta { display: flex; width: max-content; margin: 15px auto 0; padding-inline: 22px; }
-.vision-climate-card {
-  position: relative; display: flex; min-height: 132px; overflow: hidden; border: 1px solid rgba(241, 226, 204,.38); border-radius: 22px; background: linear-gradient(105deg, rgba(25,54,111,.9), rgba(13,28,66,.82)); box-shadow: 0 15px 35px rgba(0,0,0,.16);
-}
-.vision-climate-atmosphere { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
-.vision-climate-atmosphere::before, .vision-climate-atmosphere::after { content: ''; position: absolute; border-radius: 50%; filter: blur(10px); opacity: .65; animation: climateDrift 8s ease-in-out infinite alternate; }
-.vision-climate-atmosphere::before { width: 220px; height: 110px; left: 13%; top: 23px; background: radial-gradient(ellipse, rgba(255,255,255,.16), transparent 70%); }
-.vision-climate-atmosphere::after { width: 180px; height: 90px; left: 44%; top: 45px; background: radial-gradient(ellipse, rgba(96,133,193,.3), transparent 68%); animation-delay: -3s; }
-.vision-climate-atmosphere span, .vision-climate-atmosphere i, .vision-climate-atmosphere b {
-  position: absolute; display: block; width: 4px; height: 4px; border-radius: 50%; background: var(--gold-bright); opacity: .7; animation: climateFloat 5s ease-in-out infinite;
-}
-.vision-climate-atmosphere span { left: 66%; top: 24px; }
-.vision-climate-atmosphere i { left: 73%; top: 85px; animation-delay: -2s; }
-.vision-climate-atmosphere b { left: 86%; top: 44px; animation-delay: -4s; }
-@keyframes climateDrift { from { transform: translateX(-12px); } to { transform: translateX(18px); } }
-@keyframes climateFloat { 0%,100% { transform: translateY(0); opacity: .38; } 50% { transform: translateY(-10px); opacity: .9; } }
-.vision-climate-content { position: relative; z-index: 1; display: grid; flex: 1; gap: 9px; padding: 17px 20px; }
-.vision-climate-topline, .vision-climate-bottom { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.vision-climate-topline span { display: inline-flex; align-items: center; gap: 7px; color: var(--gold-bright); font-size: 10px; font-weight: 800; letter-spacing: .11em; }
-.vision-climate-topline small, .vision-climate-bottom { color: var(--txt-muted); font-size: 10px; }
-.vision-climate-main { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
-.vision-climate-main h3 { margin: 0; color: var(--txt); font-size: 20px; }
-.vision-climate-main p { max-width: 520px; margin: 3px 0 0; color: var(--txt-soft); font-size: 11px; }
-.vision-climate-score { display: flex; align-items: baseline; color: var(--gold-bright); white-space: nowrap; }
-.vision-climate-score strong { font-family: 'Outfit', sans-serif; font-size: 35px; line-height: 1; }
-.vision-climate-score span { font-size: 11px; }
-.vision-climate-bottom { justify-content: flex-start; gap: 22px; }
-.vision-climate-bottom span { display: inline-flex; align-items: center; gap: 5px; }
-.vision-focus-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-.vision-focus-grid article {
-  display: grid; align-content: start; gap: 7px; min-width: 0; padding: 15px; border: 1px solid rgba(255,255,255,.15); border-radius: 18px; background: var(--glass-bg); backdrop-filter: blur(14px); transition: transform .2s ease, border-color .2s ease;
-}
-.vision-focus-grid article:hover { transform: translateY(-2px); border-color: rgba(241, 226, 204,.45); }
-.focus-label { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 800; letter-spacing: .08em; }
-.focus-green { color: #8ee7bb; }
-.focus-amber { color: #f2c66d; }
-.focus-blue { color: #91b8ff; }
-.focus-gold { color: var(--gold-bright); }
-.vision-focus-grid article > strong { color: var(--txt); font-size: 13px; }
-.vision-focus-grid article > p { min-height: 42px; margin: 0; color: var(--txt-muted); font-size: 11px; line-height: 1.45; }
-.vision-focus-grid article button {
-  display: inline-flex; align-items: center; gap: 5px; width: max-content; border: 0; background: none; color: var(--txt-soft); font: inherit; font-size: 10px; cursor: pointer;
-}
-.vision-focus-grid article button:hover { color: var(--gold-bright); }
-.vision-linked-strip, .vision-mirror { padding: 17px; }
-.vision-linked-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
-.vision-linked-card { display: grid; gap: 5px; min-width: 0; padding: 12px; border: 1px solid rgba(255,255,255,.14); border-radius: 15px; background: rgba(10,17,40,.25); }
-.vision-linked-card-type { display: flex; align-items: center; gap: 5px; color: var(--txt-muted); font-size: 9px; text-transform: uppercase; letter-spacing: .06em; }
-.vision-linked-card strong { overflow: hidden; color: var(--txt); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.vision-linked-card b { color: var(--gold-bright); font-size: 17px; }
-.vision-linked-card span { color: var(--txt-muted); font-size: 10px; }
-.vision-progress { height: 4px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,.1); }
-.vision-progress i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--gold-bright), var(--gold)); }
-.vision-mirror-chain { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-.vision-mirror-chain > div { display: grid; gap: 4px; padding: 10px; border: 1px solid rgba(255,255,255,.13); border-radius: 13px; background: rgba(10,17,40,.22); }
-.vision-mirror-chain span { color: var(--txt-muted); font-size: 11px; }
-.vision-mirror-chain span.connected { color: var(--txt); }
-.vision-mirror-chain small { color: var(--txt-muted); font-size: 10px; }
-.vision-quick-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.vision-quick-actions button {
-  display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,.16); border-radius: 12px; background: rgba(255,255,255,.06); color: var(--txt-soft); padding: 9px 12px; font: inherit; font-size: 11px; cursor: pointer; transition: background .18s ease, border-color .18s ease;
-}
-.vision-quick-actions button:hover { border-color: rgba(241, 226, 204,.45); background: rgba(241, 226, 204,.10); color: var(--txt); }
-.vision-home-hero-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
-.vision-action-secondary {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid rgba(255,255,255,.20); border-radius: 999px; background: rgba(255,255,255,.07); color: var(--txt-soft); padding: 10px 13px; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; transition: border-color .18s ease, background .18s ease, color .18s ease, transform .18s ease;
-}
-.vision-action-secondary:hover { border-color: rgba(241, 226, 204,.60); background: rgba(241, 226, 204,.12); color: var(--txt); transform: translateY(-1px); }
-.vision-back-action {
-  display: inline-flex; align-items: center; gap: 7px; border: 1px solid rgba(255,255,255,.18); border-radius: 999px; background: rgba(255,255,255,.06); color: var(--txt-soft); padding: 9px 13px; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer;
-}
-.vision-back-action:hover { border-color: rgba(241, 226, 204,.55); color: var(--txt); background: rgba(241, 226, 204,.10); }
-[data-testid="copilot-drawer-toggle"] { border-color: rgba(241, 226, 204,.45); background: rgba(10,17,40,.88); color: #F1E2CC; }
-[data-testid="copilot-drawer-toggle"]:hover { background: rgba(31,59,105,.96); color: #fff; }
-.vision-loading, .vision-empty-state { display: grid; justify-items: center; gap: 10px; padding: 70px 24px; color: var(--txt-muted); text-align: center; }
-.vision-empty-state strong { color: var(--txt); }
-.vision-empty-state button {
-  display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(241, 226, 204,.5); border-radius: 999px; background: var(--gold); color: #0A1128; padding: 9px 14px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
-}
-@media (max-width: 1080px) {
-  .vision-focus-grid { grid-template-columns: repeat(2, 1fr); }
-  .vision-linked-list { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 768px) {
-  .vision-home { gap: 14px; }
-  .vision-home-hero { display: grid; align-items: start; gap: 14px; padding: 2px 0; }
-  .vision-home-hero-actions { display: grid; grid-template-columns: 1fr 1fr; justify-content: stretch; }
-  .vision-home-hero-actions .vision-studio-cta { grid-column: 1 / -1; width: 100%; }
-  .vision-action-secondary { width: 100%; }
-  .vision-home-hero-copy h1 { font-size: 48px; }
-  .vision-home-hero-copy p { font-size: 12px; }
-  .vision-studio-cta { width: 100%; }
-  .vision-trajectory { padding: 16px 13px; border-radius: 20px; }
-  .vision-section-title { margin-bottom: 10px; }
-  .vision-section-title span { font-size: 15px; }
-  .vision-trajectory-grid { gap: 7px; }
-  .vision-trajectory-grid::before { left: 13%; right: 13%; top: 25px; }
-  .trajectory-number { width: 27px; height: 27px; font-size: 10px; }
-  .vision-trajectory-grid article > strong { margin-top: 6px; font-size: 10px; }
-  .vision-trajectory-grid article > small { font-size: 9px; }
-  .trajectory-icon { width: 35px; height: 35px; }
-  .trajectory-card { min-height: 73px; padding: 8px; }
-  .trajectory-card b { font-size: 10px; }
-  .trajectory-card span { font-size: 9px; }
-  .vision-alignment-row { grid-template-columns: 1fr; gap: 12px; padding: 12px; }
-  .vision-alignment-row > div { padding: 0 0 11px; border-right: 0; border-bottom: 1px solid rgba(255,255,255,.14); }
-  .vision-alignment-row > div:last-child { padding-bottom: 0; border-bottom: 0; }
-  .vision-pillar-rings { gap: 7px; }
-  .vision-primary-cta { width: 100%; margin-top: 12px; }
-  .vision-climate-card { min-height: 164px; }
-  .vision-climate-content { padding: 14px; }
-  .vision-climate-topline { align-items: flex-start; flex-direction: column; gap: 3px; }
-  .vision-climate-main h3 { font-size: 17px; }
-  .vision-climate-main p { font-size: 10px; }
-  .vision-climate-score strong { font-size: 28px; }
-  .vision-focus-grid, .vision-linked-list { grid-template-columns: 1fr 1fr; gap: 8px; }
-  .vision-focus-grid article { padding: 11px; }
-  .vision-focus-grid article > p { min-height: 56px; font-size: 10px; }
-  .vision-linked-strip, .vision-mirror { padding: 13px; border-radius: 19px; }
-  .vision-mirror-chain { grid-template-columns: 1fr 1fr; }
-  .vision-quick-actions { display: grid; grid-template-columns: 1fr 1fr; }
-  .vision-quick-actions button { justify-content: center; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .vision-climate-atmosphere::before, .vision-climate-atmosphere::after, .vision-climate-atmosphere span, .vision-climate-atmosphere i, .vision-climate-atmosphere b { animation: none; }
-}
-/* Final-main adapté : grille Écosystème MyExtension AI dans le Header Cours-main. */
-.ecosystem-menu {
-  background: linear-gradient(180deg, rgba(17,45,88,.98), rgba(8,22,52,.99)) !important; border-radius: 22px !important; box-shadow: 0 24px 70px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.09);
-}
-.ecosystem-card {
-  min-height: 52px; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(255,255,255,.12); border-radius: 15px; background: linear-gradient(135deg, rgba(255,255,255,.095), rgba(255,255,255,.035)); padding: 10px 12px; color: rgba(255,255,255,.9); text-align: left; font: inherit; font-size: 12px; transition: transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
-}
-.ecosystem-card:hover {
-  transform: translateY(-1px); border-color: rgba(232,201,106,.7); background: linear-gradient(135deg, rgba(232,201,106,.16), rgba(255,255,255,.065)); box-shadow: 0 8px 22px rgba(0,0,0,.18);
-}
-.ecosystem-card-icon {
-  display: inline-flex; width: 28px; height: 28px; flex: 0 0 28px; align-items: center; justify-content: center; border: 1px solid rgba(232,201,106,.35); border-radius: 9px; background: rgba(232,201,106,.1); color: #E8C96A;
-}
-.ecosystem-card-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ecosystem-card.is-disabled { opacity: .72; }
-.decision-card-body { animation: decision-card-reveal .18s ease-out both; }
-@keyframes decision-card-reveal { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
-@media (max-width: 768px) {
-  .ecosystem-menu { width: min(92vw, 430px) !important; }
-  .vision-home-hero-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; margin-top: 2px; }
-  .vision-home-hero-actions .vision-studio-cta { grid-column: 1 / -1; min-height: 44px; width: 100%; }
-  .vision-home-hero-actions .vision-action-secondary { min-height: 42px; width: 100%; padding: 9px 8px; font-size: 10px; }
-  .vision-home-hero-actions .vision-action-secondary:last-child { grid-column: 1 / -1; }
-  [data-testid="copilot-right-drawer"] { display: none !important; }
-  [data-testid="copilot-drawer-toggle"] { display: none !important; }
-  .copilot-mobile-overlay { background: #0A1128 !important; }
-}
-/* ZAYADO Chat mobile — reprise du vrai ChatPanel original, surface Kairos.
-Intention : ne modifier que la présentation mobile ; les handlers, données et appels API restent ceux du composant original.
-*/
-/* Corrigé : ce bloc entier forçait un fond clair (blanc/beige) sur tout
-le chat mobile, SANS condition de thème — donc actif même en mode
-sombre, créant un mélange visuel incohérent (fond clair qui apparaît
-alors que l'utilisateur n'a jamais choisi ce thème). Un commentaire
-plus bas dans ce fichier confirme qu'un bloc plus récent, correctement
-scopé à html.ambiance-clarte, est "la source de vérité" pour le mode
-clair — ce bloc-ci est son ancêtre non nettoyé. Chaque sélecteur est
-maintenant préfixé par html.ambiance-clarte pour ne s'appliquer qu'au
-thème auquel ses couleurs sont réellement destinées. */
-/* Correctif final Hub IA : cette couche suit les anciens essais beige et est
-donc volontairement placée en fin de fichier pour définir la source de vérité. */
-/* Réalignement strict sur les tokens mesurés dans Accueil/Vision et sur le
-modèle de navigation fourni. Cette couche neutralise les anciens essais
-navy approximatifs (#0d2345 / #294e82) sans changer les fonctions. */
-/* Passe finale Hub IA : tokens plats de l'application, bulles lisibles et collaboration hors fil. */
-/* Correctifs de contraste finaux après contrôle Actualité. */
-/* Dernière correction ciblée du composer et de la bulle d'accueil en dark. */
-/* Bulle utilisateur dark : contraste inversé façon Kairos, sans dégrader le fond du Hub. */
-/* Le conteneur d’événement ne doit jamais peindre une seconde carte derrière la bulle. */
-/* Le wrapper de la ligne d'accueil est structurel, pas une carte : aucun fond propre. */
-/* Priorité supérieure à l'ancienne règle de mise en page qui blanchissait tous les wrappers assistant. */
-/* Référence finale MyExtension Business — une seule palette mobile, sans héritage noir/beige/gradient parasite. */
-/* Contrat visuel Hub IA — dernier niveau de priorité, mobile uniquement. */
-/* Surface cards aligned with Vision: navy only for the shell, never for opaque cards. */
-/* Verrou typographique Hub IA — Geist/Kairos, seule échelle autorisée sur mobile. */
-/* Alignement Kairos : validations visibles, hiérarchie stricte et Collaborer beige/noir. */
-/* PC : logo et thème sont déjà dans le header global et ne sont jamais dupliqués dans le panneau Chat. */
-@media (min-width: 769px) {
-  [data-testid="copilot-right-drawer"] [data-testid="hub-product-identity"], [data-testid="copilot-right-drawer"] .hub-theme-toggle { display: none !important; }
-  [data-testid="copilot-right-drawer"] [data-testid="copilot-panel"] > .border-b > div:first-child { justify-content: flex-end !important; }
-  [data-testid="copilot-right-drawer"] [data-testid="copilot-panel"] { background: #0B1F3A !important; color: #FFFFFF !important; }
-  [data-testid="copilot-right-drawer"] .copilot-contact-button { background: #F1E2CC !important; border-color: #DEC2A3 !important; color: #0B1F3A !important; }
-  [data-testid="copilot-right-drawer"] .copilot-contact-button * { color: #0B1F3A !important; }
-  [data-testid="copilot-right-drawer"] .glass, [data-testid="copilot-right-drawer"] .copilot-daily-summary, [data-testid="copilot-right-drawer"] .copilot-recent-timeline, [data-testid="copilot-right-drawer"] .copilot-action-result, [data-testid="copilot-right-drawer"] .copilot-decision-empty { background: rgba(255,255,255,.08) !important; border-color: rgba(255,255,255,.20) !important; }
-}
-/* Priorité finale : Collaborer reste beige/noir sur mobile, en clair comme en dark. */
-/* ─────────── FUSION Hub IA : mode CLAIR aussi sur le drawer Copilote PC ───────────
-Par défaut le drawer desktop reste navy (bloc @media min-width:769px plus haut).
-Ici, quand l'ambiance claire est active, on aligne le chat PC sur le rendu clair
-déjà utilisé en mobile (fond clair, texte bleu nuit, bulles/cartes claires). */
-@media (min-width: 769px) {
-  html.ambiance-clarte [data-testid="copilot-right-drawer"] [data-testid="copilot-panel"] {
-    background: linear-gradient(180deg, #f8fbff 0%, #e5effa 100%) !important;
-    color: #17233a !important;
-  }
-  html.ambiance-clarte [data-testid="copilot-right-drawer"] [data-testid="copilot-panel"] .text-white, html.ambiance-clarte [data-testid="copilot-right-drawer"] [data-testid="copilot-panel"] p, html.ambiance-clarte [data-testid="copilot-right-drawer"] [data-testid="copilot-panel"] h1, html.ambiance-clarte [data-testid="copilot-right-drawer"] [data-testid="copilot-panel"] h2 { color: #0B1F3A !important; }
-  html.ambiance-clarte [data-testid="copilot-right-drawer"] [data-testid="copilot-panel"] [class*="text-white/"] { color: rgba(11,31,58,.65) !important; }
-  html.ambiance-clarte [data-testid="copilot-right-drawer"] [data-testid="copilot-panel"] [class*="border-white/"] { border-color: rgba(23,44,92,.16) !important; }
-  html.ambiance-clarte [data-testid="copilot-right-drawer"] [data-testid="copilot-panel"] [class*="bg-white/"] { background-color: rgba(255,255,255,.62) !important; }
-  html.ambiance-clarte [data-testid="copilot-right-drawer"] [data-testid="copilot-panel"] > .border-b { background: rgba(255,255,255,.72) !important; border-color: rgba(23,44,92,.14) !important; }
-  html.ambiance-clarte [data-testid="copilot-right-drawer"] [data-testid="copilot-panel"] > .border-t { background: rgba(255,255,255,.72) !important; border-top-color: rgba(23,44,92,.14) !important; }
-  html.ambiance-clarte [data-testid="copilot-right-drawer"] .glass, html.ambiance-clarte [data-testid="copilot-right-drawer"] .copilot-daily-summary, html.ambiance-clarte [data-testid="copilot-right-drawer"] .copilot-recent-timeline, html.ambiance-clarte [data-testid="copilot-right-drawer"] .copilot-action-result, html.ambiance-clarte [data-testid="copilot-right-drawer"] .copilot-decision-empty {
-    background: linear-gradient(135deg, rgba(255,255,255,.97), rgba(231,241,252,.9)) !important;
-    border-color: rgba(23,44,92,.17) !important;
-    color: #17233a !important;
-  }
-  html.ambiance-clarte [data-testid="copilot-right-drawer"] .copilot-daily-summary *, html.ambiance-clarte [data-testid="copilot-right-drawer"] .copilot-recent-timeline *, html.ambiance-clarte [data-testid="copilot-right-drawer"] .copilot-decision-empty * { color: inherit; }
-  html.ambiance-clarte [data-testid="copilot-right-drawer"] [data-testid="copilot-panel"] input, html.ambiance-clarte [data-testid="copilot-right-drawer"] [data-testid="copilot-panel"] textarea { background: rgba(255,255,255,.92) !important; color: #0B1F3A !important; border-color: rgba(23,44,92,.18) !important; }
-  html.ambiance-clarte [data-testid="copilot-right-drawer"] [data-testid="copilot-panel"] input::placeholder { color: rgba(11,31,58,.45) !important; }
-  /* La pastille "Copilote" (poignée du drawer) reste lisible en clair. */
-  html.ambiance-clarte [data-testid="copilot-drawer-toggle"] { background: linear-gradient(180deg, #5679b7, #31578f) !important; color: #fff !important; }
-}
-/* ═══════════ FUSION Hub IA — Nettoyage & uniformisation (façon Kairos) ═══════════
-Objectif : moins de couleurs, un seul accent (beige/or), header transparent
-partout, menu bas cohérent app/chat, boutons beige (jamais bleu clair) en light. */
+::-webkit-scrollbar-thumb { background: var(--zayado-border); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: var(--zayado-muted); }
 
-/* 1) Header transparent aussi sur MOBILE (comme sur PC) — on garde le flou. */
-@media (max-width: 768px) {
-  .app-header {
-    background: transparent !important;
-    background-image: none !important;
-    border-bottom: 1px solid transparent !important;
-    box-shadow: none !important;
-    backdrop-filter: blur(14px) !important;
-    -webkit-backdrop-filter: blur(14px) !important;
-  }
+::selection { background: var(--zayado-navy); color: var(--zayado-cream); }
+
+@layer base {
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground; }
 }
-/* 2) Entête du CHAT allégée : on retire l'étiquette de contexte "Vision · …"
-(info superflue façon Kairos = logo + titre + sous-titre + toggle). */
-[data-testid="copilot-panel"] .hub-context-label { display: none !important; }
-/* 3) Menu bas (bottom-nav) : même identité sur le chat que dans l'app,
-accent beige au lieu du bleu #456EAA. */
-/* 4) LIGHT — accents BEIGE (comme Kairos), plus de bleu clair sur les boutons. */
-/* 5) LIGHT desktop (drawer) — onglet actif & boutons en beige, pas en bleu. */
-@media (min-width: 769px) {
-  html.ambiance-clarte [data-testid="copilot-right-drawer"] [data-testid="copilot-tabs"] button.is-active {
-    color: #0B1F3A !important;
-    border-bottom-color: #DEC2A3 !important;
-  }
-  html.ambiance-clarte [data-testid="copilot-right-drawer"] [data-testid="copilot-suggestions-list"] button {
-    border-color: #DEC2A3 !important;
-    color: #0B1F3A !important;
-    background: rgba(222,194,163,.16) !important;
-  }
-}
-/* ═══════════ Fond du CHAT = fond de l'APPLI (.sky-bg) — dark ═══════════
-Avant : le chat imposait un dégradé plat #172C5C→#0B1F3A (lignes 78/499/1441)
-qui recouvrait le .sky-bg de l'appli → un navy différent sur PC et mobile.
-Ici on reprend EXACTEMENT le même fond (dégradé + halos radiaux) partout. */
-html:not(.ambiance-clarte) [data-testid="copilot-right-drawer"], html:not(.ambiance-clarte) [data-testid="copilot-right-drawer"] [data-testid="copilot-panel"] {
-  background:
-    radial-gradient(ellipse at 20% 10%, rgba(45,81,150,0.45) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 8%, rgba(30,60,110,0.35) 0%, transparent 55%),
-    linear-gradient(180deg, #172C5C 0%, #101F47 42%, #0B1F3A 76%, #081734 100%) !important;
-}
-/* Header/footer du chat = TRANSPARENTS + flou (comme le header PC), sur mobile
-ET desktop. On surcharge la règle mobile spécifique (.96 opaque, lignes 79-80). */
-html:not(.ambiance-clarte) [data-testid="copilot-right-drawer"] [data-testid="copilot-panel"] > .border-b, html:not(.ambiance-clarte) [data-testid="copilot-panel"] > .border-b, html:not(.ambiance-clarte) [data-testid="copilot-panel"] > .border-t {
-  background: transparent !important;
-  border-color: rgba(159,191,235,.14) !important;
-  backdrop-filter: blur(14px) !important;
-  -webkit-backdrop-filter: blur(14px) !important;
-}
-html.ambiance-clarte [data-testid="copilot-right-drawer"] [data-testid="copilot-panel"] > .border-b, html.ambiance-clarte [data-testid="copilot-panel"] > .border-b, html.ambiance-clarte [data-testid="copilot-panel"] > .border-t {
-  background: transparent !important;
-  border-color: rgba(23,44,92,.14) !important;
-  backdrop-filter: blur(14px) !important;
-  -webkit-backdrop-filter: blur(14px) !important;
-}
-/* En LIGHT : le chat reprend aussi le fond clair de l'appli (.sky-bg light). */
-html.ambiance-clarte [data-testid="copilot-right-drawer"], html.ambiance-clarte [data-testid="copilot-right-drawer"] [data-testid="copilot-panel"] {
-  background:
-    radial-gradient(ellipse at 12% 6%, rgba(79,121,181,.16) 0%, transparent 42%),
-    radial-gradient(ellipse at 88% 12%, rgba(241,226,204,.28) 0%, transparent 36%),
-    linear-gradient(180deg, #f8fbff 0%, #edf3fa 48%, #dfeaf7 100%) !important;
-}
-/* ══════════════════════════════════════════════════════════════════
-FUSION HUB IA — habillage « cartes d'action » (desktop + drawer)
-Reprise du langage de cartes claires de la page Hub, transposé
-dans les couleurs & formes ZAYADO (navy + or). N'affecte pas le
-mobile (le mobile hérite désormais du même style que le PC).
-════════════════════════════════════════════════════════════════ */
-[data-testid="copilot-panel"] {
-  background: var(--app-deep);
-  --hub-gold: #DEC2A3;
-  --hub-gold-bright: #F1E2CC;
-  --hub-gold-soft: #F0DCA5;
-}
-/* Identité produit dans l'en-tête */
-[data-testid="copilot-panel"] .hub-product-mark {
-  background: linear-gradient(135deg, #172C5C, #294E82);
-  color: #fff; box-shadow: 0 7px 16px rgba(4, 13, 34, .35);
+
+.grain-overlay {
+  position: relative;
   overflow: hidden;
 }
-[data-testid="copilot-panel"] .hub-product-logo { width: 100%; height: 100%; object-fit: contain; }
-[data-testid="copilot-panel"] .hub-product-name { color: #fff; font-size: 14px; font-weight: 650; letter-spacing: -.02em; line-height: 1.05; }
-[data-testid="copilot-panel"] .hub-product-subtitle { margin: 3px 0 0; color: rgba(225, 237, 255, .60); font-size: 10px; font-weight: 500; }
-[data-testid="copilot-panel"] .hub-context-label {
-  border: 1px solid rgba(241, 226, 204, .30);
-  background: rgba(241, 226, 204, .10); color: var(--hub-gold-soft);
-  font-size: 9px; font-weight: 600;
-}
-[data-testid="copilot-panel"] .hub-theme-toggle {
-  display: inline-flex; width: 36px; height: 36px; align-items: center; justify-content: center;
-  border: 1px solid rgba(255, 255, 255, .16); border-radius: 12px;
-  background: rgba(255, 255, 255, .06); color: #fff;
-  transition: background .18s ease, border-color .18s ease;
-}
-[data-testid="copilot-panel"] .hub-theme-toggle:hover { background: rgba(241, 226, 204, .14); border-color: rgba(241, 226, 204, .45); }
-[data-testid="copilot-panel"] .copilot-contact-button { border-color: rgba(255, 255, 255, .20); background: rgba(255, 255, 255, .07); color: #fff; }
-[data-testid="copilot-panel"] .copilot-contact-button:hover, [data-testid="copilot-panel"] .copilot-contact-button.is-open { border-color: rgba(241, 226, 204, .55); color: var(--hub-gold-soft); background: rgba(241, 226, 204, .12); }
-/* Onglets Discussion / Actualité */
-[data-testid="copilot-panel"] .copilot-tab { color: rgba(255, 255, 255, .55); border-bottom-color: transparent; }
-[data-testid="copilot-panel"] .copilot-tab:hover { color: rgba(255, 255, 255, .85); }
-[data-testid="copilot-panel"] .copilot-tab.is-active { color: var(--hub-gold-soft); border-bottom-color: var(--hub-gold); }
-/* Horodatage + pastille or animée + badge IA */
-[data-testid="copilot-panel"] .copilot-event-stamp { display: flex; align-items: center; gap: 7px; margin: 0 0 7px; color: rgba(225, 237, 255, .58); font-size: 10px; font-weight: 500; }
-[data-testid="copilot-panel"] .copilot-event-dot {
-  width: 6px; height: 6px; border-radius: 999px; background: var(--hub-gold); box-shadow: 0 0 8px rgba(222, 194, 163, .8); animation: pulse-dot 1.8s ease-in-out infinite;
-}
-[data-testid="copilot-panel"] .copilot-ai-badge {
-  display: inline-flex; align-items: center; margin-left: 6px; padding: 1px 6px; border: 1px solid rgba(232, 201, 106, .45); border-radius: 6px; background: rgba(232, 201, 106, .12); color: #E8C96A; font-size: 9px; font-weight: 700; letter-spacing: .04em;
-}
-/* Espacement des évènements du fil */
-[data-testid="copilot-panel"] .copilot-message-event { margin-bottom: 14px; }
-[data-testid="copilot-panel"] .copilot-message-event.is-user .copilot-event-stamp { justify-content: flex-end; }
-/* Cartes d'action (Point du jour · Validations · Résultat · Mouvements) */
-[data-testid="copilot-panel"] .copilot-daily-summary, [data-testid="copilot-panel"] .copilot-decision-empty, [data-testid="copilot-panel"] .copilot-action-result, [data-testid="copilot-panel"] .copilot-recent-timeline {
-  padding: 16px;
-  border: 1px solid rgba(255, 255, 255, .16);
-  border-radius: 18px;
-  background: linear-gradient(135deg, rgba(47, 88, 154, .32), rgba(255, 255, 255, .05));
-  box-shadow: 0 10px 26px rgba(3, 12, 32, .22);
-}
-[data-testid="copilot-panel"] .copilot-daily-summary-title, [data-testid="copilot-panel"] .copilot-decision-empty-title, [data-testid="copilot-panel"] .copilot-result-title { display: flex; align-items: center; gap: 8px; color: #fff; font-size: 14px; font-weight: 650; }
-[data-testid="copilot-panel"] .copilot-daily-summary-title svg, [data-testid="copilot-panel"] .copilot-decision-empty-title svg, [data-testid="copilot-panel"] .copilot-result-title svg { color: var(--hub-gold); }
-[data-testid="copilot-panel"] .copilot-daily-date { margin-top: 4px; color: rgba(225, 237, 255, .55); font-size: 11px; }
-[data-testid="copilot-panel"] .copilot-daily-summary p, [data-testid="copilot-panel"] .copilot-decision-empty p, [data-testid="copilot-panel"] .copilot-action-result p { margin: 10px 0 0; color: rgba(225, 237, 255, .78); font-size: 12.5px; line-height: 1.55; }
-[data-testid="copilot-panel"] .copilot-daily-priority {
-  margin-top: 12px; padding: 10px 11px; border: 1px solid rgba(241, 226, 204, .22); border-radius: 12px; background: rgba(241, 226, 204, .10); color: rgba(225, 237, 255, .82); font-size: 11.5px; line-height: 1.45;
-}
-[data-testid="copilot-panel"] .copilot-daily-priority strong { color: var(--hub-gold-soft); }
-/* Boutons des cartes (or plein + retour ligne) */
-[data-testid="copilot-panel"] .copilot-decision-empty button, [data-testid="copilot-panel"] .copilot-action-result button {
-  display: inline-flex; align-items: center; gap: 7px; margin-top: 14px;
-  padding: 10px 14px; border: 0; border-radius: 12px;
-  background: linear-gradient(135deg, var(--hub-gold-bright), var(--hub-gold));
-  color: #0A1128; font-size: 12px; font-weight: 700; cursor: pointer;
-  transition: filter .18s ease, transform .18s ease;
-}
-[data-testid="copilot-panel"] .copilot-decision-empty button:hover, [data-testid="copilot-panel"] .copilot-action-result button:hover { filter: brightness(1.06); transform: translateY(-1px); }
-/* Derniers mouvements (timeline) */
-[data-testid="copilot-panel"] .copilot-timeline-row { padding: 9px 0; border-top: 1px solid rgba(255, 255, 255, .10); }
-[data-testid="copilot-panel"] .copilot-timeline-row:first-of-type { margin-top: 10px; }
-[data-testid="copilot-panel"] .copilot-timeline-row span { display: block; color: rgba(225, 237, 255, .78); font-size: 12px; line-height: 1.45; }
-/* Bulles de conversation : IA = verre navy, Vous = or */
-[data-testid="copilot-panel"] .copilot-chat-bubble.is-assistant {
-  border: 1px solid rgba(255, 255, 255, .16);
-  background: linear-gradient(135deg, rgba(47, 88, 154, .40), rgba(255, 255, 255, .06));
-  color: #fff; border-top-left-radius: 8px;
-}
-[data-testid="copilot-panel"] .copilot-chat-bubble.is-user {
-  background: linear-gradient(135deg, var(--hub-gold-bright), var(--hub-gold));
-  color: #0A1128; font-weight: 500; border-top-right-radius: 8px;
-}
-[data-testid="copilot-panel"] .copilot-chat-bubble.is-user strong { color: #0A1128; }
-/* Suggestions rapides */
-[data-testid="copilot-panel"] .copilot-suggestions { display: grid; gap: 8px; margin-top: 4px; }
-[data-testid="copilot-panel"] .copilot-suggestions-title { display: flex; align-items: center; gap: 7px; color: var(--hub-gold-soft); font-size: 11px; font-weight: 700; letter-spacing: .02em; }
-[data-testid="copilot-panel"] .copilot-suggestions-title svg { color: var(--hub-gold); }
-/* Compositeur + bouton d'envoi or */
-[data-testid="copilot-panel"] .copilot-composer-shell {
-  border-color: rgba(255, 255, 255, .16);
-  background: rgba(31, 64, 120, .32);
-}
-[data-testid="copilot-panel"] .copilot-composer-shell:focus-within { border-color: rgba(241, 226, 204, .5); }
-[data-testid="copilot-panel"] .copilot-composer-shell.is-image-mode { border-color: rgba(232, 201, 106, .6); }
-[data-testid="copilot-panel"] .copilot-send-button { background: linear-gradient(135deg, var(--hub-gold-bright), var(--hub-gold)); }
-[data-testid="copilot-panel"] .copilot-send-button:not(:disabled):hover { filter: brightness(1.06); }
-/* ── Bouton flottant « aller à la conversation » (chevron bas) ── */
-[data-testid="copilot-panel"] .copilot-jump-latest {
-  position: absolute; right: 14px; bottom: 88px; z-index: 40;
-  display: inline-flex; width: 34px; height: 34px; align-items: center; justify-content: center;
-  border: 0; border-radius: 999px;
-  background: linear-gradient(135deg, #F1E2CC, #DEC2A3); color: #0A1128;
-  box-shadow: 0 6px 18px rgba(3, 12, 32, .38); cursor: pointer;
-  transition: transform .18s ease, filter .18s ease;
-}
-[data-testid="copilot-panel"] .copilot-jump-latest:hover { transform: translateY(-2px); filter: brightness(1.06); }
-/* ── Mobile : pas de titre produit (gain de place) + bouton chevron visible ── */
-@media (max-width: 768px) {
-  /* Bouton « tâches et missions » bien visible sur mobile (pilule bordée) */
-  /* Flèche beige : fixée au-dessus de la barre de nav, petite et toujours visible */
-  [data-testid="copilot-panel"] .copilot-jump-latest {
-    position: fixed !important; right: 16px !important; bottom: 132px !important;
-    width: 32px !important; height: 32px !important; z-index: 60 !important;
-  }
-}
-/* ── Contour BEIGE des bulles & cartes en mode dark (façon kairos) ── */
-html:not(.ambiance-clarte) [data-testid="copilot-panel"] .copilot-chat-bubble.is-assistant, html:not(.ambiance-clarte) [data-testid="copilot-panel"] .copilot-daily-summary, html:not(.ambiance-clarte) [data-testid="copilot-panel"] .copilot-decision-empty, html:not(.ambiance-clarte) [data-testid="copilot-panel"] .copilot-action-result, html:not(.ambiance-clarte) [data-testid="copilot-panel"] .copilot-recent-timeline, html:not(.ambiance-clarte) [data-testid="copilot-panel"] [data-testid^="copilot-action-card-"] { border-color: rgba(222, 194, 163, .40) !important; }
-/* Le compositeur reçoit aussi un liseré beige en dark */
-html:not(.ambiance-clarte) [data-testid="copilot-panel"] .copilot-composer-shell { border-color: rgba(222, 194, 163, .40) !important; }
-/* ── Rendu markdown du chat : tailles maîtrisées + toujours lisible ── */
-[data-testid="copilot-panel"] .copilot-chat-bubble .copilot-md-h1 { font-size: 15px; font-weight: 700; line-height: 1.35; margin: 6px 0 2px; color: inherit; }
-[data-testid="copilot-panel"] .copilot-chat-bubble .copilot-md-h2 { font-size: 13.5px; font-weight: 700; line-height: 1.35; margin: 6px 0 2px; color: inherit; }
-[data-testid="copilot-panel"] .copilot-chat-bubble .copilot-md-h3 { font-size: 12.5px; font-weight: 700; line-height: 1.35; margin: 5px 0 2px; color: inherit; letter-spacing: .01em; }
-.copilot-md-li { display: flex; gap: 8px; align-items: baseline; margin: 2px 0; color: inherit; }
-.copilot-md-dot { color: #DEC2A3; }
-.copilot-md-num { color: #DEC2A3; font-weight: 700; min-width: 16px; }
-.copilot-chat-bubble.is-user .copilot-md-dot, .copilot-chat-bubble.is-user .copilot-md-num { color: #7a5f2e; }
-.copilot-md-quote {
-  margin: 6px 0; padding: 6px 10px; border-left: 3px solid rgba(222,194,163,.7); background: rgba(222,194,163,.10); border-radius: 6px; color: inherit; font-style: italic;
-}
-.copilot-md-hr { border: 0; border-top: 1px solid rgba(222,194,163,.35); margin: 10px 0; }
-.copilot-md-gap { height: 6px; }
-.copilot-md-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .92em; padding: 1px 5px; border-radius: 5px; background: rgba(255,255,255,.12); }
-.copilot-chat-bubble.is-user .copilot-md-code { background: rgba(10,17,40,.10); }
-/* Sécurité anti-« typographie immense » : jamais de titre HTML géant dans une bulle */
-.copilot-chat-bubble h1, .copilot-chat-bubble h2, .copilot-chat-bubble h3 { font-size: 14px !important; margin: 4px 0 !important; }
-/* ═══════════════════════════════════════════════════════════════
-LANDING / TUNNEL DE VENTE — navy + or, touche de rouge (logo)
-═══════════════════════════════════════════════════════════════ */
-.lp-root {
-  --lp-navy: #0B1F3A; --lp-navy-2: #0E2748; --lp-gold: #DEC2A3; --lp-gold-bright: #F1E2CC;
-  --lp-red: var(--brand-red); --lp-red-soft: var(--brand-red-soft);
-  min-height: 100vh;
-  /* Corrigé : utilisait un simple radial-gradient à une seule ellipse,
-     différent de la vraie formule de fond de l'app (.sky-bg) — d'où la
-     couleur perçue comme "pas la même" entre les pages publiques et
-     l'application. Même formule exacte réutilisée ici. */
-  background:
-    radial-gradient(ellipse at 20% 10%, rgba(45,81,150,0.45) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 8%, rgba(30,60,110,0.35) 0%, transparent 55%),
-    linear-gradient(180deg, #172C5C 0%, #101F47 42%, #0B1F3A 76%, #081734 100%);
-  color: #fff; font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-}
-.lp-container { width: 100%; max-width: 1160px; margin: 0 auto; padding: 0 24px; }
-.lp-gold { color: var(--lp-gold-bright); }
-/* Boutons */
-.lp-btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 12px; padding: 10px 18px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; transition: transform .16s ease, filter .16s ease, background .16s ease, border-color .16s ease;
-}
-.lp-btn-lg { padding: 14px 24px; font-size: 15px; border-radius: 14px; }
-.lp-btn-gold { background: linear-gradient(135deg, var(--lp-gold-bright), var(--lp-gold)); color: #0A1128; }
-.lp-btn-gold:hover { filter: brightness(1.05); transform: translateY(-1px); }
-.lp-btn-outline { border: 1px solid rgba(241, 226, 204, .45); color: var(--lp-gold-bright); background: rgba(241, 226, 204, .06); }
-.lp-btn-outline:hover { background: rgba(241, 226, 204, .14); }
-.lp-btn-ghost { color: rgba(255, 255, 255, .82); }
-.lp-btn-ghost:hover { color: #fff; }
-.w-full { width: 100%; }
-/* NAV */
-.lp-nav { position: sticky; top: 0; z-index: 50; background: rgba(11, 31, 58, .72); backdrop-filter: blur(14px); border-bottom: 1px solid rgba(255, 255, 255, .08); }
-.lp-nav-inner { display: flex; align-items: center; justify-content: space-between; height: 68px; gap: 16px; }
-.lp-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #fff; }
-.lp-brand-logo { width: 34px; height: 34px; border-radius: 9px; object-fit: cover; }
-.lp-brand-text { font-size: 15px; font-weight: 600; letter-spacing: -.01em; display: flex; align-items: baseline; gap: 6px; }
-.lp-brand-text b { font-weight: 700; }
-.lp-brand-by { font-size: 10px; color: var(--lp-gold); font-weight: 600; }
-.lp-nav-links { display: flex; gap: 26px; }
-.lp-nav-links a { color: rgba(255, 255, 255, .72); text-decoration: none; font-size: 14px; font-weight: 500; transition: color .16s ease; }
-.lp-nav-links a:hover { color: var(--lp-gold-bright); }
-.lp-nav-actions { display: flex; align-items: center; gap: 10px; }
-.lp-burger { display: none; background: none; border: 0; color: #fff; cursor: pointer; }
-.lp-mobile-menu { display: none; }
-/* HERO */
-.lp-hero { position: relative; overflow: hidden; padding: 84px 0 64px; }
-.lp-hero-inner { position: relative; z-index: 2; text-align: center; max-width: 820px; }
-.lp-hero-glow { position: absolute; inset: 0; z-index: 1; background: radial-gradient(600px 300px at 50% 0%, rgba(226, 53, 36, .10), transparent 70%); pointer-events: none; }
-.lp-eyebrow {
-  display: inline-flex; align-items: center; gap: 8px; padding: 6px 13px; border-radius: 999px; background: var(--lp-red-soft); border: 1px solid rgba(226, 53, 36, .35); color: #ffb3aa; font-size: 12px; font-weight: 600;
-}
-.lp-dot { width: 7px; height: 7px; border-radius: 999px; background: var(--lp-red); box-shadow: 0 0 10px rgba(226, 53, 36, .8); }
-.lp-h1 { margin: 22px 0 0; font-family: 'Outfit', sans-serif; font-size: clamp(34px, 6vw, 58px); font-weight: 700; line-height: 1.06; letter-spacing: -.02em; }
-.lp-lead { margin: 20px auto 0; max-width: 620px; font-size: 17px; line-height: 1.6; color: rgba(255, 255, 255, .72); }
-.lp-hero-cta { margin-top: 30px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-.lp-hero-note { margin-top: 18px; display: inline-flex; gap: 10px; align-items: center; font-size: 13px; color: rgba(255, 255, 255, .6); }
-/* STATS */
-.lp-stats { padding: 8px 0 8px; }
-.lp-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
-.lp-stat { text-align: center; padding: 18px 12px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, .10); background: rgba(255, 255, 255, .04); }
-.lp-stat strong { display: block; font-family: 'Outfit', sans-serif; font-size: 26px; color: var(--lp-gold-bright); }
-.lp-stat span { font-size: 12.5px; color: rgba(255, 255, 255, .6); }
-/* SECTIONS */
-.lp-section { padding: 76px 0; }
-.lp-section-alt { background: rgba(255, 255, 255, .03); border-top: 1px solid rgba(255, 255, 255, .06); border-bottom: 1px solid rgba(255, 255, 255, .06); }
-.lp-section-head { text-align: center; max-width: 640px; margin: 0 auto 44px; }
-.lp-kicker {
-  display: inline-block; position: relative; font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--lp-gold); padding-bottom: 8px;
-}
-.lp-kicker::after { content: ''; position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: 26px; height: 2px; border-radius: 2px; background: var(--lp-red); }
-.lp-h2 { margin: 14px 0 0; font-family: 'Outfit', sans-serif; font-size: clamp(26px, 4vw, 38px); font-weight: 700; letter-spacing: -.02em; }
-.lp-sub { margin: 12px 0 0; font-size: 16px; color: rgba(255, 255, 255, .68); }
-/* FEATURES */
-.lp-features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
-.lp-card {
-  position: relative; padding: 24px; border-radius: 18px; border: 1px solid rgba(255, 255, 255, .12); background: linear-gradient(150deg, rgba(47, 88, 154, .18), rgba(255, 255, 255, .03)); transition: transform .18s ease, border-color .18s ease;
-}
-.lp-card:hover { transform: translateY(-4px); border-color: rgba(241, 226, 204, .4); }
-.lp-card-icon {
-  display: inline-flex; width: 44px; height: 44px; align-items: center; justify-content: center; border-radius: 12px; background: rgba(241, 226, 204, .12); color: var(--lp-gold-bright);
-}
-.lp-card-tag { position: absolute; top: 22px; right: 22px; font-size: 10px; font-weight: 700; letter-spacing: .06em; color: var(--lp-gold); text-transform: uppercase; }
-.lp-card h3 { margin: 16px 0 0; font-size: 18px; font-weight: 650; }
-.lp-card p { margin: 8px 0 0; font-size: 14px; line-height: 1.55; color: rgba(255, 255, 255, .68); }
-.lp-card-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 16px; font-size: 13px; font-weight: 600; color: var(--lp-gold-bright); text-decoration: none; }
-.lp-card-link:hover { gap: 9px; }
-/* STEPS */
-.lp-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
-.lp-step { padding: 26px; border-radius: 18px; border: 1px solid rgba(255, 255, 255, .10); background: rgba(255, 255, 255, .04); }
-.lp-step-n { font-family: 'Outfit', sans-serif; font-size: 34px; font-weight: 700; color: rgba(226, 53, 36, .85); }
-.lp-step h3 { margin: 10px 0 0; font-size: 18px; font-weight: 650; }
-.lp-step p { margin: 8px 0 0; font-size: 14px; line-height: 1.55; color: rgba(255, 255, 255, .68); }
-.lp-steps-cta { text-align: center; margin-top: 36px; }
-/* PRICING */
-.lp-plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; align-items: stretch; }
-.lp-plan {
-  position: relative; display: flex; flex-direction: column; padding: 28px 24px; border-radius: 20px; border: 1px solid rgba(255, 255, 255, .12); background: rgba(255, 255, 255, .04);
-}
-.lp-plan.is-featured {
-  border-color: rgba(241, 226, 204, .5); background: linear-gradient(160deg, rgba(47, 88, 154, .28), rgba(255, 255, 255, .04)); box-shadow: 0 20px 50px rgba(3, 12, 32, .4);
-}
-.lp-plan-badge {
-  position: absolute; top: -12px; left: 50%; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 999px; background: var(--lp-red); color: #fff; font-size: 11px; font-weight: 700; box-shadow: 0 6px 16px rgba(226, 53, 36, .4);
-}
-.lp-plan-name { font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 700; }
-.lp-plan-desc { margin: 6px 0 0; font-size: 13px; color: rgba(255, 255, 255, .62); min-height: 34px; }
-.lp-plan-price { margin: 16px 0; font-family: 'Outfit', sans-serif; font-size: 44px; font-weight: 700; color: #fff; line-height: 1; }
-.lp-plan-cur { font-size: 22px; vertical-align: super; margin-right: 2px; color: var(--lp-gold); }
-.lp-plan-period { font-size: 14px; font-weight: 500; color: rgba(255, 255, 255, .5); }
-.lp-plan-features { list-style: none; margin: 0 0 22px; padding: 0; display: grid; gap: 10px; flex: 1; }
-.lp-plan-features li { display: flex; align-items: center; gap: 9px; font-size: 14px; color: rgba(255, 255, 255, .8); }
-/* QUOTE */
-.lp-quote-wrap { text-align: center; max-width: 760px; }
-.lp-quote { margin: 16px auto 0; font-family: 'Outfit', sans-serif; font-size: clamp(20px, 3vw, 28px); font-weight: 500; line-height: 1.45; }
-.lp-quote-author { margin-top: 22px; display: inline-flex; align-items: center; gap: 12px; text-align: left; }
-.lp-quote-avatar {
-  display: inline-flex; width: 44px; height: 44px; align-items: center; justify-content: center; border-radius: 999px; background: linear-gradient(135deg, var(--lp-gold-bright), var(--lp-gold)); color: #0A1128; font-weight: 700;
-}
-.lp-quote-author strong { display: block; font-size: 14px; }
-.lp-quote-author small { color: rgba(255, 255, 255, .6); font-size: 12.5px; }
-/* FINAL CTA */
-.lp-final { padding: 84px 0; text-align: center; background: radial-gradient(600px 260px at 50% 120%, rgba(226, 53, 36, .12), transparent 70%); }
-.lp-final-inner { max-width: 620px; margin: 0 auto; }
-.lp-final .lp-btn { margin-top: 26px; }
-/* FOOTER */
-.lp-footer { border-top: 1px solid rgba(255, 255, 255, .08); padding: 26px 0; }
-.lp-footer-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-.lp-footer-copy { font-size: 12.5px; color: rgba(255, 255, 255, .55); }
-.lp-footer-link { color: var(--lp-gold-bright); text-decoration: none; font-size: 13px; font-weight: 600; }
-/* RESPONSIVE */
-@media (max-width: 900px) {
-  .lp-features, .lp-steps, .lp-plans, .lp-stats-grid { grid-template-columns: 1fr 1fr; }
-}
-@media (max-width: 768px) {
-  .lp-nav-links, .lp-nav-actions { display: none; }
-  .lp-burger { display: inline-flex; }
-  .lp-mobile-menu { display: flex; flex-direction: column; gap: 14px; padding: 16px 24px 22px; border-top: 1px solid rgba(255, 255, 255, .08); background: rgba(11, 31, 58, .96); }
-  .lp-mobile-menu a { color: rgba(255, 255, 255, .82); text-decoration: none; font-size: 15px; }
-  .lp-features, .lp-steps, .lp-plans { grid-template-columns: 1fr; }
-  .lp-stats-grid { grid-template-columns: 1fr 1fr; }
-  .lp-hero { padding: 56px 0 44px; }
-  .lp-section { padding: 56px 0; }
-}
-/* ── Vision : stepper 01/02/03 lisible sur mobile (plus de colonnes serrées) ── */
-@media (max-width: 768px) {
-  .vision-trajectory-grid { grid-template-columns: 1fr; gap: 14px; }
-  .vision-trajectory-grid::before { display: none; }
-  /* on retire la ligne horizontale */
-  .vision-trajectory-grid article {
-    grid-template-columns: 34px 1fr; justify-items: start; text-align: left;
-    align-items: center; column-gap: 12px; row-gap: 2px;
-    padding: 12px; border: 1px solid rgba(255,255,255,.12); border-radius: 16px;
-    background: rgba(10,17,40,.30);
-  }
-  .vision-trajectory-grid article > .trajectory-number { grid-row: 1 / span 2; }
-  .vision-trajectory-grid article > strong { margin-top: 0; grid-column: 2; font-size: 12.5px; }
-  .vision-trajectory-grid article > small { grid-column: 2; font-size: 11.5px; }
-  .vision-trajectory-grid article > .trajectory-icon { display: none; }
-  /* icône décorative masquée sur mobile */
-  .vision-trajectory-grid article > .trajectory-card { grid-column: 1 / -1; margin-top: 8px; min-height: 0; }
-}
-/* ── Page Tarifs : toggle mensuel/annuel, note, garantie, FAQ ── */
-.lp-billing-toggle {
-  display: inline-flex; margin: 26px auto 0; padding: 5px; border-radius: 999px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.05); gap: 4px;
-}
-.lp-billing-toggle { display: flex; width: fit-content; margin-left: auto; margin-right: auto; }
-.lp-billing-toggle button {
-  display: inline-flex; align-items: center; gap: 8px; border: 0; background: transparent; color: rgba(255,255,255,.7); padding: 9px 20px; border-radius: 999px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .16s ease, color .16s ease;
-}
-.lp-billing-toggle button.is-active { background: linear-gradient(135deg, #F1E2CC, #DEC2A3); color: #0A1128; }
-.lp-save-badge { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 999px; background: #E23524; color: #fff; }
-.lp-plan-note { margin: 6px 0 14px; font-size: 12px; color: var(--lp-gold); min-height: 16px; }
-.lp-guarantee { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 28px; font-size: 13px; color: rgba(255,255,255,.65); }
-.lp-faq { display: grid; gap: 12px; }
-.lp-faq-item { border: 1px solid rgba(255,255,255,.12); border-radius: 14px; background: rgba(255,255,255,.04); overflow: hidden; }
-.lp-faq-item.is-open { border-color: rgba(241,226,204,.4); }
-.lp-faq-q {
-  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px; background: transparent; border: 0; color: #fff; font-size: 15px; font-weight: 600; text-align: left; cursor: pointer;
-}
-.lp-faq-chevron { transition: transform .2s ease; color: var(--lp-gold); flex-shrink: 0; }
-.lp-faq-item.is-open .lp-faq-chevron { transform: rotate(180deg); }
-.lp-faq-a { margin: 0; padding: 0 18px 16px; font-size: 14px; line-height: 1.6; color: rgba(255,255,255,.7); }
-/* ── Pages marketing : lignes fonctionnalités, captures, démo live ── */
-.lp-feature-row { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; padding: 44px 0; border-top: 1px solid rgba(255,255,255,.06); }
-.lp-feature-row:first-child { border-top: 0; }
-.lp-feature-row.is-reverse .lp-feature-copy { order: 2; }
-.lp-feature-tag { display: inline-block; margin-top: 12px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--lp-gold); }
-.lp-feature-copy .lp-h2 { margin-top: 8px; }
-.lp-feature-list { list-style: none; margin: 18px 0 0; padding: 0; display: grid; gap: 10px; }
-.lp-feature-list li { display: flex; align-items: center; gap: 9px; font-size: 14.5px; color: rgba(255,255,255,.8); }
-.lp-capture {
-  border-radius: 20px; border: 1px solid rgba(255,255,255,.12); background: linear-gradient(150deg, rgba(47,88,154,.28), rgba(255,255,255,.03)); overflow: hidden; box-shadow: 0 20px 50px rgba(3,12,32,.35);
-}
-.lp-capture-bar { display: flex; gap: 7px; padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,.08); }
-.lp-capture-bar span { width: 10px; height: 10px; border-radius: 999px; background: rgba(255,255,255,.18); }
-.lp-capture-bar span:first-child { background: #E23524; }
-.lp-capture-body { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; min-height: 220px; color: var(--lp-gold); }
-.lp-capture-body p { margin: 0; font-family: 'Outfit', sans-serif; font-size: 18px; color: #fff; }
-.lp-demo-box {
-  border: 1px solid rgba(255,255,255,.14); border-radius: 20px; background: linear-gradient(160deg, rgba(47,88,154,.22), rgba(255,255,255,.03)); padding: 18px; box-shadow: 0 20px 50px rgba(3,12,32,.35);
-}
-.lp-demo-head {
-  display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #fff; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,.08);
-}
-.lp-demo-stream { display: flex; flex-direction: column; gap: 10px; min-height: 120px; max-height: 320px; overflow-y: auto; padding: 14px 2px; }
-.lp-demo-empty { margin: 0; color: rgba(255,255,255,.5); font-size: 13.5px; text-align: center; padding: 24px 0; }
-.lp-demo-msg { max-width: 88%; padding: 10px 13px; border-radius: 14px; font-size: 13.5px; line-height: 1.5; white-space: pre-wrap; }
-.lp-demo-msg.user { align-self: flex-end; background: linear-gradient(135deg, #F1E2CC, #DEC2A3); color: #0A1128; border-top-right-radius: 6px; }
-.lp-demo-msg.assistant { align-self: flex-start; background: rgba(47,88,154,.4); border: 1px solid rgba(222,194,163,.35); color: #fff; border-top-left-radius: 6px; }
-.lp-demo-loading { display: inline-flex; align-items: center; gap: 8px; color: rgba(255,255,255,.7); }
-.lp-spin { animation: lp-spin 1s linear infinite; }
-@keyframes lp-spin { to { transform: rotate(360deg); } }
-.lp-demo-suggest { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 12px; }
-.lp-demo-suggest button {
-  border: 1px solid rgba(241,226,204,.3); background: rgba(241,226,204,.08); color: var(--lp-gold-bright); border-radius: 999px; padding: 7px 12px; font-size: 12px; cursor: pointer; transition: background .16s ease;
-}
-.lp-demo-suggest button:hover:not(:disabled) { background: rgba(241,226,204,.16); }
-.lp-demo-suggest button:disabled { opacity: .5; cursor: default; }
-.lp-demo-input {
-  display: flex; align-items: center; gap: 10px; border: 1px solid rgba(222,194,163,.35); border-radius: 14px; padding: 8px 8px 8px 16px; background: rgba(10,17,40,.35);
-}
-.lp-demo-input input { flex: 1; background: transparent; border: 0; color: #fff; font-size: 14px; outline: none; }
-.lp-demo-input input::placeholder { color: rgba(255,255,255,.45); }
-.lp-demo-input button {
-  display: inline-flex; width: 40px; height: 40px; align-items: center; justify-content: center; border: 0; border-radius: 11px; background: linear-gradient(135deg, #F1E2CC, #DEC2A3); color: #0A1128; cursor: pointer;
-}
-.lp-demo-input button:disabled { opacity: .5; cursor: default; }
-@media (max-width: 768px) {
-  .lp-feature-row { grid-template-columns: 1fr; gap: 22px; padding: 32px 0; }
-  .lp-feature-row.is-reverse .lp-feature-copy { order: 0; }
+.grain-overlay::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.25'/%3E%3C/svg%3E");
+  opacity: 0.35;
+  pointer-events: none;
+  mix-blend-mode: overlay;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
-   Onglet ACTUALITÉ du Copilote — style de base, UNIQUE (PC + mobile)
-   ───────────────────────────────────────────────────────────────────────
-   Avant : les 156 règles de cet onglet n'existaient QUE dans les blocs
-   [data-testid="mobile-copilot-home"], eux-mêmes empilés et contradictoires.
-   Résultat : sur PC l'onglet n'avait aucun style du tout, et sur mobile il en
-   avait cinq qui se contredisaient — d'où les boutons sans bordure ni fond,
-   collés les uns aux autres, de la capture d'écran.
-   Ici : un seul jeu de règles, accroché au panneau Copilote lui-même, donc
-   strictement identique dans le tiroir PC et dans le plein écran mobile.
-   ═══════════════════════════════════════════════════════════════════════ */
-[data-testid="copilot-panel"] .news-conversation {
-  display: flex; flex-direction: column; gap: 14px;
-  background: transparent; color: #fff;
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-[data-testid="copilot-panel"] .news-conversation-intro,
-[data-testid="copilot-panel"] .news-signal-card,
-[data-testid="copilot-panel"] .news-empty-state {
-  border: 1px solid var(--glass-border); border-radius: 16px; padding: 14px;
-  background: var(--glass-bg);
-  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-}
-[data-testid="copilot-panel"] .news-conversation-intro p { margin: 8px 0 0; color: rgba(255,255,255,.72); font-size: 12.5px; line-height: 1.55; }
-[data-testid="copilot-panel"] .news-conversation-intro button {
-  display: inline-flex; align-items: center; gap: 6px; margin-top: 11px;
-  border: 1px solid rgba(241,226,204,.34); border-radius: 999px; padding: 7px 13px;
-  background: rgba(241,226,204,.10); color: var(--hub-gold-soft);
-  font-size: 11.5px; font-weight: 600; cursor: pointer; transition: background .16s ease;
-}
-[data-testid="copilot-panel"] .news-conversation-intro button:hover:not(:disabled) { background: rgba(241,226,204,.19); }
-[data-testid="copilot-panel"] .news-conversation-intro button:disabled { opacity: .55; cursor: default; }
+.animate-fade-up { animation: fade-up 0.5s ease-out both; }
 
-[data-testid="copilot-panel"] .news-conversation-status,
-[data-testid="copilot-panel"] .news-conversation-error {
-  border: 1px solid rgba(255,255,255,.14); border-radius: 12px; padding: 9px 11px;
-  background: rgba(255,255,255,.06); color: rgba(255,255,255,.75);
-  font-size: 11.5px; line-height: 1.45;
+@keyframes pulse-soft {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(138,115,64,0.4); }
+  50% { box-shadow: 0 0 0 12px rgba(138,115,64,0); }
 }
-[data-testid="copilot-panel"] .news-conversation-error { border-color: rgba(251,113,133,.38); background: rgba(251,113,133,.12); color: #fecdd3; }
+.pulse-gold { animation: pulse-soft 2.4s ease-out infinite; }
 
-[data-testid="copilot-panel"] .news-signal-heading { display: flex; align-items: center; gap: 7px; color: #fff; font-size: 14px; font-weight: 650; }
-[data-testid="copilot-panel"] .news-signal-heading svg { color: var(--hub-gold); }
-[data-testid="copilot-panel"] .news-signal-scope { margin-top: 3px; color: rgba(255,255,255,.45); font-size: 10.5px; letter-spacing: .02em; }
-[data-testid="copilot-panel"] .news-signal-copy { margin-top: 11px; color: rgba(255,255,255,.78); font-size: 12.5px; line-height: 1.6; }
-[data-testid="copilot-panel"] .news-signal-copy p { margin: 0 0 8px; }
-[data-testid="copilot-panel"] .news-signal-copy strong { color: #fff; }
+.btn-press { transition: transform 0.15s ease, box-shadow 0.2s ease; }
+.btn-press:active { transform: scale(0.97); }
 
-/* Les quatre actions du Signal du jour : de vrais boutons, jamais du texte nu.
-   Une seule taille de police ici — la règle « 14px !important » d'une passe
-   précédente faisait déborder le texte de gabarits dessinés pour 12px. */
-[data-testid="copilot-panel"] .news-signal-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 13px; }
-[data-testid="copilot-panel"] .news-signal-actions button {
-  display: inline-flex; align-items: center; justify-content: center;
-  min-height: 34px; border: 1px solid rgba(255,255,255,.18); border-radius: 10px;
-  padding: 7px 12px; background: rgba(255,255,255,.07); color: rgba(255,255,255,.88);
-  font-size: 12px; font-weight: 600; line-height: 1.2; cursor: pointer;
-  transition: background .16s ease, border-color .16s ease;
+.card-soft {
+  background: white;
+  border: none;
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px rgba(31, 29, 26, 0.04), 0 6px 18px rgba(31, 29, 26, 0.06);
 }
-[data-testid="copilot-panel"] .news-signal-actions button:hover { background: rgba(255,255,255,.13); border-color: rgba(241,226,204,.45); }
-[data-testid="copilot-panel"] .news-signal-actions button:first-child {
-  border-color: transparent; background: linear-gradient(135deg, #F1E2CC, #DEC2A3); color: #0A1128;
-}
-[data-testid="copilot-panel"] .news-signal-actions button:first-child:hover { filter: brightness(1.06); background: linear-gradient(135deg, #F1E2CC, #DEC2A3); }
+.card-soft:hover { box-shadow: 0 2px 6px rgba(31, 29, 26, 0.06), 0 12px 28px rgba(31, 29, 26, 0.09); }
 
-[data-testid="copilot-panel"] .news-inline-sources { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 11px; font-size: 10.5px; }
-[data-testid="copilot-panel"] .news-inline-sources > span:first-child { color: rgba(255,255,255,.42); text-transform: uppercase; letter-spacing: .1em; font-weight: 700; }
-[data-testid="copilot-panel"] .news-inline-sources a {
-  display: inline-flex; align-items: center; gap: 4px; border: 1px solid rgba(255,255,255,.15);
-  border-radius: 999px; padding: 3px 8px; background: rgba(255,255,255,.05);
-  color: rgba(255,255,255,.72); text-decoration: none;
-}
-[data-testid="copilot-panel"] .news-inline-sources a:hover { color: var(--hub-gold-soft); border-color: rgba(241,226,204,.45); }
+/* Pastilles d'icônes beige — signature Zayado */
+.icon-beige { background: #f3e9d0; color: #b89855; }
+.icon-beige-soft { background: #EDD9B0; color: #1a3a6e; }
 
-[data-testid="copilot-panel"] .news-empty-state { color: rgba(255,255,255,.6); font-size: 12.5px; line-height: 1.55; }
+.btn-navy {
+  background: var(--zayado-navy);
+  color: var(--zayado-cream);
+  border-radius: 0.75rem;
+  padding: 0.7rem 1.4rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+.btn-navy:hover { background: var(--zayado-navy-dark); transform: translateY(-1px); }
+.btn-navy:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-[data-testid="copilot-panel"] .news-message { display: flex; flex-direction: column; gap: 5px; }
-[data-testid="copilot-panel"] .news-message-bubble {
-  border: 1px solid rgba(255,255,255,.14); border-radius: 14px; padding: 11px 13px;
-  background: rgba(255,255,255,.06); color: rgba(255,255,255,.85);
-  font-size: 12.5px; line-height: 1.6;
+/* ── Aplats bleus en GRADIENT (pas uni) ── */
+.bg-navy-gradient {
+  background: var(--zayado-navy-gradient);
+  color: var(--zayado-cream);
 }
-[data-testid="copilot-panel"] .news-message.is-user { align-items: flex-end; }
-[data-testid="copilot-panel"] .news-message.is-user .news-message-bubble {
-  border-color: rgba(241,226,204,.32); background: rgba(241,226,204,.13); color: #F7EEE1; max-width: 88%;
+.btn-navy-gradient {
+  background: var(--zayado-navy-gradient);
+  color: var(--zayado-cream);
+  border-radius: 999px;
+  padding: 0.7rem 1.4rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  background-size: 200% 200%;
+  background-position: 0% 0%;
 }
+.btn-navy-gradient:hover { background-position: 100% 100%; transform: translateY(-1px); }
 
-[data-testid="copilot-panel"] .news-secondary-panel { border-top: 1px solid rgba(255,255,255,.10); padding-top: 11px; }
-[data-testid="copilot-panel"] .news-secondary-panel summary {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  cursor: pointer; color: rgba(255,255,255,.8); font-size: 11.5px; font-weight: 600; list-style: none;
+.btn-gold {
+  background: var(--zayado-gold);
+  color: white;
+  border-radius: 0.75rem;
+  padding: 0.7rem 1.4rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
 }
-[data-testid="copilot-panel"] .news-secondary-panel summary::-webkit-details-marker { display: none; }
-[data-testid="copilot-panel"] .news-secondary-panel summary span { color: var(--hub-gold-soft); font-size: 10.5px; }
-[data-testid="copilot-panel"] .news-secondary-panel > div { margin-top: 9px; display: grid; gap: 8px; }
-[data-testid="copilot-panel"] .news-history-item summary { color: rgba(255,255,255,.75); font-size: 11.5px; }
-[data-testid="copilot-panel"] .news-history-item p { margin: 5px 0; color: rgba(255,255,255,.42); font-size: 10.5px; }
-[data-testid="copilot-panel"] .news-history-item > div { color: rgba(255,255,255,.7); font-size: 12px; line-height: 1.55; }
-[data-testid="copilot-panel"] .news-saved-item {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  border: 1px solid rgba(255,255,255,.12); border-radius: 12px; padding: 9px 11px; background: rgba(255,255,255,.05);
+.btn-gold:hover { background: #74612f; transform: translateY(-1px); }
+
+.btn-red {
+  background: var(--zayado-red);
+  color: white;
+  border-radius: 0.75rem;
+  padding: 0.7rem 1.4rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
 }
-[data-testid="copilot-panel"] .news-saved-item strong { display: block; color: #fff; font-size: 12px; font-weight: 600; }
-[data-testid="copilot-panel"] .news-saved-item small { color: rgba(255,255,255,.45); font-size: 10.5px; }
-[data-testid="copilot-panel"] .news-saved-item a, [data-testid="copilot-panel"] .news-saved-item button {
-  color: var(--hub-gold-soft); font-size: 11px; font-weight: 600; background: none; border: 0; cursor: pointer; padding: 2px 4px;
+.btn-red:hover { background: #7c0f1a; transform: translateY(-1px); }
+
+.btn-outline-navy {
+  background: transparent;
+  color: var(--zayado-navy);
+  border: 1.5px solid var(--zayado-navy);
+  border-radius: 0.75rem;
+  padding: 0.6rem 1.4rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+.btn-outline-navy:hover { background: var(--zayado-navy); color: white; }
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  background: var(--zayado-cream-dark);
+  color: var(--zayado-text);
+  font-size: 0.78rem;
+  font-weight: 500;
 }
 
-/* Barre de question de l'onglet Actualité — conservée et rendue lisible :
-   sans style, elle passait pour un artefact au bas de la page. */
-[data-testid="copilot-panel"] .news-composer {
-  position: sticky; bottom: 0; display: flex; align-items: center; gap: 8px;
-  margin-top: 4px; border: 1px solid rgba(255,255,255,.18); border-radius: 14px; padding: 7px 7px 7px 14px;
-  background: rgba(11,31,58,.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-}
-[data-testid="copilot-panel"] .news-composer input { min-width: 0; flex: 1; border: 0; background: transparent; color: #fff; font-size: 13px; outline: 0; }
-[data-testid="copilot-panel"] .news-composer input::placeholder { color: rgba(255,255,255,.42); }
-[data-testid="copilot-panel"] .news-composer button {
-  display: inline-flex; width: 34px; height: 34px; flex-shrink: 0; align-items: center; justify-content: center;
-  border: 0; border-radius: 11px; background: linear-gradient(135deg, #F1E2CC, #DEC2A3); color: #0A1128; cursor: pointer;
-}
-[data-testid="copilot-panel"] .news-composer button:disabled { opacity: .45; cursor: default; }
-
-/* Ambiance claire : mêmes formes, contrastes inversés — un seul jeu de règles. */
-html.ambiance-clarte [data-testid="copilot-panel"] .news-conversation { color: #17233a; }
-html.ambiance-clarte [data-testid="copilot-panel"] .news-conversation-intro,
-html.ambiance-clarte [data-testid="copilot-panel"] .news-signal-card,
-html.ambiance-clarte [data-testid="copilot-panel"] .news-empty-state { border-color: rgba(23,35,58,.12); background: #fff; }
-html.ambiance-clarte [data-testid="copilot-panel"] .news-conversation-intro p,
-html.ambiance-clarte [data-testid="copilot-panel"] .news-signal-copy { color: rgba(23,35,58,.72); }
-html.ambiance-clarte [data-testid="copilot-panel"] .news-signal-heading { color: #17233a; }
-html.ambiance-clarte [data-testid="copilot-panel"] .news-signal-actions button { border-color: rgba(23,35,58,.16); background: #f4eadb; color: #17233a; }
-html.ambiance-clarte [data-testid="copilot-panel"] .news-signal-actions button:first-child { background: linear-gradient(135deg, #172C5C, #294E82); color: #fff; }
-html.ambiance-clarte [data-testid="copilot-panel"] .news-message-bubble { border-color: rgba(23,35,58,.12); background: #f6f7fa; color: #17233a; }
-html.ambiance-clarte [data-testid="copilot-panel"] .news-composer { border-color: rgba(23,35,58,.12); background: rgba(255,255,255,.96); }
-html.ambiance-clarte [data-testid="copilot-panel"] .news-composer input { color: #17233a; }
-html.ambiance-clarte [data-testid="copilot-panel"] .news-composer button { background: linear-gradient(135deg, #172C5C, #294E82); color: #fff; }
-
-/* ═══════════════════════════════════════════════════════════════════════
-   Page VISION — barre d'outils, trajectoire en fenêtre, repli « Aller plus loin »
-   ───────────────────────────────────────────────────────────────────────
-   La page empilait, dès l'ouverture : synthèse stratégique, séparateur,
-   bloc d'actions, trajectoire, climat, quatre cartes de focus, cartes
-   reliées, miroir des connexions, insights, célébration, ressources.
-   Onze blocs pour une page dont on attend d'abord une réponse simple :
-   « ma Vision, et la prochaine étape ». Les commandes remontent en barre
-   d'outils, la trajectoire s'ouvre à la demande, le reste passe sous un repli.
-   ═══════════════════════════════════════════════════════════════════════ */
-.vb-page-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-left: auto; }
-.vb-page-action {
-  display: inline-flex; align-items: center; gap: 7px;
-  border: 1px solid var(--glass-border); border-radius: 12px; padding: 8px 13px;
-  background: var(--glass-bg); color: rgba(255,255,255,.85);
-  font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap;
-  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-  transition: border-color .16s ease, color .16s ease, background .16s ease;
-}
-.vb-page-action:hover { border-color: rgba(222,194,163,.55); color: #F1E2CC; }
-.vb-page-action.is-primary {
-  border-color: transparent; background: linear-gradient(135deg, #F1E2CC, #DEC2A3); color: #0B1F3A;
-}
-.vb-page-action.is-primary:hover { filter: brightness(1.06); color: #0B1F3A; }
-.vb-page-action svg { flex-shrink: 0; }
-@media (max-width: 768px) {
-  /* Le menu ⋮ se retrouvait seul sur une ligne au-dessus des actions, avec un
-     vide au milieu : il vient se placer à droite des boutons, sur la même ligne. */
-  .vb-toolbar { display: grid !important; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 10px; }
-  .vb-toolbar > span:empty { display: none; }
-  .vb-toolbar .vision-back-action { grid-column: 1 / -1; }
-  .vb-page-actions { grid-column: 1; width: 100%; margin-left: 0; }
-  .vb-page-action { flex: 1 1 calc(50% - 8px); justify-content: center; padding: 9px 10px; font-size: 12px; }
-  .vb-page-action.is-primary { flex-basis: 100%; }
-  .vb-toolbar .vb-actions { grid-column: 2; }
+.chip-gold {
+  background: var(--zayado-gold-bg);
+  color: var(--zayado-gold);
+  font-weight: 600;
 }
 
-/* Fenêtre « Ma trajectoire » */
-.vision-modal-backdrop {
-  position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center;
-  padding: 20px; background: rgba(6,15,32,.72); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-  animation: visionModalIn .18s ease;
-}
-@keyframes visionModalIn { from { opacity: 0; } to { opacity: 1; } }
-.vision-modal {
-  position: relative; width: min(880px, 100%); max-height: 88vh; overflow-y: auto;
-  border: 1px solid var(--glass-border); border-radius: 24px; padding: 26px;
-  background: var(--app-deep);
-  box-shadow: 0 30px 80px rgba(0,0,0,.45);
-}
-.vision-modal .vision-trajectory { border: 0; background: none; box-shadow: none; padding: 0; }
-.vision-modal-close {
-  position: absolute; top: 16px; right: 16px; z-index: 1;
-  display: inline-flex; width: 34px; height: 34px; align-items: center; justify-content: center;
-  border: 1px solid rgba(255,255,255,.18); border-radius: 999px;
-  background: rgba(255,255,255,.07); color: rgba(255,255,255,.8); cursor: pointer;
-}
-.vision-modal-close:hover { border-color: rgba(222,194,163,.5); color: #F1E2CC; }
-@media (max-width: 768px) { .vision-modal { padding: 20px 16px; border-radius: 18px; } }
-
-/* Repli « Aller plus loin » */
-.vision-more { margin-top: 8px; border: 1px solid var(--glass-border); border-radius: 20px; background: var(--glass-bg); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
-.vision-more > summary {
-  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
-  padding: 16px 20px; cursor: pointer; list-style: none;
-}
-.vision-more > summary::-webkit-details-marker { display: none; }
-.vision-more > summary::after { content: "▾"; margin-left: auto; color: rgba(255,255,255,.45); transition: transform .18s ease; }
-.vision-more[open] > summary::after { transform: rotate(180deg); }
-.vision-more > summary span { color: #fff; font-size: 14px; font-weight: 650; }
-.vision-more > summary small { color: rgba(255,255,255,.45); font-size: 11.5px; }
-.vision-more-body { display: grid; gap: 16px; padding: 0 20px 20px; }
-
-/* Onboarding — même fond que l'application.
-   Il utilisait #0A1128, un navy quasi noir qui n'existe nulle part ailleurs
-   dans le produit : le premier écran après l'inscription ne ressemblait donc
-   pas à l'application dans laquelle il fait entrer. */
-.onboarding-screen { background: var(--app-deep); background-attachment: fixed; }
-
-/* ═══════════════════════════════════════════════════════════════════════
-   Fenêtre COLLABORER — styles de base reconstruits
-   ───────────────────────────────────────────────────────────────────────
-   Ses 44 règles n'existaient que dans les blocs mobiles supprimés : la
-   fenêtre s'affichait donc en texte brut, sans fond ni bordure — sur PC
-   comme sur mobile, et ce AVANT le nettoyage (personne ne l'avait ouverte
-   sur grand écran). Reconstruite ici une seule fois, pour les deux.
-   ═══════════════════════════════════════════════════════════════════════ */
-.copilot-collab-backdrop {
-  position: fixed; inset: 0; z-index: 320; display: flex; align-items: center; justify-content: center;
-  padding: 20px; background: rgba(6,15,32,.72);
-  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-}
-.copilot-collab-modal {
-  position: relative; width: min(460px, 100%); max-height: 88vh; overflow-y: auto;
-  border: 1px solid var(--glass-border); border-radius: 22px; padding: 22px;
-  background: var(--app-deep); box-shadow: 0 30px 80px rgba(0,0,0,.45);
-  color: #fff;
-}
-.copilot-collab-modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.copilot-collab-eyebrow { color: var(--hub-gold, #DEC2A3); font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
-.copilot-collab-modal-header h2 { margin: 4px 0 0; font-family: 'Outfit', sans-serif; font-size: 19px; font-weight: 650; color: #fff; }
-.copilot-collab-close {
-  display: inline-flex; width: 34px; height: 34px; flex-shrink: 0; align-items: center; justify-content: center;
-  border: 1px solid rgba(255,255,255,.18); border-radius: 999px;
-  background: rgba(255,255,255,.07); color: rgba(255,255,255,.8); cursor: pointer;
-}
-.copilot-collab-close:hover { border-color: rgba(222,194,163,.5); color: #F1E2CC; }
-.copilot-collab-description { margin: 12px 0 0; color: rgba(255,255,255,.66); font-size: 12.5px; line-height: 1.6; }
-.copilot-collab-whatsapp {
-  display: inline-flex; align-items: center; gap: 7px; margin-top: 14px;
-  border: 1px solid rgba(255,255,255,.18); border-radius: 999px; padding: 8px 14px;
-  background: rgba(255,255,255,.07); color: rgba(255,255,255,.85);
-  font-size: 12px; font-weight: 600; text-decoration: none;
-}
-.copilot-collab-whatsapp:hover { border-color: rgba(222,194,163,.5); color: #F1E2CC; }
-.copilot-collab-label { display: block; margin: 18px 0 7px; color: rgba(255,255,255,.7); font-size: 12px; font-weight: 600; }
-.copilot-collab-textarea {
-  width: 100%; resize: vertical; min-height: 96px;
-  border: 1px solid rgba(255,255,255,.16); border-radius: 14px; padding: 11px 13px;
-  background: rgba(255,255,255,.06); color: #fff; font-family: inherit; font-size: 13px; line-height: 1.55; outline: 0;
-}
-.copilot-collab-textarea::placeholder { color: rgba(255,255,255,.38); }
-.copilot-collab-textarea:focus { border-color: rgba(222,194,163,.55); background: rgba(255,255,255,.09); }
-.copilot-collab-submit {
-  display: inline-flex; width: 100%; align-items: center; justify-content: center; gap: 8px;
-  margin-top: 14px; border: 0; border-radius: 14px; padding: 12px 18px;
-  background: linear-gradient(135deg, #F1E2CC, #DEC2A3); color: #0A1128;
-  font-family: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer;
-}
-.copilot-collab-submit:disabled { opacity: .5; cursor: default; }
-.copilot-collab-submit:not(:disabled):hover { filter: brightness(1.06); }
-/* Passerelle vers la page Collaborateur — la fenêtre recueille un besoin,
-   la page montre le suivi : les deux doivent être reliées. */
-.copilot-collab-link {
-  display: inline-flex; align-items: center; gap: 6px; margin-top: 14px;
-  color: var(--hub-gold-soft, #F0DCA5); font-size: 12px; font-weight: 600;
-  background: none; border: 0; cursor: pointer;
-}
-.copilot-collab-link:hover { color: #fff; }
-
-html.ambiance-clarte .copilot-collab-modal { background: #fff; border-color: rgba(23,35,58,.12); color: #17233a; }
-html.ambiance-clarte .copilot-collab-modal-header h2 { color: #17233a; }
-html.ambiance-clarte .copilot-collab-description { color: rgba(23,35,58,.7); }
-html.ambiance-clarte .copilot-collab-textarea { border-color: rgba(23,35,58,.14); background: #f6f7fa; color: #17233a; }
-html.ambiance-clarte .copilot-collab-submit { background: linear-gradient(135deg, #172C5C, #294E82); color: #fff; }
-html.ambiance-clarte .copilot-collab-close { border-color: rgba(23,35,58,.14); background: #f6f7fa; color: #17233a; }
-
-/* Navigation basse — bouton Copilote central et surélevé.
-   Le Copilote est l'argument central du produit ; il n'avait aucune entrée
-   de menu. Il prend ici la place centrale, traitement distinct, comme le
-   bouton d'action principal des applications mobiles. */
-.bottom-nav button.is-center { position: relative; }
-.bottom-nav button.is-center svg {
-  display: flex; align-items: center; justify-content: center;
-  box-sizing: content-box; width: 21px; height: 21px; padding: 9px;
-  margin-top: -20px; border-radius: 999px;
-  background: linear-gradient(135deg, #F1E2CC, #DEC2A3); color: #0A1128;
-  box-shadow: 0 8px 20px rgba(222,194,163,.30), 0 0 0 4px var(--navy-900);
-}
-.bottom-nav button.is-center { color: var(--gold); }
-.bottom-nav button.is-center:hover svg { filter: brightness(1.06); }
-.bottom-nav button.is-center.active { background: transparent; }
-.bottom-nav-dot {
-  position: absolute; top: -14px; right: 50%; margin-right: -17px;
-  width: 9px; height: 9px; border-radius: 999px;
-  background: var(--brand-red); border: 2px solid var(--navy-900);
-}
-@media (max-width: 640px) {
-  .bottom-nav button.is-center svg { margin-top: -22px; box-shadow: 0 8px 20px rgba(222,194,163,.30), 0 0 0 4px #101F47; }
-  .bottom-nav-dot { border-color: #101F47; }
+/* Sidebar group label */
+.sidebar-group {
+  font-size: 0.68rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--zayado-muted);
+  padding: 0 1rem;
+  margin-top: 0.7rem;
+  margin-bottom: 0.25rem;
 }
 
-/* Rangées d'onglets défilables (Mon Mouvement, Croissance) — indice visuel.
-   Le conteneur défile bien horizontalement, mais rien n'indiquait que des
-   onglets existaient hors écran : sur mobile, l'utilisateur voyait quatre
-   onglets dont deux invisibles, sans savoir qu'il pouvait faire défiler. */
-@media (max-width: 768px) {
-  [data-testid="page-travail"] .overflow-x-auto,
-  [data-testid="page-croissance-radar"] .overflow-x-auto {
-    position: relative;
-    -webkit-mask-image: linear-gradient(to right, #000 88%, transparent 100%);
-    mask-image: linear-gradient(to right, #000 88%, transparent 100%);
-    scrollbar-width: none;
-  }
-  [data-testid="page-travail"] .overflow-x-auto::-webkit-scrollbar,
-  [data-testid="page-croissance-radar"] .overflow-x-auto::-webkit-scrollbar { display: none; }
+.sidebar-item {
+  display: flex; align-items: center; gap: 0.7rem;
+  padding: 0.45rem 1rem;
+  font-size: 0.91rem;
+  color: var(--zayado-text);
+  border-right: 3px solid transparent;
+  transition: all 0.15s ease;
 }
+.sidebar-item:hover { background: var(--zayado-cream); }
+.sidebar-item.active {
+  background: var(--zayado-gold-bg);
+  border-right-color: var(--zayado-gold);
+  color: var(--zayado-navy);
+  font-weight: 600;
+}
+
+/* ─────────────────────────────────────────────────────────
+   Responsive globals — gardes-fou pour mobile et PWA
+   ───────────────────────────────────────────────────────── */
+
+/* Évite le débordement horizontal causé par les tables larges,
+   les preformatted blocks, ou les iframes. */
+html, body { overflow-x: hidden; max-width: 100vw; }
+img, video, svg { max-width: 100%; height: auto; }
+table { display: block; max-width: 100%; overflow-x: auto; }
+
+/* Safe-area pour iOS standalone (PWA) — la sidebar mobile et le bottom-bar
+   doivent respecter le notch et la home-indicator. */
+@supports (padding: max(0px)) {
+  .safe-top { padding-top: max(0.5rem, env(safe-area-inset-top)); }
+  .safe-bottom { padding-bottom: max(0.75rem, env(safe-area-inset-bottom)); }
+  .safe-left { padding-left: max(0.75rem, env(safe-area-inset-left)); }
+  .safe-right { padding-right: max(0.75rem, env(safe-area-inset-right)); }
+}
+
+/* Mobile : compactage typographique et padding-bottom pour le bottom-bar. */
+@media (max-width: 767px) {
+  main { padding-bottom: 88px !important; }
+  h1.font-display { font-size: clamp(1.85rem, 6vw, 2.4rem); line-height: 1.15; }
+  h2.font-display { font-size: clamp(1.4rem, 5vw, 1.85rem); line-height: 1.2; }
+  /* Inputs : éviter le zoom auto iOS sur focus (< 16px) */
+  input, select, textarea { font-size: 16px; }
+  /* Tap targets : minimum 44px */
+  button, [role="button"], a.sidebar-item { min-height: 40px; }
+  /* Cards qui débordent : forcer leur conteneur à tenir dans la largeur. */
+  .card-soft { border-radius: 0.85rem; }
+}
+
+/* Touch-friendly hovers — désactiver les transitions hover sur touch devices */
+@media (hover: none) {
+  .card-soft:hover { box-shadow: 0 1px 2px rgba(31, 29, 26, 0.03), 0 4px 12px rgba(31, 29, 26, 0.04); }
+}
+
+/* PWA standalone : masque les liens externes décoratifs */
+@media all and (display-mode: standalone) {
+  .pwa-hide { display: none !important; }
+}
+
+
+/* ─────────────────────────────────────────────────────────
+   wp-content — styling pour les pages WordPress (Gutenberg)
+   rendues via /wp/:slug et /page/:slug
+   ───────────────────────────────────────────────────────── */
+.wp-content {
+  font-family: 'Inter', system-ui, sans-serif;
+  color: var(--zayado-text);
+  font-size: 17px;
+  line-height: 1.7;
+}
+.wp-content h1, .wp-content h2, .wp-content h3, .wp-content h4 {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--zayado-text);
+  margin-top: 1.8em;
+  margin-bottom: 0.5em;
+}
+.wp-content h1 { font-size: 2.4rem; line-height: 1.1; }
+.wp-content h2 { font-size: 1.85rem; line-height: 1.15; }
+.wp-content h3 { font-size: 1.4rem; line-height: 1.25; }
+.wp-content h4 { font-size: 1.15rem; }
+.wp-content p { margin: 1em 0; }
+.wp-content a { color: var(--zayado-navy); text-decoration: underline; text-underline-offset: 3px; }
+.wp-content a:hover { color: var(--zayado-gold); }
+.wp-content ul, .wp-content ol { margin: 1em 0; padding-left: 1.5rem; }
+.wp-content ul li, .wp-content ol li { margin: 0.4em 0; }
+.wp-content img { border-radius: 1rem; margin: 1.5em auto; box-shadow: 0 6px 18px rgba(31,29,26,0.08); }
+.wp-content blockquote {
+  border-left: 3px solid var(--zayado-gold);
+  padding: 0.4em 1.2em;
+  margin: 1.5em 0;
+  font-style: italic;
+  background: rgba(212,185,130,0.08);
+  border-radius: 0 1rem 1rem 0;
+}
+.wp-content code {
+  background: var(--zayado-cream-dark);
+  padding: 0.15em 0.4em;
+  border-radius: 0.35rem;
+  font-size: 0.9em;
+}
+.wp-content pre {
+  background: var(--zayado-navy-deep);
+  color: var(--zayado-cream);
+  padding: 1.2rem;
+  border-radius: 1rem;
+  overflow-x: auto;
+}
+.wp-content pre code { background: transparent; color: inherit; padding: 0; }
+.wp-content hr {
+  border: none;
+  height: 1px;
+  background: var(--zayado-border);
+  margin: 2.5em 0;
+}
+.wp-content figure { margin: 1.5em 0; }
+.wp-content figure figcaption {
+  text-align: center;
+  font-size: 0.85em;
+  color: var(--zayado-muted);
+  margin-top: 0.5em;
+  font-style: italic;
+}
+.wp-content .wp-block-button__link {
+  display: inline-block;
+  background: var(--zayado-navy);
+  color: #f6f3ee !important;
+  padding: 0.7em 1.6em;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(31,59,115,0.18);
+  transition: all 0.2s;
+}
+.wp-content .wp-block-button__link:hover { background: var(--zayado-navy-dark); transform: translateY(-1px); }
+.wp-content .wp-block-columns { display: grid; gap: 2rem; margin: 1.5em 0; }
+@media (min-width: 768px) {
+  .wp-content .wp-block-columns { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+}
+.wp-content .wp-block-image img { margin: 0; }

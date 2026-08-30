@@ -45,8 +45,7 @@ export function useInstallPromptState() {
 
 export default function InstallBanner() {
   const { visible, install, dismiss } = useInstallPromptState();
-  const isMobileHub = typeof window !== "undefined" && window.innerWidth < 769 && window.location.pathname === "/";
-  if (!visible || isMobileHub) return null;
+  if (!visible) return null;
 
   return (
     <div
