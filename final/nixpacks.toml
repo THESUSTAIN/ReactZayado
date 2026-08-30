@@ -1,0 +1,6 @@
+# Ce projet est déployé via le Dockerfile (mono-service).
+# Ce fichier neutralise l'auto-détection Nixpacks qui échouait
+# (frontend + backend dans le même dépôt). Railway doit utiliser
+# le Dockerfile : Settings → Build → Builder = Dockerfile.
+# (Le railway.json force déjà "builder": "DOCKERFILE".)
+providers = []
