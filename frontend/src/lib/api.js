@@ -335,6 +335,13 @@ export const globalSearch = (q) => api.get("/search", { params: { q } }).then((r
 export const getLastSeenNewsId = () => api.get("/prefs").then((r) => r.data?.last_seen_news_id || null);
 export const setLastSeenNewsId = (newsId) => api.put("/prefs", { last_seen_news_id: newsId }).then((r) => r.data?.last_seen_news_id || null);
 
+// Résumé du cockpit (ChatPanel.jsx) — /api/dashboard/summary et /api/dashboard/fusion
+// existent bien côté backend (routes/dashboard.py) mais n'avaient pas encore leur
+// wrapper ici : c'est ce qui faisait échouer le build ("getDashboardSummary" is not
+// exported by "src/lib/api.js") et laissait le déploiement bloqué sur l'ancien build.
+export const getDashboardSummary = () => api.get("/dashboard/summary").then((r) => r.data);
+export const getDashboardFusion = () => api.get("/dashboard/fusion").then((r) => r.data);
+
 export const archiveNewsEdition = (session = "default", item) =>
   api.post("/chat/news-history", { session_id: session, ...item }).then((r) => r.data);
 
