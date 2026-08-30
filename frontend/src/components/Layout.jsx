@@ -168,7 +168,7 @@ function Sidebar({ onSettings, onCopilote, unseenNewsCount }) {
 }
 
 /* ─────────────── Header (transparent, modèle exact) ─────────────── */
-function Header({ onSettings, profileName, theSustainMember, ambianceFoi, onOpenTheSustain, onOpenCopilot, unseenNewsCount }) {
+function Header({ onSettings, profileName, theSustainMember, ambianceFoi, onOpenTheSustain, onOpenCopilot, unseenNewsCount, headerNotifications, setHeaderNotifications }) {
   const navigate = useNavigate();
   // Corrige AUTH-03 : aucun élément de l'interface ne permettait de savoir
   // si la session provenait de Google, Microsoft, thesustain ou d'un compte
@@ -180,7 +180,11 @@ function Header({ onSettings, profileName, theSustainMember, ambianceFoi, onOpen
   const [searchOpen, setSearchOpen] = useState(false);
   const [q, setQ] = useState("");
   const [headerMessages, setHeaderMessages] = useState([]);
-  const [headerNotifications, setHeaderNotifications] = useState([]);
+  // headerNotifications remonté dans Layout (App shell) : le son de nouvelle
+  // notification (voir plus bas dans ce fichier) en a besoin dans sa propre
+  // portée, et lisait par erreur cette variable alors qu'elle n'existait que
+  // dans le scope de Header — d'où le crash "headerNotifications is not
+  // defined" en prod. Header reçoit maintenant la même donnée par props.
   const headerSession = "default";
   const [isLight, setIsLight] = useState(() => document.documentElement.classList.contains("ambiance-clarte"));
 
@@ -196,9 +200,7 @@ function Header({ onSettings, profileName, theSustainMember, ambianceFoi, onOpen
   };
 
   useEffect(() => {
-    Promise.all([getHeaderMessages(headerSession), getHeaderNotifications(headerSession)])
-      .then(([messages, notifications]) => { setHeaderMessages(messages?.items || []); setHeaderNotifications(notifications?.items || []); })
-      .catch(() => {});
+    getHeaderMessages(headerSession).then((messages) => setHeaderMessages(messages?.items || [])).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -420,6 +422,13 @@ export default function Layout() {
   // Badge "nouvelle actualité" — compare la dernière édition disponible à la
   // dernière vue par l'utilisateur.
   const [unseenNewsCount, setUnseenNewsCount] = useState(0);
+  // Remonté ici (au lieu de rester interne à Header) : l'effet "petit son"
+  // plus bas dans ce même composant Layout en a besoin dans sa portée pour
+  // calculer le total notifications + actualités non lues.
+  const [headerNotifications, setHeaderNotifications] = useState([]);
+  useEffect(() => {
+    getHeaderNotifications("default").then((notifications) => setHeaderNotifications(notifications?.items || [])).catch(() => {});
+  }, []);
   // Corrigé : ne marque plus l'actualité comme "vue" à la simple ouverture
   // du chat (mobile ou PC) — seulement quand l'utilisateur clique
   // vraiment sur l'onglet Actualité dans ChatPanel.jsx (markNewsTabSeen).
@@ -511,7 +520,7 @@ export default function Layout() {
       <Sidebar onSettings={openSettings} onCopilote={openCopilot} unseenNewsCount={unseenNewsCount} />
 
       <div className="app-body">
-        <Header onSettings={openSettings} profileName={profileName} theSustainMember={theSustainMember} ambianceFoi={ambianceFoi} onOpenTheSustain={() => setTheSustainModalOpen(true)} onOpenCopilot={openCopilot} unseenNewsCount={unseenNewsCount} />
+        <Header onSettings={openSettings} profileName={profileName} theSustainMember={theSustainMember} ambianceFoi={ambianceFoi} onOpenTheSustain={() => setTheSustainModalOpen(true)} onOpenCopilot={openCopilot} unseenNewsCount={unseenNewsCount} headerNotifications={headerNotifications} setHeaderNotifications={setHeaderNotifications} />
         <div className="flex">
           <main className={`flex-1 min-w-0 w-full px-4 sm:px-8 pb-28 xl:pb-8 max-w-none transition-[padding] duration-300 ${copilotOpen ? "md:pr-[396px]" : ""}`}>
             <Outlet />
