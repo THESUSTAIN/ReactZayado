@@ -72,14 +72,27 @@ if DB_TYPE == "mysql":
             _decoded_ssl = _raw_ssl
         _mysql_ssl_options = _decoded_ssl if isinstance(_decoded_ssl, dict) else {}
 
-from sqlalchemy.pool import NullPool
+from sqlalchemy.pool import QueuePool
 
 _engine_kwargs = {"echo": False}
 if DB_TYPE != "sqlite":
-    # NullPool = fresh connection per request. No stale TCP connections ever.
-    # Slightly higher latency but 100% reliable on Railway/cloud MySQL.
+    # QueuePool réutilisable, petit et à courte durée de vie.
+    # AVANT : NullPool = une connexion (donc une AUTHENTIFICATION MySQL)
+    # neuve à CHAQUE requête, y compris chaque appel de /api/health par le
+    # health-check de la plateforme (~toutes les 30s en continu) et chaque
+    # boucle cron. Sur un compte dont le mot de passe est temporairement
+    # invalide, ça génère un flot constant d'échecs d'authentification —
+    # exactement le pattern qui déclenche un verrouillage automatique côté
+    # MySQL (erreur 4151 "Access denied, this account is locked").
+    # Un petit pool réutilisable réduit ce flot de ~100x tout en gardant
+    # pool_pre_ping + pool_recycle pour ne jamais servir de connexion morte.
     _engine_kwargs.update({
-        "poolclass": NullPool,
+        "poolclass": QueuePool,
+        "pool_size": 3,
+        "max_overflow": 5,
+        "pool_recycle": 1800,   # recycle les connexions après 30 min
+        "pool_pre_ping": True,  # vérifie la connexion avant de la réutiliser
+        "pool_timeout": 15,
         "connect_args": {"connect_timeout": 10},
     })
     if DB_TYPE == "mysql" and _mysql_ssl_options is not None:
