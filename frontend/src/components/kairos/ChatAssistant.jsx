@@ -243,11 +243,13 @@ function DecisionsTab() {
 
 // ── Onglet Actualité (digest piloté par l'énergie) ──
 function ActuTab() {
-  const [marche, setMarche] = useState("france");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const load = async (m) => { setLoading(true); try { setData(await fetchActualite(m)); } catch { setData({ erreur: true, articles: [] }); } setLoading(false); };
-  useEffect(() => { load(marche); }, [marche]);
+  // Corrigé : le pays/marché n'a plus à être choisi ici via des boutons —
+  // c'est réglé une fois dans Paramètres (ou à l'onboarding), le chat lit
+  // simplement le réglage du profil, comme le fait déjà le serveur.
+  const load = async () => { setLoading(true); try { setData(await fetchActualite()); } catch { setData({ erreur: true, articles: [] }); } setLoading(false); };
+  useEffect(() => { load(); }, []);
 
   return (
     <div className="h-full overflow-y-auto px-4 py-4" data-testid="actu-tab">
@@ -258,16 +260,6 @@ function ActuTab() {
           Généré le {new Date(data.genere_a).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
           {data.prochaine_maj && <> · prochaine actualisation vers {new Date(data.prochaine_maj).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</>}
         </p>
-      )}
-      {data?.marches && (
-        <div className="mb-3 flex flex-wrap gap-1.5">
-          {data.marches.map((m) => (
-            <button key={m.cle} onClick={() => setMarche(m.cle)} data-testid={`actu-marche-${m.cle}`}
-              className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${marche === m.cle ? "bg-gold/15 text-gold border border-gold/40" : "border border-white/10 bg-white/5 text-offwhite/60"}`}>
-              {m.label}
-            </button>
-          ))}
-        </div>
       )}
       {loading ? <Loader2 className="h-5 w-5 animate-spin text-gold" /> : data?.masque ? (
         <div className="rounded-xl border border-[#14B8A6]/30 bg-[#14B8A6]/10 p-4 text-sm leading-relaxed text-offwhite/85" data-testid="actu-masque">

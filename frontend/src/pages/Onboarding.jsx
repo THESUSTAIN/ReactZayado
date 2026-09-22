@@ -42,7 +42,7 @@ export default function Onboarding() {
   const [saving, setSaving] = useState(false);
   // Nouveau wizard 3 étapes : Identité / Activité / Cap financier
   const [identite, setIdentite] = useState({ prenom: user.firstName || "", entreprise: "", role: "" });
-  const [activite, setActivite] = useState({ type: "", cible: "", offre: "" });
+  const [activite, setActivite] = useState({ type: "", cible: "", offre: "", marche: "france" });
   const [capFin, setCapFin]     = useState({ ca_objectif: 0, ca_mensuel: 0, tresorerie: 0 });
 
   const next = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
@@ -62,6 +62,7 @@ export default function Onboarding() {
         contexte_metier: {
           entreprise: identite.entreprise, role: identite.role,
           activite_type: activite.type, cible: activite.cible, offre: activite.offre,
+          marche: activite.marche,
         },
         onboarded: true,
       });
@@ -166,6 +167,18 @@ export default function Onboarding() {
               <textarea value={activite.offre} onChange={(e) => setActivite({ ...activite, offre: e.target.value })}
                 placeholder="Ton offre phare (facultatif)" rows={2} data-testid="onboarding-activite-offre"
                 className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-offwhite placeholder:text-offwhite/40 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/30" />
+              <div>
+                <label className="mb-1.5 block text-xs text-offwhite/50">Ton pays / marché — pour l'actualité et le contexte économique</label>
+                <select value={activite.marche} onChange={(e) => setActivite({ ...activite, marche: e.target.value })} data-testid="onboarding-activite-marche"
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-offwhite focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/30">
+                  <option value="france">France</option>
+                  <option value="senegal">Sénégal</option>
+                  <option value="cote_ivoire">Côte d'Ivoire</option>
+                  <option value="cameroun">Cameroun</option>
+                  <option value="maroc">Maroc</option>
+                  <option value="belgique">Belgique</option>
+                </select>
+              </div>
             </div>
           </div>
         )}

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Sidebar } from "@/components/kairos/Sidebar";
+import { TabBar } from "@/components/kairos/TabBar";
 import { Header } from "@/components/kairos/Header";
 import { GlassCard } from "@/components/kairos/GlassCard";
 import { fetchRadar, genererSwot } from "@/lib/kairosApi";
@@ -504,6 +505,12 @@ export default function Radar() {
           </section>
         </div>
       </div>
+      <TabBar active="radar" onSelect={(key) => {
+        if (key === "today") navigate("/app");
+        else if (key === "vision") navigate("/app/vision");
+        else if (key === "ideas") navigate("/app/ideas");
+        else if (key === "wellbeing") navigate("/app/bien-etre");
+      }} onOpenChat={() => navigate("/app")} />
     </div>
   );
 }

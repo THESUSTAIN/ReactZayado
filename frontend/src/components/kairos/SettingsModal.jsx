@@ -22,6 +22,7 @@ export function SettingsModal({ open, onClose }) {
   const [heure, setHeure] = useState("08:30");
   const [plan, setPlan] = useState("immersion");
   const [notif, setNotif] = useState(true);
+  const [marche, setMarche] = useState("france");
   const [saving, setSaving] = useState(false);
   const [confirmDel, setConfirmDel] = useState("");
 
@@ -31,12 +32,13 @@ export function SettingsModal({ open, onClose }) {
       setPrenom(s.profile?.prenom || ""); setEmail(s.profile?.email || "");
       setHeure(s.profile?.heure_checkin || "08:30"); setPlan(s.profile?.plan || "immersion");
       setNotif(s.profile?.notifications ?? true);
+      setMarche(s.profile?.contexte_metier?.marche || "france");
     }).catch(() => {});
   }, [open]);
 
   const save = async () => {
     setSaving(true);
-    try { await saveProfile({ prenom, email, heure_checkin: heure, plan, notifications: notif }); toast.success("Paramètres enregistrés"); onClose(); }
+    try { await saveProfile({ prenom, email, heure_checkin: heure, plan, notifications: notif, contexte_metier: { marche } }); toast.success("Paramètres enregistrés"); onClose(); }
     catch { toast.error("Enregistrement impossible."); }
     setSaving(false);
   };
@@ -71,6 +73,16 @@ export function SettingsModal({ open, onClose }) {
               <Field l="Heure de check-in">
                 <div className="relative"><Clock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gold" />
                   <input type="time" value={heure} onChange={(e) => setHeure(e.target.value)} data-testid="settings-heure" className={`${inputCls} pl-9`} /></div>
+              </Field>
+              <Field l="Pays / marché — actualité & contexte économique">
+                <select value={marche} onChange={(e) => setMarche(e.target.value)} data-testid="settings-marche" className={inputCls}>
+                  <option value="france">France</option>
+                  <option value="senegal">Sénégal</option>
+                  <option value="cote_ivoire">Côte d'Ivoire</option>
+                  <option value="cameroun">Cameroun</option>
+                  <option value="maroc">Maroc</option>
+                  <option value="belgique">Belgique</option>
+                </select>
               </Field>
             </div>
           </section>

@@ -90,7 +90,7 @@ export const fetchDecisions = () => jget("/copilote/decisions");
 export const suggererDecisions = () => jsend("/copilote/decisions/suggerer", "POST");
 export const patchDecision = (id, statut, canal) => jsend(`/copilote/decisions/${id}`, "PATCH", { statut, canal });
 export const validerDecisionEmail = (id) => jsend(`/copilote/decisions/${id}/valider-email`, "POST");
-export const fetchActualite = (marche = "france") => jget(`/copilote/actualite?marche=${marche}`);
+export const fetchActualite = () => jget("/copilote/actualite");
 export const enregistrerArticle = (titre, lien) => jsend("/copilote/enregistres", "POST", { titre, lien });
 export const fetchEnregistres = () => jget("/copilote/enregistres");
 export const exportData = () => jget("/export");

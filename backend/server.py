@@ -992,7 +992,11 @@ async def maj_profil(body: ProfilIn, db: AsyncSession = Depends(get_db)):
         if champ in data and data[champ] is not None:
             setattr(profil, champ, data[champ])
     if data.get("contexte_metier"):
-        profil.contexte_metier = {k: v for k, v in data["contexte_metier"].items() if isinstance(v, str)}
+        # Corrigé : remplaçait tout contexte_metier au lieu de le compléter —
+        # un simple changement de pays depuis Paramètres aurait effacé
+        # l'entreprise/rôle/activité saisis à l'onboarding. Fusion à la place.
+        nouveau = {k: v for k, v in data["contexte_metier"].items() if isinstance(v, str)}
+        profil.contexte_metier = {**(profil.contexte_metier or {}), **nouveau}
     # Objectifs 90 jours saisis à l'onboarding
     if data.get("objectifs"):
         for o in (await db.execute(select(VisionObjectif).where(VisionObjectif.user_id == uid))).scalars():
