@@ -17,6 +17,9 @@ RUN yarn build
 
 FROM nginx:alpine
 COPY --from=build /app/build /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Les fichiers *.template de ce répertoire sont interpolés par
+# 20-envsubst-on-templates.sh avec la variable PORT fournie par Railway.
+ENV PORT=80
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
