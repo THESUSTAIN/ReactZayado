@@ -1,18 +1,29 @@
 {
-  "short_name": "MyExtension",
-  "name": "MyExtension Business — Cockpit",
-  "description": "De la vision à l'action — pilotage, vision et bien-être pour solopreneurs.",
-  "lang": "fr",
+  "short_name": "Kairos",
+  "name": "Kairos by Zayado",
+  "description": "De ta vision à l'action, en prenant soin de toi.",
   "icons": [
-    { "src": "/logo-icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
   ],
-  "start_url": "/",
-  "scope": "/",
+  "start_url": ".",
   "display": "standalone",
   "orientation": "portrait",
-  "theme_color": "#0B1F3A",
-  "background_color": "#0B1F3A",
-  "categories": ["business", "productivity"]
+  "theme_color": "#0B0F19",
+  "background_color": "#0B0F19"
 }

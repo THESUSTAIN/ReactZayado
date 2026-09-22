@@ -1,7 +1,0 @@
-{
-  "root": true,
-  "rules": {
-    "react-hooks/set-state-in-effect": "off",
-    "no-empty": ["warn", { "allowEmptyCatch": true }]
-  }
-}

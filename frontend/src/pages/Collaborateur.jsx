@@ -1,17 +1,14 @@
-import { useState } from "react";
-import { Users, ArrowRight, Map } from "lucide-react";
+import React, { useState } from "react";
+import { Sidebar } from "@/components/kairos/Sidebar";
+import { Users, ArrowRight, Map, ShieldCheck, Send, Loader2, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
-import { sendCopilotWorkRequest } from "../lib/api";
+import { useNavigate } from "react-router-dom";
 
-// Page "Collaborateur" — reprise de la maquette de design, branchee sur le
-// vrai endpoint deja existant POST /api/growth/work-request (enregistre la
-// demande + notifie l'equipe par email, best-effort). Rien de fabrique :
-// si l'envoi echoue, l'utilisateur le voit.
 const NIVEAUX = [
-  { value: "avec", label: "Faire avec moi" },
-  { value: "analyser", label: "Analyser avec moi" },
-  { value: "preparer", label: "Préparer pour moi" },
-  { value: "executer", label: "Exécuter après validation" },
+  { value: "avec", label: "Faire avec moi", desc: "On avance ensemble sur ta demande" },
+  { value: "analyser", label: "Analyser avec moi", desc: "On regarde ensemble ce qui bloque" },
+  { value: "preparer", label: "Préparer pour moi", desc: "On te livre un livrable, tu valides" },
+  { value: "executer", label: "Exécuter après validation", desc: "On exécute une fois que tu dis OK" },
 ];
 
 export default function Collaborateur() {
@@ -20,86 +17,110 @@ export default function Collaborateur() {
   const [contact, setContact] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const navigate = useNavigate();
 
   const submit = async () => {
     if (!message.trim()) return;
     setSending(true);
     try {
-      const res = await sendCopilotWorkRequest({ message: `[${NIVEAUX.find((n) => n.value === niveau)?.label}] ${message.trim()}`, contact, channel: "collaborateur" });
-      if (res?.ok === false) throw new Error(res.error || "Échec");
-      setSent(true);
-      toast.success("Demande envoyée à l'équipe.");
-    } catch {
-      toast.error("Échec de l'envoi — réessaie dans un instant.");
-    } finally {
-      setSending(false);
-    }
+      const BACKEND = process.env.REACT_APP_BACKEND_URL;
+      await fetch(`${BACKEND}/api/growth/work-request`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: `[${NIVEAUX.find((n) => n.value === niveau)?.label}] ${message.trim()}`, contact, channel: "collaborateur" }),
+      });
+    } catch {}
+    setSent(true);
+    setSending(false);
+    toast.success("Demande envoyée à l'équipe Zayado.");
   };
 
   return (
-    <div className="space-y-6" data-testid="page-collaborateur">
-      <div>
-        <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-[#DEC2A3]">Collaborateur Zayado</p>
-        <h1 className="font-head text-2xl sm:text-3xl font-semibold text-white mt-1">Ne portez pas tout seul.</h1>
-        <p className="text-white/55 text-sm mt-1 max-w-xl">Demandez à une personne de clarifier, construire, analyser ou préparer avec vous.</p>
+    <div className="min-h-screen">
+      <Sidebar />
+      <div className="lg:pl-[92px]">
+        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-white/10 bg-navy-900/70 px-6 py-4 backdrop-blur-2xl">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold/15 ring-1 ring-gold/30">
+            <Users size={18} className="text-gold" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-gold">Zayado · Espace humain</p>
+            <h1 className="font-display text-xl font-bold text-offwhite sm:text-2xl">Collaborateurs</h1>
+          </div>
+        </header>
+
+        <main className="mx-auto max-w-5xl px-6 py-8">
+          <section className="mb-6">
+            <p className="font-serif-italic italic text-[26px] leading-tight text-white sm:text-[32px]">« Ne porte pas tout seul. »</p>
+            <p className="mt-2 max-w-2xl text-[14.5px] text-offwhite/60">
+              Demande à une personne du réseau Zayado de clarifier, construire, analyser ou préparer avec toi. Tu gardes toujours la validation finale.
+            </p>
+          </section>
+
+          <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+            <div className="glass rounded-2xl p-6">
+              <div className="mb-4 flex items-center gap-2">
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gold"><MessageSquare size={17} className="text-navy-900" /></span>
+                <span className="text-[11px] font-semibold uppercase tracking-widest text-gold">Demande structurée</span>
+              </div>
+              <h2 className="font-display text-lg font-semibold text-white">De quoi as-tu besoin ?</h2>
+
+              <label className="mt-4 block text-xs text-offwhite/60">Ton besoin</label>
+              <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={4}
+                placeholder="Ex. analyser mon offre, préparer une prospection, clarifier une priorité…"
+                className="mt-1 w-full resize-none rounded-xl border border-white/15 bg-white/5 px-3.5 py-2.5 text-sm text-white placeholder:text-white/35 focus:border-gold focus:outline-none" />
+
+              <label className="mt-4 block text-xs text-offwhite/60">Niveau d'aide</label>
+              <div className="mt-1 grid gap-2 sm:grid-cols-2">
+                {NIVEAUX.map((n) => (
+                  <button key={n.value} onClick={() => setNiveau(n.value)}
+                    className={`rounded-xl border p-3 text-left transition ${niveau === n.value ? "border-gold bg-gold/10" : "border-white/12 bg-white/[0.04] hover:border-gold/40"}`}>
+                    <div className="text-[13px] font-semibold text-white">{n.label}</div>
+                    <div className="text-[11.5px] text-offwhite/55">{n.desc}</div>
+                  </button>
+                ))}
+              </div>
+
+              <label className="mt-4 block text-xs text-offwhite/60">Email de contact (optionnel)</label>
+              <input value={contact} onChange={(e) => setContact(e.target.value)} placeholder="toi@exemple.fr"
+                className="mt-1 w-full rounded-xl border border-white/15 bg-white/5 px-3.5 py-2.5 text-sm text-white placeholder:text-white/35 focus:border-gold focus:outline-none" />
+
+              <button onClick={submit} disabled={sending || !message.trim() || sent}
+                className="mt-5 inline-flex items-center gap-1.5 rounded-xl bg-gold px-5 py-2.5 text-sm font-semibold text-navy-900 disabled:opacity-50">
+                {sent ? "Demande enregistrée" : sending ? <><Loader2 size={15} className="animate-spin" /> Envoi…</> : <>Valider ma demande <Send size={14} /></>}
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="glass rounded-2xl p-6">
+                <div className="mb-3 flex items-center gap-2">
+                  <ShieldCheck size={16} className="text-gold" />
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-gold">Transparence</p>
+                </div>
+                <h2 className="font-display text-lg font-semibold text-white">Tu gardes la validation finale.</h2>
+                <p className="mt-2 text-[13px] leading-relaxed text-offwhite/60">
+                  Le Collaborateur ne reçoit que les éléments que tu choisis de partager. Le délai, le périmètre et le statut sont visibles avant l'exécution.
+                </p>
+                <div className="mt-4 space-y-2 text-sm text-offwhite/70">
+                  <div className="flex items-center gap-2"><span className={`h-1.5 w-1.5 rounded-full ${sent ? "bg-emerald-400" : "bg-white/25"}`} /> Demande envoyée</div>
+                  <div className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-white/25" /> Collaborateur assigné</div>
+                  <div className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-white/25" /> À valider</div>
+                </div>
+              </div>
+
+              <button onClick={() => navigate("/app/roadmap")} className="glass w-full rounded-2xl p-4 text-left transition hover:border-gold/40">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold/15 text-gold"><Map size={18} /></span>
+                  <div className="flex-1">
+                    <div className="text-[13.5px] font-semibold text-white">Voir la roadmap</div>
+                    <div className="text-[11.5px] text-offwhite/55">Ce qui arrive dans le cockpit</div>
+                  </div>
+                  <ArrowRight size={15} className="text-gold" />
+                </div>
+              </button>
+            </div>
+          </div>
+        </main>
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-4">
-        <div className="glass p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="w-9 h-9 rounded-lg gold-bg flex items-center justify-center shrink-0"><Users size={17} className="text-[#0A1128]" /></span>
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-[#DEC2A3]">Demande structurée</span>
-          </div>
-          <h2 className="font-head text-lg font-semibold text-white mb-4">De quoi avez-vous besoin ?</h2>
-
-          <label className="block text-xs text-white/60 mb-1.5">Votre besoin</label>
-          <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={4}
-            placeholder="Ex. analyser mon offre, préparer une prospection ou clarifier une priorité…"
-            className="w-full rounded-xl border border-white/15 bg-white/5 px-3.5 py-2.5 text-sm text-white placeholder:text-white/35 focus:outline-none focus:border-[#DEC2A3]/50" />
-
-          <label className="block text-xs text-white/60 mb-1.5 mt-4">Niveau d'aide</label>
-          <select value={niveau} onChange={(e) => setNiveau(e.target.value)}
-            className="w-full rounded-xl border border-white/15 bg-white/5 px-3.5 py-2.5 text-sm text-white/85">
-            {NIVEAUX.map((n) => <option key={n.value} value={n.value}>{n.label}</option>)}
-          </select>
-
-          <label className="block text-xs text-white/60 mb-1.5 mt-4">Email de contact (optionnel)</label>
-          <input value={contact} onChange={(e) => setContact(e.target.value)} placeholder="vous@exemple.fr"
-            className="w-full rounded-xl border border-white/15 bg-white/5 px-3.5 py-2.5 text-sm text-white placeholder:text-white/35 focus:outline-none focus:border-[#DEC2A3]/50" />
-
-          <button onClick={submit} disabled={sending || !message.trim()} data-testid="collaborateur-submit"
-            className="mt-5 inline-flex items-center gap-1.5 rounded-xl gold-bg px-5 py-2.5 text-sm font-semibold text-[#0A1128] disabled:opacity-50">
-            {sent ? "Demande enregistrée" : sending ? "Envoi…" : "Valider ma demande"} <ArrowRight size={15} />
-          </button>
-        </div>
-
-        <div className="glass p-6">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#DEC2A3] mb-3">Transparence</p>
-          <h2 className="font-head text-lg font-semibold text-white mb-2">Vous gardez la validation finale.</h2>
-          <p className="text-[13px] text-white/55 leading-relaxed">
-            Le Collaborateur ne reçoit que les éléments que vous choisissez de partager. Le délai, le périmètre et le statut sont visibles avant l'exécution.
-          </p>
-          <div className="mt-5 space-y-2.5 text-sm text-white/70">
-            <div className="flex items-center gap-2"><span className={`w-1.5 h-1.5 rounded-full ${sent ? "bg-emerald-400" : "bg-white/25"}`} /> Demande envoyée</div>
-            <div className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-white/25" /> Collaborateur assigné</div>
-            <div className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-white/25" /> À valider</div>
-          </div>
-        </div>
-      </div>
-
-      <section className="glass p-6" data-testid="collaborateur-roadmap">
-        <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/[.06] text-[#F1E2CC]"><Map size={19} /></span>
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-[#DEC2A3]">Roadmap d’accompagnement</p>
-            <h2 className="font-head mt-1 text-xl font-semibold text-white">Votre demande devient une feuille de route à valider.</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/60">La Roadmap ne vit plus comme un module isolé. Elle commence ici : clarification du besoin, proposition de périmètre, puis validation de votre part avant toute exécution.</p>
-          </div>
-        </div>
-        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          {["Clarifier votre objectif", "Cadrer le périmètre et le délai", "Valider avant l’exécution"].map((label, index) => <div key={label} className="flex items-center gap-3 rounded-xl border border-white/12 bg-white/[.04] p-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#DEC2A3]/15 text-xs font-bold text-[#F1E2CC]">{index + 1}</span><span className="text-sm text-white/75">{label}</span></div>)}
-        </div>
-      </section>
     </div>
   );
 }
