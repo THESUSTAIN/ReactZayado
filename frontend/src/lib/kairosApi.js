@@ -205,6 +205,7 @@ export const lancerIdee = (id) => jsend(`/idees/${id}/lancer`, "POST", {});
 export const fetchPouls = () => jget("/cockpit/pouls");
 export const savePouls = (data) => jsend("/cockpit/pouls", "PUT", data);
 export const fetchRadar = () => jget("/cockpit/radar");
+export const genererSwot = () => jsend("/radar/swot", "POST");
 export const fetchImpact = () => jget("/cockpit/impact");
 
 // ── Admin (accès réservé au rôle admin — vérifié côté serveur, pas ici) ──

@@ -251,8 +251,14 @@ function ActuTab() {
 
   return (
     <div className="h-full overflow-y-auto px-4 py-4" data-testid="actu-tab">
-      <p className="mb-1 px-1 text-xs font-semibold uppercase tracking-[0.2em] text-gold">Digest éco</p>
+      <p className="mb-1 px-1 text-xs font-semibold uppercase tracking-[0.2em] text-gold">Actualité de ton marché</p>
       <p className="mb-3 px-1 text-xs text-offwhite/55">Un résumé court, jamais un fil d'actus infini.</p>
+      {data?.genere_a && !data?.masque && !data?.erreur && (
+        <p className="mb-3 px-1 text-[10.5px] text-offwhite/40" data-testid="actu-dates">
+          Généré le {new Date(data.genere_a).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+          {data.prochaine_maj && <> · prochaine actualisation vers {new Date(data.prochaine_maj).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</>}
+        </p>
+      )}
       {data?.marches && (
         <div className="mb-3 flex flex-wrap gap-1.5">
           {data.marches.map((m) => (

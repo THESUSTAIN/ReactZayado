@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { Sidebar } from "@/components/kairos/Sidebar";
 import { Header } from "@/components/kairos/Header";
 import { GlassCard } from "@/components/kairos/GlassCard";
-import { fetchRadar } from "@/lib/kairosApi";
+import { fetchRadar, genererSwot } from "@/lib/kairosApi";
 
 const CANAL_META = {
   email: { icon: Send, color: "#DEC2A3", label: "Email" },
@@ -60,6 +60,79 @@ function Chapter({ num, title, sub }) {
         <h2 className="mt-1 font-display text-2xl font-bold text-offwhite sm:text-3xl">{title}</h2>
       </div>
     </Reveal>
+  );
+}
+
+const SWOT_QUADRANTS = [
+  { cle: "forces", label: "Forces", couleur: "#7A9E7E" },
+  { cle: "faiblesses", label: "Faiblesses", couleur: "#B9524E" },
+  { cle: "opportunites", label: "Opportunités", couleur: "#DEC2A3" },
+  { cle: "menaces", label: "Menaces", couleur: "#7C93C3" },
+];
+
+// Branché sur POST /radar/swot — prêt côté serveur depuis un moment,
+// jamais relié à l'écran avant (retour Marie Esther : « le SWOT utile ? »).
+function SwotSection() {
+  const [swot, setSwot] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [erreur, setErreur] = useState(null);
+
+  const generer = () => {
+    setLoading(true);
+    setErreur(null);
+    genererSwot()
+      .then(setSwot)
+      .catch(() => setErreur("Analyse indisponible pour l'instant — réessaie dans un instant."))
+      .finally(() => setLoading(false));
+  };
+
+  return (
+    <section className="pt-20" data-testid="radar-chapter-swot">
+      <Chapter num="03" sub="Vue d'ensemble" title="Ton SWOT, généré par l'IA" />
+      {!swot && !loading && (
+        <GlassCard className="p-6 text-center">
+          <p className="text-sm text-offwhite/65">Une analyse forces / faiblesses / opportunités / menaces à partir de ton vrai contexte — pas un modèle générique.</p>
+          <button onClick={generer} data-testid="radar-swot-generer" className="btn-gold mt-4 inline-flex items-center gap-2 !px-6 !py-2.5">
+            <Sparkles size={15} /> Générer mon SWOT
+          </button>
+          {erreur && <p className="mt-3 text-xs text-rose-300">{erreur}</p>}
+        </GlassCard>
+      )}
+      {loading && (
+        <GlassCard className="flex items-center justify-center gap-2 p-8 text-sm text-offwhite/60">
+          <Loader2 size={16} className="animate-spin" /> Analyse en cours…
+        </GlassCard>
+      )}
+      {swot && !loading && (
+        <div data-testid="radar-swot-resultat">
+          <div className="grid gap-4 sm:grid-cols-2">
+            {SWOT_QUADRANTS.map((q) => (
+              <GlassCard key={q.cle} className="p-5" data-testid={`radar-swot-${q.cle}`}>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: q.couleur }}>{q.label}</p>
+                <ul className="mt-2.5 space-y-1.5">
+                  {(swot[q.cle] || []).length === 0 && <li className="text-sm text-offwhite/45">Rien de notable identifié.</li>}
+                  {(swot[q.cle] || []).map((item, i) => (
+                    <li key={i} className="text-sm leading-relaxed text-offwhite/75">• {item}</li>
+                  ))}
+                </ul>
+              </GlassCard>
+            ))}
+          </div>
+          {swot.synthese && (
+            <GlassCard className="mt-4 p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gold">Synthèse</p>
+              <p className="mt-1.5 text-sm leading-relaxed text-offwhite/80">{swot.synthese}</p>
+            </GlassCard>
+          )}
+          <div className="mt-3 flex items-center justify-between">
+            <p className="text-[11px] text-offwhite/40">Généré le {new Date(swot.genere_a).toLocaleString("fr-FR")}</p>
+            <button onClick={generer} data-testid="radar-swot-regenerer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-gold hover:underline">
+              <RefreshCw size={12} /> Régénérer
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -384,9 +457,12 @@ export default function Radar() {
             )}
           </section>
 
-          {/* ── CHAPITRE 03 · ACTION ── */}
+          {/* ── CHAPITRE 03 · SWOT ── */}
+          <SwotSection />
+
+          {/* ── CHAPITRE 04 · ACTION ── */}
           <section className="pt-20" data-testid="radar-chapter-action">
-            <Chapter num="03" sub="À toi de jouer" title="Passe à l'action" />
+            <Chapter num="04" sub="À toi de jouer" title="Passe à l'action" />
             <div className="grid gap-4 sm:grid-cols-3">
               {[
                 {
