@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { GlassCard } from "@/components/kairos/GlassCard";
 import { Chip } from "@/components/kairos/Chip";
@@ -40,6 +40,7 @@ export default function Onboarding() {
   const planParam = searchParams.get("plan");
   const [plan, setPlan] = useState(PLANS.some((p) => p.key === planParam) ? planParam : "essentielle");
   const [saving, setSaving] = useState(false);
+  const [savePhase, setSavePhase] = useState(0);
   // Nouveau wizard 3 étapes : Identité / Activité / Cap financier
   const [identite, setIdentite] = useState({ prenom: user.firstName || "", entreprise: "", role: "" });
   const [activite, setActivite] = useState({ type: "", cible: "", offre: "", marche: "france" });
@@ -49,6 +50,7 @@ export default function Onboarding() {
   const back = () => setStep((s) => Math.max(s - 1, 0));
 
   const finish = async () => {
+    const startedAt = Date.now();
     setSaving(true);
     try {
       await saveProfile({
@@ -76,9 +78,17 @@ export default function Onboarding() {
         }); } catch (_) {}
       }
     } catch (_) { /* échafaudage : on continue même hors-ligne */ }
+    // L’écran d’analyse doit être perceptible même lorsque l’API répond très vite.
+    await new Promise((resolve) => setTimeout(resolve, Math.max(0, 1800 - (Date.now() - startedAt))));
     setOnboardingData({ vision, why, goals: goals.filter(Boolean), values, checkinHour, plan });
     navigate("/app");
   };
+
+  useEffect(() => {
+    if (!saving) return undefined;
+    const timer = setInterval(() => setSavePhase((p) => (p + 1) % 4), 900);
+    return () => clearInterval(timer);
+  }, [saving]);
 
   const addGoal = () => goals.length < 3 && setGoals([...goals, ""]);
   const updateGoal = (i, v) => setGoals(goals.map((g, idx) => (idx === i ? v : g)));
@@ -296,30 +306,30 @@ export default function Onboarding() {
             </div>
             <h2 className="mt-2 font-display text-2xl font-bold text-offwhite">Choisis ton rythme</h2>
             <p className="mt-1 text-sm text-offwhite/60">Commence gratuitement. Change d'avis quand tu veux, sans pression.</p>
-            <div className="mt-4 space-y-3" data-testid="onboarding-plans">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2" data-testid="onboarding-plans">
               {PLANS.map((p) => (
                 <button
                   key={p.key}
                   onClick={() => setPlan(p.key)}
                   data-testid={`onboarding-plan-${p.key}`}
-                  className={`flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition-all ${
+                  className={`relative flex min-h-[150px] w-full flex-col items-start rounded-2xl border p-4 text-left transition-all ${p.highlight ? "sm:col-span-2" : ""} ${
                     plan === p.key ? "border-gold/60 bg-gold/10 ring-1 ring-gold/30" : "border-white/10 bg-white/5 hover:border-white/20"
                   }`}
                 >
-                  <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${plan === p.key ? "border-gold bg-gold text-navy-900" : "border-white/30"}`}>
+                  <span className={`absolute right-4 top-4 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${plan === p.key ? "border-gold bg-gold text-navy-900" : "border-white/30"}`}>
                     {plan === p.key && <Check className="h-3.5 w-3.5" />}
                   </span>
-                  <div className="flex-1">
+                  <div className="pr-8">
                     <div className="flex items-center gap-2">
                       <span className="font-display text-base font-bold text-offwhite">{p.name}</span>
                       {p.highlight && <span className="rounded-full bg-gold px-2 py-0.5 text-[10px] font-bold text-navy-900">Recommandé</span>}
                     </div>
-                    <p className="mt-0.5 text-xs text-offwhite/60">{p.features.join(" · ")}</p>
+                    <p className="mt-2 text-xs leading-relaxed text-offwhite/60">{p.features.join(" · ")}</p>
                   </div>
-                  <div className="text-right">
+                  <div className="mt-auto pt-4 text-left">
                     {p.old && <span className="block text-xs text-offwhite/40 line-through">{p.old}</span>}
                     <span className="font-display text-lg font-extrabold text-offwhite">{p.price}</span>
-                    <span className="block text-[10px] text-offwhite/50">{p.period}</span>
+                    <span className="ml-1 text-[10px] text-offwhite/50">{p.period}</span>
                   </div>
                 </button>
               ))}
@@ -373,6 +383,20 @@ export default function Onboarding() {
           )}
         </div>
       </GlassCard>
+      {saving && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071a31]/90 p-5 backdrop-blur-md" data-testid="onboarding-processing">
+          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#102945] p-7 text-center shadow-2xl">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gold/15 ring-1 ring-gold/30">
+              <Sparkles className="h-8 w-8 animate-pulse text-gold" />
+            </div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Kairos prépare ton espace</p>
+            <h2 className="mt-3 font-display text-2xl font-bold text-offwhite">On relie tes informations</h2>
+            <p className="mt-2 text-sm text-offwhite/60">{["Lecture de ta vision…", "Structuration de tes objectifs…", "Préparation de ton cockpit…", "Dernières vérifications…"][savePhase]}</p>
+            <div className="mt-6 h-2 overflow-hidden rounded-full bg-white/10"><div className="onboarding-progress-shimmer h-full rounded-full bg-gold" /></div>
+            <div className="mt-4 flex items-center justify-center gap-2 text-[11px] text-offwhite/45"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Cela prend quelques secondes</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

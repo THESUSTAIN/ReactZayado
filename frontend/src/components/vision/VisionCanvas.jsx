@@ -4,6 +4,7 @@ import {
   Plus, Minus, MousePointer2, Hand, Loader2, Check, AlertTriangle, X, Send,
   Type, Image as ImageIcon, ListChecks, Link2, Palette, Sparkles, FileText,
   LayoutTemplate, Quote, FileDown, ArrowRight, Wand2, RefreshCw, Maximize2, Heart, Mic,
+  Columns3, Trash2, Presentation, Share2,
 } from "lucide-react";
 import {
   fetchBoard, saveBoard, fetchStarterTemplates, generateAiDoc, generateBoard, fetchInspire, searchUnsplash,
@@ -32,6 +33,29 @@ const tv = (v, lang = "fr") => {
 
 const AI_DOC_TYPES = ["note", "brief", "plan", "positioning", "swot"];
 const AI_DOC_KEYS = { note: "t1", brief: "t2", plan: "t3", positioning: "t4", swot: "t5" };
+const VISION_LAYOUT_STORAGE = "kairos_vision_layout_v1";
+const DEFAULT_WALLS = [
+  { id: "wall_vision", title: "1 · Vision & Pourquoi", x: 120, y: 120, w: 520, h: 760, color: "#DEC2A3" },
+  { id: "wall_objectifs", title: "2 · Objectifs", x: 700, y: 120, w: 520, h: 760, color: "#8FB7E8" },
+  { id: "wall_actions", title: "3 · Actions & énergie", x: 1280, y: 120, w: 520, h: 760, color: "#8FD6BF" },
+];
+
+function loadVisionLayout(boardKey) {
+  try {
+    const all = JSON.parse(localStorage.getItem(VISION_LAYOUT_STORAGE) || "{}");
+    return all[boardKey] || { walls: DEFAULT_WALLS, connections: [] };
+  } catch (_) {
+    return { walls: DEFAULT_WALLS, connections: [] };
+  }
+}
+
+function saveVisionLayout(boardKey, layout) {
+  try {
+    const all = JSON.parse(localStorage.getItem(VISION_LAYOUT_STORAGE) || "{}");
+    all[boardKey] = layout;
+    localStorage.setItem(VISION_LAYOUT_STORAGE, JSON.stringify(all));
+  } catch (_) {}
+}
 
 function AiDocModal({ open, onClose, onGenerated }) {
   const { t } = useI18n();
@@ -100,6 +124,8 @@ export function VisionCanvas() {
     try { return localStorage.getItem(BOARD_STORAGE) || "perso"; } catch (_) { return "perso"; }
   });
   const [items, setItems] = useState([]);
+  const [walls, setWalls] = useState(() => loadVisionLayout(boardKey).walls);
+  const [connections, setConnections] = useState(() => loadVisionLayout(boardKey).connections);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
@@ -109,11 +135,14 @@ export function VisionCanvas() {
   const [editingId, setEditingId] = useState(null);
   const [styleMenuId, setStyleMenuId] = useState(null);
   const [tagFilter, setTagFilter] = useState("all");
+  const [connectMode, setConnectMode] = useState(false);
+  const [connectSource, setConnectSource] = useState(null);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [aiDocOpen, setAiDocOpen] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [generating, setGenerating] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [presenting, setPresenting] = useState(false);
   const [tplOpen, setTplOpen] = useState(false);
   const [templates, setTemplates] = useState([]);
   const [tplLoading, setTplLoading] = useState(false);
@@ -173,6 +202,10 @@ export function VisionCanvas() {
   const loadBoard = useCallback((key) => {
     setLoaded(false);
     skipSaveRef.current = true;
+    const layout = loadVisionLayout(key);
+    setWalls(layout.walls);
+    setConnections(layout.connections);
+    setConnectSource(null);
     fetchBoard(key)
       .then((r) => {
         const cards = Array.isArray(r.cards) ? r.cards : [];
@@ -203,6 +236,10 @@ export function VisionCanvas() {
     return () => clearTimeout(id);
   }, [items, loaded, boardKey]);
 
+  useEffect(() => {
+    if (loaded) saveVisionLayout(boardKey, { walls, connections });
+  }, [walls, connections, loaded, boardKey]);
+
   /* ── Zoom clavier ── */
   useEffect(() => {
     const onKey = (e) => {
@@ -227,7 +264,11 @@ export function VisionCanvas() {
   useEffect(() => {
     const onMove = (e) => {
       const d = dragRef.current;
-      if (d) {
+      if (d?.kind === "wall") {
+        const dx = (e.clientX - d.startX) / zoom;
+        const dy = (e.clientY - d.startY) / zoom;
+        setWalls((prev) => prev.map((wall) => wall.id === d.id ? { ...wall, x: d.origX + dx, y: d.origY + dy } : wall));
+      } else if (d) {
         const dx = (e.clientX - d.startX) / zoom;
         const dy = (e.clientY - d.startY) / zoom;
         setItems((prev) => prev.map((it) => {
@@ -356,6 +397,26 @@ export function VisionCanvas() {
     }
     setItems((prev) => [...prev, note]);
     if (note.type !== "color") setTimeout(() => setEditingId(id), 60);
+  };
+
+  const addWall = () => {
+    const n = walls.length + 1;
+    setWalls((prev) => [...prev, {
+      id: `wall_${Date.now()}`, title: `${n} · Nouveau mur`, x: 220 + (n % 3) * 560, y: 980,
+      w: 520, h: 700, color: ["#DEC2A3", "#8FB7E8", "#8FD6BF", "#C8A7E8"][n % 4],
+    }]);
+  };
+
+  const toggleConnection = (cardId) => {
+    if (!connectSource) {
+      setConnectSource(cardId);
+      return;
+    }
+    if (connectSource !== cardId) {
+      setConnections((prev) => prev.some((c) => (c.from === connectSource && c.to === cardId) || (c.from === cardId && c.to === connectSource))
+        ? prev : [...prev, { id: `connection_${Date.now()}`, from: connectSource, to: cardId }]);
+    }
+    setConnectSource(null);
   };
 
   /* ── Capture vocale → carte ── */
@@ -526,11 +587,20 @@ export function VisionCanvas() {
 
   return (
     <div ref={canvasRef} data-testid="vision-canvas-container"
-      className="relative h-[calc(100dvh-150px)] overflow-hidden rounded-2xl border border-white/10 bg-navy-850">
+      className={["relative h-[calc(100dvh-120px)] overflow-hidden bg-[#1F1F1F] md:h-[calc(100dvh-150px)] md:rounded-2xl md:border md:border-white/10", presenting ? "fixed inset-0 z-[80] h-[100dvh] w-[100vw] rounded-none border-0" : ""].join(" ")}>
       <AiDocModal open={aiDocOpen} onClose={() => setAiDocOpen(false)} onGenerated={handleAiDocGenerated} />
 
       {/* Rail d'outils gauche (desktop) */}
       <div className="absolute left-3 top-1/2 z-30 hidden -translate-y-1/2 flex-col gap-1 rounded-2xl border border-white/10 bg-navy-800/90 p-1.5 shadow-lg backdrop-blur md:flex">
+        <button onClick={addWall} title="Ajouter un mur" data-testid="vision-tool-wall"
+          className="flex h-11 w-11 flex-col items-center justify-center rounded-xl text-offwhite/60 transition hover:bg-gold/15 hover:text-gold">
+          <Columns3 size={17} /><span className="mt-0.5 text-[8px] font-medium">Mur</span>
+        </button>
+        <button onClick={() => { setConnectMode((v) => !v); setConnectSource(null); }} title="Relier deux cartes" data-testid="vision-tool-line"
+          className={["flex h-11 w-11 flex-col items-center justify-center rounded-xl text-offwhite/60 transition hover:bg-gold/15 hover:text-gold", connectMode ? "bg-gold/20 text-gold" : ""].join(" ")}>
+          <Link2 size={17} /><span className="mt-0.5 text-[8px] font-medium">Ligne</span>
+        </button>
+        <div className="my-1 border-t border-white/10" />
         {ADD_ITEMS.slice(1).map((it) => {
           const Icon = it.icon;
           return (
@@ -564,12 +634,15 @@ export function VisionCanvas() {
         <span className="mx-1 h-5 w-px bg-white/10" />
         <button onClick={() => setMode("select")} title={t("vision.select")} data-testid="vision-tool-select" className={mode === "select" ? ctrlActive : ctrlBtn}><MousePointer2 size={15} /></button>
         <button onClick={() => setMode("hand")} title={t("vision.pan")} data-testid="vision-tool-hand" className={mode === "hand" ? ctrlActive : ctrlBtn}><Hand size={15} /></button>
+        <button onClick={() => setConnectMode((v) => !v)} title="Relier deux cartes" data-testid="vision-tool-line-top" className={connectMode ? ctrlActive : ctrlBtn}><Link2 size={15} /></button>
         <span className="mx-1 h-5 w-px bg-white/10" />
         <button onClick={() => setZoom((z) => Math.max(0.4, +(z - 0.1).toFixed(2)))} title={t("vision.zoomOut")} data-testid="vision-zoom-out" className={ctrlBtn}><Minus size={15} /></button>
         <span className="w-10 text-center text-xs font-semibold text-offwhite" data-testid="vision-zoom-value">{Math.round(zoom * 100)}%</span>
         <button onClick={() => setZoom((z) => Math.min(1.6, +(z + 0.1).toFixed(2)))} title={t("vision.zoomIn")} data-testid="vision-zoom-in" className={ctrlBtn}><Plus size={15} /></button>
         <span className="mx-1 h-5 w-px bg-white/10" />
         <button onClick={handleInspire} title={t("vision.quoteAi")} data-testid="vision-inspire" className={ctrlBtn}><Quote size={15} /></button>
+        <button onClick={() => { setPresenting((v) => !v); setConnectMode(false); setConnectSource(null); }} title="Présenter" data-testid="vision-present" className={presenting ? ctrlActive : ctrlBtn}><Presentation size={15} /></button>
+        <button onClick={() => navigator.clipboard?.writeText(window.location.href).then(() => toast.success("Lien du board copié"))} title="Partager" data-testid="vision-share" className={ctrlBtn}><Share2 size={15} /></button>
         <button onClick={() => handleExport("png")} disabled={exporting} title={t("vision.exportPng")} data-testid="vision-export-png" className={ctrlBtn}>{exporting ? <Loader2 size={15} className="animate-spin" /> : <ImageIcon size={15} />}</button>
         <button onClick={() => handleExport("pdf")} disabled={exporting} title={t("vision.exportPdf")} data-testid="vision-export-pdf" className={ctrlBtn}><FileDown size={15} /></button>
       </div>
@@ -577,6 +650,17 @@ export function VisionCanvas() {
       {/* Filtre tags Élan / Refuge */}
       <div className="absolute left-1/2 top-3 z-30 hidden -translate-x-1/2 lg:block">
         <TagFilterBar value={tagFilter} onChange={setTagFilter} counts={tagCounts} />
+      </div>
+
+      {/* Commandes mobiles : même logique que la rail desktop, accessible au pouce. */}
+      <div className="absolute bottom-[4.75rem] left-1/2 z-30 flex -translate-x-1/2 items-center gap-1 rounded-2xl border border-white/10 bg-navy-800/95 p-1 shadow-xl backdrop-blur md:hidden" data-testid="vision-mobile-toolbar">
+        <button onClick={addWall} title="Ajouter un mur" data-testid="vision-mobile-wall" className="flex h-9 w-9 items-center justify-center rounded-xl text-offwhite/70 hover:bg-white/10 hover:text-gold"><Columns3 size={16} /></button>
+        <button onClick={() => { setConnectMode((v) => !v); setConnectSource(null); }} title="Relier deux cartes" data-testid="vision-mobile-line" className={["flex h-9 w-9 items-center justify-center rounded-xl text-offwhite/70 hover:bg-white/10 hover:text-gold", connectMode ? "bg-gold/20 text-gold" : ""].join(" ")}><Link2 size={16} /></button>
+        <button onClick={() => setMode("select")} title="Sélection" className={mode === "select" ? ctrlActive : ctrlBtn}><MousePointer2 size={16} /></button>
+        <button onClick={() => setMode("hand")} title="Déplacer la vue" className={mode === "hand" ? ctrlActive : ctrlBtn}><Hand size={16} /></button>
+        <button onClick={() => setZoom((z) => Math.max(0.4, +(z - 0.1).toFixed(2)))} title="Zoom arrière" className={ctrlBtn}><Minus size={16} /></button>
+        <span className="w-9 text-center text-[10px] font-semibold text-offwhite">{Math.round(zoom * 100)}%</span>
+        <button onClick={() => setZoom((z) => Math.min(1.6, +(z + 0.1).toFixed(2)))} title="Zoom avant" className={ctrlBtn}><Plus size={16} /></button>
       </div>
 
       {/* Barre de prompt bas */}
@@ -664,14 +748,32 @@ export function VisionCanvas() {
       <div ref={scrollRef} onMouseDown={onCanvasPointerDown} onWheel={onWheelZoom}
         onContextMenu={(e) => { e.preventDefault(); setMode((m) => (m === "hand" ? "select" : "hand")); }}
         className={["relative h-full w-full overflow-auto", mode === "hand" ? "cursor-grab" : ""].join(" ")}
-        style={{ backgroundImage: "radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "26px 26px" }}>
+        style={{ backgroundColor: "#1F1F1F" }}>
         <div className="relative" style={{ width: BOARD_W, height: BOARD_H, transform: `scale(${zoom})`, transformOrigin: "top left", userSelect: draggingId ? "none" : "auto" }}>
-          <svg className="absolute inset-0 h-full w-full" style={{ pointerEvents: "none" }}>
-            {visibleItems.map((c) => {
-              const midY = ((CENTER.y + 26) + (c.y + (c.h || 120) / 2)) / 2;
-              return <path key={`l-${c.id}`} d={`M ${CENTER.x + 70} ${CENTER.y + 26} C ${CENTER.x + 70} ${midY}, ${c.x + (c.w || 200) / 2} ${midY}, ${c.x + (c.w || 200) / 2} ${c.y + (c.h || 120) / 2}`} fill="none" stroke="rgba(222,194,163,0.25)" strokeWidth="1.4" />;
+          <svg className="absolute inset-0 z-[5] h-full w-full" style={{ pointerEvents: "none" }}>
+            {connections.map((connection) => {
+              const from = items.find((c) => c.id === connection.from);
+              const to = items.find((c) => c.id === connection.to);
+              if (!from || !to) return null;
+              const x1 = from.x + (from.w || 200) / 2, y1 = from.y + (from.h || 120) / 2;
+              const x2 = to.x + (to.w || 200) / 2, y2 = to.y + (to.h || 120) / 2;
+              const midY = (y1 + y2) / 2;
+              return <path key={connection.id} d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`} fill="none" stroke="rgba(222,194,163,0.75)" strokeWidth="3" strokeLinecap="round" />;
             })}
           </svg>
+
+          {walls.map((wall) => (
+            <div key={wall.id} data-testid={`vision-wall-${wall.id}`} className="group absolute z-[1] rounded-[28px] bg-navy-800/90 shadow-inner"
+              onPointerDown={(e) => {
+                if (mode !== "select" || connectMode) return;
+                e.stopPropagation();
+                dragRef.current = { kind: "wall", id: wall.id, startX: e.clientX, startY: e.clientY, origX: wall.x, origY: wall.y };
+              }} style={{ left: wall.x, top: wall.y, width: wall.w, height: wall.h, borderTop: `5px solid ${wall.color}`, cursor: mode === "select" ? "grab" : "default" }}>
+              <div className="pointer-events-none px-5 pt-4 text-[22px] font-semibold tracking-tight text-offwhite">{wall.title}</div>
+              <button onPointerDown={(e) => e.stopPropagation()} onClick={() => setWalls((prev) => prev.filter((item) => item.id !== wall.id))}
+                className="absolute right-3 top-3 hidden rounded-full p-1.5 text-offwhite/50 hover:bg-white/10 hover:text-alert group-hover:block" title="Supprimer le mur"><Trash2 size={14} /></button>
+            </div>
+          ))}
 
           <div className="absolute z-10 flex items-center justify-center rounded-2xl bg-gradient-to-br from-[#F1E2CC] to-[#DEC2A3] px-6 py-4 text-center shadow-xl" style={{ left: CENTER.x, top: CENTER.y, width: 140 }}>
             <span className="font-display text-sm font-bold uppercase tracking-wide text-navy-900">{t("vision.hub")}</span>
@@ -689,10 +791,10 @@ export function VisionCanvas() {
             const rot = card.rotate || 0;
             return (
               <div key={card.id} data-card-el
-                onPointerDown={(e) => { if (!isEditing) onPointerDownCard(e, card); }}
+                onPointerDown={(e) => { if (connectMode) { e.stopPropagation(); toggleConnection(card.id); } else if (!isEditing) onPointerDownCard(e, card); }}
                 onDoubleClick={() => ["note", "image", "ai-doc", "sticky", "kpi", "polaroid"].includes(card.type) && setEditingId(card.id)}
                 data-testid={`vision-card-${card.id}`}
-                className={["group absolute select-none", isDragging ? "z-30" : styleMenuId === card.id ? "z-40" : "animate-fade-up"].join(" ")}
+                className={["group absolute select-none", connectSource === card.id ? "z-50 ring-2 ring-gold" : "", isDragging ? "z-30" : styleMenuId === card.id ? "z-40" : "animate-fade-up"].join(" ")}
                 style={{ left: card.x, top: card.y, width: card.w, touchAction: mode === "select" ? "none" : "auto", cursor: mode === "hand" ? "inherit" : isEditing ? "default" : "grab", transform: `rotate(${rot}deg) ${isDragging ? "scale(1.03)" : ""}`, animationDelay: `${Math.min(i * 30, 300)}ms` }}>
 
                 <CardTagBadges tags={card.tags} />
