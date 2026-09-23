@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Caveat:wght@400;500;600;700&family=Kalam:wght@300;400;700&family=Instrument+Serif:ital@0;1&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Caveat:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -55,7 +55,7 @@
         -moz-osx-font-smoothing: grayscale;
     }
     h1, h2, h3, h4, .font-display {
-        font-family: 'Fraunces', 'Outfit', Georgia, serif;
+        font-family: 'Fraunces', Georgia, serif;
     }
 }
 
@@ -114,7 +114,7 @@
 }
 
 /* ── Ajouts : typographies manuscrites + papier (Vision Board) ── */
-.font-hand { font-family: 'Caveat', 'Kalam', cursive; }
+.font-hand { font-family: 'Caveat', cursive; }
 .font-serif-italic { font-family: 'Instrument Serif', 'Fraunces', Georgia, serif; font-style: italic; }
 
 .paper-note {
@@ -227,7 +227,10 @@
    telles quelles de l'ancien projet. */
 .side-nav {
   position: fixed; left: 0; top: 0; bottom: 0; width: 96px; z-index: 40;
-  display: flex; flex-direction: column; align-items: center;
+  /* display géré par « hidden lg:flex » du composant : un display:flex ici
+     écrasait « hidden » et affichait la barre en mobile par-dessus le contenu
+     (qui n'a de marge gauche qu'à partir de lg). */
+  flex-direction: column; align-items: center;
   overflow: visible; pointer-events: none;
 }
 .side-nav > * { pointer-events: auto; }

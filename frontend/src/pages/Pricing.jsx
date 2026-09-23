@@ -29,6 +29,7 @@ const PALIERS_PLUS = [
 
 function Carte({ o, cycle }) {
   const prix = cycle === "annuel" ? (o.annuel / 12).toFixed(o.annuel % 12 === 0 ? 0 : 2) : o.mensuel;
+  const startUrl = `/login?next=${encodeURIComponent(`/onboarding?plan=${o.key}&cycle=${cycle}`)}`;
   return (
     <div className={`glass flex flex-col rounded-2xl p-7 ${o.star ? "border-gold/50 shadow-[0_20px_50px_-20px_rgba(222,194,163,0.25)] scale-[1.02]" : ""}`} data-testid={`pricing-${o.key}`}>
       {o.star && <p className="mb-3 inline-block w-fit rounded-full bg-gold/15 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-gold">Le plus choisi</p>}
@@ -42,7 +43,7 @@ function Carte({ o, cycle }) {
           <li key={pt} className="flex items-start gap-2 text-sm text-offwhite/70"><Check size={14} className="mt-0.5 shrink-0 text-gold" />{pt}</li>
         ))}
       </ul>
-      <Link to={`/onboarding?plan=${o.key}&cycle=${cycle}`} data-testid={`pricing-cta-${o.key}`} className={`mt-6 text-center ${o.star ? "btn-gold justify-center" : "btn-ghost"}`}>
+      <Link to={startUrl} data-testid={`pricing-cta-${o.key}`} className={`mt-6 text-center ${o.star ? "btn-gold justify-center" : "btn-ghost"}`}>
         {o.mensuel === 0 ? "Commencer gratuitement" : "Choisir cette offre"}
       </Link>
     </div>
@@ -127,7 +128,7 @@ export default function Pricing() {
                       Nous contacter <ArrowRight size={12} className="ml-1 inline" />
                     </a>
                   ) : (
-                    <Link to={`/onboarding?plan=${o.key}&cycle=${cycle}`} className="shrink-0 rounded-lg border border-gold/40 px-3 py-1.5 text-xs font-semibold text-gold" data-testid={`pricing-plus-cta-${o.key}`}>
+                    <Link to={`/login?next=${encodeURIComponent(`/onboarding?plan=${o.key}&cycle=${cycle}`)}`} className="shrink-0 rounded-lg border border-gold/40 px-3 py-1.5 text-xs font-semibold text-gold" data-testid={`pricing-plus-cta-${o.key}`}>
                       Choisir <ArrowRight size={12} className="ml-1 inline" />
                     </Link>
                   )}

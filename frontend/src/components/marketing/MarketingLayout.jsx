@@ -23,7 +23,7 @@ export function MarketingLayout({ children }) {
             </Link>
           ))}
         </nav>
-        <Link to="/onboarding" data-testid="mkt-nav-cta" className="btn-gold !px-5 !py-2.5 text-sm">Essayer gratuitement</Link>
+        <Link to="/login?next=%2Fonboarding" data-testid="mkt-nav-cta" className="btn-gold !px-5 !py-2.5 text-sm">Essayer gratuitement</Link>
       </header>
 
       <main>{children}</main>
@@ -43,7 +43,7 @@ export function MarketingLayout({ children }) {
           <div>
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-gold">Commencer</p>
             <ul className="space-y-2 text-sm text-offwhite/60">
-              <li><Link to="/onboarding" className="hover:text-gold">Créer mon cockpit</Link></li>
+              <li><Link to="/login?next=%2Fonboarding" className="hover:text-gold">Créer mon cockpit</Link></li>
               <li><Link to="/login" className="hover:text-gold">Se connecter</Link></li>
               <li><Link to="/pricing" className="hover:text-gold">Voir les tarifs</Link></li>
             </ul>

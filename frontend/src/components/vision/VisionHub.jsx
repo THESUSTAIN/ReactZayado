@@ -55,8 +55,8 @@ function Card({ item, onOpen, delay }) {
         <Icon size={20} />
       </span>
       <div>
-        <h3 className="font-display text-base font-bold text-offwhite">{item.title}</h3>
-        <p className="mt-1 text-sm leading-relaxed text-offwhite/60">{item.desc}</p>
+        <h3 className="font-ui text-[15px] font-semibold tracking-[-0.01em] text-offwhite">{item.title}</h3>
+        <p className="mt-1 font-ui text-[13px] leading-relaxed text-offwhite/70">{item.desc}</p>
       </div>
       {clickable && (
         <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-gold opacity-0 transition group-hover:opacity-100">
@@ -77,28 +77,28 @@ export function VisionHub({ onOpen }) {
   return (
     <div className="mx-auto max-w-5xl" data-testid="vision-hub">
       <div className="mb-8 animate-fade-up">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Ma maison stratégique</p>
-        <h2 className="mt-1 font-display text-3xl font-extrabold text-offwhite sm:text-4xl">
+        <p className="font-ui text-[11px] font-semibold uppercase tracking-[0.16em] text-gold">Ma maison stratégique</p>
+        <h2 className="mt-1 font-display text-[30px] font-semibold leading-[1.1] tracking-[-0.02em] text-offwhite sm:text-[38px]">
           De ta vision à l'action
         </h2>
-        <p className="mt-2 max-w-xl text-sm text-offwhite/60">
+        <p className="mt-2 max-w-xl font-ui text-[14px] leading-relaxed text-offwhite/70">
           Choisis un point de départ : laisse l'IA composer ton board, pars d'une page blanche, ou ouvre un modèle prêt à l'emploi.
         </p>
       </div>
 
       {objectifs && objectifs.length > 0 && (
         <section className="mb-9" data-testid="vision-mes-objectifs">
-          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-offwhite/80">
+          <h3 className="mb-3 flex items-center gap-2 font-ui text-[13px] font-semibold text-offwhite/85">
             <Target size={15} className="text-gold" /> Tes objectifs 90 jours
           </h3>
           <div className="grid gap-3 sm:grid-cols-3">
             {objectifs.map((o) => (
               <div key={o.id} className="glass rounded-2xl p-4" data-testid={`vision-objectif-${o.id}`}>
-                <p className="text-sm font-semibold text-offwhite">{o.titre}</p>
+                <p className="font-ui text-[13.5px] font-semibold text-offwhite">{o.titre}</p>
                 <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
                   <div className="h-full rounded-full bg-gold" style={{ width: `${o.progression || 0}%` }} />
                 </div>
-                <p className="mt-1.5 text-[11px] text-offwhite/45">{o.progression || 0}% — échéance {o.echeance}</p>
+                <p className="mt-1.5 font-ui text-[11px] tabular-nums text-offwhite/60">{o.progression || 0}% — échéance {o.echeance ? new Date(o.echeance).toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) : "—"}</p>
               </div>
             ))}
           </div>
@@ -106,7 +106,7 @@ export function VisionHub({ onOpen }) {
       )}
 
       <section className="mb-9">
-        <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-offwhite/80">
+        <h3 className="mb-3 flex items-center gap-2 font-ui text-[13px] font-semibold text-offwhite/85">
           <Sparkles size={15} className="text-gold" /> Créer
         </h3>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -115,7 +115,7 @@ export function VisionHub({ onOpen }) {
       </section>
 
       <section>
-        <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-offwhite/80">
+        <h3 className="mb-3 flex items-center gap-2 font-ui text-[13px] font-semibold text-offwhite/85">
           <LayoutTemplate size={15} className="text-gold" /> Modèles
         </h3>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

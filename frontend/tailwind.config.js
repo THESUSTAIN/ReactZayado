@@ -9,7 +9,9 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        display: ["Fraunces", "Outfit", "serif"],
+        display: ["Fraunces", "Georgia", "serif"],
+        // Police d'interface « comme Storyflow » : la police système (SF Pro / Segoe UI / Roboto)
+        ui: ["-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "sans-serif"],
         sans: ["Plus Jakarta Sans", "-apple-system", "sans-serif"],
       },
       borderRadius: {

@@ -160,6 +160,7 @@ def install_part2(g: dict) -> None:
         "/api/webhooks/", "/api/mollie/webhook",       # authentifiés par leurs propres secrets/uid
         "/api/vision/images/",                          # URL non devinable, lue par <img> (sans en-tête)
         "/api/subscribe",
+        "/api/public/vision/",                          # lien de partage en lecture seule (jeton non devinable)
     )
 
     def _auth_requise(request: Request) -> bool:

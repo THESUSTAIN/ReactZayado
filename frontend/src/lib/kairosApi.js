@@ -1,4 +1,8 @@
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || (
+  typeof window !== "undefined" && /localhost|127\.0\.0\.1/.test(window.location.hostname)
+    ? "http://localhost:8000"
+    : "https://api.zayado.net"
+);
 const API = `${BACKEND_URL}/api`;
 const TOKEN_KEY = "kairos_access_token";
 
@@ -75,7 +79,7 @@ export const saveProfile = (data) => jsend("/profile", "PUT", data);
 export const postCheckin = (data) => jsend("/checkins", "POST", data);
 export const toggleTache = (id) => jsend(`/taches/${id}`, "PATCH");
 export const fetchTaches = () => jget("/taches");
-export const creerTache = (titre, duree_min = 15) => jsend("/taches", "POST", { titre, duree_min });
+export const creerTache = (titre, duree_min = 15, objectif_id = null) => jsend("/taches", "POST", { titre, duree_min, ...(objectif_id ? { objectif_id } : {}) });
 export const majTacheStatut = (id, statut) => jsend(`/taches/${id}/statut`, "PATCH", { statut });
 
 // ── HeyGen (console admin) ──
@@ -129,6 +133,16 @@ export async function transcrireAudio(blob) {
 }
 
 // ── Vision Board ──
+// Vision+ : victoires, lien public en lecture seule
+export const fetchVictoires = () => jget("/victoires");
+export const fetchShare = (board = "perso") => jget(`/vision/share?board=${encodeURIComponent(board)}`);
+export const saveShare = (data) => jsend("/vision/share", "POST", data);
+export const revokeShare = (board = "perso") => jsend(`/vision/share?board=${encodeURIComponent(board)}`, "DELETE");
+export async function fetchPublicVision(token) {
+  const r = await fetch(`${API}/public/vision/${encodeURIComponent(token)}`);
+  if (!r.ok) throw new Error(`public ${r.status}`);
+  return r.json();
+}
 export const fetchBoard = (board = "perso") => jget(`/vision/board?board=${encodeURIComponent(board)}`);
 export const saveBoard = (cards, board = "perso") => jsend(`/vision/board?board=${encodeURIComponent(board)}`, "PUT", { cards });
 export const fetchWheel = () => jget("/vision/wheel");

@@ -1458,6 +1458,7 @@ async def basculer_tache(tache_id: str, db: AsyncSession = Depends(get_db)):
 class TacheIn(BaseModel):
     titre: str = Field(min_length=1, max_length=300)
     duree_min: int = Field(default=15, ge=1, le=480)
+    objectif_id: Optional[str] = None  # « + Mission » depuis un objectif du Vision Board
 
 
 class TacheStatutIn(BaseModel):
@@ -1473,7 +1474,7 @@ async def lister_taches(db: AsyncSession = Depends(get_db)):
     )).scalars()
     return {"items": [
         {"id": t.id, "titre": t.titre, "statut": t.statut, "duree_min": t.duree_min,
-         "micro": t.micro, "progression": t.progression,
+         "micro": t.micro, "progression": t.progression, "objectif_id": t.objectif_id,
          "created_at": t.created_at.isoformat() if t.created_at else None}
         for t in rows
     ]}
@@ -1481,12 +1482,17 @@ async def lister_taches(db: AsyncSession = Depends(get_db)):
 
 @api.post("/taches")
 async def creer_tache(body: TacheIn, db: AsyncSession = Depends(get_db)):
+    objectif_id = None
+    if body.objectif_id:
+        # On ne relie qu'à un objectif de l'utilisateur courant.
+        o = (await db.execute(select(VisionObjectif).where(VisionObjectif.id == body.objectif_id, VisionObjectif.user_id == _uid()))).scalar_one_or_none()
+        objectif_id = o.id if o else None
     t = VisionTache(user_id=_uid(), titre=body.titre.strip(), duree_min=body.duree_min,
-                    micro=body.duree_min <= 5, statut="a_faire")
+                    micro=body.duree_min <= 5, statut="a_faire", objectif_id=objectif_id)
     db.add(t)
     await db.commit()
     await db.refresh(t)
-    return {"id": t.id, "titre": t.titre, "statut": t.statut}
+    return {"id": t.id, "titre": t.titre, "statut": t.statut, "objectif_id": t.objectif_id}
 
 
 @api.patch("/taches/{tache_id}/statut")
@@ -3456,6 +3462,10 @@ async def mollie_webhook(request: Request):
 # ── Partie 2 : auth obligatoire en prod, images IA, marketplace, Qonto ──
 from part2_ext import install_part2  # noqa: E402
 install_part2(globals())
+
+# ── Vision+ : victoires, partage public en lecture seule, e-mail du lundi ──
+from vision_plus import install_vision_plus  # noqa: E402
+install_vision_plus(globals())
 
 app.include_router(api)
 app.include_router(heygen_router, prefix="/api")

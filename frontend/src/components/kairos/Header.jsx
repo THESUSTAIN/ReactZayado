@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Search, Moon, Sun, Mail, Grid3x3, Bell, Store, LayoutGrid, Network, Sparkles, Bot, Map, Users, MessageCircle, Workflow, Radio, CheckSquare } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -21,6 +21,7 @@ export function Header() {
   const { user, modeInfo } = useKairos();
   const { t } = useI18n();
   const navigate = useNavigate();
+  const location = useLocation();
   const [q, setQ] = useState("");
   // L'Espace Vendeur ne s'affiche que si le compte a le rôle vendeur/admin —
   // un client lambda ne doit pas voir une entrée qui le mène à un refus.
@@ -56,7 +57,14 @@ export function Header() {
   }, []);
   const notifCount = (actuNonVue ? 1 : 0) + decisionsEnAttente;
 
+  const mobileItems = [
+    ["today", "Aujourd'hui", "/app"], ["vision", "Vision", "/app/vision"],
+    ["radar", "Radar", "/app/radar"], ["ideas", "Idées", "/app/ideas"],
+    ["actions", "Actions", "/app/actions"], ["wellbeing", "Bien-être", "/app/bien-etre"],
+  ];
+
   return (
+    <>
     <header
       className="sticky top-0 z-20 flex items-center gap-3 border-b border-white/10 bg-navy-900/50 px-4 py-3 backdrop-blur-xl sm:px-6"
       data-testid="app-header"
@@ -78,14 +86,15 @@ export function Header() {
         <button
           onClick={() => setClair((v) => !v)}
           className="rounded-xl border border-white/10 bg-white/5 p-2 text-offwhite/70 transition-colors hover:bg-white/10"
-          title={clair ? "Passer en thème sombre" : "Passer en thème clair"} data-testid="header-darkmode"
+          title={clair ? "Passer en thème sombre" : "Passer en thème clair"}
+          aria-label={clair ? "Passer en thème sombre" : "Passer en thème clair"} data-testid="header-darkmode"
         >
           {clair ? <Moon className="h-[18px] w-[18px]" /> : <Sun className="h-[18px] w-[18px]" />}
         </button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="relative rounded-xl border border-white/10 bg-white/5 p-2 text-offwhite/70 transition-colors hover:bg-white/10" title="Messages de tes clients" data-testid="header-mail">
+            <button className="relative rounded-xl border border-white/10 bg-white/5 p-2 text-offwhite/70 transition-colors hover:bg-white/10" title="Messages de tes clients" aria-label="Messages de tes clients" data-testid="header-mail">
               <Mail className="h-[18px] w-[18px]" />
             </button>
           </DropdownMenuTrigger>
@@ -100,7 +109,7 @@ export function Header() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="rounded-xl border border-white/10 bg-white/5 p-2 text-offwhite/70 transition-colors hover:bg-white/10" title={t("header.ecosystem")} data-testid="header-ecosystem">
+            <button className="rounded-xl border border-white/10 bg-white/5 p-2 text-offwhite/70 transition-colors hover:bg-white/10" title={t("header.ecosystem")} aria-label={t("header.ecosystem")} data-testid="header-ecosystem">
               <Grid3x3 className="h-[18px] w-[18px]" />
             </button>
           </DropdownMenuTrigger>
@@ -122,7 +131,7 @@ export function Header() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="relative rounded-xl border border-white/10 bg-white/5 p-2 text-offwhite/70 transition-colors hover:bg-white/10" title={t("header.notifications")} data-testid="header-bell">
+            <button className="relative rounded-xl border border-white/10 bg-white/5 p-2 text-offwhite/70 transition-colors hover:bg-white/10" title={t("header.notifications")} aria-label={t("header.notifications")} data-testid="header-bell">
               <Bell className="h-[18px] w-[18px]" />
               {notifCount > 0 && (
                 <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-alert px-1 text-[9px] font-bold text-white" data-testid="bell-badge">{notifCount}</span>
@@ -171,5 +180,13 @@ export function Header() {
         </div>
       </div>
     </header>
+    <nav className="sticky top-[61px] z-10 flex gap-1 overflow-x-auto border-b border-white/10 bg-navy-900/80 px-3 py-2 backdrop-blur-xl lg:hidden" aria-label="Navigation mobile" data-testid="mobile-nav">
+      {mobileItems.map(([key, label, path]) => {
+        const active = location.pathname === path || (path !== "/app" && location.pathname.startsWith(path));
+        return <button key={key} onClick={() => navigate(path)} aria-current={active ? "page" : undefined} className={`shrink-0 rounded-lg px-3 py-1.5 text-xs ${active ? "bg-gold text-navy-900" : "bg-white/5 text-offwhite/70"}`}>{label}</button>;
+      })}
+      <button onClick={() => navigate("/parametres")} className="shrink-0 rounded-lg bg-white/5 px-3 py-1.5 text-xs text-offwhite/70">Paramètres</button>
+    </nav>
+    </>
   );
 }

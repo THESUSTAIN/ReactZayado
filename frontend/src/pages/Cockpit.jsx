@@ -16,6 +16,7 @@ import PoulsBusinessWidget from "@/components/kairos/PoulsBusinessWidget";
 import RadarWidget from "@/components/kairos/RadarWidget";
 import ImpactBanner from "@/components/kairos/ImpactBanner";
 import { useI18n } from "@/i18n";
+import PinnedVisionCards from "@/components/vision/PinnedVisionCards";
 import { fetchPointDuJour } from "@/lib/kairosApi";
 import {
   BatteryMedium, Check, Trophy, Target, Sparkles, TrendingUp,
@@ -115,6 +116,9 @@ export default function Cockpit() {
                   </span>
                 </button>
               </div>
+
+              {/* Cartes Live épinglées depuis le Vision Board */}
+              <PinnedVisionCards />
 
               {/* Point du jour (brief IA, sur Aujourd'hui) */}
               <PointDuJourCard modeInfo={modeInfo} />

@@ -51,8 +51,8 @@ export default function VisionBoard() {
             </button>
           )}
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold">Zayado</p>
-            <h1 className="truncate font-display text-lg font-bold text-offwhite sm:text-xl">{t(`vision.${view}`) || "Vision Board"}</h1>
+            <p className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-gold/90">Zayado · Vision</p>
+            <h1 className="truncate font-display text-[19px] font-semibold tracking-[-0.015em] text-offwhite sm:text-[21px]">{t(`vision.${view}`) || "Vision Board"}</h1>
           </div>
           <LanguageSwitcher className="ml-auto" />
           <button

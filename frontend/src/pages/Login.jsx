@@ -51,11 +51,14 @@ export default function Login() {
     // Corrigé : partait toujours vers /app, même pour un tout nouvel
     // utilisateur — qui ne voyait donc jamais l'onboarding (ni le choix
     // d'offre à la fin). Vérifie le vrai statut avant de rediriger.
+    const requested = new URLSearchParams(window.location.search).get("next");
+    const next = requested && requested.startsWith("/") && !requested.startsWith("//") && !requested.startsWith("/login")
+      ? requested : null;
     try {
       const d = await fetchState();
-      navigate(d?.profile?.onboarded ? "/app" : "/onboarding");
+      navigate(next || (d?.profile?.onboarded ? "/app" : "/onboarding"));
     } catch {
-      navigate("/onboarding");
+      navigate(next || "/onboarding");
     }
   };
 

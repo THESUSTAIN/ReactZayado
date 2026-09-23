@@ -1,13 +1,17 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   Plus, Minus, MousePointer2, Hand, Loader2, Check, AlertTriangle, X, Send,
-  Type, Image as ImageIcon, ListChecks, Link2, Palette, Sparkles, FileText,
-  LayoutTemplate, Quote, FileDown, ArrowRight, Wand2, RefreshCw, Maximize2, Heart, Mic,
-  Columns3, Trash2, Presentation, Share2,
+  Type, Image as ImageIcon, ListChecks, Palette, FileText,
+  LayoutTemplate, Quote, FileDown, ArrowRight, Wand2, RefreshCw, Maximize2, Heart,
+  Undo2, Redo2, Spline, PenTool, Trash2, LayoutGrid, Columns3, Table2, Video, Heading1,
+  Activity, ChevronLeft, ChevronRight, Presentation, Download, RotateCcw, StickyNote,
+  Pencil, Pin, PinOff, Share2, Map as MapIcon, Copy, Filter,
 } from "lucide-react";
 import {
   fetchBoard, saveBoard, fetchStarterTemplates, generateAiDoc, generateBoard, fetchInspire, searchUnsplash,
+  fetchShare, saveShare, revokeShare,
 } from "@/lib/kairosApi";
 import { useI18n } from "@/i18n";
 import {
@@ -16,46 +20,84 @@ import {
 import { BoardSwitcher } from "@/components/vision/BoardSwitcher";
 import { AiImageRow } from "@/components/vision/AiImageRow";
 import { VoiceCapture } from "@/components/vision/VoiceCapture";
-import { GoalCountdown } from "@/components/kairos/GoalCountdown";
+import { NoteCard, TableCard, VideoCard, LiveCard, LIVE_SOURCES, useVisionLive, visionScore, PALIERS } from "@/components/vision/SfCards";
+import { cockpitTemplate, WALL_COLORS } from "@/components/vision/cockpitTemplate";
+import "./sf.css";
 
-const BOARD_W = 3000;
-const BOARD_H = 2000;
-const CENTER = { x: 660, y: 420 };
-const NOTE_COLORS = ["#4a6a9e", "#2FB89A", "#8b6fbf", "#DEC2A3"];
+/* ─────────────────────────────────────────────────────────────
+   Canvas Vision — refonte inspirée de Storyflow
+   · Murs (colonnes numérotées) dans lesquels on glisse les cartes
+   · Cartes Storyflow : titre, texte, **gras**, cases à cocher,
+     étiquettes pastel, date, tableau, vidéo, image
+   · Cartes LIVE reliées aux données pro (objectifs, actions,
+     énergie, finances, idées) — jamais de chiffres inventés
+   · Lignes entre cartes, dessin libre, corbeille, annuler/rétablir,
+     présentation mur par mur, export PNG/PDF cadré sur le contenu
+   Rétro-compatible : post-it, polaroïd, pilier KPI, image, palette
+   et document IA des anciens boards s'affichent toujours.
+   ───────────────────────────────────────────────────────────── */
+
+const BOARD_W = 6400;
+const BOARD_H = 4200;
+const MIN_Z = 0.2;
+const MAX_Z = 1.6;
 const BOARD_STORAGE = "kairos_board_key";
+const MM_W = 176;
+const MM_H = Math.round((MM_W * BOARD_H) / BOARD_W);
 
-/** Valeur traduite d'un champ multilingue { fr, en } ou d'une chaîne simple. */
-const tv = (v, lang = "fr") => {
-  if (v == null) return "";
-  if (typeof v === "string") return v;
-  return v[lang] ?? v.fr ?? v.en ?? "";
-};
+const tv = (v, lang = "fr") => (v == null ? "" : typeof v === "string" ? v : v[lang] ?? v.fr ?? v.en ?? "");
+const clampZ = (z) => Math.min(MAX_Z, Math.max(MIN_Z, +z.toFixed(2)));
+const uid = (p = "u") => `${p}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+
+/** Types qui peuvent vivre dans un mur. */
+const DROPPABLE = new Set(["note", "table", "video", "live", "image", "sticky", "polaroid", "kpi", "color", "ai-doc"]);
+const EDITABLE = new Set(["note", "table", "video", "heading", "wall", "image", "ai-doc", "sticky", "kpi", "polaroid"]);
 
 const AI_DOC_TYPES = ["note", "brief", "plan", "positioning", "swot"];
 const AI_DOC_KEYS = { note: "t1", brief: "t2", plan: "t3", positioning: "t4", swot: "t5" };
-const VISION_LAYOUT_STORAGE = "kairos_vision_layout_v1";
-const DEFAULT_WALLS = [
-  { id: "wall_vision", title: "1 · Vision & Pourquoi", x: 120, y: 120, w: 520, h: 760, color: "#DEC2A3" },
-  { id: "wall_objectifs", title: "2 · Objectifs", x: 700, y: 120, w: 520, h: 760, color: "#8FB7E8" },
-  { id: "wall_actions", title: "3 · Actions & énergie", x: 1280, y: 120, w: 520, h: 760, color: "#8FD6BF" },
-];
 
-function loadVisionLayout(boardKey) {
-  try {
-    const all = JSON.parse(localStorage.getItem(VISION_LAYOUT_STORAGE) || "{}");
-    return all[boardKey] || { walls: DEFAULT_WALLS, connections: [] };
-  } catch (_) {
-    return { walls: DEFAULT_WALLS, connections: [] };
-  }
+const itemName = (it, lang) => {
+  if (it.type === "wall") return `Mur · ${it.title || "Sans titre"}`;
+  if (it.type === "heading") return it.text || "Titre";
+  if (it.type === "live") return `Live · ${LIVE_SOURCES.find((s) => s.id === it.source)?.label || it.source}`;
+  if (it.type === "draw") return "Dessin";
+  if (it.type === "table") return it.title || "Tableau";
+  if (it.type === "video") return "Vidéo";
+  return tv(it.title, lang) || it.label || it.caption || tv(it.body, lang).slice(0, 40) || it.type;
+};
+
+/**
+ * Migration : la version précédente gardait murs et liaisons dans le
+ * localStorage du navigateur (perdus sur un autre appareil). On les
+ * reprend une fois dans le board sauvegardé côté serveur, puis on nettoie.
+ * Les 3 murs par défaut (jamais personnalisés) ne sont pas repris.
+ */
+const LEGACY_LAYOUT_KEY = "kairos_vision_layout_v1";
+const LEGACY_DEFAULT_WALLS = new Set(["wall_vision", "wall_objectifs", "wall_actions"]);
+function migrateLocalLayout(boardKey, cards) {
+  let all;
+  try { all = JSON.parse(localStorage.getItem(LEGACY_LAYOUT_KEY) || "{}"); } catch (_) { return cards; }
+  const layout = all?.[boardKey];
+  if (!layout) return cards;
+  const ids = new Set(cards.map((c) => c.id));
+  const walls = (layout.walls || [])
+    .filter((w) => !LEGACY_DEFAULT_WALLS.has(w.id) && !ids.has(w.id))
+    .map((w) => ({ id: w.id, type: "wall", x: w.x, y: w.y, w: w.w || 500, color: w.color, title: String(w.title || "Mur").replace(/^\s*\d+\s*·\s*/, "") }));
+  const lines = (layout.connections || [])
+    .filter((c) => ids.has(c.from) && ids.has(c.to) && !ids.has(c.id))
+    .map((c) => ({ id: c.id, type: "line", from: c.from, to: c.to }));
+  try { delete all[boardKey]; localStorage.setItem(LEGACY_LAYOUT_KEY, JSON.stringify(all)); } catch (_) {}
+  return walls.length || lines.length ? [...cards, ...walls, ...lines] : cards;
 }
 
-function saveVisionLayout(boardKey, layout) {
-  try {
-    const all = JSON.parse(localStorage.getItem(VISION_LAYOUT_STORAGE) || "{}");
-    all[boardKey] = layout;
-    localStorage.setItem(VISION_LAYOUT_STORAGE, JSON.stringify(all));
-  } catch (_) {}
-}
+/** Titre avec jeton {prenom} (modèle cockpit) → prénom du profil, ou « Mon cockpit ». */
+const headingText = (text, prenom) => {
+  const s = text || "Titre";
+  if (!s.includes("{prenom}")) return s;
+  return prenom ? s.replace("{prenom}", prenom) : s.replace("Le cockpit de {prenom}", "Mon cockpit").replace("{prenom}", "");
+};
+
+/* ───────────────────────── Document IA (modale) ───────────────────────── */
 
 function AiDocModal({ open, onClose, onGenerated }) {
   const { t } = useI18n();
@@ -82,33 +124,25 @@ function AiDocModal({ open, onClose, onGenerated }) {
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-navy-900/70 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="glass-strong relative w-full max-w-lg rounded-2xl p-6" onClick={(e) => e.stopPropagation()} data-testid="vision-ai-doc-modal">
-        <button onClick={onClose} className="absolute right-4 top-4 rounded-lg p-1.5 text-offwhite/60 hover:bg-white/10" data-testid="vision-ai-doc-close"><X size={16} /></button>
-        <div className="mb-3 flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gold/15 text-gold"><FileText size={17} /></span>
-          <div>
-            <h3 className="font-display text-lg font-bold text-offwhite">{t("vision.aiDoc.title")}</h3>
-            <p className="text-xs text-offwhite/60">{t("vision.aiDoc.lead")}</p>
-          </div>
-        </div>
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div className="sf sf-menu relative w-full max-w-lg p-6" onClick={(e) => e.stopPropagation()} data-testid="vision-ai-doc-modal">
+        <button onClick={onClose} className="sf-btn absolute right-3 top-3" data-testid="vision-ai-doc-close"><X size={16} /></button>
+        <p className="sf-title" style={{ fontSize: 18 }}>{t("vision.aiDoc.title")}</p>
+        <p className="sf-small mb-4">{t("vision.aiDoc.lead")}</p>
         <div className="mb-3 grid grid-cols-2 gap-1.5 sm:grid-cols-3">
           {AI_DOC_TYPES.map((id) => (
             <button key={id} onClick={() => setDocType(id)} data-testid={`vision-ai-doc-type-${id}`}
-              className={["rounded-lg border px-2.5 py-2 text-left transition",
-                docType === id ? "border-gold bg-gold/15 text-offwhite" : "border-white/10 bg-white/5 text-offwhite/60 hover:border-gold/50"].join(" ")}>
-              <div className="text-[11px] font-semibold text-offwhite">{t(`vision.aiDoc.${AI_DOC_KEYS[id]}`)}</div>
-              <div className="mt-0.5 text-[10px] leading-snug opacity-80">{t(`vision.aiDoc.${AI_DOC_KEYS[id]}h`)}</div>
+              className="rounded-xl border px-3 py-2 text-left transition"
+              style={{ borderColor: docType === id ? "var(--sf-accent)" : "var(--sf-line)", background: docType === id ? "rgba(222,194,163,0.12)" : "var(--sf-card)" }}>
+              <div className="text-[13px] font-semibold">{t(`vision.aiDoc.${AI_DOC_KEYS[id]}`)}</div>
+              <div className="sf-small mt-0.5" style={{ fontSize: 12, lineHeight: 1.35 }}>{t(`vision.aiDoc.${AI_DOC_KEYS[id]}h`)}</div>
             </button>
           ))}
         </div>
         <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={4} autoFocus
           onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) generate(); }}
-          placeholder={t("vision.aiDoc.placeholder")}
-          data-testid="vision-ai-doc-prompt"
-          className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-offwhite outline-none focus:border-gold placeholder:text-offwhite/40" />
-        <button onClick={generate} disabled={loading} data-testid="vision-ai-doc-generate"
-          className="btn-gold mt-3 w-full disabled:opacity-60">
+          placeholder={t("vision.aiDoc.placeholder")} data-testid="vision-ai-doc-prompt" className="sf-field" style={{ fontSize: 15 }} />
+        <button onClick={generate} disabled={loading} data-testid="vision-ai-doc-generate" className="sf-btn sf-btn-primary mt-3 h-10 w-full">
           {loading ? <Loader2 size={15} className="animate-spin" /> : <Wand2 size={15} />}
           {loading ? t("vision.aiDoc.generating") : t("vision.aiDoc.generate")}
         </button>
@@ -117,239 +151,307 @@ function AiDocModal({ open, onClose, onGenerated }) {
   );
 }
 
-export function VisionCanvas() {
+/* ───────────────────────── Menu flottant ───────────────────────── */
+
+function Popover({ open, onClose, className = "", style, children, testid }) {
+  if (!open) return null;
+  return (
+    <>
+      <div className="fixed inset-0 z-[55]" onPointerDown={onClose} />
+      <div className={`sf-menu absolute z-[56] p-1.5 ${className}`} style={style} data-testid={testid} onPointerDown={(e) => e.stopPropagation()}>
+        {children}
+      </div>
+    </>
+  );
+}
+
+/* ───────────────────────── Composant principal ───────────────────────── */
+
+/** Petit écran : un mur par écran au lieu du canvas libre. */
+function useIsSmall() {
+  const [small, setSmall] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
+  useEffect(() => {
+    const on = () => setSmall(window.innerWidth < 768);
+    window.addEventListener("resize", on);
+    return () => window.removeEventListener("resize", on);
+  }, []);
+  return small;
+}
+
+const MINIMAP_KEY = "kairos_vision_minimap";
+const ONBOARD_KEY = "kairos_vision_onboard_dismissed";
+const PALIER_KEY = "kairos_vision_palier";
+
+/**
+ * @param readOnly     page publique (lien partagé) : aucune modification possible
+ * @param initialItems cartes fournies (lecture seule)
+ * @param liveData     données live fournies (lecture seule)
+ */
+export function VisionCanvas({ readOnly = false, initialItems = null, liveData = null } = {}) {
   const { t, lang } = useI18n();
+  const navigate = useNavigate();
+  const live = useVisionLive(readOnly ? (liveData || {}) : undefined);
+  const isSmall = useIsSmall();
+  const prenom = live.data?.state?.profile?.prenom || "";
 
   const [boardKey, setBoardKey] = useState(() => {
     try { return localStorage.getItem(BOARD_STORAGE) || "perso"; } catch (_) { return "perso"; }
   });
   const [items, setItems] = useState([]);
-  const [walls, setWalls] = useState(() => loadVisionLayout(boardKey).walls);
-  const [connections, setConnections] = useState(() => loadVisionLayout(boardKey).connections);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
-  const [zoom, setZoom] = useState(0.85);
-  const [mode, setMode] = useState("select");
-  const [draggingId, setDraggingId] = useState(null);
+  const [zoom, setZoom] = useState(0.6);
+  const [mode, setMode] = useState("select"); // select | hand | line | draw
+  const [selectedId, setSelectedId] = useState(null);
   const [editingId, setEditingId] = useState(null);
+  const [draggingId, setDraggingId] = useState(null);
   const [styleMenuId, setStyleMenuId] = useState(null);
+  const [wallColorId, setWallColorId] = useState(null);
   const [tagFilter, setTagFilter] = useState("all");
-  const [connectMode, setConnectMode] = useState(false);
-  const [connectSource, setConnectSource] = useState(null);
-  const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const [menu, setMenu] = useState(null); // all | live | images | trash | export | add
   const [aiDocOpen, setAiDocOpen] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [generating, setGenerating] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [presenting, setPresenting] = useState(false);
   const [tplOpen, setTplOpen] = useState(false);
   const [templates, setTemplates] = useState([]);
   const [tplLoading, setTplLoading] = useState(false);
   const [viewport, setViewport] = useState({ left: 0, top: 0, w: 0, h: 0 });
+  const [rects, setRects] = useState({});
+  const [dropTarget, setDropTarget] = useState(null); // { wall, index }
+  const [lineFrom, setLineFrom] = useState(null);
+  const [selectedLine, setSelectedLine] = useState(null);
+  const [drawPts, setDrawPts] = useState(null);
+  const [presenting, setPresenting] = useState(false);
+  const [presentIdx, setPresentIdx] = useState(0);
+  const [, setHistVer] = useState(0);
+  const [unsplash, setUnsplash] = useState({ q: "", results: [], loading: false });
+  const [showMinimap, setShowMinimap] = useState(() => { try { return localStorage.getItem(MINIMAP_KEY) === "1"; } catch (_) { return false; } });
+  const [shareOpen, setShareOpen] = useState(false);
+  const [onboardHidden, setOnboardHidden] = useState(() => { try { return localStorage.getItem(ONBOARD_KEY) === "1"; } catch (_) { return false; } });
+  const [mobileWall, setMobileWall] = useState(0);
 
+  const rootRef = useRef(null);
   const scrollRef = useRef(null);
-  const canvasRef = useRef(null);
+  const boardRef = useRef(null);
   const dragRef = useRef(null);
+  const dropRef = useRef(null);
   const panRef = useRef(null);
   const rotateRef = useRef(null);
   const resizeRef = useRef(null);
+  const drawRef = useRef(null);
+  const rectsRef = useRef({});
   const skipSaveRef = useRef(false);
-
-  const seedCards = useCallback((key) => {
-    if (key !== "perso") return [];
-    return [
-      { id: "seed_1", type: "sticky", stickyColor: "cream", x: 200, y: 220, w: 240, h: 220, rotate: -4,
-        label: "MA PHRASE DE VIE", style: "handwritten", tags: ["elan"],
-        body: { fr: "Construire la liberté financière en aidant le plus de personnes possible.",
-                en: "Build financial freedom by helping as many people as possible." } },
-      { id: "seed_2", type: "polaroid", x: 470, y: 200, w: 260, h: 260, rotate: 2, caption: "Liberté", tags: ["refuge"],
-        image: "https://images.unsplash.com/photo-1603979649806-5299879db16b?w=800&q=80" },
-      { id: "seed_3", type: "sticky", stickyColor: "pink", x: 760, y: 220, w: 240, h: 220, rotate: -2,
-        label: "OBJECTIF 3 ANS", tags: ["elan"],
-        body: { fr: "• Atteindre 1M€ de CA\n• Racheter une entreprise\n• 4h de travail par jour\n• Voyager 6 mois / an",
-                en: "• Reach €1M revenue\n• Acquire a company\n• 4 working hours a day\n• Travel 6 months a year" } },
-      { id: "seed_4", type: "polaroid", x: 1030, y: 200, w: 240, h: 240, rotate: 3, caption: "",
-        image: "https://images.unsplash.com/photo-1505843513577-22bb7d21e455?w=800&q=80" },
-      { id: "seed_5", type: "sticky", stickyColor: "green", x: 900, y: 490, w: 230, h: 240, rotate: 2,
-        label: "VALEURS", tags: ["refuge"],
-        body: { fr: "• Intégrité\n• Excellence\n• Impact positif\n• Liberté\n• Foi",
-                en: "• Integrity\n• Excellence\n• Positive impact\n• Freedom\n• Faith" } },
-      { id: "seed_6", type: "kpi", stickyColor: "green", x: 200, y: 750, w: 240, h: 190, rotate: 0,
-        label: "SANTÉ & ÉNERGIE", tags: ["refuge"],
-        body: { fr: "Sport 4x / semaine\nMéditation quotidienne\nAlimentation saine\nSommeil 7h+",
-                en: "Sport 4x / week\nDaily meditation\nHealthy food\n7h+ sleep" }, progress: 75 },
-      { id: "seed_7", type: "kpi", stickyColor: "orange", x: 470, y: 750, w: 240, h: 190, rotate: 0,
-        label: "BUSINESS", tags: ["elan"],
-        body: { fr: "3 offres premium\n100 clients actifs\nAutomatiser 80%\nÉquipe de 10 pers.",
-                en: "3 premium offers\n100 active clients\nAutomate 80%\nTeam of 10" }, progress: 60 },
-      { id: "seed_8", type: "kpi", stickyColor: "yellow", x: 740, y: 750, w: 240, h: 190, rotate: 0,
-        label: "FINANCE", tags: ["elan"],
-        body: { fr: "CA : 1 000 000 €\nRentabilité > 30%\nInvestissements\nPatrimoine",
-                en: "Revenue: €1,000,000\nMargin > 30%\nInvestments\nAssets" }, progress: 40 },
-      { id: "seed_9", type: "kpi", stickyColor: "purple", x: 1010, y: 750, w: 240, h: 190, rotate: 0,
-        label: "IMPACT",
-        body: { fr: "Aider 10 000\nContenu gratuit\nMentorat\nProjets solidaires",
-                en: "Help 10,000\nFree content\nMentoring\nSolidarity projects" }, progress: 50 },
-      { id: "seed_10", type: "sticky", stickyColor: "blue", x: 200, y: 490, w: 200, h: 180, rotate: -3,
-        label: "RAPPEL", style: "handwritten", tags: ["refuge"],
-        body: { fr: "Focus sur les actions qui créent le plus de valeur.",
-                en: "Focus on the actions that create the most value." } },
-    ];
-  }, []);
+  const needScrollRef = useRef(true);
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+  const zoomRef = useRef(zoom);
+  zoomRef.current = zoom;
+  // Historique (annuler / rétablir)
+  const stableRef = useRef(null);
+  const pastRef = useRef([]);
+  const futureRef = useRef([]);
+  const histSkipRef = useRef(false);
 
   /* ── Chargement du board courant ── */
   const loadBoard = useCallback((key) => {
+    if (readOnly) {
+      skipSaveRef.current = true;
+      needScrollRef.current = true;
+      setItems(Array.isArray(initialItems) ? initialItems : []);
+      setLoaded(true);
+      return;
+    }
     setLoaded(false);
     skipSaveRef.current = true;
-    const layout = loadVisionLayout(key);
-    setWalls(layout.walls);
-    setConnections(layout.connections);
-    setConnectSource(null);
+    needScrollRef.current = true;
+    stableRef.current = null; pastRef.current = []; futureRef.current = [];
     fetchBoard(key)
       .then((r) => {
-        const cards = Array.isArray(r.cards) ? r.cards : [];
-        setItems(cards.length === 0 ? seedCards(key) : cards);
+        let cards = Array.isArray(r.cards) ? r.cards : [];
+        const migrated = migrateLocalLayout(key, cards);
+        if (migrated !== cards) skipSaveRef.current = false; // sauvegarder tout de suite la reprise
+        cards = migrated;
+        // Board perso vide → on démarre sur le cockpit A → Z relié aux données
+        setItems(cards.length === 0 && key === "perso" ? cockpitTemplate({}) : cards);
       })
       .catch(() => setItems([]))
       .finally(() => setLoaded(true));
-  }, [seedCards]);
+  }, [readOnly, initialItems]);
 
   useEffect(() => { loadBoard(boardKey); }, [boardKey, loadBoard]);
 
   const switchBoard = (key) => {
     if (key === boardKey) return;
     try { localStorage.setItem(BOARD_STORAGE, key); } catch (_) {}
-    setStyleMenuId(null);
-    setEditingId(null);
+    setStyleMenuId(null); setEditingId(null); setSelectedId(null);
     setBoardKey(key);
   };
 
-  /* ── Sauvegarde auto (debounce) ── */
+  /* ── Sauvegarde auto (debounce, pas pendant un glisser) ── */
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || readOnly) return;
     if (skipSaveRef.current) { skipSaveRef.current = false; return; }
+    if (draggingId) return;
     setSaving(true);
     const id = setTimeout(() => {
       saveBoard(items, boardKey).then(() => setSaveError(false)).catch(() => setSaveError(true)).finally(() => setSaving(false));
     }, 700);
     return () => clearTimeout(id);
-  }, [items, loaded, boardKey]);
+  }, [items, loaded, boardKey, draggingId, readOnly]);
 
+  /* ── Historique ── */
   useEffect(() => {
-    if (loaded) saveVisionLayout(boardKey, { walls, connections });
-  }, [walls, connections, loaded, boardKey]);
+    if (!loaded || draggingId) return;
+    if (stableRef.current === null) { stableRef.current = items; return; }
+    if (histSkipRef.current) { histSkipRef.current = false; stableRef.current = items; return; }
+    const id = setTimeout(() => {
+      if (stableRef.current !== items) {
+        pastRef.current.push(stableRef.current);
+        if (pastRef.current.length > 80) pastRef.current.shift();
+        futureRef.current = [];
+        stableRef.current = items;
+        setHistVer((v) => v + 1);
+      }
+    }, 350);
+    return () => clearTimeout(id);
+  }, [items, loaded, draggingId]);
 
-  /* ── Zoom clavier ── */
-  useEffect(() => {
-    const onKey = (e) => {
-      if (["INPUT", "TEXTAREA"].includes(e.target.tagName) || e.target.isContentEditable) return;
-      if (e.key === "+" || e.key === "=") { e.preventDefault(); setZoom((z) => Math.min(1.6, +(z + 0.1).toFixed(2))); }
-      if (e.key === "-" || e.key === "_") { e.preventDefault(); setZoom((z) => Math.max(0.4, +(z - 0.1).toFixed(2))); }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+  const undo = useCallback(() => {
+    if (readOnly) return;
+    const cur = itemsRef.current;
+    const prev = stableRef.current && stableRef.current !== cur ? stableRef.current : pastRef.current.pop();
+    if (!prev) return;
+    futureRef.current.push(cur);
+    histSkipRef.current = true;
+    setItems(prev);
+    setEditingId(null);
+    setHistVer((v) => v + 1);
+  }, [readOnly]);
+  const redo = useCallback(() => {
+    if (readOnly) return;
+    const next = futureRef.current.pop();
+    if (!next) return;
+    pastRef.current.push(itemsRef.current);
+    histSkipRef.current = true;
+    setItems(next);
+    setHistVer((v) => v + 1);
+  }, [readOnly]);
+  const canUndo = pastRef.current.length > 0 || (stableRef.current !== null && stableRef.current !== items);
+  const canRedo = futureRef.current.length > 0;
+
+  /* ── Dérivés ── */
+  const trashedIds = useMemo(() => new Set(items.filter((i) => i.trashed).map((i) => i.id)), [items]);
+  const activeItems = useMemo(() => items.filter((i) => !i.trashed && !(i.parent && trashedIds.has(i.parent))), [items, trashedIds]);
+  const walls = useMemo(() => activeItems.filter((i) => i.type === "wall"), [activeItems]);
+  const wallIds = useMemo(() => new Set(walls.map((w) => w.id)), [walls]);
+  const wallNumber = useMemo(() => {
+    const m = {};
+    [...walls].sort((a, b) => a.x - b.x || a.y - b.y).forEach((w, i) => { m[w.id] = i + 1; });
+    return m;
+  }, [walls]);
+  const lines = useMemo(() => activeItems.filter((i) => i.type === "line"), [activeItems]);
+  const trashItems = useMemo(() => items.filter((i) => i.trashed && i.type !== "line"), [items]);
+
+  const isVisible = useCallback((card) => {
+    if (tagFilter === "all" || ["wall", "heading", "draw", "live"].includes(card.type)) return true;
+    const tags = Array.isArray(card.tags) ? card.tags : [];
+    if (tagFilter === "none") return tags.length === 0;
+    return tags.includes(tagFilter);
+  }, [tagFilter]);
+
+  const freeItems = useMemo(
+    () => activeItems.filter((i) => i.type !== "wall" && i.type !== "line" && (!i.parent || !wallIds.has(i.parent)) && isVisible(i)),
+    [activeItems, wallIds, isVisible],
+  );
+  const childrenOf = useCallback(
+    (wid) => activeItems.filter((i) => i.parent === wid && isVisible(i)).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+    [activeItems, isVisible],
+  );
+
+  const tagCounts = useMemo(() => {
+    const c = { all: 0, elan: 0, refuge: 0, none: 0 };
+    activeItems.forEach((it) => {
+      if (["wall", "line", "heading", "draw", "live"].includes(it.type)) return;
+      c.all += 1;
+      const tags = Array.isArray(it.tags) ? it.tags : [];
+      if (!tags.length) c.none += 1;
+      if (tags.includes("elan")) c.elan += 1;
+      if (tags.includes("refuge")) c.refuge += 1;
+    });
+    return c;
+  }, [activeItems]);
+
+  /* ── Mesure des positions réelles (y compris cartes dans les murs) ── */
+  const measure = useCallback(() => {
+    const board = boardRef.current;
+    if (!board) return;
+    const br = board.getBoundingClientRect();
+    const z = zoomRef.current;
+    const next = {};
+    board.querySelectorAll("[data-item-id]").forEach((el) => {
+      const r = el.getBoundingClientRect();
+      next[el.dataset.itemId] = { x: (r.left - br.left) / z, y: (r.top - br.top) / z, w: r.width / z, h: r.height / z };
+    });
+    rectsRef.current = next;
+    setRects((prev) => {
+      const a = Object.keys(prev), b = Object.keys(next);
+      const same = a.length === b.length && b.every((k) => prev[k] && Math.abs(prev[k].x - next[k].x) < 0.5 && Math.abs(prev[k].y - next[k].y) < 0.5 && Math.abs(prev[k].w - next[k].w) < 0.5 && Math.abs(prev[k].h - next[k].h) < 0.5);
+      return same ? prev : next;
+    });
   }, []);
 
-  /* ── Drag ── */
-  const onPointerDownCard = useCallback((e, item) => {
-    if (mode !== "select") return;
-    if (e.pointerType === "mouse" && e.button !== 0) return;
-    e.stopPropagation();
-    try { e.currentTarget.setPointerCapture?.(e.pointerId); } catch {}
-    dragRef.current = { id: item.id, startX: e.clientX, startY: e.clientY, origX: item.x, origY: item.y };
-    setDraggingId(item.id);
-  }, [mode]);
-
+  useLayoutEffect(() => { measure(); }, [items, zoom, editingId, tagFilter, measure, live.data]);
   useEffect(() => {
-    const onMove = (e) => {
-      const d = dragRef.current;
-      if (d?.kind === "wall") {
-        const dx = (e.clientX - d.startX) / zoom;
-        const dy = (e.clientY - d.startY) / zoom;
-        setWalls((prev) => prev.map((wall) => wall.id === d.id ? { ...wall, x: d.origX + dx, y: d.origY + dy } : wall));
-      } else if (d) {
-        const dx = (e.clientX - d.startX) / zoom;
-        const dy = (e.clientY - d.startY) / zoom;
-        setItems((prev) => prev.map((it) => {
-          if (it.id !== d.id) return it;
-          const nx = Math.min(BOARD_W - (it.w || 200), Math.max(0, d.origX + dx));
-          const ny = Math.min(BOARD_H - (it.h || 150), Math.max(0, d.origY + dy));
-          return { ...it, x: nx, y: ny };
-        }));
-      }
-      const r = rotateRef.current;
-      if (r) {
-        const dx = e.clientX - r.cx;
-        const dy = e.clientY - r.cy;
-        let deg = Math.atan2(dy, dx) * (180 / Math.PI) + 90;
-        deg = Math.round(deg / 2) * 2;
-        setItems((prev) => prev.map((it) => (it.id === r.id ? { ...it, rotate: deg } : it)));
-      }
-      const rs = resizeRef.current;
-      if (rs) {
-        const dx = (e.clientX - rs.startX) / zoom;
-        const dy = (e.clientY - rs.startY) / zoom;
-        setItems((prev) => prev.map((it) => {
-          if (it.id !== rs.id) return it;
-          const nw = Math.max(120, Math.min(600, rs.origW + dx));
-          const nh = Math.max(80, Math.min(600, rs.origH + dy));
-          return { ...it, w: nw, h: nh };
-        }));
-      }
-    };
-    const onUp = () => {
-      dragRef.current = null; rotateRef.current = null; resizeRef.current = null;
-      setDraggingId(null);
-    };
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-    window.addEventListener("pointercancel", onUp);
-    return () => { window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp); window.removeEventListener("pointercancel", onUp); };
-  }, [zoom]);
+    const board = boardRef.current;
+    if (!board || typeof ResizeObserver === "undefined") return undefined;
+    const ro = new ResizeObserver(() => measure());
+    board.querySelectorAll("[data-item-id]").forEach((el) => ro.observe(el));
+    return () => ro.disconnect();
+  }, [items, loaded, measure]);
 
-  const onRotateStart = (e, item) => {
-    e.stopPropagation();
-    const el = e.currentTarget.closest("[data-card-el]");
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    rotateRef.current = { id: item.id, cx: rect.left + rect.width / 2, cy: rect.top + rect.height / 2 };
-    setDraggingId(item.id);
-  };
-  const onResizeStart = (e, item) => {
-    e.stopPropagation();
-    resizeRef.current = { id: item.id, startX: e.clientX, startY: e.clientY, origW: item.w || 200, origH: item.h || 150 };
-    setDraggingId(item.id);
-  };
-
-  /* ── Pan ── */
-  const onCanvasPointerDown = (e) => {
-    if (mode !== "hand" || !scrollRef.current) return;
-    panRef.current = { startX: e.clientX, startY: e.clientY, left: scrollRef.current.scrollLeft, top: scrollRef.current.scrollTop };
-  };
+  /* Au chargement : zoom lisible ajusté pour ~3 murs, puis se placer sur le contenu */
   useEffect(() => {
-    const onMove = (e) => {
-      const p = panRef.current;
-      if (!p || !scrollRef.current) return;
-      scrollRef.current.scrollLeft = p.left - (e.clientX - p.startX);
-      scrollRef.current.scrollTop = p.top - (e.clientY - p.startY);
-    };
-    const onUp = () => { panRef.current = null; };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-    return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
-  }, []);
+    if (!loaded || !needScrollRef.current || !scrollRef.current) return;
+    const vals = Object.values(rects);
+    if (!vals.length && activeItems.length) return;
+    needScrollRef.current = false;
+    const el = scrollRef.current;
+    const minX = vals.length ? Math.min(...vals.map((r) => r.x)) : 0;
+    const minY = vals.length ? Math.min(...vals.map((r) => r.y)) : 0;
+    const ws = walls.map((w) => rectsRef.current[w.id]).filter(Boolean).sort((a, b) => a.x - b.x);
+    let z = 0.8;
+    if (ws.length) {
+      const last = ws[Math.min(2, ws.length - 1)];
+      const span = last.x + last.w - ws[0].x;
+      z = clampZ(Math.max(0.55, Math.min(1, (el.clientWidth - 150) / span)));
+    }
+    setZoom(z);
+    requestAnimationFrame(() => {
+      el.scrollLeft = Math.max(0, minX * z - (readOnly ? 40 : 120));
+      el.scrollTop = Math.max(0, minY * z - 70);
+    });
+  }, [loaded, rects, activeItems.length, walls, readOnly]);
 
-  const onWheelZoom = useCallback((e) => {
-    if (!(e.ctrlKey || e.metaKey)) return;
-    e.preventDefault();
-    setZoom((z) => Math.min(1.6, Math.max(0.3, +(z - e.deltaY * 0.0015).toFixed(2))));
-  }, []);
+  /* Paliers « Vision réalisée » : 25 / 50 / 75 / 100 % → message de célébration */
+  useEffect(() => {
+    if (readOnly) return;
+    const score = visionScore(live.data || {});
+    if (score == null) return;
+    const reached = [...PALIERS].reverse().find((p) => score >= p) || 0;
+    let prev = null;
+    try { prev = localStorage.getItem(PALIER_KEY); } catch (_) {}
+    if (prev !== null && reached > Number(prev)) {
+      toast.success(`🎉 Palier franchi : ${reached} % de ta vision réalisée !`, { duration: 6000 });
+    }
+    try { localStorage.setItem(PALIER_KEY, String(reached)); } catch (_) {}
+  }, [live.data, readOnly]);
 
-  /* ── Mini-map ── */
+  /* ── Viewport / mini-carte ── */
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el) return;
+    if (!el) return undefined;
     const update = () => setViewport({ left: el.scrollLeft, top: el.scrollTop, w: el.clientWidth, h: el.clientHeight });
     update();
     el.addEventListener("scroll", update);
@@ -358,82 +460,120 @@ export function VisionCanvas() {
     return () => { el.removeEventListener("scroll", update); ro.disconnect(); };
   }, [loaded]);
 
-  const spawn = () => {
-    const a = Math.random() * Math.PI * 2;
-    return {
-      x: CENTER.x + Math.cos(a) * 340 + (Math.random() * 60 - 30),
-      y: CENTER.y + Math.sin(a) * 230 + (Math.random() * 60 - 30),
-    };
+  const toBoard = useCallback((clientX, clientY) => {
+    const br = boardRef.current?.getBoundingClientRect();
+    if (!br) return { x: 0, y: 0 };
+    return { x: (clientX - br.left) / zoomRef.current, y: (clientY - br.top) / zoomRef.current };
+  }, []);
+
+  /** Zoom en gardant le centre de l'écran fixe. */
+  const zoomTo = useCallback((nz) => {
+    const el = scrollRef.current;
+    const z0 = zoomRef.current;
+    const z1 = clampZ(nz);
+    if (!el || z1 === z0) { setZoom(z1); return; }
+    const cx = (el.scrollLeft + el.clientWidth / 2) / z0;
+    const cy = (el.scrollTop + el.clientHeight / 2) / z0;
+    setZoom(z1);
+    requestAnimationFrame(() => {
+      el.scrollLeft = cx * z1 - el.clientWidth / 2;
+      el.scrollTop = cy * z1 - el.clientHeight / 2;
+    });
+  }, []);
+
+  const viewCenter = () => {
+    const el = scrollRef.current;
+    if (!el) return { x: 600, y: 400 };
+    return { x: (el.scrollLeft + el.clientWidth / 2) / zoom, y: (el.scrollTop + el.clientHeight / 2) / zoom };
   };
 
-  const addByTool = (toolId) => {
-    const { x, y } = spawn();
-    const id = `u_${Date.now()}`;
-    let note;
-    if (toolId === "image") {
-      note = { id, type: "image", x, y, w: 210, h: 160, tags: [], image: "https://images.unsplash.com/photo-1500534623283-312aade485b7?w=600&q=80", title: { fr: "Nouvelle image", en: "New image" } };
-    } else if (toolId === "polaroid") {
-      const seed = Math.floor(Math.random() * 1000);
-      note = { id, type: "polaroid", x, y, w: 240, h: 240, rotate: (Math.random() - 0.5) * 8, tags: [],
-        image: `https://picsum.photos/seed/${seed}/600/500`, caption: "Liberté" };
-    } else if (toolId === "sticky") {
-      const colors = ["cream", "pink", "green", "orange", "blue", "purple"];
-      const cn = colors[Math.floor(Math.random() * colors.length)];
-      note = { id, type: "sticky", x, y, w: 220, h: 200, rotate: (Math.random() - 0.5) * 8, tags: [],
-        stickyColor: cn, label: "MA NOTE", body: { fr: "Écris ton idée ici…", en: "Write your idea here…" } };
-    } else if (toolId === "kpi") {
-      note = { id, type: "kpi", x, y, w: 230, h: 180, stickyColor: "green", tags: [],
-        label: "SANTÉ & ÉNERGIE", body: { fr: "Sport 4x / semaine\nMéditation quotidienne\nAlimentation saine", en: "Sport 4x / week\nDaily meditation\nHealthy food" }, progress: 65 };
-    } else if (toolId === "color") {
-      note = { id, type: "color", x, y, w: 220, h: 100, tags: [], title: { fr: "Palette", en: "Palette" }, colors: ["#0B1F3A", "#4a6a9e", "#DEC2A3", "#F1E2CC"] };
-    } else if (toolId === "check") {
-      note = { id, type: "note", x, y, w: 220, h: 130, color: "#2FB89A", tags: [], title: { fr: "Ma liste", en: "My list" }, body: { fr: "• Étape 1\n• Étape 2\n• Étape 3", en: "• Step 1\n• Step 2\n• Step 3" } };
-    } else if (toolId === "link") {
-      note = { id, type: "note", x, y, w: 220, h: 110, color: "#4a6a9e", tags: [], title: { fr: "Lien", en: "Link" }, body: { fr: "https://…", en: "https://…" } };
-    } else if (toolId === "ai") {
-      note = { id, type: "note", x, y, w: 220, h: 120, color: "#8b6fbf", tags: [], title: { fr: "Idée IA", en: "AI idea" }, body: { fr: "Clarifie ton objectif phare du trimestre.", en: "Clarify your flagship goal for the quarter." } };
-    } else {
-      note = { id, type: "note", x, y, w: 210, h: 110, color: NOTE_COLORS[Math.floor(Math.random() * 4)], tags: [], title: { fr: "Nouvelle idée", en: "New idea" }, body: { fr: "", en: "" } };
-    }
-    setItems((prev) => [...prev, note]);
-    if (note.type !== "color") setTimeout(() => setEditingId(id), 60);
+  /* ── Création d'éléments ── */
+  const targetWall = () => {
+    const sel = items.find((i) => i.id === selectedId);
+    if (!sel) return null;
+    if (sel.type === "wall") return sel.id;
+    if (sel.parent && wallIds.has(sel.parent)) return sel.parent;
+    return null;
   };
 
-  const addWall = () => {
-    const n = walls.length + 1;
-    setWalls((prev) => [...prev, {
-      id: `wall_${Date.now()}`, title: `${n} · Nouveau mur`, x: 220 + (n % 3) * 560, y: 980,
-      w: 520, h: 700, color: ["#DEC2A3", "#8FB7E8", "#8FD6BF", "#C8A7E8"][n % 4],
-    }]);
+  const addItem = (item, { edit = false, intoWall = true, wall = null } = {}) => {
+    const id = item.id || uid();
+    let it = { tags: [], ...item, id };
+    const wid = DROPPABLE.has(it.type) ? (wall || (intoWall ? targetWall() : null)) : null;
+    if (wid) {
+      const order = Math.max(-1, ...items.filter((i) => i.parent === wid).map((i) => i.order ?? 0)) + 1;
+      it = { ...it, parent: wid, order };
+    } else if (it.x == null) {
+      const c = viewCenter();
+      const w = it.w || 420;
+      it = { ...it, x: Math.max(20, c.x - w / 2 + (Math.random() * 60 - 30)), y: Math.max(20, c.y - 140 + (Math.random() * 60 - 30)), w };
+    }
+    setItems((prev) => [...prev, it]);
+    setSelectedId(id);
+    if (edit) setTimeout(() => setEditingId(id), 40);
+    return id;
   };
 
-  const toggleConnection = (cardId) => {
-    if (!connectSource) {
-      setConnectSource(cardId);
-      return;
+  const addByTool = (toolId, opts = {}) => {
+    setMenu(null);
+    const L = (fr, en) => ({ fr, en: en || fr });
+    switch (toolId) {
+      case "note":
+        return addItem({ type: "note", w: 420, title: L(""), body: L("") }, { edit: true, ...opts });
+      case "list":
+        return addItem({ type: "note", w: 420, title: L("Ma liste", "My list"), body: L("[ ] Étape 1\n[ ] Étape 2\n[ ] Étape 3", "[ ] Step 1\n[ ] Step 2\n[ ] Step 3") }, { edit: true });
+      case "wall": {
+        const c = viewCenter();
+        const id = addItem({ type: "wall", x: c.x - 250, y: c.y - 220, w: 500, title: "Nouveau mur", color: WALL_COLORS[walls.length % WALL_COLORS.length] }, { intoWall: false });
+        setTimeout(() => setEditingId(id), 40);
+        return id;
+      }
+      case "heading":
+        return addItem({ type: "heading", w: 900, text: "Titre du board" }, { edit: true, intoWall: false });
+      case "table":
+        return addItem({ type: "table", w: 460, title: "Suivi mensuel", columns: ["Mois", "Revenu"], rows: [["Juillet", ""], ["Août", ""], ["Objectif", ""]] }, { edit: true });
+      case "video":
+        return addItem({ type: "video", w: 460, url: "" }, { edit: true });
+      case "polaroid": {
+        const seed = Math.floor(Math.random() * 1000);
+        return addItem({ type: "polaroid", w: 280, h: 280, rotate: (Math.random() - 0.5) * 8, image: `https://picsum.photos/seed/${seed}/600/500`, caption: "Liberté" });
+      }
+      case "sticky": {
+        const colors = ["cream", "pink", "green", "orange", "blue", "purple"];
+        return addItem({ type: "sticky", w: 240, h: 220, rotate: (Math.random() - 0.5) * 8, stickyColor: colors[Math.floor(Math.random() * colors.length)], label: "MA NOTE", body: L("Écris ton idée ici…", "Write your idea here…") }, { edit: true });
+      }
+      case "kpi":
+        return addItem({ type: "kpi", w: 260, h: 200, stickyColor: "green", label: "SANTÉ & ÉNERGIE", body: L("Sport 4x / semaine\nMéditation quotidienne\nAlimentation saine", "Sport 4x / week\nDaily meditation\nHealthy food"), progress: 65 });
+      case "color":
+        return addItem({ type: "color", w: 320, title: L("Palette"), colors: ["#0B1F3A", "#4a6a9e", "#DEC2A3", "#F1E2CC"] });
+      case "cockpit": {
+        const vals = Object.values(rectsRef.current);
+        const maxX = vals.length ? Math.max(...vals.map((r) => r.x + r.w)) : 0;
+        const minY = vals.length ? Math.min(...vals.map((r) => r.y)) : 140;
+        const tpl = cockpitTemplate({ prenom: live.data.state?.profile?.prenom, originX: vals.length ? Math.min(maxX + 200, BOARD_W - 3400) : 140, originY: Math.max(120, minY) });
+        setItems((prev) => [...prev, ...tpl]);
+        setTimeout(() => {
+          const el = scrollRef.current;
+          if (el) { el.scrollLeft = Math.max(0, tpl[0].x * zoomRef.current - 110); el.scrollTop = Math.max(0, tpl[0].y * zoomRef.current - 80); }
+        }, 80);
+        toast.success("Modèle « Cockpit Vision A → Z » ajouté");
+        return null;
+      }
+      default:
+        return null;
     }
-    if (connectSource !== cardId) {
-      setConnections((prev) => prev.some((c) => (c.from === connectSource && c.to === cardId) || (c.from === cardId && c.to === connectSource))
-        ? prev : [...prev, { id: `connection_${Date.now()}`, from: connectSource, to: cardId }]);
-    }
-    setConnectSource(null);
   };
+
+  const addLive = (source) => { setMenu(null); addItem({ type: "live", source, w: 440 }); };
 
   /* ── Capture vocale → carte ── */
   const handleVoice = (texte) => {
-    const { x, y } = spawn();
-    const id = `voice_${Date.now()}`;
-    setItems((prev) => [...prev, {
-      id, type: "sticky", stickyColor: "sky", x, y, w: 240, h: 210,
-      rotate: (Math.random() - 0.5) * 6, tags: ["elan"], source: "vocale",
-      label: t("vision.voice.label"), body: { fr: texte, en: texte },
-    }]);
+    addItem({ type: "note", w: 420, tags: ["elan"], source: "vocale", title: { fr: t("vision.voice.label"), en: t("vision.voice.label") }, body: { fr: texte, en: texte }, labels: ["Vocal"] });
     toast.success(t("vision.voice.added"));
   };
 
   const handleAiDocGenerated = ({ title, content, docType }) => {
-    const { x, y } = spawn();
-    setItems((prev) => [...prev, { id: `u_${Date.now()}`, type: "ai-doc", x, y, w: 320, h: 260, color: "#DEC2A3", tags: [], docType, title: { fr: title, en: title }, body: { fr: content, en: content } }]);
+    addItem({ type: "ai-doc", w: 440, h: 360, color: "#DEC2A3", docType, title: { fr: title, en: title }, body: { fr: content, en: content } });
   };
 
   const handleGenerateBoard = async () => {
@@ -442,8 +582,9 @@ export function VisionCanvas() {
     setGenerating(true);
     try {
       const res = await generateBoard(value);
+      const c = viewCenter();
       const jitter = () => Math.round((Math.random() - 0.5) * 60);
-      const newCards = (res.cards || []).map((c, i) => ({ id: `gen_${Date.now()}_${i}`, tags: [], ...c, x: c.x + jitter(), y: c.y + jitter() }));
+      const newCards = (res.cards || []).map((card, i) => ({ id: uid(`gen${i}`), tags: [], ...card, x: Math.max(20, c.x - 700 + (card.x || 0) + jitter()), y: Math.max(20, c.y - 450 + (card.y || 0) + jitter()) }));
       setItems((prev) => [...prev, ...newCards]);
       setPrompt("");
       toast.success(t("vision.generated", { n: newCards.length }));
@@ -455,11 +596,11 @@ export function VisionCanvas() {
   };
 
   const handleInspire = async () => {
+    setMenu(null);
     try {
       const { quote, author } = await fetchInspire();
-      const { x, y } = spawn();
       const text = `« ${quote} »\n— ${author}`;
-      setItems((prev) => [...prev, { id: `u_${Date.now()}`, type: "note", x, y, w: 240, h: 130, color: "#DEC2A3", tags: ["refuge"], title: { fr: "Citation", en: "Quote" }, body: { fr: text, en: text } }]);
+      addItem({ type: "note", w: 420, tags: ["refuge"], title: { fr: "Citation", en: "Quote" }, body: { fr: text, en: text }, labels: ["Inspiration"] });
       toast.success(t("vision.quoteAi"));
     } catch {
       toast.error(t("common.unavailable"));
@@ -467,7 +608,7 @@ export function VisionCanvas() {
   };
 
   const openTemplates = () => {
-    setAddMenuOpen(false);
+    setMenu(null);
     setTplOpen(true);
     if (!templates.length) {
       setTplLoading(true);
@@ -477,35 +618,345 @@ export function VisionCanvas() {
 
   const applyTemplate = (tpl) => {
     if (!tpl?.cards?.length) return;
-    if (items.length && !window.confirm(t("vision.templates.replace", { name: tpl.label }))) return;
-    setItems(tpl.cards.map((c, i) => ({ h: 130, tags: [], ...c, id: `tpl_${Date.now()}_${i}` })));
+    if (activeItems.length && !window.confirm(t("vision.templates.replace", { name: tpl.label }))) return;
+    setItems((prev) => [...prev.filter((i) => i.trashed), ...tpl.cards.map((c, i) => ({ h: 130, tags: [], ...c, id: uid(`tpl${i}`), x: (c.x || 0) + 200, y: (c.y || 0) + 200 }))]);
+    needScrollRef.current = true;
     setTplOpen(false);
     toast.success(t("vision.templates.applied", { name: tpl.label }));
   };
 
-  const deleteCard = (id) => {
-    const removed = items.find((c) => c.id === id);
-    setItems((prev) => prev.filter((c) => c.id !== id));
-    if (editingId === id) setEditingId(null);
-    if (styleMenuId === id) setStyleMenuId(null);
-    if (removed) toast(t("vision.cardDeleted"), { action: { label: t("vision.undo"), onClick: () => setItems((prev) => [...prev, removed]) } });
-  };
-
+  /* ── Modification / corbeille ── */
   const patchCard = useCallback((id, patch) => {
     setItems((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
   }, []);
 
   const editBody = (id, text) =>
-    setItems((prev) => prev.map((c) => (c.id === id ? { ...c, body: { ...(typeof c.body === "object" ? c.body : {}), [lang]: text } } : c)));
+    setItems((prev) => prev.map((c) => (c.id === id ? { ...c, body: { ...(typeof c.body === "object" && c.body ? c.body : {}), [lang]: text } } : c)));
 
   const editImage = (id, url) => { if (url?.trim()) patchCard(id, { image: url.trim() }); setEditingId(null); };
 
-  const [unsplash, setUnsplash] = useState({ q: "", results: [], loading: false });
+  const trashItem = useCallback((id) => {
+    const it = itemsRef.current.find((c) => c.id === id);
+    if (!it) return;
+    if (it.type === "line") {
+      setItems((prev) => prev.filter((c) => c.id !== id));
+    } else {
+      setItems((prev) => prev.map((c) => (c.id === id ? { ...c, trashed: true, trashedAt: Date.now() } : c)));
+      toast(it.type === "wall" ? "Mur mis à la corbeille (avec ses cartes)" : "Mis à la corbeille", {
+        action: { label: t("vision.undo"), onClick: () => setItems((prev) => prev.map((c) => (c.id === id ? { ...c, trashed: false } : c))) },
+      });
+    }
+    setEditingId((e) => (e === id ? null : e));
+    setSelectedId((s) => (s === id ? null : s));
+    setStyleMenuId((s) => (s === id ? null : s));
+    setSelectedLine((s) => (s === id ? null : s));
+  }, [t]);
+
+  const restoreItem = (id) => setItems((prev) => prev.map((c) => (c.id === id ? { ...c, trashed: false } : c)));
+  const purgeItem = (id) => setItems((prev) => prev.filter((c) => c.id !== id && c.parent !== id && c.from !== id && c.to !== id));
+  const emptyTrash = () => {
+    if (!trashItems.length || !window.confirm(`Supprimer définitivement ${trashItems.length} élément(s) ?`)) return;
+    const ids = new Set(trashItems.map((i) => i.id));
+    setItems((prev) => prev.filter((c) => !ids.has(c.id) && !ids.has(c.parent) && !ids.has(c.from) && !ids.has(c.to)));
+  };
+
+  /* ── Glisser-déposer (cartes libres, cartes dans les murs, murs) ── */
+  const onPointerDownItem = (e, item) => {
+    if (readOnly) return;
+    if (isSmall) { setSelectedId(item.id); return; } // mobile : on défile, on ne glisse pas
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    if (mode === "line") {
+      e.stopPropagation();
+      if (!lineFrom) { setLineFrom(item.id); return; }
+      if (lineFrom !== item.id) {
+        setItems((prev) => [...prev, { id: uid("line"), type: "line", from: lineFrom, to: item.id }]);
+        toast.success("Ligne ajoutée");
+      }
+      setLineFrom(null);
+      return;
+    }
+    if (mode !== "select" || editingId === item.id) return;
+    e.stopPropagation();
+    setSelectedId(item.id);
+    setSelectedLine(null);
+    dragRef.current = { id: item.id, startX: e.clientX, startY: e.clientY, started: false, origX: item.x, origY: item.y };
+  };
+
+  useEffect(() => {
+    const onMove = (e) => {
+      const d = dragRef.current;
+      if (d) {
+        const dxs = e.clientX - d.startX;
+        const dys = e.clientY - d.startY;
+        if (!d.started) {
+          if (Math.hypot(dxs, dys) < 5) return;
+          d.started = true;
+          const moving = itemsRef.current.find((i) => i.id === d.id);
+          if (moving?.parent) {
+            // La carte sort de son mur : elle devient libre là où elle est affichée
+            const r = rectsRef.current[d.id];
+            d.origX = r ? r.x : 0;
+            d.origY = r ? r.y : 0;
+            setItems((prev) => prev.map((c) => (c.id === d.id ? { ...c, parent: undefined, x: d.origX, y: d.origY, w: r ? r.w : c.w, rotate: 0 } : c)));
+          }
+          setDraggingId(d.id);
+        }
+        const z = zoomRef.current;
+        const nx = Math.max(0, Math.min(BOARD_W - 80, (d.origX || 0) + dxs / z));
+        const ny = Math.max(0, Math.min(BOARD_H - 80, (d.origY || 0) + dys / z));
+        setItems((prev) => prev.map((c) => (c.id === d.id ? { ...c, x: nx, y: ny } : c)));
+        // Mur survolé → emplacement de dépôt
+        const cur = itemsRef.current.find((i) => i.id === d.id);
+        if (cur && DROPPABLE.has(cur.type)) {
+          const p = toBoard(e.clientX, e.clientY);
+          const hit = itemsRef.current
+            .filter((w) => w.type === "wall" && !w.trashed)
+            .find((w) => { const r = rectsRef.current[w.id]; return r && p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h; });
+          let next = null;
+          if (hit) {
+            const sibs = itemsRef.current.filter((c) => c.parent === hit.id && !c.trashed && c.id !== d.id).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+            let index = sibs.length;
+            for (let k = 0; k < sibs.length; k += 1) {
+              const r = rectsRef.current[sibs[k].id];
+              if (r && p.y < r.y + r.h / 2) { index = k; break; }
+            }
+            next = { wall: hit.id, index };
+          }
+          const prevDrop = dropRef.current;
+          if ((prevDrop?.wall !== next?.wall) || (prevDrop?.index !== next?.index)) {
+            dropRef.current = next;
+            setDropTarget(next);
+          }
+        }
+      }
+      const r = rotateRef.current;
+      if (r) {
+        let deg = Math.atan2(e.clientY - r.cy, e.clientX - r.cx) * (180 / Math.PI) + 90;
+        deg = Math.round(deg / 2) * 2;
+        setItems((prev) => prev.map((it) => (it.id === r.id ? { ...it, rotate: deg } : it)));
+      }
+      const rs = resizeRef.current;
+      if (rs) {
+        const z = zoomRef.current;
+        const nw = Math.max(rs.minW, Math.min(1400, rs.origW + (e.clientX - rs.startX) / z));
+        const nh = rs.origH != null ? Math.max(80, Math.min(1200, rs.origH + (e.clientY - rs.startY) / z)) : null;
+        setItems((prev) => prev.map((it) => (it.id === rs.id ? { ...it, w: nw, ...(nh != null ? { h: nh } : {}) } : it)));
+      }
+      const p = panRef.current;
+      if (p && scrollRef.current) {
+        scrollRef.current.scrollLeft = p.left - (e.clientX - p.startX);
+        scrollRef.current.scrollTop = p.top - (e.clientY - p.startY);
+      }
+      if (drawRef.current) {
+        drawRef.current.push(toBoard(e.clientX, e.clientY));
+        setDrawPts([...drawRef.current]);
+      }
+    };
+    const onUp = () => {
+      const d = dragRef.current;
+      const dt = dropRef.current;
+      if (d?.started && dt) {
+        setItems((prev) => {
+          const moving = prev.find((c) => c.id === d.id);
+          if (!moving) return prev;
+          const sibs = prev.filter((c) => c.parent === dt.wall && !c.trashed && c.id !== d.id).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+          sibs.splice(dt.index, 0, moving);
+          const orders = new Map(sibs.map((c, i) => [c.id, i]));
+          return prev.map((c) => (orders.has(c.id) ? { ...c, parent: dt.wall, order: orders.get(c.id), ...(c.id === d.id ? { rotate: 0 } : {}) } : c));
+        });
+      }
+      dropRef.current = null;
+      setDropTarget(null);
+      if (drawRef.current) {
+        const pts = drawRef.current;
+        drawRef.current = null;
+        setDrawPts(null);
+        if (pts.length > 2) {
+          const xs = pts.map((q) => q.x), ys = pts.map((q) => q.y);
+          const minX = Math.min(...xs) - 6, minY = Math.min(...ys) - 6;
+          const w = Math.max(...xs) - minX + 6, h = Math.max(...ys) - minY + 6;
+          setItems((prev) => [...prev, { id: uid("draw"), type: "draw", x: minX, y: minY, w, h, color: "#DEC2A3", points: pts.map((q) => [+(q.x - minX).toFixed(1), +(q.y - minY).toFixed(1)]) }]);
+        }
+      }
+      dragRef.current = null; rotateRef.current = null; resizeRef.current = null; panRef.current = null;
+      setDraggingId(null);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    return () => { window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp); window.removeEventListener("pointercancel", onUp); };
+  }, [toBoard]);
+
+  const onRotateStart = (e, item) => {
+    e.stopPropagation();
+    const el = e.currentTarget.closest("[data-item-id]");
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    rotateRef.current = { id: item.id, cx: rect.left + rect.width / 2, cy: rect.top + rect.height / 2 };
+    setDraggingId(item.id);
+  };
+  const onResizeStart = (e, item, heightToo) => {
+    e.stopPropagation();
+    resizeRef.current = {
+      id: item.id, startX: e.clientX, startY: e.clientY,
+      origW: item.w || rectsRef.current[item.id]?.w || 400,
+      origH: heightToo ? (item.h || rectsRef.current[item.id]?.h || 200) : null,
+      minW: item.type === "wall" ? 320 : 180,
+    };
+    setDraggingId(item.id);
+  };
+
+  /* Fond : se déplacer (glisser) ou dessiner */
+  const onSurfacePointerDown = (e) => {
+    if (e.pointerType === "mouse" && e.button !== 0 && e.button !== 1) return;
+    if (mode === "draw") {
+      e.preventDefault();
+      drawRef.current = [toBoard(e.clientX, e.clientY)];
+      setDrawPts([...drawRef.current]);
+      return;
+    }
+    if (!scrollRef.current) return;
+    setSelectedId(null); setSelectedLine(null); setEditingId(null); setLineFrom(null);
+    panRef.current = { startX: e.clientX, startY: e.clientY, left: scrollRef.current.scrollLeft, top: scrollRef.current.scrollTop };
+  };
+
+  const onWheelZoom = useCallback((e) => {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    e.preventDefault();
+    zoomTo(zoomRef.current - e.deltaY * 0.0015);
+  }, [zoomTo]);
+
+  /* ── Présentation mur par mur ── */
+  const presentWalls = useMemo(() => [...walls].sort((a, b) => a.x - b.x || a.y - b.y), [walls]);
+  const startPresent = () => {
+    setMenu(null);
+    if (!presentWalls.length) { toast("Ajoute au moins un mur pour présenter."); return; }
+    setSelectedId(null); setEditingId(null);
+    setPresentIdx(0);
+    setPresenting(true);
+    try { rootRef.current?.requestFullscreen?.()?.catch?.(() => {}); } catch (_) {}
+  };
+  const stopPresent = useCallback(() => {
+    setPresenting(false);
+    try { if (document.fullscreenElement) document.exitFullscreen?.(); } catch (_) {}
+  }, []);
+  useEffect(() => {
+    const onFs = () => { if (!document.fullscreenElement) setPresenting(false); };
+    document.addEventListener("fullscreenchange", onFs);
+    return () => document.removeEventListener("fullscreenchange", onFs);
+  }, []);
+  useEffect(() => {
+    if (!presenting) return undefined;
+    const w = presentWalls[Math.min(presentIdx, presentWalls.length - 1)];
+    const el = scrollRef.current;
+    const id = setTimeout(() => {
+      const r = rectsRef.current[w?.id];
+      if (!r || !el) return;
+      const z = clampZ(Math.min(1.1, (el.clientHeight - 100) / r.h, (el.clientWidth - 120) / r.w));
+      setZoom(z);
+      requestAnimationFrame(() => {
+        el.scrollLeft = r.x * z - (el.clientWidth - r.w * z) / 2;
+        el.scrollTop = r.y * z - Math.max(30, (el.clientHeight - 70 - r.h * z) / 2);
+      });
+    }, 150);
+    return () => clearTimeout(id);
+  }, [presenting, presentIdx, presentWalls]);
+
+  /* ── Clavier ── */
+  useEffect(() => {
+    const onKey = (e) => {
+      const typing = ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName) || e.target.isContentEditable;
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !typing) { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y" && !typing) { e.preventDefault(); redo(); return; }
+      if (typing) return;
+      if (readOnly && !["Escape", "ArrowLeft", "ArrowRight", " "].includes(e.key)) return;
+      if (e.key === "Escape") {
+        if (presenting) stopPresent();
+        setMode("select"); setLineFrom(null); setSelectedId(null); setSelectedLine(null); setEditingId(null); setMenu(null);
+        return;
+      }
+      if (presenting) {
+        if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); setPresentIdx((i) => Math.min(presentWalls.length - 1, i + 1)); }
+        if (e.key === "ArrowLeft") { e.preventDefault(); setPresentIdx((i) => Math.max(0, i - 1)); }
+        return;
+      }
+      if ((e.key === "Delete" || e.key === "Backspace") && (selectedId || selectedLine)) { e.preventDefault(); trashItem(selectedLine || selectedId); return; }
+      if (e.key === "+" || e.key === "=") { e.preventDefault(); zoomTo(zoomRef.current + 0.1); }
+      if (e.key === "-" || e.key === "_") { e.preventDefault(); zoomTo(zoomRef.current - 0.1); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [undo, redo, selectedId, selectedLine, trashItem, zoomTo, presenting, presentWalls.length, stopPresent, readOnly]);
+
+  /* ── Export PNG / PDF (cadré sur le contenu) ── */
+  const handleExport = async (kind) => {
+    setMenu(null);
+    const vals = Object.values(rectsRef.current);
+    if (!vals.length) { toast("Le board est vide."); return; }
+    setExporting(true);
+    const prevZoom = zoomRef.current;
+    const prevSel = selectedId;
+    setSelectedId(null);
+    try {
+      setZoom(1);
+      await new Promise((r) => setTimeout(r, 300));
+      const box = Object.values(rectsRef.current);
+      const pad = 60;
+      const minX = Math.max(0, Math.min(...box.map((r) => r.x)) - pad);
+      const minY = Math.max(0, Math.min(...box.map((r) => r.y)) - pad);
+      const maxX = Math.min(BOARD_W, Math.max(...box.map((r) => r.x + r.w)) + pad);
+      const maxY = Math.min(BOARD_H, Math.max(...box.map((r) => r.y + r.h)) + pad);
+      const { default: html2canvas } = await import("html2canvas");
+      const bg = getComputedStyle(rootRef.current).getPropertyValue("--sf-canvas").trim() || "#0f1a2b";
+      const scale = Math.min(2, 8000 / Math.max(maxX - minX, maxY - minY));
+      const full = await html2canvas(boardRef.current, { backgroundColor: bg, useCORS: true, scale, logging: false, width: maxX, height: maxY });
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round((maxX - minX) * scale);
+      canvas.height = Math.round((maxY - minY) * scale);
+      canvas.getContext("2d").drawImage(full, minX * scale, minY * scale, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
+      const name = `vision-board-${boardKey}-${new Date().toISOString().slice(0, 10)}`;
+      if (kind === "png") {
+        const link = document.createElement("a");
+        link.download = `${name}.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      } else {
+        const jsPdfMod = await import("jspdf");
+        const JsPDF = jsPdfMod.jsPDF || jsPdfMod.default;
+        const pdf = new JsPDF({ orientation: canvas.width >= canvas.height ? "landscape" : "portrait", unit: "mm", format: "a3" });
+        const pageW = pdf.internal.pageSize.getWidth();
+        const pageH = pdf.internal.pageSize.getHeight();
+        const margin = 10;
+        const ratio = canvas.width / canvas.height;
+        let w = pageW - margin * 2;
+        let h = w / ratio;
+        if (h > pageH - margin * 2) { h = pageH - margin * 2; w = h * ratio; }
+        pdf.setFillColor(bg);
+        pdf.rect(0, 0, pageW, pageH, "F");
+        pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", (pageW - w) / 2, (pageH - h) / 2, w, h, undefined, "FAST");
+        pdf.save(`${name}.pdf`);
+      }
+      toast.success(`${kind.toUpperCase()} ✓`);
+    } catch {
+      toast.error(t("common.unavailable"));
+    } finally {
+      setZoom(prevZoom);
+      setSelectedId(prevSel);
+      setExporting(false);
+    }
+  };
+
+  /* ── Images ── */
   const doUnsplash = async (q) => {
     if (!q.trim()) return;
     setUnsplash((u) => ({ ...u, loading: true }));
     try { const { images } = await searchUnsplash(q, 9); setUnsplash({ q, results: images || [], loading: false }); }
     catch { setUnsplash((u) => ({ ...u, loading: false })); toast.error(t("vision.unsplash.unavailable")); }
+  };
+  const addImageFromUrl = (url) => {
+    if (!url?.trim()) return;
+    setMenu(null);
+    addItem({ type: "image", w: 420, h: 300, image: url.trim(), title: { fr: "", en: "" } });
   };
 
   const jumpToMiniMap = (e) => {
@@ -516,216 +967,590 @@ export function VisionCanvas() {
     el.scrollTop = ((e.clientY - rect.top) / rect.height) * BOARD_H * zoom - viewport.h / 2;
   };
 
-  const handleExport = async (kind) => {
-    setExporting(true);
-    try {
-      const { default: html2canvas } = await import("html2canvas");
-      const canvas = await html2canvas(canvasRef.current, { backgroundColor: "#0B1F3A", useCORS: true, scale: 2, logging: false });
-      if (kind === "png") {
-        const link = document.createElement("a");
-        link.download = `vision-board-${boardKey}-${new Date().toISOString().slice(0, 10)}.png`;
-        link.href = canvas.toDataURL("image/png");
-        link.click();
-      } else {
-        const jsPdfMod = await import("jspdf");
-        const JsPDF = jsPdfMod.jsPDF || jsPdfMod.default;
-        const pdf = new JsPDF({ orientation: "landscape", unit: "mm", format: "a3" });
-        const pageW = 420, pageH = 297, margin = 12;
-        const ratio = canvas.width / canvas.height;
-        let w = pageW - margin * 2, h = w / ratio;
-        if (h > pageH - margin * 2) { h = pageH - margin * 2; w = h * ratio; }
-        pdf.setFillColor(11, 31, 58);
-        pdf.rect(0, 0, pageW, pageH, "F");
-        pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", (pageW - w) / 2, (pageH - h) / 2, w, h, undefined, "FAST");
-        pdf.save(`vision-board-${boardKey}-${new Date().toISOString().slice(0, 10)}.pdf`);
+  const openLiveModule = (source) => {
+    const s = LIVE_SOURCES.find((x) => x.id === source);
+    if (s) navigate(s.route);
+  };
+
+  /* ───────────────────────── Contenu d'une carte ───────────────────────── */
+
+  const renderBody = (card, inWall) => {
+    const isEditing = !readOnly && editingId === card.id;
+    const done = () => setEditingId(null);
+    const patch = readOnly ? () => {} : (p) => patchCard(card.id, p);
+    switch (card.type) {
+      case "note":
+        return <NoteCard card={card} lang={lang} editing={isEditing} onPatch={patch} onDone={done} />;
+      case "table":
+        return <TableCard card={card} editing={isEditing} onPatch={patch} onDone={done} />;
+      case "video":
+        return <VideoCard card={card} editing={isEditing} onPatch={patch} onDone={done} />;
+      case "live":
+        return <LiveCard card={card} live={live} onOpen={openLiveModule} />;
+      case "heading":
+        return isEditing ? (
+          <input autoFocus defaultValue={card.text} onPointerDown={(e) => e.stopPropagation()}
+            onBlur={(e) => { patch({ text: e.target.value }); done(); }} onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+            className="sf-input sf-heading" />
+        ) : <p className="sf-heading">{headingText(card.text, prenom)}</p>;
+      case "draw": {
+        const d = (card.points || []).map((p, i) => `${i ? "L" : "M"}${p[0]},${p[1]}`).join(" ");
+        return (
+          <svg width={card.w} height={card.h} className="block overflow-visible">
+            <path d={d} fill="none" stroke={card.color || "#DEC2A3"} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        );
       }
-      toast.success(`${kind.toUpperCase()} ✓`);
-    } catch {
-      toast.error(t("common.unavailable"));
-    } finally {
-      setExporting(false);
+      case "sticky": {
+        const c = stickyOf(card.stickyColor || "cream");
+        const isHand = card.style === "handwritten";
+        return (
+          <div className="paper-note relative" style={{ background: c.bg, minHeight: inWall ? undefined : card.h, padding: 18, borderRadius: inWall ? 18 : undefined }}>
+            {!inWall && <span className="push-pin" />}
+            <div className="mb-2 text-[12px] font-bold tracking-[0.12em]" style={{ color: c.label }}>{card.label || "MA NOTE"}</div>
+            {isEditing ? (
+              <textarea autoFocus defaultValue={tv(card.body, lang)} rows={4} onPointerDown={(e) => e.stopPropagation()}
+                onBlur={(e) => { editBody(card.id, e.target.value); done(); }}
+                className={`w-full resize-none bg-transparent outline-none ${isHand ? "font-hand text-[26px] leading-tight" : "text-[16px] leading-relaxed"}`} style={{ color: c.text }} />
+            ) : (
+              <p className={`whitespace-pre-line ${isHand ? "font-hand text-[26px] leading-tight" : "text-[16px] leading-relaxed"}`} style={{ color: c.text }}>{tv(card.body, lang)}</p>
+            )}
+          </div>
+        );
+      }
+      case "polaroid": {
+        const frame = card.stickyColor ? stickyOf(card.stickyColor).bg : "#fafafa";
+        return (
+          <div className="polaroid-frame relative" style={{ height: inWall ? undefined : card.h, background: frame, borderRadius: inWall ? 18 : undefined }}>
+            {!inWall && <span className="push-pin red" />}
+            <img src={card.image} alt={card.caption || ""} draggable={false} className="w-full rounded-sm object-cover" style={{ height: inWall ? 260 : (card.h || 240) - (card.caption ? 54 : 26) }} />
+            {card.caption ? (
+              <div className="pt-2 text-center">
+                {isEditing ? (
+                  <input autoFocus defaultValue={card.caption} onPointerDown={(e) => e.stopPropagation()}
+                    onBlur={(e) => { patch({ caption: e.target.value }); done(); }}
+                    className="w-full bg-transparent text-center font-serif-italic text-[26px] leading-none text-navy-900 outline-none" />
+                ) : <span className="font-serif-italic text-[26px] leading-none text-navy-900">{card.caption}</span>}
+              </div>
+            ) : <div className="h-[24px]" />}
+            <Heart size={16} className="absolute bottom-3 right-3 fill-pink-500 text-pink-500" />
+          </div>
+        );
+      }
+      case "kpi": {
+        const c = stickyOf(card.stickyColor || "green");
+        const kLines = tv(card.body, lang).split("\n").filter(Boolean);
+        return (
+          <div className="paper-note relative" style={{ background: c.bg, minHeight: inWall ? 200 : card.h, padding: "18px 20px", borderRadius: inWall ? 18 : undefined }}>
+            <div className="mb-2 text-[12px] font-bold tracking-[0.12em]" style={{ color: c.label }}>{card.label || "KPI"}</div>
+            {isEditing ? (
+              <textarea autoFocus defaultValue={tv(card.body, lang)} rows={4} onPointerDown={(e) => e.stopPropagation()}
+                onBlur={(e) => { editBody(card.id, e.target.value); done(); }} className="w-full resize-none bg-transparent text-[15px] leading-snug outline-none" style={{ color: c.text }} />
+            ) : (
+              <ul className="mb-9 space-y-1">
+                {kLines.map((line, k) => (
+                  <li key={k} className="flex gap-2 text-[15px] leading-snug" style={{ color: c.text }}><span style={{ color: c.label }}>•</span><span>{line.replace(/^[•\-*]\s*/, "")}</span></li>
+                ))}
+              </ul>
+            )}
+            <div className="absolute bottom-3 left-4 right-4">
+              <div className="h-1.5 overflow-hidden rounded-full bg-white/50"><span className="block h-full" style={{ width: `${card.progress || 60}%`, background: c.label }} /></div>
+              <div className="mt-0.5 text-right text-[12px] font-semibold" style={{ color: c.label }}>{card.progress || 60}%</div>
+            </div>
+          </div>
+        );
+      }
+      case "image":
+        return (
+          <div className="sf-card relative overflow-hidden" style={{ padding: 12 }}>
+            <img src={card.image} alt="" draggable={false} className="w-full rounded-[14px] object-cover" style={{ height: inWall ? 260 : Math.max(120, (card.h || 300) - (tv(card.title, lang) ? 60 : 24)) }} />
+            {tv(card.title, lang) && <p className="sf-title px-1 pt-3">{tv(card.title, lang)}</p>}
+            {isEditing && (
+              <div className="absolute inset-0 flex flex-col justify-start gap-2 overflow-y-auto bg-black/85 p-4" onPointerDown={(e) => e.stopPropagation()} onWheel={(e) => e.stopPropagation()}>
+                <div className="flex items-center gap-2">
+                  <input placeholder={t("vision.unsplash.search")} data-testid="vision-unsplash-query" onKeyDown={(e) => e.key === "Enter" && doUnsplash(e.target.value)} className="sf-field" />
+                  {unsplash.loading && <Loader2 size={15} className="animate-spin text-white" />}
+                </div>
+                {unsplash.results.length > 0 && (
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {unsplash.results.map((im) => (
+                      <button key={im.thumb} onClick={() => editImage(card.id, im.url)} data-testid="vision-unsplash-pick" className="overflow-hidden rounded-lg border border-white/10 hover:border-[var(--sf-accent)]">
+                        <img src={im.thumb} alt={im.alt} className="h-16 w-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <AiImageRow onPick={(url) => editImage(card.id, url)} />
+                <p className="sf-small" style={{ fontSize: 12 }}>{t("vision.unsplash.orUrl")}</p>
+                <input defaultValue={card.image} placeholder="https://…" onKeyDown={(e) => e.key === "Enter" && editImage(card.id, e.target.value)}
+                  onBlur={(e) => e.target.value !== card.image && editImage(card.id, e.target.value)} className="sf-field" />
+                <input defaultValue={tv(card.title, lang)} placeholder="Légende (optionnel)" onBlur={(e) => patch({ title: { fr: e.target.value, en: e.target.value } })} className="sf-field" />
+                <button onClick={done} className="sf-btn sf-btn-primary self-end">Terminé</button>
+              </div>
+            )}
+          </div>
+        );
+      case "color":
+        return (
+          <div className="sf-card">
+            <p className="sf-title mb-3">{tv(card.title, lang)}</p>
+            <div className="flex gap-2">{(card.colors || []).map((col) => <span key={col} className="h-12 flex-1 rounded-xl" style={{ background: col }} />)}</div>
+          </div>
+        );
+      case "ai-doc":
+        return (
+          <div className="sf-card flex flex-col overflow-hidden" style={{ padding: 0, height: inWall ? 420 : card.h }}>
+            <div className="flex items-center gap-3 border-b px-5 py-4" style={{ borderColor: "var(--sf-line)" }}>
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ background: `${card.color || "#DEC2A3"}22`, color: card.color || "#DEC2A3" }}><FileText size={17} /></span>
+              <div className="min-w-0 flex-1">
+                <p className="sf-title truncate">{tv(card.title, lang)}</p>
+                <p className="sf-small" style={{ fontSize: 12 }}>IA · {t(`vision.aiDoc.${AI_DOC_KEYS[card.docType] || "t1"}`)}</p>
+              </div>
+            </div>
+            <div className="sf-scroll min-h-0 flex-1 overflow-y-auto px-5 py-4" onPointerDown={(e) => { if (isEditing) e.stopPropagation(); }} onWheel={(e) => e.stopPropagation()}>
+              {isEditing ? (
+                <textarea autoFocus defaultValue={tv(card.body, lang)} onPointerDown={(e) => e.stopPropagation()} onBlur={(e) => { editBody(card.id, e.target.value); done(); }} className="sf-input sf-text h-full" />
+              ) : <p className="sf-text whitespace-pre-wrap">{tv(card.body, lang)}</p>}
+            </div>
+          </div>
+        );
+      default:
+        return <div className="sf-card sf-small">Élément non pris en charge ({card.type})</div>;
     }
   };
 
-  /* ── Filtre par tag ── */
-  const tagCounts = useMemo(() => {
-    const c = { all: items.length, elan: 0, refuge: 0, none: 0 };
-    items.forEach((it) => {
-      const tags = Array.isArray(it.tags) ? it.tags : [];
-      if (!tags.length) c.none += 1;
-      if (tags.includes("elan")) c.elan += 1;
-      if (tags.includes("refuge")) c.refuge += 1;
-    });
-    return c;
-  }, [items]);
-
-  const isVisible = useCallback((card) => {
-    if (tagFilter === "all") return true;
-    const tags = Array.isArray(card.tags) ? card.tags : [];
-    if (tagFilter === "none") return tags.length === 0;
-    return tags.includes(tagFilter);
-  }, [tagFilter]);
-
-  const visibleItems = useMemo(() => items.filter(isVisible), [items, isVisible]);
-
-  const ctrlBtn = "flex h-8 w-8 items-center justify-center rounded-lg text-offwhite/70 hover:bg-white/10 transition";
-  const ctrlActive = "flex h-8 w-8 items-center justify-center rounded-lg bg-gold/20 text-gold";
-
-  const ADD_ITEMS = [
-    { id: "starter", icon: LayoutTemplate, label: t("vision.tools.templates"), action: openTemplates },
-    { id: "ai", icon: Sparkles, label: t("vision.tools.ai"), action: () => addByTool("ai") },
-    { id: "sticky", icon: Type, label: t("vision.tools.sticky"), action: () => addByTool("sticky") },
-    { id: "polaroid", icon: ImageIcon, label: t("vision.tools.polaroid"), action: () => addByTool("polaroid") },
-    { id: "kpi", icon: ListChecks, label: t("vision.tools.kpi"), action: () => addByTool("kpi") },
-    { id: "note", icon: Type, label: t("vision.tools.note"), action: () => addByTool("text") },
-    { id: "ai-doc", icon: FileText, label: t("vision.tools.aiDoc"), action: () => setAiDocOpen(true) },
-    { id: "image", icon: ImageIcon, label: t("vision.tools.image"), action: () => addByTool("image") },
-    { id: "check", icon: ListChecks, label: t("vision.tools.list"), action: () => addByTool("check") },
-    { id: "link", icon: Link2, label: t("vision.tools.link"), action: () => addByTool("link") },
-    { id: "palette", icon: Palette, label: t("vision.tools.palette"), action: () => addByTool("color") },
-  ];
-
-  return (
-    <div ref={canvasRef} data-testid="vision-canvas-container"
-      className={["relative h-[calc(100dvh-120px)] overflow-hidden bg-[#1F1F1F] md:h-[calc(100dvh-150px)] md:rounded-2xl md:border md:border-white/10", presenting ? "fixed inset-0 z-[80] h-[100dvh] w-[100vw] rounded-none border-0" : ""].join(" ")}>
-      <AiDocModal open={aiDocOpen} onClose={() => setAiDocOpen(false)} onGenerated={handleAiDocGenerated} />
-
-      {/* Rail d'outils gauche (desktop) */}
-      <div className="absolute left-3 top-1/2 z-30 hidden -translate-y-1/2 flex-col gap-1 rounded-2xl border border-white/10 bg-navy-800/90 p-1.5 shadow-lg backdrop-blur md:flex">
-        <button onClick={addWall} title="Ajouter un mur" data-testid="vision-tool-wall"
-          className="flex h-11 w-11 flex-col items-center justify-center rounded-xl text-offwhite/60 transition hover:bg-gold/15 hover:text-gold">
-          <Columns3 size={17} /><span className="mt-0.5 text-[8px] font-medium">Mur</span>
-        </button>
-        <button onClick={() => { setConnectMode((v) => !v); setConnectSource(null); }} title="Relier deux cartes" data-testid="vision-tool-line"
-          className={["flex h-11 w-11 flex-col items-center justify-center rounded-xl text-offwhite/60 transition hover:bg-gold/15 hover:text-gold", connectMode ? "bg-gold/20 text-gold" : ""].join(" ")}>
-          <Link2 size={17} /><span className="mt-0.5 text-[8px] font-medium">Ligne</span>
-        </button>
-        <div className="my-1 border-t border-white/10" />
-        {ADD_ITEMS.slice(1).map((it) => {
-          const Icon = it.icon;
-          return (
-            <button key={it.id} onClick={it.action} title={it.label} data-testid={`vision-tool-${it.id}`}
-              className="flex h-11 w-11 flex-col items-center justify-center rounded-xl text-offwhite/60 transition hover:bg-gold/15 hover:text-gold">
-              <Icon size={17} />
-              <span className="mt-0.5 text-[8px] font-medium">{it.label.split(" ")[0]}</span>
-            </button>
-          );
-        })}
-        {/* Capture vocale → carte */}
-        <div className="mt-1 flex flex-col items-center border-t border-white/10 pt-1">
-          <VoiceCapture onTranscribed={handleVoice} />
-          <span className="mt-0.5 text-[8px] font-medium text-offwhite/50">{t("vision.tools.voice").split(" ")[0]}</span>
+  /** Enveloppe commune (fonction, pas composant, pour ne jamais remonter les champs en cours d'édition). */
+  const renderShell = (card, inWall) => {
+    const isDragging = draggingId === card.id;
+    const isEditing = editingId === card.id;
+    const isSelected = selectedId === card.id || lineFrom === card.id;
+    const free = !inWall;
+    const rot = free && ["sticky", "polaroid"].includes(card.type) ? card.rotate || 0 : 0;
+    const canEdit = !readOnly && EDITABLE.has(card.type);
+    const pos = free
+      ? { position: "absolute", left: card.x, top: card.y, width: card.w || 420, zIndex: isDragging ? 50 : styleMenuId === card.id || isEditing ? 40 : card.type === "draw" ? 3 : 4, transform: `rotate(${rot}deg)${isDragging ? " scale(1.02)" : ""}` }
+      : { position: "relative" };
+    return (
+      <div key={card.id} data-item-id={card.id} data-selected={isSelected ? "true" : "false"}
+        onPointerDown={(e) => onPointerDownItem(e, card)}
+        onDoubleClick={(e) => { e.stopPropagation(); if (canEdit) setEditingId(card.id); }}
+        data-testid={`vision-card-${card.id}`}
+        className="sf-item group select-none"
+        style={{ ...pos, touchAction: isSmall || readOnly ? "auto" : "none", cursor: readOnly || isSmall ? "default" : mode === "line" ? "crosshair" : mode !== "select" ? "inherit" : isEditing ? "default" : "grab", filter: isDragging ? "drop-shadow(0 18px 30px rgba(0,0,0,.45))" : undefined }}>
+        <div style={isSelected && !isEditing ? { borderRadius: 24, boxShadow: "0 0 0 2px var(--sf-accent)" } : undefined}>
+          {renderBody(card, inWall)}
         </div>
-      </div>
-
-      {/* Statut + boards + compte à rebours */}
-      <div className="absolute left-3 top-3 z-30 hidden flex-wrap items-center gap-2 md:flex">
-        <div data-testid="vision-save-status" className="flex items-center gap-1.5 rounded-full border border-white/10 bg-navy-800/90 px-3 py-1.5 text-xs shadow-lg">
-          {saving ? (<><Loader2 size={12} className="animate-spin text-gold" /> <span className="text-offwhite/60">{t("common.saving")}</span></>)
-            : saveError ? (<><AlertTriangle size={12} className="text-alert" /> <span className="text-alert">{t("common.saveError")}</span></>)
-            : (<><Check size={12} className="text-emerald-400" /> <span className="text-offwhite/60">{t("common.saved")}</span></>)}
-        </div>
-        <GoalCountdown variant="strip" />
-      </div>
-
-      {/* Contrôles haut-droite */}
-      <div className="absolute right-3 top-3 z-30 flex flex-wrap items-center justify-end gap-1 rounded-xl border border-white/10 bg-navy-800/90 p-1 shadow-lg backdrop-blur">
-        <BoardSwitcher current={boardKey} onSwitch={switchBoard} />
-        <span className="mx-1 h-5 w-px bg-white/10" />
-        <button onClick={() => setMode("select")} title={t("vision.select")} data-testid="vision-tool-select" className={mode === "select" ? ctrlActive : ctrlBtn}><MousePointer2 size={15} /></button>
-        <button onClick={() => setMode("hand")} title={t("vision.pan")} data-testid="vision-tool-hand" className={mode === "hand" ? ctrlActive : ctrlBtn}><Hand size={15} /></button>
-        <button onClick={() => setConnectMode((v) => !v)} title="Relier deux cartes" data-testid="vision-tool-line-top" className={connectMode ? ctrlActive : ctrlBtn}><Link2 size={15} /></button>
-        <span className="mx-1 h-5 w-px bg-white/10" />
-        <button onClick={() => setZoom((z) => Math.max(0.4, +(z - 0.1).toFixed(2)))} title={t("vision.zoomOut")} data-testid="vision-zoom-out" className={ctrlBtn}><Minus size={15} /></button>
-        <span className="w-10 text-center text-xs font-semibold text-offwhite" data-testid="vision-zoom-value">{Math.round(zoom * 100)}%</span>
-        <button onClick={() => setZoom((z) => Math.min(1.6, +(z + 0.1).toFixed(2)))} title={t("vision.zoomIn")} data-testid="vision-zoom-in" className={ctrlBtn}><Plus size={15} /></button>
-        <span className="mx-1 h-5 w-px bg-white/10" />
-        <button onClick={handleInspire} title={t("vision.quoteAi")} data-testid="vision-inspire" className={ctrlBtn}><Quote size={15} /></button>
-        <button onClick={() => { setPresenting((v) => !v); setConnectMode(false); setConnectSource(null); }} title="Présenter" data-testid="vision-present" className={presenting ? ctrlActive : ctrlBtn}><Presentation size={15} /></button>
-        <button onClick={() => navigator.clipboard?.writeText(window.location.href).then(() => toast.success("Lien du board copié"))} title="Partager" data-testid="vision-share" className={ctrlBtn}><Share2 size={15} /></button>
-        <button onClick={() => handleExport("png")} disabled={exporting} title={t("vision.exportPng")} data-testid="vision-export-png" className={ctrlBtn}>{exporting ? <Loader2 size={15} className="animate-spin" /> : <ImageIcon size={15} />}</button>
-        <button onClick={() => handleExport("pdf")} disabled={exporting} title={t("vision.exportPdf")} data-testid="vision-export-pdf" className={ctrlBtn}><FileDown size={15} /></button>
-      </div>
-
-      {/* Filtre tags Élan / Refuge */}
-      <div className="absolute left-1/2 top-3 z-30 hidden -translate-x-1/2 lg:block">
-        <TagFilterBar value={tagFilter} onChange={setTagFilter} counts={tagCounts} />
-      </div>
-
-      {/* Commandes mobiles : même logique que la rail desktop, accessible au pouce. */}
-      <div className="absolute bottom-[4.75rem] left-1/2 z-30 flex -translate-x-1/2 items-center gap-1 rounded-2xl border border-white/10 bg-navy-800/95 p-1 shadow-xl backdrop-blur md:hidden" data-testid="vision-mobile-toolbar">
-        <button onClick={addWall} title="Ajouter un mur" data-testid="vision-mobile-wall" className="flex h-9 w-9 items-center justify-center rounded-xl text-offwhite/70 hover:bg-white/10 hover:text-gold"><Columns3 size={16} /></button>
-        <button onClick={() => { setConnectMode((v) => !v); setConnectSource(null); }} title="Relier deux cartes" data-testid="vision-mobile-line" className={["flex h-9 w-9 items-center justify-center rounded-xl text-offwhite/70 hover:bg-white/10 hover:text-gold", connectMode ? "bg-gold/20 text-gold" : ""].join(" ")}><Link2 size={16} /></button>
-        <button onClick={() => setMode("select")} title="Sélection" className={mode === "select" ? ctrlActive : ctrlBtn}><MousePointer2 size={16} /></button>
-        <button onClick={() => setMode("hand")} title="Déplacer la vue" className={mode === "hand" ? ctrlActive : ctrlBtn}><Hand size={16} /></button>
-        <button onClick={() => setZoom((z) => Math.max(0.4, +(z - 0.1).toFixed(2)))} title="Zoom arrière" className={ctrlBtn}><Minus size={16} /></button>
-        <span className="w-9 text-center text-[10px] font-semibold text-offwhite">{Math.round(zoom * 100)}%</span>
-        <button onClick={() => setZoom((z) => Math.min(1.6, +(z + 0.1).toFixed(2)))} title="Zoom avant" className={ctrlBtn}><Plus size={16} /></button>
-      </div>
-
-      {/* Barre de prompt bas */}
-      <div className="absolute bottom-4 left-1/2 z-30 w-[min(94vw,680px)] -translate-x-1/2" data-testid="vision-prompt-bar">
-        <div className="flex items-center gap-2 rounded-full border border-white/10 bg-navy-800/95 px-2 py-1.5 shadow-xl backdrop-blur">
-          <button onClick={() => setAddMenuOpen((v) => !v)} title={t("common.add")} data-testid="vision-prompt-add"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gold/20 text-gold transition hover:bg-gold hover:text-navy-900"><Plus size={16} /></button>
-          <input value={prompt} onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleGenerateBoard(); } }}
-            placeholder={t("vision.promptPlaceholder")}
-            data-testid="vision-prompt-input"
-            className="flex-1 bg-transparent px-2 text-sm text-offwhite outline-none placeholder:text-offwhite/40" />
-          <VoiceCapture onTranscribed={handleVoice} compact />
-          <button onClick={handleGenerateBoard} disabled={!prompt.trim() || generating} data-testid="vision-prompt-submit"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-navy-900 text-offwhite transition hover:opacity-90 disabled:opacity-40">
-            {generating ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-          </button>
-        </div>
-        {addMenuOpen && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => setAddMenuOpen(false)} />
-            <div className="absolute bottom-full left-0 z-50 mb-2 grid w-64 grid-cols-2 gap-1 rounded-2xl border border-white/10 bg-navy-800 p-1.5 shadow-2xl" data-testid="vision-add-menu">
-              {ADD_ITEMS.map((it) => {
-                const Icon = it.icon;
-                return (
-                  <button key={it.id} onClick={() => { it.action(); setAddMenuOpen(false); }} data-testid={`vision-add-${it.id}`}
-                    className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium text-offwhite transition hover:bg-white/10">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/5 text-gold"><Icon size={13} /></span>
-                    {it.label}
-                  </button>
-                );
-              })}
-              <div className="col-span-2 flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-offwhite/70">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/5 text-gold"><Mic size={13} /></span>
-                <span className="flex-1">{t("vision.tools.voice")}</span>
-                <VoiceCapture onTranscribed={(x) => { handleVoice(x); setAddMenuOpen(false); }} compact />
-              </div>
-            </div>
-          </>
+        {card.tags?.length > 0 && <CardTagBadges tags={card.tags} />}
+        {!presenting && !isEditing && !readOnly && (
+          <div className="sf-handles sf-hide-present">
+            <button onPointerDown={(e) => e.stopPropagation()} onClick={() => trashItem(card.id)} title="Mettre à la corbeille" data-testid={`vision-card-delete-${card.id}`}
+              className="sf-handle absolute -right-3 -top-3 z-40 hover:!text-red-400"><X size={15} /></button>
+            {canEdit && (
+              <button onPointerDown={(e) => e.stopPropagation()} onClick={() => setEditingId(card.id)} title="Modifier" data-testid={`vision-card-edit-${card.id}`}
+                className="sf-handle absolute -top-3 right-7 z-40"><Pencil size={13} /></button>
+            )}
+            {card.type === "live" && (
+              <button onPointerDown={(e) => e.stopPropagation()} onClick={() => { patchCard(card.id, { pinned: !card.pinned }); toast.success(card.pinned ? "Retirée du Cockpit" : "Épinglée sur le Cockpit"); }}
+                title={card.pinned ? "Retirer du Cockpit" : "Épingler au Cockpit"} data-testid={`vision-card-pin-${card.id}`}
+                className="sf-handle absolute -top-3 right-7 z-40" style={card.pinned ? { color: "var(--sf-accent)", display: "flex" } : undefined}>
+                {card.pinned ? <PinOff size={13} /> : <Pin size={13} />}
+              </button>
+            )}
+            {!["live", "draw", "heading"].includes(card.type) && (
+              <button onPointerDown={(e) => e.stopPropagation()} onClick={() => setStyleMenuId((id) => (id === card.id ? null : card.id))}
+                title={t("vision.color.title")} data-testid={`vision-card-palette-${card.id}`} className="sf-handle absolute -left-3 -top-3 z-40"><Palette size={14} /></button>
+            )}
+            {free && ["sticky", "polaroid"].includes(card.type) && (
+              <button onPointerDown={(e) => onRotateStart(e, card)} title={t("vision.rotate")} className="sf-handle absolute -top-11 left-1/2 z-40 -translate-x-1/2"><RefreshCw size={13} /></button>
+            )}
+            {free && card.type !== "draw" && (
+              <button onPointerDown={(e) => onResizeStart(e, card, ["sticky", "polaroid", "kpi", "image", "ai-doc"].includes(card.type))} title={t("vision.resize")}
+                className="sf-handle absolute -bottom-3 -right-3 z-40" style={{ cursor: "nwse-resize" }}><Maximize2 size={13} /></button>
+            )}
+          </div>
+        )}
+        {styleMenuId === card.id && (
+          <CardStyleMenu card={card} onChange={(p) => patchCard(card.id, p)} onClose={() => setStyleMenuId(null)} />
         )}
       </div>
+    );
+  };
 
-      {/* Modèles */}
+  /* ───────────────────────── Mur ───────────────────────── */
+  const renderWall = (w) => {
+    const isDragging = draggingId === w.id;
+    const isEditing = editingId === w.id;
+    const isSelected = selectedId === w.id || lineFrom === w.id;
+    const kids = childrenOf(w.id).filter((k) => k.id !== draggingId);
+    const dt = dropTarget && dropTarget.wall === w.id ? dropTarget : null;
+    const list = [];
+    kids.forEach((k, i) => {
+      if (dt && dt.index === i) list.push(<div key="drop" className="sf-drop-marker" />);
+      list.push(renderShell(k, true));
+    });
+    if (dt && dt.index >= kids.length) list.push(<div key="drop" className="sf-drop-marker" />);
+    return (
+      <div key={w.id} data-item-id={w.id} data-selected={isSelected ? "true" : "false"} data-testid={`vision-wall-${w.id}`}
+        className={`sf-item sf-wall group ${dt ? "sf-wall-drop" : ""}`}
+        onPointerDown={(e) => onPointerDownItem(e, w)}
+        style={isSmall
+          ? { position: "relative", width: "100%", touchAction: "auto" }
+          : { position: "absolute", left: w.x, top: w.y, width: w.w || 500, zIndex: isDragging ? 45 : 1, touchAction: readOnly ? "auto" : "none", cursor: readOnly ? "default" : mode === "line" ? "crosshair" : mode === "select" ? "grab" : "inherit", boxShadow: isSelected && !readOnly ? "0 0 0 2px var(--sf-accent)" : undefined }}>
+        <div className="mb-4 flex items-center gap-3 px-2" onDoubleClick={(e) => { e.stopPropagation(); if (!readOnly) setEditingId(w.id); }}>
+          <span className="sf-wall-bar" style={{ background: w.color || "#94A3B8" }} />
+          {isEditing ? (
+            <input autoFocus defaultValue={w.title} onPointerDown={(e) => e.stopPropagation()} data-testid={`vision-wall-title-${w.id}`}
+              onBlur={(e) => { patchCard(w.id, { title: e.target.value || "Sans titre" }); setEditingId(null); }}
+              onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} className="sf-input sf-wall-title" />
+          ) : (
+            <h3 className="sf-wall-title min-w-0 flex-1 truncate">{wallNumber[w.id]} · {w.title || "Sans titre"}</h3>
+          )}
+        </div>
+        <div className="flex flex-col gap-3">
+          {list}
+          {!kids.length && !dt && !readOnly && <p className="sf-small px-2 py-6 text-center">{isSmall ? "Aucune carte dans ce mur" : "Glisse des cartes ici"}</p>}
+          {!readOnly && <button onPointerDown={(e) => e.stopPropagation()} onClick={() => addByTool("note", { wall: w.id })}
+            className="sf-hide-present flex items-center gap-2 rounded-2xl px-4 py-3 text-left text-[15px] font-medium text-[var(--sf-muted)] transition hover:bg-white/5 hover:text-[var(--sf-text)]"
+            data-testid={`vision-wall-add-${w.id}`}>
+            <Plus size={17} /> Ajouter une note
+          </button>}
+        </div>
+        {!presenting && !readOnly && !isSmall && (
+          <div className="sf-handles sf-hide-present">
+            <button onPointerDown={(e) => e.stopPropagation()} onClick={() => trashItem(w.id)} title="Mettre le mur à la corbeille" data-testid={`vision-wall-delete-${w.id}`}
+              className="sf-handle absolute -right-3 -top-3 z-40 hover:!text-red-400"><X size={15} /></button>
+            <button onPointerDown={(e) => e.stopPropagation()} onClick={() => setWallColorId((id) => (id === w.id ? null : w.id))} title="Couleur du mur"
+              className="sf-handle absolute -left-3 -top-3 z-40"><Palette size={14} /></button>
+            <button onPointerDown={(e) => onResizeStart(e, w, false)} title="Largeur" className="sf-handle absolute -right-3 top-1/2 z-40 -translate-y-1/2" style={{ cursor: "ew-resize" }}><Maximize2 size={13} /></button>
+          </div>
+        )}
+        {wallColorId === w.id && (
+          <Popover open onClose={() => setWallColorId(null)} className="left-0 top-12 flex gap-1.5 p-2">
+            {WALL_COLORS.map((c) => (
+              <button key={c} onClick={() => { patchCard(w.id, { color: c }); setWallColorId(null); }} className="h-7 w-7 rounded-full border-2" style={{ background: c, borderColor: w.color === c ? "#fff" : "transparent" }} />
+            ))}
+          </Popover>
+        )}
+      </div>
+    );
+  };
+
+  /* ───────────────────────── Lignes ───────────────────────── */
+  const linePath = (a, b) => {
+    const ac = { x: a.x + a.w / 2, y: a.y + a.h / 2 };
+    const bc = { x: b.x + b.w / 2, y: b.y + b.h / 2 };
+    const dx = bc.x - ac.x;
+    const dy = bc.y - ac.y;
+    let p1; let p2; let c1; let c2;
+    if (Math.abs(dx) >= Math.abs(dy)) {
+      const s = Math.sign(dx) || 1;
+      p1 = { x: s > 0 ? a.x + a.w : a.x, y: ac.y };
+      p2 = { x: s > 0 ? b.x : b.x + b.w, y: bc.y };
+      const k = Math.max(40, Math.abs(p2.x - p1.x) / 2);
+      c1 = { x: p1.x + s * k, y: p1.y }; c2 = { x: p2.x - s * k, y: p2.y };
+    } else {
+      const s = Math.sign(dy) || 1;
+      p1 = { x: ac.x, y: s > 0 ? a.y + a.h : a.y };
+      p2 = { x: bc.x, y: s > 0 ? b.y : b.y + b.h };
+      const k = Math.max(40, Math.abs(p2.y - p1.y) / 2);
+      c1 = { x: p1.x, y: p1.y + s * k }; c2 = { x: p2.x, y: p2.y - s * k };
+    }
+    return { d: `M ${p1.x} ${p1.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${p2.x} ${p2.y}`, mid: { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 } };
+  };
+
+  /* ───────────────────────── Barres d'outils ───────────────────────── */
+
+  const RAIL = [
+    { id: "note", icon: Type, label: "Note", action: () => addByTool("note") },
+    { id: "wall", icon: Columns3, label: "Mur", action: () => addByTool("wall") },
+    { id: "line", icon: Spline, label: "Ligne", action: () => { setMode((m) => (m === "line" ? "select" : "line")); setLineFrom(null); }, active: mode === "line" },
+    { id: "all", icon: LayoutGrid, label: "Outils", action: () => setMenu((m) => (m === "all" || m === "live" ? null : "all")), active: menu === "all" || menu === "live" },
+    { sep: true },
+    { id: "draw", icon: PenTool, label: "Dessin", action: () => setMode((m) => (m === "draw" ? "select" : "draw")), active: mode === "draw" },
+    { id: "images", icon: ImageIcon, label: "Images", action: () => setMenu((m) => (m === "images" ? null : "images")), active: menu === "images" },
+    { id: "trash", icon: Trash2, label: "Corbeille", action: () => setMenu((m) => (m === "trash" ? null : "trash")), active: menu === "trash", badge: trashItems.length },
+  ];
+
+  const ALL_TOOLS = [
+    { title: "Contenu" },
+    { id: "heading", icon: Heading1, label: "Titre", action: () => addByTool("heading") },
+    { id: "list", icon: ListChecks, label: "Liste à cocher", action: () => addByTool("list") },
+    { id: "table", icon: Table2, label: "Tableau", action: () => addByTool("table") },
+    { id: "video", icon: Video, label: "Vidéo YouTube", action: () => addByTool("video") },
+    { id: "live", icon: Activity, label: "Carte live (données pro)", action: () => setMenu("live"), accent: true },
+    { title: "Inspiration" },
+    { id: "sticky", icon: StickyNote, label: t("vision.tools.sticky"), action: () => addByTool("sticky") },
+    { id: "polaroid", icon: ImageIcon, label: t("vision.tools.polaroid"), action: () => addByTool("polaroid") },
+    { id: "kpi", icon: ListChecks, label: t("vision.tools.kpi"), action: () => addByTool("kpi") },
+    { id: "palette", icon: Palette, label: t("vision.tools.palette"), action: () => addByTool("color") },
+    { id: "quote", icon: Quote, label: t("vision.quoteAi"), action: handleInspire },
+    { title: "IA & modèles" },
+    { id: "ai-doc", icon: FileText, label: t("vision.tools.aiDoc"), action: () => { setMenu(null); setAiDocOpen(true); } },
+    { id: "cockpit", icon: LayoutGrid, label: "Modèle « Cockpit Vision A → Z »", action: () => addByTool("cockpit"), accent: true },
+    { id: "starter", icon: LayoutTemplate, label: t("vision.tools.templates"), action: openTemplates },
+  ];
+
+  const zoomPct = Math.round(zoom * 100);
+  const modeHint = mode === "line" ? (lineFrom ? "Clique sur la 2ᵉ carte à relier · Échap pour annuler" : "Clique sur la 1ʳᵉ carte (ou le mur) à relier")
+    : mode === "draw" ? "Dessine librement sur le board · Échap pour quitter" : null;
+
+  const menuList = (list) => list.map((it, i) => (it.title ? (
+    <p key={`t${i}`} className="sf-menu-title">{it.title}</p>
+  ) : (
+    <button key={it.id} onClick={it.action} className="sf-menu-item" data-testid={`vision-tool-${it.id}`}>
+      <span className="sf-mi-ico" style={it.accent ? { background: "rgba(222,194,163,0.18)" } : undefined}><it.icon size={15} /></span>
+      <span className="flex-1">{it.label}</span>
+      {it.id === "live" && <ChevronRight size={14} className="opacity-60" />}
+    </button>
+  )));
+
+  const trashPanel = (
+    <>
+      <div className="flex items-center justify-between px-2 pb-1 pt-1">
+        <p className="sf-menu-title" style={{ padding: 0 }}>Corbeille · {trashItems.length}</p>
+        {trashItems.length > 0 && <button onClick={emptyTrash} className="sf-btn" style={{ height: 28, fontSize: 12 }}>Vider</button>}
+      </div>
+      {!trashItems.length && <p className="sf-small px-2 py-4" style={{ fontSize: 13 }}>La corbeille est vide.</p>}
+      <div className="sf-scroll max-h-[300px] overflow-y-auto">
+        {[...trashItems].sort((a, b) => (b.trashedAt || 0) - (a.trashedAt || 0)).map((it) => (
+          <div key={it.id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white/5">
+            <span className="min-w-0 flex-1 truncate text-[13px]">{itemName(it, lang)}</span>
+            <button onClick={() => restoreItem(it.id)} className="sf-btn" style={{ height: 26, minWidth: 26, padding: 0 }} title="Restaurer"><RotateCcw size={13} /></button>
+            <button onClick={() => purgeItem(it.id)} className="sf-btn hover:!text-red-400" style={{ height: 26, minWidth: 26, padding: 0 }} title="Supprimer définitivement"><X size={13} /></button>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+
+  const livePanel = (
+    <>
+      <div className="flex items-center gap-2 px-1 pb-1">
+        <button onClick={() => setMenu("all")} className="sf-btn" style={{ height: 28, minWidth: 28, padding: 0 }}><ChevronLeft size={15} /></button>
+        <p className="sf-menu-title" style={{ padding: 0 }}>Reliées à tes données</p>
+      </div>
+      {LIVE_SOURCES.map((s) => (
+        <button key={s.id} onClick={() => addLive(s.id)} className="sf-menu-item" data-testid={`vision-live-${s.id}`}>
+          <span className="h-2 w-2 rounded-full bg-emerald-400" /> <span className="flex-1">{s.label}</span>
+        </button>
+      ))}
+      <p className="sf-small px-2.5 pb-1 pt-2" style={{ fontSize: 12, lineHeight: 1.4 }}>Astuce : sélectionne un mur avant d'ajouter une carte pour la poser dedans.</p>
+    </>
+  );
+
+  /* ───────────────────────── Rendu ───────────────────────── */
+
+  const liveEmpty = live.data && !live.loading && Object.keys(live.data).length > 0
+    && !live.data.state?.vision?.texte && !(Array.isArray(live.data.objectifs) && live.data.objectifs.length) && !(live.data.taches?.items || []).length;
+  const showOnboard = !readOnly && loaded && liveEmpty && !onboardHidden;
+  const toggleMinimap = () => setShowMinimap((v) => { try { localStorage.setItem(MINIMAP_KEY, v ? "0" : "1"); } catch (_) {} return !v; });
+  const hideOnboard = () => { setOnboardHidden(true); try { localStorage.setItem(ONBOARD_KEY, "1"); } catch (_) {} };
+
+  /* Vue mobile : un mur par écran (+ « Libre » pour les cartes hors murs) */
+  const mobileCols = [...presentWalls];
+  const looseCards = freeItems.filter((c) => !["draw"].includes(c.type));
+  const headingCard = looseCards.find((c) => c.type === "heading");
+  const looseOthers = looseCards.filter((c) => c.type !== "heading");
+  const mobilePages = [...mobileCols.map((w) => ({ key: w.id, label: w.title || "Mur", wall: w })), ...(looseOthers.length ? [{ key: "_libre", label: "Libre", wall: null }] : [])];
+  const mobileRef = useRef(null);
+  const goMobile = (i) => {
+    const el = mobileRef.current;
+    if (!el) return;
+    el.scrollTo({ left: i * el.clientWidth, behavior: "smooth" });
+  };
+  const currentMobileWallId = mobilePages[mobileWall]?.wall?.id || null;
+
+  return (
+    <div ref={rootRef} data-testid="vision-canvas-container"
+      className={`sf relative overflow-hidden ${presenting ? "sf-present fixed inset-0 z-[80] h-[100dvh] w-screen" : readOnly ? "h-full" : "h-[calc(100dvh-120px)] md:h-[calc(100dvh-150px)] md:rounded-2xl md:border md:border-white/10"}`}>
+      {!readOnly && <AiDocModal open={aiDocOpen} onClose={() => setAiDocOpen(false)} onGenerated={handleAiDocGenerated} />}
+      {shareOpen && <ShareDialog board={boardKey} onClose={() => setShareOpen(false)} />}
+
+      {/* ── Rail d'outils (gauche, ordinateur) ── */}
+      {!readOnly && !isSmall && (
+        <div className="sf-hide-present sf-chrome absolute left-3 top-1/2 z-30 flex -translate-y-1/2 flex-col items-center gap-0.5 rounded-[18px] p-1.5" data-testid="vision-rail">
+          {RAIL.map((it, i) => (it.sep ? <span key={`s${i}`} className="my-1.5 h-px w-10" style={{ background: "var(--sf-line)" }} /> : (
+            <button key={it.id} onClick={it.action} className="sf-tool relative" data-active={it.active ? "true" : "false"} data-testid={`vision-rail-${it.id}`} title={it.label}>
+              <span className="sf-tool-ico"><it.icon size={17} /></span>
+              {it.label}
+              {it.badge > 0 && <span className="absolute right-1.5 top-1 rounded-full px-1.5 text-[10px] font-semibold" style={{ background: "var(--sf-accent)", color: "#0b1f3a" }}>{it.badge}</span>}
+            </button>
+          )))}
+          <span className="my-1.5 h-px w-10" style={{ background: "var(--sf-line)" }} />
+          <div className="flex flex-col items-center pb-1"><VoiceCapture onTranscribed={handleVoice} /><span className="mt-1 text-[11.5px] font-medium" style={{ color: "var(--sf-text-2)" }}>Vocal</span></div>
+
+          <Popover open={menu === "all"} onClose={() => setMenu(null)} className="left-full top-0 ml-3 max-h-[70vh] w-[290px] overflow-y-auto" testid="vision-all-tools">
+            {menuList(ALL_TOOLS)}
+            <p className="sf-menu-title">Filtrer Élan / Refuge</p>
+            <div className="px-1.5 pb-1.5"><TagFilterBar value={tagFilter} onChange={setTagFilter} counts={tagCounts} /></div>
+          </Popover>
+          <Popover open={menu === "live"} onClose={() => setMenu(null)} className="left-full top-0 ml-3 max-h-[70vh] w-[300px] overflow-y-auto" testid="vision-live-menu">{livePanel}</Popover>
+          <Popover open={menu === "images"} onClose={() => setMenu(null)} className="bottom-0 left-full ml-3 w-[330px] p-3" testid="vision-images-menu">
+            <p className="sf-menu-title" style={{ padding: "0 0 8px" }}>Images</p>
+            <div className="flex items-center gap-2">
+              <input autoFocus placeholder={t("vision.unsplash.search")} onKeyDown={(e) => e.key === "Enter" && doUnsplash(e.target.value)} className="sf-field" />
+              {unsplash.loading && <Loader2 size={15} className="animate-spin" />}
+            </div>
+            {unsplash.results.length > 0 && (
+              <div className="mt-2 grid grid-cols-3 gap-1.5">
+                {unsplash.results.map((im) => (
+                  <button key={im.thumb} onClick={() => addImageFromUrl(im.url)} className="overflow-hidden rounded-lg border border-transparent hover:border-[var(--sf-accent)]">
+                    <img src={im.thumb} alt={im.alt} className="h-16 w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="mt-3"><AiImageRow onPick={addImageFromUrl} /></div>
+            <input placeholder="…ou colle l'URL d'une image" onKeyDown={(e) => e.key === "Enter" && addImageFromUrl(e.target.value)} className="sf-field mt-3" />
+          </Popover>
+          <Popover open={menu === "trash"} onClose={() => setMenu(null)} className="bottom-0 left-full ml-3 w-[330px] p-2" testid="vision-trash">{trashPanel}</Popover>
+        </div>
+      )}
+
+      {/* ── Barre unique (haut droite) : statut · board · modes · zoom · annuler · carte · exporter · partager · présenter ── */}
+      <div className="sf-hide-present absolute right-3 top-3 z-30 flex max-w-[calc(100%-24px)] flex-wrap items-center justify-end gap-2">
+        {readOnly && (
+          <span className="sf-chrome flex h-9 items-center gap-2 rounded-xl px-3 text-[13px]" style={{ color: "var(--sf-text-2)" }}>Lecture seule</span>
+        )}
+        <div className="sf-chrome flex items-center gap-0.5 rounded-xl p-1" data-testid="vision-topbar">
+          {!readOnly && (
+            <span data-testid="vision-save-status" title={saving ? t("common.saving") : saveError ? t("common.saveError") : t("common.saved")}
+              className="flex h-8 items-center gap-1.5 px-2 text-[13px]">
+              {saving ? <Loader2 size={14} className="animate-spin" style={{ color: "var(--sf-accent)" }} />
+                : saveError ? <><AlertTriangle size={14} className="text-red-400" /><span className="text-red-400">{t("common.saveError")}</span></>
+                : <Check size={14} className="text-emerald-400" />}
+            </span>
+          )}
+          {!readOnly && <><span className="mx-0.5 h-5 w-px" style={{ background: "var(--sf-line)" }} /><BoardSwitcher current={boardKey} onSwitch={switchBoard} /></>}
+          {!readOnly && !isSmall && (
+            <>
+              <span className="mx-1 h-5 w-px" style={{ background: "var(--sf-line)" }} />
+              <button onClick={() => setMode("select")} title={t("vision.select")} data-testid="vision-tool-select" className="sf-btn" data-active={mode === "select" ? "true" : "false"}><MousePointer2 size={15} /></button>
+              <button onClick={() => setMode("hand")} title={t("vision.pan")} data-testid="vision-tool-hand" className="sf-btn" data-active={mode === "hand" ? "true" : "false"}><Hand size={15} /></button>
+            </>
+          )}
+          {!isSmall && (
+            <>
+              <span className="mx-1 h-5 w-px" style={{ background: "var(--sf-line)" }} />
+              <button onClick={() => zoomTo(zoom - 0.1)} title={t("vision.zoomOut")} data-testid="vision-zoom-out" className="sf-btn"><Minus size={15} /></button>
+              <button onClick={() => { needScrollRef.current = true; setRects((r) => ({ ...r })); }} className="sf-btn sf-num w-12 text-[12px]" title="Ajuster à l'écran" data-testid="vision-zoom-value">{zoomPct}%</button>
+              <button onClick={() => zoomTo(zoom + 0.1)} title={t("vision.zoomIn")} data-testid="vision-zoom-in" className="sf-btn"><Plus size={15} /></button>
+            </>
+          )}
+          {!readOnly && (
+            <>
+              <span className="mx-1 h-5 w-px" style={{ background: "var(--sf-line)" }} />
+              <button onClick={undo} disabled={!canUndo} title="Annuler (Ctrl+Z)" data-testid="vision-undo" className="sf-btn"><Undo2 size={15} /></button>
+              <button onClick={redo} disabled={!canRedo} title="Rétablir (Ctrl+Maj+Z)" data-testid="vision-redo" className="sf-btn"><Redo2 size={15} /></button>
+            </>
+          )}
+          {!isSmall && <button onClick={toggleMinimap} title={showMinimap ? "Masquer la mini-carte" : "Afficher la mini-carte"} data-testid="vision-minimap-toggle" className="sf-btn" data-active={showMinimap ? "true" : "false"}><MapIcon size={15} /></button>}
+          <span className="mx-1 h-5 w-px" style={{ background: "var(--sf-line)" }} />
+          <div className="relative">
+            <button onClick={() => setMenu((m) => (m === "export" ? null : "export"))} disabled={exporting} className="sf-btn" title="Exporter" data-testid="vision-export">
+              {exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+            </button>
+            <Popover open={menu === "export"} onClose={() => setMenu(null)} className="right-0 top-full mt-2 w-[220px]">
+              <button onClick={() => handleExport("png")} className="sf-menu-item" data-testid="vision-export-png"><span className="sf-mi-ico"><ImageIcon size={15} /></span>{t("vision.exportPng")}</button>
+              <button onClick={() => handleExport("pdf")} className="sf-menu-item" data-testid="vision-export-pdf"><span className="sf-mi-ico"><FileDown size={15} /></span>{t("vision.exportPdf")}</button>
+            </Popover>
+          </div>
+          {!readOnly && <button onClick={() => setShareOpen(true)} className="sf-btn" title="Partager en lecture seule" data-testid="vision-share"><Share2 size={15} /></button>}
+          {!isSmall && <button onClick={startPresent} className="sf-btn sf-btn-primary ml-1 h-8" data-testid="vision-present"><Presentation size={15} /> <span className="hidden lg:inline">Présenter</span></button>}
+        </div>
+      </div>
+
+      {modeHint && !isSmall && (
+        <div className="sf-chrome pointer-events-none absolute left-1/2 top-16 z-30 -translate-x-1/2 rounded-full px-4 py-2 text-[13px] font-medium">{modeHint}</div>
+      )}
+
+      {/* ── Premier contact : 3 étapes plutôt que des cartes vides ── */}
+      {showOnboard && (
+        <div className="sf-menu absolute left-1/2 top-1/2 z-40 w-[min(92vw,460px)] -translate-x-1/2 -translate-y-1/2 p-6" data-testid="vision-onboard">
+          <button onClick={hideOnboard} className="sf-btn absolute right-3 top-3" title="Fermer"><X size={16} /></button>
+          <p className="sf-menu-title" style={{ padding: 0 }}>Bienvenue</p>
+          <p className="sf-title mt-1" style={{ fontSize: 20 }}>Démarre ton cockpit en 3 étapes</p>
+          <p className="sf-small mt-1" style={{ fontSize: 14 }}>Tes murs se remplissent tout seuls avec tes vraies données.</p>
+          <ol className="mt-4 space-y-2">
+            {[
+              ["1", "Écris ta vision et ton pourquoi", "/onboarding"],
+              ["2", "Fixe 3 objectifs pour ce trimestre", "/app/roadmap"],
+              ["3", "Ajoute ta première action de 15 minutes", "/app/actions"],
+            ].map(([n, label, route]) => (
+              <li key={n}>
+                <button onClick={() => navigate(route)} className="flex w-full items-center gap-3 rounded-xl p-3 text-left transition hover:brightness-110" style={{ background: "var(--sf-card)" }}>
+                  <span className="sf-num flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[14px] font-semibold" style={{ background: "rgba(222,194,163,0.16)", color: "var(--sf-accent)" }}>{n}</span>
+                  <span className="flex-1 text-[15px] font-medium">{label}</span>
+                  <ArrowRight size={16} style={{ color: "var(--sf-muted)" }} />
+                </button>
+              </li>
+            ))}
+          </ol>
+          <button onClick={hideOnboard} className="sf-small mt-4 hover:underline" style={{ fontSize: 13 }}>Plus tard, je découvre le board</button>
+        </div>
+      )}
+
+      {/* ── Barre IA (bas) ── */}
+      {!readOnly && (
+        <div className={`sf-hide-present absolute left-1/2 z-30 -translate-x-1/2 ${isSmall ? "bottom-3 w-[calc(100%-24px)]" : "bottom-4 w-[min(94vw,620px)]"}`} data-testid="vision-prompt-bar">
+          <div className="sf-chrome flex items-center gap-2 rounded-full px-2 py-1.5">
+            <button onClick={() => setMenu((m) => (m === "add" ? null : "add"))} title={t("common.add")} data-testid="vision-prompt-add"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition" style={{ background: "rgba(222,194,163,0.18)", color: "var(--sf-accent)" }}><Plus size={17} /></button>
+            <input value={prompt} onChange={(e) => setPrompt(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleGenerateBoard(); } }}
+              placeholder={isSmall ? "Décris ton projet…" : t("vision.promptPlaceholder")} data-testid="vision-prompt-input" className="sf-input min-w-0 flex-1 px-2 text-[14px]" />
+            <VoiceCapture onTranscribed={handleVoice} compact />
+            <button onClick={handleGenerateBoard} disabled={!prompt.trim() || generating} data-testid="vision-prompt-submit"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition disabled:opacity-40" style={{ background: "var(--sf-accent)", color: "#0b1f3a" }}>
+              {generating ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+            </button>
+          </div>
+          <Popover open={menu === "add"} onClose={() => setMenu(null)} className="bottom-full left-0 mb-2 max-h-[60vh] w-[290px] overflow-y-auto" testid="vision-add-menu">
+            {menuList([
+              { title: isSmall && currentMobileWallId ? `Ajouter dans « ${mobilePages[mobileWall]?.label} »` : "Ajouter" },
+              { id: "m-note", icon: Type, label: "Note", action: () => addByTool("note", isSmall && currentMobileWallId ? { wall: currentMobileWallId } : {}) },
+              { id: "m-wall", icon: Columns3, label: "Mur", action: () => addByTool("wall") },
+              { id: "m-images", icon: ImageIcon, label: "Image", action: () => setMenu("images-m") },
+              ...ALL_TOOLS,
+              { id: "m-trash", icon: Trash2, label: `Corbeille (${trashItems.length})`, action: () => setMenu("trash-m") },
+            ])}
+          </Popover>
+          <Popover open={menu === "images-m"} onClose={() => setMenu(null)} className="bottom-full left-0 mb-2 w-[300px] p-3">
+            <input autoFocus placeholder="Colle l'URL d'une image" onKeyDown={(e) => e.key === "Enter" && addImageFromUrl(e.target.value)} className="sf-field" />
+            <div className="mt-3"><AiImageRow onPick={addImageFromUrl} /></div>
+          </Popover>
+          <Popover open={menu === "live" && isSmall} onClose={() => setMenu(null)} className="bottom-full left-0 mb-2 max-h-[60vh] w-[300px] overflow-y-auto">{livePanel}</Popover>
+          <Popover open={menu === "trash-m"} onClose={() => setMenu(null)} className="bottom-full left-0 mb-2 w-[300px] p-2">{trashPanel}</Popover>
+        </div>
+      )}
+
+      {/* ── Modèles de départ ── */}
       {tplOpen && (
         <>
-          <div className="fixed inset-0 z-[60] bg-navy-900/60 backdrop-blur-sm" onClick={() => setTplOpen(false)} data-testid="vision-templates-overlay" />
-          <div className="glass-strong fixed left-1/2 top-1/2 z-[61] w-[min(94vw,640px)] max-h-[80vh] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl p-5" data-testid="vision-templates-panel">
+          <div className="fixed inset-0 z-[60] bg-black/60" onClick={() => setTplOpen(false)} data-testid="vision-templates-overlay" />
+          <div className="sf sf-menu fixed left-1/2 top-1/2 z-[61] max-h-[80vh] w-[min(94vw,640px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto p-6" data-testid="vision-templates-panel">
             <div className="mb-4 flex items-start justify-between">
               <div>
-                <h3 className="flex items-center gap-2 font-display text-lg font-bold text-offwhite"><LayoutTemplate size={18} className="text-gold" /> {t("vision.templates.title")}</h3>
-                <p className="text-sm text-offwhite/60">{t("vision.templates.lead")}</p>
+                <p className="sf-title flex items-center gap-2" style={{ fontSize: 18 }}><LayoutTemplate size={18} style={{ color: "var(--sf-accent)" }} /> {t("vision.templates.title")}</p>
+                <p className="sf-small">{t("vision.templates.lead")}</p>
               </div>
-              <button onClick={() => setTplOpen(false)} data-testid="vision-templates-close" className="flex h-8 w-8 items-center justify-center rounded-lg text-offwhite/60 hover:bg-white/10"><X size={18} /></button>
+              <button onClick={() => setTplOpen(false)} data-testid="vision-templates-close" className="sf-btn"><X size={18} /></button>
             </div>
+            <button onClick={() => { setTplOpen(false); addByTool("cockpit"); }} className="mb-3 flex w-full items-center gap-3 rounded-2xl p-4 text-left transition hover:brightness-110" style={{ background: "var(--sf-card)", boxShadow: "inset 0 0 0 1px rgba(222,194,163,0.4)" }}>
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: "rgba(222,194,163,0.16)", color: "var(--sf-accent)" }}><Activity size={18} /></span>
+              <span className="flex-1"><span className="sf-title block">Cockpit Vision A → Z</span><span className="sf-small block" style={{ fontSize: 13 }}>6 murs reliés en direct à tes objectifs, finances, actions, énergie, idées et victoires.</span></span>
+              <ArrowRight size={16} />
+            </button>
             {tplLoading ? (
-              <div className="flex items-center justify-center gap-2 py-12 text-sm text-offwhite/60"><Loader2 size={16} className="animate-spin" /> {t("common.loading")}</div>
+              <div className="sf-small flex items-center justify-center gap-2 py-12"><Loader2 size={16} className="animate-spin" /> {t("common.loading")}</div>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2">
                 {templates.map((tpl) => (
                   <button key={tpl.id} onClick={() => applyTemplate(tpl)} data-testid={`vision-template-${tpl.id}`}
-                    className="group flex flex-col items-start gap-1.5 rounded-xl border border-white/10 bg-white/5 p-4 text-left transition hover:border-gold/60">
+                    className="flex flex-col items-start gap-1.5 rounded-2xl p-4 text-left transition hover:brightness-110" style={{ background: "var(--sf-card)" }}>
                     <span className="text-2xl">{tpl.emoji}</span>
-                    <span className="font-display text-base font-bold text-offwhite">{tpl.label}</span>
-                    <span className="text-xs text-offwhite/60">{tpl.description}</span>
-                    <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-gold opacity-0 transition group-hover:opacity-100">{t("vision.templates.use")} <ArrowRight size={12} /></span>
+                    <span className="sf-title">{tpl.label}</span>
+                    <span className="sf-small" style={{ fontSize: 13 }}>{tpl.description}</span>
                   </button>
                 ))}
               </div>
@@ -734,262 +1559,178 @@ export function VisionCanvas() {
         </>
       )}
 
-      {/* Mini-map */}
-      <div onClick={jumpToMiniMap} data-testid="vision-minimap" className="absolute bottom-3 right-3 z-30 hidden cursor-pointer overflow-hidden rounded-lg border border-white/10 bg-navy-800 shadow-lg sm:block" style={{ width: 140, height: 93 }}>
-        <div className="relative h-full w-full">
-          {visibleItems.map((c) => (
-            <div key={`mm-${c.id}`} className="absolute rounded-sm" style={{ left: (c.x / BOARD_W) * 140, top: (c.y / BOARD_H) * 93, width: Math.max(2, ((c.w || 200) / BOARD_W) * 140), height: Math.max(2, ((c.h || 120) / BOARD_H) * 93), background: "#DEC2A3", opacity: 0.6 }} />
-          ))}
-          <div className="absolute border border-gold" style={{ left: (viewport.left / (BOARD_W * zoom)) * 140, top: (viewport.top / (BOARD_H * zoom)) * 93, width: Math.min(140, (viewport.w / (BOARD_W * zoom)) * 140), height: Math.min(93, (viewport.h / (BOARD_H * zoom)) * 93) }} />
+      {/* ── Présentation ── */}
+      {presenting && (
+        <div className="sf-chrome absolute bottom-5 left-1/2 z-40 flex -translate-x-1/2 items-center gap-1 rounded-full p-1.5">
+          <button onClick={() => setPresentIdx((i) => Math.max(0, i - 1))} disabled={presentIdx === 0} className="sf-btn"><ChevronLeft size={17} /></button>
+          <span className="sf-num px-2 text-[13px] font-medium">{Math.min(presentIdx + 1, presentWalls.length)} / {presentWalls.length} · {presentWalls[presentIdx]?.title}</span>
+          <button onClick={() => setPresentIdx((i) => Math.min(presentWalls.length - 1, i + 1))} disabled={presentIdx >= presentWalls.length - 1} className="sf-btn"><ChevronRight size={17} /></button>
+          <span className="mx-1 h-5 w-px" style={{ background: "var(--sf-line)" }} />
+          <button onClick={stopPresent} className="sf-btn" data-testid="vision-present-exit"><X size={16} /> Quitter</button>
         </div>
-      </div>
+      )}
 
-      {/* Surface */}
-      <div ref={scrollRef} onMouseDown={onCanvasPointerDown} onWheel={onWheelZoom}
-        onContextMenu={(e) => { e.preventDefault(); setMode((m) => (m === "hand" ? "select" : "hand")); }}
-        className={["relative h-full w-full overflow-auto", mode === "hand" ? "cursor-grab" : ""].join(" ")}
-        style={{ backgroundColor: "#1F1F1F" }}>
-        <div className="relative" style={{ width: BOARD_W, height: BOARD_H, transform: `scale(${zoom})`, transformOrigin: "top left", userSelect: draggingId ? "none" : "auto" }}>
-          <svg className="absolute inset-0 z-[5] h-full w-full" style={{ pointerEvents: "none" }}>
-            {connections.map((connection) => {
-              const from = items.find((c) => c.id === connection.from);
-              const to = items.find((c) => c.id === connection.to);
-              if (!from || !to) return null;
-              const x1 = from.x + (from.w || 200) / 2, y1 = from.y + (from.h || 120) / 2;
-              const x2 = to.x + (to.w || 200) / 2, y2 = to.y + (to.h || 120) / 2;
-              const midY = (y1 + y2) / 2;
-              return <path key={connection.id} d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`} fill="none" stroke="rgba(222,194,163,0.75)" strokeWidth="3" strokeLinecap="round" />;
-            })}
-          </svg>
-
-          {walls.map((wall) => (
-            <div key={wall.id} data-testid={`vision-wall-${wall.id}`} className="group absolute z-[1] rounded-[28px] bg-navy-800/90 shadow-inner"
-              onPointerDown={(e) => {
-                if (mode !== "select" || connectMode) return;
-                e.stopPropagation();
-                dragRef.current = { kind: "wall", id: wall.id, startX: e.clientX, startY: e.clientY, origX: wall.x, origY: wall.y };
-              }} style={{ left: wall.x, top: wall.y, width: wall.w, height: wall.h, borderTop: `5px solid ${wall.color}`, cursor: mode === "select" ? "grab" : "default" }}>
-              <div className="pointer-events-none px-5 pt-4 text-[22px] font-semibold tracking-tight text-offwhite">{wall.title}</div>
-              <button onPointerDown={(e) => e.stopPropagation()} onClick={() => setWalls((prev) => prev.filter((item) => item.id !== wall.id))}
-                className="absolute right-3 top-3 hidden rounded-full p-1.5 text-offwhite/50 hover:bg-white/10 hover:text-alert group-hover:block" title="Supprimer le mur"><Trash2 size={14} /></button>
-            </div>
-          ))}
-
-          <div className="absolute z-10 flex items-center justify-center rounded-2xl bg-gradient-to-br from-[#F1E2CC] to-[#DEC2A3] px-6 py-4 text-center shadow-xl" style={{ left: CENTER.x, top: CENTER.y, width: 140 }}>
-            <span className="font-display text-sm font-bold uppercase tracking-wide text-navy-900">{t("vision.hub")}</span>
+      {isSmall ? (
+        /* ───────── Mobile : un mur par écran ───────── */
+        <div className="sf-surface flex h-full flex-col" data-testid="vision-mobile">
+          <div className="sf-scroll flex shrink-0 gap-1.5 overflow-x-auto px-3 pb-2 pt-[60px]" data-testid="vision-mobile-tabs">
+            {mobilePages.map((pg, i) => (
+              <button key={pg.key} onClick={() => goMobile(i)} ref={i === mobileWall ? (el) => el?.scrollIntoView?.({ block: "nearest", inline: "nearest" }) : undefined} className="shrink-0 rounded-full px-3 py-1.5 text-[13px] font-medium transition"
+                style={i === mobileWall ? { background: "rgba(222,194,163,0.18)", color: "var(--sf-accent)" } : { background: "var(--sf-chrome)", color: "var(--sf-text-2)" }}>
+                {i + 1} · {pg.label}
+              </button>
+            ))}
           </div>
-
-          {visibleItems.length === 0 && loaded && tagFilter !== "all" && (
-            <div className="absolute left-1/2 top-1/3 -translate-x-1/2 rounded-xl border border-white/10 bg-navy-800/90 px-4 py-3 text-sm text-offwhite/60">
-              {t("vision.tags.empty")}
+          <div ref={mobileRef} className="flex min-h-0 flex-1 snap-x snap-mandatory overflow-x-auto overflow-y-hidden" style={{ scrollbarWidth: "none" }}
+            onScroll={(e) => { const el = e.currentTarget; const i = Math.round(el.scrollLeft / Math.max(1, el.clientWidth)); if (i !== mobileWall) setMobileWall(i); }}>
+            {mobilePages.map((pg) => (
+              <div key={pg.key} className="sf-scroll h-full w-full shrink-0 snap-start overflow-y-auto px-3 pb-28">
+                {pg.wall && pg === mobilePages[0] && headingCard && <p className="sf-heading mb-3 px-1" style={{ fontSize: 22 }}>{headingText(headingCard.text, prenom)}</p>}
+                {pg.wall ? renderWall(pg.wall) : (
+                  <div className="sf-wall"><h3 className="sf-wall-title mb-4 px-2">Libre</h3><div className="flex flex-col gap-3">{looseOthers.map((c) => renderShell(c, true))}</div></div>
+                )}
+              </div>
+            ))}
+            {!mobilePages.length && loaded && <p className="sf-small w-full p-6 text-center">Ce board est vide.</p>}
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* ── Mini-carte (sur demande) ── */}
+          {showMinimap && (
+            <div onClick={jumpToMiniMap} data-testid="vision-minimap" className="sf-hide-present sf-chrome absolute bottom-3 right-3 z-30 cursor-pointer overflow-hidden rounded-xl" style={{ width: MM_W, height: MM_H }}>
+              <div className="relative h-full w-full">
+                {activeItems.filter((it) => !it.parent && rects[it.id]).map((it) => {
+                  const r = rects[it.id];
+                  return <div key={`mm-${it.id}`} className="absolute rounded-sm" style={{ left: (r.x / BOARD_W) * MM_W, top: (r.y / BOARD_H) * MM_H, width: Math.max(2, (r.w / BOARD_W) * MM_W), height: Math.max(2, (r.h / BOARD_H) * MM_H), background: it.type === "wall" ? (it.color || "#94A3B8") : "#DEC2A3", opacity: it.type === "wall" ? 0.45 : 0.7 }} />;
+                })}
+                <div className="absolute rounded-sm border" style={{ borderColor: "var(--sf-accent)", left: (viewport.left / (BOARD_W * zoom)) * MM_W, top: (viewport.top / (BOARD_H * zoom)) * MM_H, width: Math.min(MM_W, (viewport.w / (BOARD_W * zoom)) * MM_W), height: Math.min(MM_H, (viewport.h / (BOARD_H * zoom)) * MM_H) }} />
+              </div>
             </div>
           )}
 
-          {visibleItems.map((card, i) => {
-            const isDragging = draggingId === card.id;
-            const isEditing = editingId === card.id;
-            const rot = card.rotate || 0;
-            return (
-              <div key={card.id} data-card-el
-                onPointerDown={(e) => { if (connectMode) { e.stopPropagation(); toggleConnection(card.id); } else if (!isEditing) onPointerDownCard(e, card); }}
-                onDoubleClick={() => ["note", "image", "ai-doc", "sticky", "kpi", "polaroid"].includes(card.type) && setEditingId(card.id)}
-                data-testid={`vision-card-${card.id}`}
-                className={["group absolute select-none", connectSource === card.id ? "z-50 ring-2 ring-gold" : "", isDragging ? "z-30" : styleMenuId === card.id ? "z-40" : "animate-fade-up"].join(" ")}
-                style={{ left: card.x, top: card.y, width: card.w, touchAction: mode === "select" ? "none" : "auto", cursor: mode === "hand" ? "inherit" : isEditing ? "default" : "grab", transform: `rotate(${rot}deg) ${isDragging ? "scale(1.03)" : ""}`, animationDelay: `${Math.min(i * 30, 300)}ms` }}>
+          {/* ── Surface ── */}
+          <div ref={scrollRef} onWheel={onWheelZoom}
+            onPointerDown={(e) => { if (e.target === e.currentTarget || e.target.dataset?.bg) onSurfacePointerDown(e); }}
+            onContextMenu={(e) => { e.preventDefault(); if (!readOnly) setMode((m) => (m === "hand" ? "select" : "hand")); }}
+            className={["sf-surface sf-scroll relative h-full w-full overflow-auto", mode === "hand" || readOnly ? "cursor-grab" : ""].join(" ")}
+            style={{ backgroundSize: `${28 * zoom}px ${28 * zoom}px` }}>
+            <div style={{ width: BOARD_W * zoom, height: BOARD_H * zoom }} data-bg="1">
+              <div ref={boardRef} data-bg="1" className="relative" style={{ width: BOARD_W, height: BOARD_H, transform: `scale(${zoom})`, transformOrigin: "top left", userSelect: draggingId ? "none" : "auto" }}>
 
-                <CardTagBadges tags={card.tags} />
+                {!loaded && <div className="sf-small absolute left-[300px] top-[200px] flex items-center gap-2" style={{ fontSize: 18 }}><Loader2 size={18} className="animate-spin" /> {t("common.loading")}</div>}
 
-                <button onPointerDown={(e) => e.stopPropagation()} onClick={() => deleteCard(card.id)} data-testid={`vision-card-delete-${card.id}`}
-                  className="absolute -right-2 -top-2 z-40 hidden h-6 w-6 items-center justify-center rounded-full bg-navy-900 text-white shadow-md hover:bg-alert group-hover:flex"><X size={13} /></button>
+                {walls.map(renderWall)}
 
-                {/* Couleur + tags de la carte */}
-                <button onPointerDown={(e) => e.stopPropagation()}
-                  onClick={() => setStyleMenuId((id) => (id === card.id ? null : card.id))}
-                  title={t("vision.color.title")} data-testid={`vision-card-palette-${card.id}`}
-                  className={`absolute -left-2 -top-2 z-40 h-6 w-6 items-center justify-center rounded-full border border-white/20 bg-navy-800 text-offwhite/75 shadow-md hover:text-gold ${styleMenuId === card.id ? "flex" : "hidden group-hover:flex"}`}>
-                  <Palette size={12} />
-                </button>
-
-                {/* Rotation */}
-                <button onPointerDown={(e) => onRotateStart(e, card)} title={t("vision.rotate")}
-                  className="absolute -top-8 left-1/2 z-40 hidden h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full border border-white/20 bg-navy-800 text-offwhite/70 shadow-md hover:text-gold group-hover:flex">
-                  <RefreshCw size={11} />
-                </button>
-                {/* Redimensionnement */}
-                <button onPointerDown={(e) => onResizeStart(e, card)} title={t("vision.resize")}
-                  className="absolute -bottom-2 -right-2 z-40 hidden h-5 w-5 cursor-nwse-resize items-center justify-center rounded-md border border-gold/40 bg-navy-800 text-gold shadow-md group-hover:flex"
-                  style={{ cursor: "nwse-resize" }}>
-                  <Maximize2 size={10} />
-                </button>
-
-                {styleMenuId === card.id && (
-                  <CardStyleMenu card={card} onChange={(patch) => patchCard(card.id, patch)} onClose={() => setStyleMenuId(null)} />
-                )}
-
-                {/* Post-it */}
-                {card.type === "sticky" && (() => {
-                  const c = stickyOf(card.stickyColor || "cream");
-                  const isHand = card.style === "handwritten";
+                {/* Lignes entre cartes */}
+                <svg className="absolute inset-0" width={BOARD_W} height={BOARD_H} style={{ pointerEvents: "none", zIndex: 2 }}>
+                  <defs>
+                    <marker id="sf-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                      <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(222,194,163,0.85)" />
+                    </marker>
+                  </defs>
+                  {lines.map((l) => {
+                    const a = rects[l.from];
+                    const b = rects[l.to];
+                    if (!a || !b) return null;
+                    const { d } = linePath(a, b);
+                    const sel = selectedLine === l.id;
+                    return (
+                      <g key={l.id}>
+                        {!readOnly && <path d={d} fill="none" stroke="transparent" strokeWidth="18" style={{ pointerEvents: "stroke", cursor: "pointer" }}
+                          onPointerDown={(e) => { e.stopPropagation(); setSelectedLine(l.id); setSelectedId(null); }} />}
+                        <path d={d} fill="none" stroke={sel ? "#F1E2CC" : "rgba(222,194,163,0.7)"} strokeWidth={sel ? 3.5 : 2.5} markerEnd="url(#sf-arrow)" />
+                      </g>
+                    );
+                  })}
+                  {drawPts && drawPts.length > 1 && (
+                    <path d={drawPts.map((p, i) => `${i ? "L" : "M"}${p.x},${p.y}`).join(" ")} fill="none" stroke="#DEC2A3" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+                  )}
+                </svg>
+                {selectedLine && !readOnly && (() => {
+                  const l = lines.find((x) => x.id === selectedLine);
+                  const a = l && rects[l.from];
+                  const b = l && rects[l.to];
+                  if (!a || !b) return null;
+                  const { mid } = linePath(a, b);
                   return (
-                    <div className="paper-note relative" style={{ background: c.bg, minHeight: card.h, padding: 14 }}>
-                      <span className="push-pin" />
-                      <div className="mb-1.5 text-[10px] font-bold tracking-[0.15em]" style={{ color: c.label }}>
-                        {card.label || "MA NOTE"}
-                      </div>
-                      {isEditing ? (
-                        <textarea autoFocus defaultValue={tv(card.body, lang)} rows={3}
-                          onPointerDown={(e) => e.stopPropagation()}
-                          onBlur={(e) => { editBody(card.id, e.target.value); setEditingId(null); }}
-                          className={`w-full resize-none bg-transparent outline-none ${isHand ? "font-hand text-[22px] leading-tight" : "text-[13px] leading-snug"}`}
-                          style={{ color: c.text }} />
-                      ) : (
-                        <p className={`whitespace-pre-line ${isHand ? "font-hand text-[22px] leading-tight" : "text-[13px] leading-snug"}`} style={{ color: c.text }}>
-                          {tv(card.body, lang)}
-                        </p>
-                      )}
-                    </div>
+                    <button onPointerDown={(e) => e.stopPropagation()} onClick={() => trashItem(selectedLine)} className="sf-handle absolute z-40 hover:!text-red-400"
+                      style={{ left: mid.x - 15, top: mid.y - 15, display: "flex" }} title="Supprimer la ligne" data-testid="vision-line-delete"><X size={15} /></button>
                   );
                 })()}
 
-                {/* Polaroïd */}
-                {card.type === "polaroid" && (() => {
-                  const frame = card.stickyColor ? stickyOf(card.stickyColor).bg : "#fafafa";
-                  return (
-                    <div className="polaroid-frame relative" style={{ height: card.h, background: frame }}>
-                      <span className="push-pin red" />
-                      <img src={card.image} alt={card.caption || ""} draggable={false}
-                        className="w-full rounded-sm object-cover"
-                        style={{ height: (card.h || 240) - (card.caption ? 54 : 26) }} />
-                      {card.caption ? (
-                        <div className="pt-2 text-center">
-                          {isEditing ? (
-                            <input autoFocus defaultValue={card.caption} onPointerDown={(e) => e.stopPropagation()}
-                              onBlur={(e) => { patchCard(card.id, { caption: e.target.value }); setEditingId(null); }}
-                              className="w-full bg-transparent text-center font-serif-italic text-[26px] leading-none text-navy-900 outline-none" />
-                          ) : (
-                            <span className="font-serif-italic text-[26px] leading-none text-navy-900">{card.caption}</span>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="h-[24px]" />
-                      )}
-                      <Heart size={16} className="absolute bottom-3 right-3 fill-pink-500 text-pink-500" />
-                    </div>
-                  );
-                })()}
+                {freeItems.map((card) => renderShell(card, false))}
 
-                {/* Pilier KPI */}
-                {card.type === "kpi" && (() => {
-                  const c = stickyOf(card.stickyColor || "green");
-                  const lines = tv(card.body, lang).split("\n").filter(Boolean);
-                  return (
-                    <div className="paper-note relative" style={{ background: c.bg, minHeight: card.h, padding: "12px 14px" }}>
-                      <div className="mb-2 text-[10px] font-bold tracking-[0.15em]" style={{ color: c.label }}>
-                        {card.label || "KPI"}
-                      </div>
-                      {isEditing ? (
-                        <textarea autoFocus defaultValue={tv(card.body, lang)} rows={4}
-                          onPointerDown={(e) => e.stopPropagation()}
-                          onBlur={(e) => { editBody(card.id, e.target.value); setEditingId(null); }}
-                          className="w-full resize-none bg-transparent text-[12px] leading-snug outline-none"
-                          style={{ color: c.text }} />
-                      ) : (
-                        <ul className="mb-8 space-y-1">
-                          {lines.map((line, k) => (
-                            <li key={k} className="flex gap-1.5 text-[11.5px]" style={{ color: c.text }}>
-                              <span style={{ color: c.label }}>•</span>
-                              <span>{line.replace(/^[•\-*]\s*/, "")}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      <div className="absolute bottom-3 left-3 right-3">
-                        <div className="h-1.5 overflow-hidden rounded-full bg-white/50">
-                          <span className="block h-full" style={{ width: `${card.progress || 60}%`, background: c.label }} />
-                        </div>
-                        <div className="mt-0.5 text-right text-[10.5px] font-semibold" style={{ color: c.label }}>{card.progress || 60}%</div>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {card.type === "image" && (
-                  <div className={["relative overflow-hidden rounded-xl border bg-navy-800 shadow-md", isDragging || isEditing ? "border-gold" : "border-white/10"].join(" ")}
-                    style={card.color ? { borderColor: `${card.color}88` } : undefined}>
-                    <img src={card.image} alt="" draggable={false} className="w-full object-cover" style={{ height: (card.h || 160) - 34 }} />
-                    <p className="px-2.5 py-2 text-xs font-medium text-offwhite">{tv(card.title, lang)}</p>
-                    {isEditing && (
-                      <div className="absolute inset-0 flex flex-col justify-start gap-1.5 overflow-y-auto bg-black/80 p-2 backdrop-blur-sm" onPointerDown={(e) => e.stopPropagation()} onWheel={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-1">
-                          <input placeholder={t("vision.unsplash.search")} data-testid="vision-unsplash-query"
-                            onKeyDown={(e) => e.key === "Enter" && doUnsplash(e.target.value)}
-                            className="min-w-0 flex-1 rounded-md border border-white/20 bg-white/10 px-2 py-1.5 text-[11px] text-white outline-none placeholder:text-white/50" />
-                          {unsplash.loading && <Loader2 size={13} className="animate-spin text-white" />}
-                        </div>
-                        {unsplash.results.length > 0 && (
-                          <div className="grid grid-cols-3 gap-1">
-                            {unsplash.results.map((im) => (
-                              <button key={im.thumb} onClick={() => editImage(card.id, im.url)} data-testid="vision-unsplash-pick"
-                                className="overflow-hidden rounded border border-white/10 hover:border-gold">
-                                <img src={im.thumb} alt={im.alt} className="h-12 w-full object-cover" />
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                        <AiImageRow onPick={(url) => editImage(card.id, url)} />
-                        <p className="text-[9px] text-white/60">{t("vision.unsplash.orUrl")}</p>
-                        <input defaultValue={card.image} placeholder="https://…"
-                          onKeyDown={(e) => e.key === "Enter" && editImage(card.id, e.target.value)} onBlur={(e) => e.target.value !== card.image && editImage(card.id, e.target.value)}
-                          className="w-full rounded-md border border-white/20 bg-white/10 px-2 py-1.5 text-[11px] text-white outline-none placeholder:text-white/50" />
-                      </div>
-                    )}
-                  </div>
+                {tagFilter !== "all" && loaded && !freeItems.length && !walls.length && (
+                  <div className="sf-chrome absolute left-[300px] top-[200px] rounded-xl px-4 py-3 text-[15px]">{t("vision.tags.empty")}</div>
                 )}
 
-                {card.type === "note" && (
-                  <div className={["rounded-xl border bg-navy-800 p-3 shadow-md", isDragging || isEditing ? "border-gold" : card.important ? "border-gold/60" : "border-white/10"].join(" ")} style={{ minHeight: card.h }}>
-                    <span className="mb-1.5 inline-block h-1.5 rounded-full" style={{ background: card.important ? "#DEC2A3" : card.color, width: card.important ? 36 : 32 }} />
-                    <p className="text-xs font-semibold text-offwhite">{tv(card.title, lang)}</p>
-                    {isEditing ? (
-                      <textarea autoFocus defaultValue={tv(card.body, lang)} rows={3} onPointerDown={(e) => e.stopPropagation()}
-                        onBlur={(e) => { editBody(card.id, e.target.value); setEditingId(null); }}
-                        className="mt-1 w-full resize-none rounded-md border border-white/10 bg-white/5 p-1.5 text-xs text-offwhite outline-none" />
-                    ) : (
-                      <p className="mt-1 whitespace-pre-line text-xs text-offwhite/60">{tv(card.body, lang)}</p>
-                    )}
-                  </div>
-                )}
-
-                {card.type === "color" && (
-                  <div className={["rounded-xl border bg-navy-800 p-3 shadow-md", isDragging ? "border-gold" : "border-white/10"].join(" ")}>
-                    <p className="mb-2 text-xs font-semibold text-offwhite">{tv(card.title, lang)}</p>
-                    <div className="flex gap-1.5">{(card.colors || []).map((col) => <span key={col} className="h-8 flex-1 rounded-md" style={{ background: col }} />)}</div>
-                  </div>
-                )}
-
-                {card.type === "ai-doc" && (
-                  <div className={["flex flex-col overflow-hidden rounded-xl border bg-navy-800 shadow-md", isDragging || isEditing ? "border-gold" : "border-white/10"].join(" ")} style={{ height: card.h }}>
-                    <div className="flex items-center gap-2 border-b border-white/10 bg-white/5 px-3 py-2" style={card.color ? { borderColor: `${card.color}55` } : undefined}>
-                      <span className="flex h-6 w-6 items-center justify-center rounded-md bg-gold/15 text-gold" style={card.color ? { background: `${card.color}22`, color: card.color } : undefined}><FileText size={13} /></span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[13px] font-semibold text-offwhite">{tv(card.title, lang)}</p>
-                        <p className="text-[9px] uppercase tracking-wider text-offwhite/50">IA · {t(`vision.aiDoc.${AI_DOC_KEYS[card.docType] || "t1"}`)}</p>
-                      </div>
-                    </div>
-                    <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2" onPointerDown={(e) => { if (isEditing) e.stopPropagation(); }} onWheel={(e) => e.stopPropagation()}>
-                      {isEditing ? (
-                        <textarea defaultValue={tv(card.body, lang)} onPointerDown={(e) => e.stopPropagation()} onBlur={(e) => { editBody(card.id, e.target.value); setEditingId(null); }}
-                          className="h-full w-full resize-none bg-transparent text-[11.5px] leading-relaxed text-offwhite outline-none" />
-                      ) : (
-                        <p className="whitespace-pre-wrap text-[11.5px] leading-relaxed text-offwhite/90">{tv(card.body, lang)}</p>
-                      )}
-                    </div>
-                  </div>
+                {/* Calque de dessin : capte le tracé même au-dessus des cartes */}
+                {mode === "draw" && !readOnly && (
+                  <div className="absolute inset-0" style={{ zIndex: 60, cursor: "crosshair" }} onPointerDown={onSurfacePointerDown} />
                 )}
               </div>
-            );
-          })}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ───────────────────────── Partage en lecture seule ───────────────────────── */
+
+function ShareDialog({ board, onClose }) {
+  const [state, setState] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [opts, setOpts] = useState({ hide_finances: true, hide_energie: true });
+  useEffect(() => {
+    fetchShare(board).then((s) => { setState(s); if (s?.active) setOpts({ hide_finances: s.hide_finances, hide_energie: s.hide_energie }); })
+      .catch(() => setState({ active: false, error: true }));
+  }, [board]);
+  const url = state?.active ? `${window.location.origin}/v/${state.token}` : "";
+  const save = async (next = opts) => {
+    setBusy(true);
+    try { const s = await saveShare({ board, ...next }); setState(s); }
+    catch { toast.error("Partage impossible pour le moment (compte requis)."); }
+    finally { setBusy(false); }
+  };
+  const revoke = async () => {
+    if (!window.confirm("Désactiver ce lien ? Les personnes qui l'ont ne pourront plus voir le board.")) return;
+    setBusy(true);
+    try { await revokeShare(board); setState({ active: false }); toast("Lien désactivé"); } catch { toast.error("Impossible de désactiver le lien."); } finally { setBusy(false); }
+  };
+  const copy = () => navigator.clipboard?.writeText(url).then(() => toast.success("Lien copié")).catch(() => {});
+  const setOpt = (k) => { const next = { ...opts, [k]: !opts[k] }; setOpts(next); if (state?.active) save(next); };
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div className="sf sf-menu relative w-full max-w-md p-6" onClick={(e) => e.stopPropagation()} data-testid="vision-share-dialog">
+        <button onClick={onClose} className="sf-btn absolute right-3 top-3"><X size={16} /></button>
+        <p className="sf-title" style={{ fontSize: 18 }}>Partager en lecture seule</p>
+        <p className="sf-small mt-1" style={{ fontSize: 14 }}>Pour un coach, un associé ou un banquier : ils voient le board sans compte et ne peuvent rien modifier.</p>
+        <div className="mt-4 space-y-2">
+          {[["hide_finances", "Masquer les finances (CA, trésorerie)"], ["hide_energie", "Masquer l'énergie et la roue de l'équilibre"]].map(([k, label]) => (
+            <label key={k} className="flex cursor-pointer items-center gap-3 rounded-xl p-3" style={{ background: "var(--sf-card)" }}>
+              <input type="checkbox" checked={opts[k]} onChange={() => setOpt(k)} className="h-4 w-4 accent-[#DEC2A3]" />
+              <span className="text-[14px]">{label}</span>
+            </label>
+          ))}
         </div>
+        {!state ? (
+          <div className="sf-small mt-4 flex items-center gap-2"><Loader2 size={14} className="animate-spin" /> Chargement…</div>
+        ) : state.active ? (
+          <div className="mt-4">
+            <div className="flex items-center gap-2">
+              <input readOnly value={url} className="sf-field" onFocus={(e) => e.target.select()} data-testid="vision-share-url" />
+              <button onClick={copy} className="sf-btn sf-btn-primary shrink-0" style={{ height: 36 }}><Copy size={14} /> Copier</button>
+            </div>
+            <button onClick={revoke} disabled={busy} className="sf-small mt-3 hover:underline" style={{ fontSize: 13, color: "#F87171" }}>Désactiver le lien</button>
+          </div>
+        ) : (
+          <button onClick={() => save()} disabled={busy} className="sf-btn sf-btn-primary mt-4 h-10 w-full" data-testid="vision-share-create">
+            {busy ? <Loader2 size={15} className="animate-spin" /> : <Share2 size={15} />} Créer le lien de partage
+          </button>
+        )}
       </div>
     </div>
   );

@@ -41,6 +41,7 @@ export default function Onboarding() {
   const [plan, setPlan] = useState(PLANS.some((p) => p.key === planParam) ? planParam : "essentielle");
   const [saving, setSaving] = useState(false);
   const [savePhase, setSavePhase] = useState(0);
+  const [saveError, setSaveError] = useState("");
   // Nouveau wizard 3 étapes : Identité / Activité / Cap financier
   const [identite, setIdentite] = useState({ prenom: user.firstName || "", entreprise: "", role: "" });
   const [activite, setActivite] = useState({ type: "", cible: "", offre: "", marche: "france" });
@@ -51,6 +52,7 @@ export default function Onboarding() {
 
   const finish = async () => {
     const startedAt = Date.now();
+    setSaveError("");
     setSaving(true);
     try {
       await saveProfile({
@@ -77,7 +79,11 @@ export default function Onboarding() {
           source: "manuel",
         }); } catch (_) {}
       }
-    } catch (_) { /* échafaudage : on continue même hors-ligne */ }
+    } catch (error) {
+      setSaving(false);
+      setSaveError(error?.message || "Impossible d'enregistrer ton espace pour le moment. Vérifie ta connexion puis réessaie.");
+      return;
+    }
     // L’écran d’analyse doit être perceptible même lorsque l’API répond très vite.
     await new Promise((resolve) => setTimeout(resolve, Math.max(0, 1800 - (Date.now() - startedAt))));
     setOnboardingData({ vision, why, goals: goals.filter(Boolean), values, checkinHour, plan });
@@ -382,6 +388,12 @@ export default function Onboarding() {
             </button>
           )}
         </div>
+        {saveError && (
+          <div className="mt-4 rounded-xl border border-red-300/30 bg-red-500/10 px-3 py-2.5 text-sm text-red-100" role="alert" data-testid="onboarding-save-error">
+            <p>{saveError}</p>
+            <button onClick={finish} className="mt-2 text-xs font-semibold text-gold underline" data-testid="onboarding-retry">Réessayer l'enregistrement</button>
+          </div>
+        )}
       </GlassCard>
       {saving && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071a31]/90 p-5 backdrop-blur-md" data-testid="onboarding-processing">

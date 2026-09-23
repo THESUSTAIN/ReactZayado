@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Compass, Lightbulb, CheckSquare, Heart, Users, Settings, CalendarCheck, Radar,
@@ -36,7 +36,7 @@ export function Sidebar() {
     }).catch(() => setActualiteNonVue(false));
   }, [location.pathname]);
   const itemsAvecAlerte = ITEMS.map((item) => item.key === "today" ? { ...item, alert: actualiteNonVue } : item);
-  const deriveActive = () => {
+  const deriveActive = useCallback(() => {
     if (location.pathname.startsWith("/app/radar")) return "radar";
     if (location.pathname.startsWith("/app/revue")) return "review";
     if (location.pathname.startsWith("/app/vision")) return "vision";
@@ -46,9 +46,10 @@ export function Sidebar() {
     if (location.pathname.startsWith("/app/ideas") || location.pathname.startsWith("/app/sources")) return "ideas";
     if (location.pathname === "/parametres") return "settings";
     return "today";
-  };
+  }, [location.pathname]);
   const { t } = useI18n();
   const [active, setActive] = useState(deriveActive());
+  useEffect(() => { setActive(deriveActive()); }, [deriveActive]);
 
   // Hors saveur SaaS (console admin/vendeur), le rail Kairos n'a pas lieu d'être
   if ((process.env.REACT_APP_FLAVOR || "saas") !== "saas") return null;

@@ -136,7 +136,7 @@ export const fr = {
   },
 
   vision: {
-    hub: "Vision Board", canvas: "Studio — Tableau libre",
+    hub: "Vision Board", canvas: "Mon Vision Board",
     wheel: "Roue de l'équilibre", roadmap: "Feuille de route 90 jours",
     select: "Sélection", pan: "Déplacer", zoomIn: "Zoom avant", zoomOut: "Zoom arrière",
     quoteAi: "Citation IA", exportPng: "Export PNG", exportPdf: "Export PDF",
@@ -389,7 +389,7 @@ export const en = {
   },
 
   vision: {
-    hub: "Vision Board", canvas: "Studio — Free canvas",
+    hub: "Vision Board", canvas: "My Vision Board",
     wheel: "Balance wheel", roadmap: "90-day roadmap",
     select: "Select", pan: "Pan", zoomIn: "Zoom in", zoomOut: "Zoom out",
     quoteAi: "AI quote", exportPng: "Export PNG", exportPdf: "Export PDF",
