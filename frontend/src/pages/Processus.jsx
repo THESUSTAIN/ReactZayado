@@ -13,7 +13,7 @@ const GOLD = "#DEC2A3";
 const STORAGE_KEY = "zayado_processus_v1";
 
 const SEED = [
-  { id: "p1", name: "Onboarding client", icon: "Users", color: "#818cf8", steps: [
+  { id: "p1", name: "Onboarding client", icon: "Users", color: "#60a5fa", steps: [
     { title: "Envoi email de bienvenue", assignee: "IA", done: true },
     { title: "Envoi contrat + facture", assignee: "IA", done: true },
     { title: "Création compte + accès", assignee: "Toi", done: false },
@@ -97,7 +97,7 @@ export default function Processus() {
             <div className="mt-5 grid gap-3 sm:grid-cols-3">
               <Stat icon={Workflow} label="Processus actifs" value={active} fg={GOLD} />
               <Stat icon={Check} label="Étapes accomplies" value={`${doneSteps}/${totalSteps}`} fg="#a3e635" />
-              <Stat icon={Sparkles} label="Auto par IA" value={`${processes.reduce((s, p) => s + p.steps.filter((x) => x.assignee === "IA").length, 0)}`} fg="#818cf8" />
+              <Stat icon={Sparkles} label="Auto par IA" value={`${processes.reduce((s, p) => s + p.steps.filter((x) => x.assignee === "IA").length, 0)}`} fg="#60a5fa" />
             </div>
           </div>
 
@@ -164,7 +164,7 @@ export default function Processus() {
                       <div className="flex-1 min-w-0">
                         <div className={`text-[13px] ${s.done ? "line-through text-white/50" : "text-white"}`}>{s.title}</div>
                         <div className="mt-0.5 flex items-center gap-1.5 text-[10.5px]">
-                          <span className={`rounded-full px-1.5 py-0.5 ${s.assignee === "IA" ? "bg-violet-500/15 text-violet-300" : "bg-gold/15"}`} style={s.assignee !== "IA" ? { color: GOLD } : {}}>
+                          <span className={`rounded-full px-1.5 py-0.5 ${s.assignee === "IA" ? "bg-blue-500/15 text-blue-300" : "bg-gold/15"}`} style={s.assignee !== "IA" ? { color: GOLD } : {}}>
                             {s.assignee === "IA" ? "🤖 L'Organisateur" : "👤 Toi"}
                           </span>
                         </div>

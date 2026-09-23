@@ -153,7 +153,7 @@ function BienEtreV2() {
         {[
           { icon: Battery, label: "Énergie", value: 4, color: "#a3e635" },
           { icon: Activity, label: "Stress", value: 2, color: "#f97316", reverse: true },
-          { icon: Moon, label: "Sommeil", value: 4, color: "#818cf8" },
+          { icon: Moon, label: "Sommeil", value: 4, color: "#60a5fa" },
           { icon: Heart, label: "Charge", value: 3, color: "#f472b6", reverse: true },
         ].map((v, i) => (
           <div key={i} className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
@@ -301,7 +301,7 @@ function IdeesV2() {
       { title: "Programme accompagnement 6 sem.", tag: "Offre", star: true },
       { title: "Automatiser brief hebdo Claude", tag: "IA", star: false },
     ]},
-    { title: "En roadmap", tag: "PROD", color: "#818cf8", items: [
+    { title: "En roadmap", tag: "PROD", color: "#60a5fa", items: [
       { title: "Podcasts « Ne porte pas tout seul »", tag: "Contenu", star: true },
     ]},
     { title: "Archivé", tag: "COLD", color: "#94a3b8", items: [

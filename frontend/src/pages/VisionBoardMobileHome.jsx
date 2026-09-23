@@ -92,7 +92,7 @@ export default function VisionBoardMobileHome({ onOpenBoard }) {
           {/* Splash art on the right */}
           <div className="pointer-events-none absolute right-0 top-0 h-full w-2/5 opacity-90">
             <div className="absolute inset-0 rounded-3xl" style={{
-              background: `radial-gradient(circle at 60% 40%, ${GOLD}44, transparent 60%), radial-gradient(circle at 30% 80%, #f472b644, transparent 60%), radial-gradient(circle at 80% 80%, #818cf844, transparent 60%)`,
+              background: `radial-gradient(circle at 60% 40%, ${GOLD}44, transparent 60%), radial-gradient(circle at 30% 80%, #38b2ac44, transparent 60%), radial-gradient(circle at 80% 80%, #60a5fa44, transparent 60%)`,
             }} />
             <div className="absolute right-2 top-4 grid grid-cols-2 gap-1 rotate-[-6deg]">
               {["photo-1470071459604-3b5ec3a7fe05", "photo-1505843513577-22bb7d21e455", "photo-1567808291548-fc3ee04dbcf0", "photo-1571019614242-c5c5dee9f50b"].map((p, i) => (
@@ -158,7 +158,7 @@ export default function VisionBoardMobileHome({ onOpenBoard }) {
         <section>
           <h3 className="mb-3 font-display text-[17px] font-semibold">Aperçu progression</h3>
           <div className="grid grid-cols-3 gap-2">
-            <StatCard icon={Target} label="Objectifs" value={stats.active} sub="Actifs" bg="rgba(129,140,248,0.15)" fg="#818cf8" />
+            <StatCard icon={Target} label="Objectifs" value={stats.active} sub="Actifs" bg="rgba(96,165,250,0.15)" fg="#60a5fa" />
             <StatCard icon={Trophy} label="Complétés" value={stats.done} sub="Ce mois" bg="rgba(244,114,182,0.15)" fg="#f472b6" />
             <StatCard icon={TrendingUp} label="Progression" value={`${stats.progress}%`} sub="Continue !" bg="rgba(222,194,163,0.15)" fg={GOLD} />
           </div>

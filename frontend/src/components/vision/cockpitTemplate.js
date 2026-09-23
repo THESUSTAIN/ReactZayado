@@ -4,7 +4,7 @@
  * (objectifs, actions, énergie, finances, idées) + quelques notes-règles
  * que l'utilisateur réécrit à sa façon.
  */
-export const WALL_COLORS = ["#A78BFA", "#34D399", "#FBBF24", "#60A5FA", "#2DD4BF", "#F472B6", "#94A3B8", "#DEC2A3"];
+export const WALL_COLORS = ["#60A5FA", "#34D399", "#FBBF24", "#3B82F6", "#2DD4BF", "#F472B6", "#94A3B8", "#DEC2A3"];
 
 export function cockpitTemplate({ originX = 140, originY = 140 } = {}) {
   const t = Date.now();

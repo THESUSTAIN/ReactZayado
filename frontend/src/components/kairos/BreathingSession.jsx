@@ -99,7 +99,7 @@ export default function BreathingSession({ onClose, defaultCycle = "4-7-8", dura
           {/* Glow */}
           <div className="absolute inset-0 rounded-full transition-transform ease-in-out"
             style={{
-              background: "radial-gradient(circle, rgba(196,168,229,0.5) 0%, rgba(129,140,248,0.35) 45%, rgba(56,178,172,0.3) 75%, transparent 100%)",
+              background: "radial-gradient(circle, rgba(147,197,253,0.5) 0%, rgba(96,165,250,0.35) 45%, rgba(56,178,172,0.3) 75%, transparent 100%)",
               transform: `scale(${running ? step.scale : 1})`,
               transitionDuration: running ? `${step.dur}ms` : "600ms",
               filter: "blur(20px)",
@@ -108,7 +108,7 @@ export default function BreathingSession({ onClose, defaultCycle = "4-7-8", dura
           <div className="relative flex h-56 w-56 items-center justify-center rounded-full sm:h-64 sm:w-64 transition-transform ease-in-out"
             style={{
               background: "radial-gradient(circle at 40% 35%, rgba(255,255,255,0.9), rgba(220,220,235,0.7) 50%, rgba(180,180,220,0.5) 100%)",
-              boxShadow: "0 0 60px rgba(196,168,229,0.6), inset 0 0 40px rgba(129,140,248,0.3)",
+              boxShadow: "0 0 60px rgba(147,197,253,0.6), inset 0 0 40px rgba(96,165,250,0.3)",
               transform: `scale(${running ? step.scale : 1})`,
               transitionDuration: running ? `${step.dur}ms` : "600ms",
             }}>

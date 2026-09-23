@@ -179,9 +179,9 @@ export default function BienEtre() {
 
           {/* Big breathing hero card */}
           <section className="mt-6 relative overflow-hidden rounded-2xl border border-white/10 p-6 sm:p-8"
-            style={{ background: "linear-gradient(135deg, rgba(129,140,248,0.15), rgba(196,168,229,0.10), rgba(56,178,172,0.10))" }}>
+            style={{ background: "linear-gradient(135deg, rgba(96,165,250,0.15), rgba(147,197,253,0.10), rgba(56,178,172,0.10))" }}>
             <div className="pointer-events-none absolute -top-16 -right-16 h-64 w-64 rounded-full opacity-40 blur-3xl"
-              style={{ background: "radial-gradient(circle, rgba(196,168,229,0.6), transparent 70%)" }} />
+              style={{ background: "radial-gradient(circle, rgba(147,197,253,0.6), transparent 70%)" }} />
             <div className="relative flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="max-w-lg">
                 <div className="flex items-center gap-2">
@@ -198,7 +198,7 @@ export default function BienEtre() {
                 className="group relative flex h-32 w-32 items-center justify-center rounded-full transition hover:scale-105 sm:h-36 sm:w-36"
                 style={{
                   background: "radial-gradient(circle at 40% 35%, rgba(255,255,255,0.95), rgba(220,220,235,0.75) 55%, rgba(180,180,220,0.55))",
-                  boxShadow: "0 0 50px rgba(196,168,229,0.5), inset 0 0 30px rgba(129,140,248,0.25)",
+                  boxShadow: "0 0 50px rgba(147,197,253,0.5), inset 0 0 30px rgba(96,165,250,0.25)",
                 }}>
                 <span className="font-display text-[22px] font-bold text-navy-900 sm:text-[26px]">Begin</span>
               </button>
