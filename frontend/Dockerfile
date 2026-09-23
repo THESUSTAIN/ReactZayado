@@ -29,6 +29,11 @@ ENV PORT=80
 ENV BACKEND_URL=http://127.0.0.1:8001
 COPY nginx.conf /etc/nginx/templates/default.conf.template
 COPY docker-entrypoint.d/05-backend-default.envsh /docker-entrypoint.d/05-backend-default.envsh
+# L'entrypoint nginx IGNORE les scripts non exécutables (y compris .envsh).
+RUN chmod +x /docker-entrypoint.d/05-backend-default.envsh
+# Filet de sécurité : si le script ne tournait pas, nginx démarre quand même
+# (resolver Docker par défaut) au lieu de planter en boucle.
+ENV NGINX_RESOLVER=127.0.0.11
 # Seules ces trois variables sont substituées : les $uri, $host… de nginx restent intacts.
 ENV NGINX_ENVSUBST_FILTER="^(PORT|BACKEND_URL|NGINX_RESOLVER)$"
 EXPOSE 80
