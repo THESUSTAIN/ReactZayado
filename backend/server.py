@@ -24,7 +24,7 @@ from urllib.parse import quote, urlparse
 import httpx
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import RedirectResponse, StreamingResponse
+from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import (
     Boolean, DateTime, ForeignKey, Integer, JSON, String, Text, delete as sa_delete, func, select,
@@ -131,20 +131,57 @@ def _role_courant() -> str:
     return _current_role.get()
 
 
+# Routes /api accessibles SANS connexion. Tout le reste exige un JWT valide
+# (avant : sans jeton, la requête agissait silencieusement comme l'utilisateur
+# démo — n'importe qui pouvait lire/modifier ce compte via l'API).
+_ROUTES_PUBLIQUES_EXACTES = {
+    "/api", "/api/", "/api/health",
+    "/api/auth/login", "/api/auth/register",
+    "/api/leads",                      # capture email des pages marketing
+    "/api/mollie/webhook",             # appelé par Mollie
+    "/api/commerce/health",
+    "/api/codes-promo/appliquer",      # simple vérification d'un code
+}
+_ROUTES_PUBLIQUES_PREFIXES = (
+    "/api/connexion/",                 # options, lien magique, OAuth (démo bloquée à part)
+    "/api/webhooks/",                  # Telegram / WhatsApp (secret propre)
+    "/api/public/",                    # Vision Board partagé en lecture seule
+    "/api/vision/images/",             # images chargées par <img>, sans en-tête
+    "/api/commerce/offers/",           # fiche d'offre publique
+)
+
+
+def _route_publique(path: str) -> bool:
+    return path in _ROUTES_PUBLIQUES_EXACTES or path.startswith(_ROUTES_PUBLIQUES_PREFIXES)
+
+
+def _mode_apercu(request) -> bool:
+    """Aperçu développeur : APERCU_CODE défini ET hors domaines de production.
+    Seul cas où une requête sans jeton retombe sur le compte démo."""
+    return bool(os.environ.get("APERCU_CODE")) and not _en_prod(request)
+
+
 class _AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         uid = DEMO_USER_ID
         role = "client"
+        jeton_valide = False
         auth = request.headers.get("authorization", "")
         if auth.startswith("Bearer "):
             try:
                 payload = _pyjwt.decode(auth[7:], JWT_SECRET, algorithms=[JWT_ALGO])
-                uid = payload.get("sub") or DEMO_USER_ID
+                if payload.get("sub"):
+                    uid = payload["sub"]
+                    jeton_valide = True
                 # "client" de repli pour les anciens tokens émis avant l'ajout
                 # du rôle (pas de champ "role" dedans) — jamais élevé par défaut.
                 role = payload.get("role") or "client"
-            except Exception:  # noqa: BLE001 — token invalide/expiré → repli démo
+            except Exception:  # noqa: BLE001 — token invalide/expiré
                 pass
+        path = request.url.path
+        if (not jeton_valide and request.method != "OPTIONS" and path.startswith("/api")
+                and not _route_publique(path) and not _mode_apercu(request)):
+            return JSONResponse(status_code=401, content={"detail": "Connexion requise."})
         token_uid = _current_uid.set(uid)
         token_role = _current_role.set(role)
         try:
