@@ -16,7 +16,7 @@ const CHANNELS = [
     name: "WhatsApp",
     icon: MessageCircle,
     color: "#25D366",
-    desc: "Valide tes décisions et cause à Kairos depuis ton WhatsApp perso.",
+    desc: "Valide tes décisions et échange avec le Copilote IA depuis ton WhatsApp perso.",
     status: "not_connected", // not_connected | pending | connected
     action: "Connecter WhatsApp",
     ready: true,
@@ -56,7 +56,7 @@ const AI_AGENTS = [
   },
   {
     id: "copilot",
-    name: "Kairos Copilote",
+    name: "Copilote IA Zayado",
     icon: Bot,
     role: "Ton co-pilote conversationnel principal",
     model: "Claude Sonnet · Anthropic",
@@ -129,7 +129,7 @@ export default function Agents() {
         toast.success("WhatsApp connecté (démo). Le vrai QR arrivera quand le service Railway sera déployé.");
       }, 3000);
     } else if (id === "telegram") {
-      toast.info("Redirection vers @KairosZayadoBot… (à activer côté Railway)");
+      toast.info("Redirection vers le bot Zayado… (à activer côté Railway)");
     } else {
       toast.success("Email déjà configuré : noreply@zayado.net");
     }
@@ -172,7 +172,7 @@ export default function Agents() {
               Des <span className="font-serif-italic italic" style={{ color: GOLD }}>agents IA</span>, un ton doux, des canaux <span className="font-serif-italic italic" style={{ color: GOLD }}>humains.</span>
             </h1>
             <p className="mt-3 max-w-2xl text-[14px] leading-relaxed text-white/60">
-              Kairos n'est pas un seul robot. C'est un <b className="text-white">Copilote</b> et jusqu'à <b className="text-white">5 agents spécialisés</b> que tu actives à la carte, plus 3 canaux (WhatsApp, Telegram, Email) pour rester joignable partout.
+              Zayado n'est pas un seul robot. C'est un <b className="text-white">Copilote IA</b> et jusqu'à <b className="text-white">5 agents spécialisés</b> que tu actives à la carte, plus 3 canaux (WhatsApp, Telegram, Email) pour rester joignable partout.
             </p>
           </div>
 

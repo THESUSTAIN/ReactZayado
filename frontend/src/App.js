@@ -4,10 +4,6 @@ import { Toaster } from "@/components/ui/sonner";
 import { KairosProvider } from "@/context/KairosContext";
 import { I18nProvider } from "@/i18n";
 import { AuroraBackground } from "@/components/aurora/AuroraBackground";
-import Landing from "@/pages/Landing";
-import VisionObjectifs from "@/pages/marketing/VisionObjectifs";
-import ProspectionCroissance from "@/pages/marketing/ProspectionCroissance";
-import BienEtreDirigeant from "@/pages/marketing/BienEtreDirigeant";
 import Onboarding from "@/pages/Onboarding";
 import Cockpit from "@/pages/Cockpit";
 import Radar from "@/pages/Radar";
@@ -34,7 +30,7 @@ import PublicVision from "@/pages/PublicVision";
 import { getToken } from "@/lib/kairosApi";
 
 // Deux apps séparées issues du même code — la saveur est choisie AU BUILD :
-//   REACT_APP_FLAVOR=saas     → Kairos (app.zayado.net) : cockpit + espace VENDEUR inclus
+//   REACT_APP_FLAVOR=saas     → Cockpit IA Zayado (app.zayado.net) : cockpit + espace VENDEUR inclus
 //                               (un utilisateur peut être vendeur, même compte)
 //   REACT_APP_FLAVOR=console  → admin.zayado.net : console admin seule, sa propre porte
 const FLAVOR = process.env.REACT_APP_FLAVOR || "saas";
@@ -72,10 +68,7 @@ function App() {
         <KairosProvider>
           <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/fonctionnalites/vision-objectifs" element={<VisionObjectifs />} />
-            <Route path="/fonctionnalites/prospection-croissance" element={<ProspectionCroissance />} />
-            <Route path="/fonctionnalites/bien-etre-dirigeant" element={<BienEtreDirigeant />} />
+            <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<Login />} />
             {/* Lien public en lecture seule d'un Vision Board (sans compte) */}
             <Route path="/v/:token" element={<PublicVision />} />

@@ -17,9 +17,9 @@ const DEFAULT_BOARDS = [
 
 const QUOTES = [
   { text: "L'avenir dépend de ce que tu fais aujourd'hui.", author: "Mahatma Gandhi" },
-  { text: "Va doucement, ça avance quand même.", author: "Kairos" },
+  { text: "Va doucement, ça avance quand même.", author: "Zayado" },
   { text: "Prends soin de la journée, elle prendra soin de la vie.", author: "Anonyme" },
-  { text: "La clarté vient après le premier pas, pas avant.", author: "Kairos" },
+  { text: "La clarté vient après le premier pas, pas avant.", author: "Zayado" },
 ];
 
 /**
@@ -63,7 +63,7 @@ export default function VisionBoardMobileHome({ onOpenBoard }) {
       <header className="sticky top-0 z-30 flex items-center justify-between px-5 pt-4 pb-3 backdrop-blur-xl" style={{ background: "rgba(11,31,58,0.72)" }}>
         <button className="rounded-lg p-2 hover:bg-white/5"><Menu size={22} /></button>
         <div className="text-center">
-          <div className="text-[10px] uppercase tracking-[0.22em]" style={{ color: GOLD }}>Kairos</div>
+          <div className="text-[10px] uppercase tracking-[0.22em]" style={{ color: GOLD }}>Zayado</div>
           <div className="font-display text-[15px] font-semibold">Welcome back, {firstName} <span className="ml-1">👋</span></div>
         </div>
         <button className="relative rounded-lg p-2 hover:bg-white/5">

@@ -1,7 +1,7 @@
 {
-  "short_name": "Kairos",
-  "name": "Kairos by Zayado",
-  "description": "De ta vision à l'action, en prenant soin de toi.",
+  "short_name": "Zayado",
+  "name": "Zayado — Marketplace et Cockpit IA",
+  "description": "Des outils et un Cockpit IA pour entrepreneurs qui veulent développer leur activité sans perdre leur équilibre.",
   "icons": [
     {
       "src": "favicon.svg",

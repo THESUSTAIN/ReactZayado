@@ -101,7 +101,7 @@ export default function WeeklyReview() {
             <ArrowLeft size={17} />
           </button>
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold">Kairos</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold">Zayado</p>
             <h1 className="truncate font-display text-lg font-bold text-offwhite sm:text-xl">{t("review.title")}</h1>
           </div>
           <div className="ml-auto flex items-center gap-2">
@@ -193,7 +193,7 @@ export default function WeeklyReview() {
                 </div>
               </div>
 
-              {/* Synthèse Kairos */}
+              {/* Synthèse Zayado */}
               {synth && (
                 <div className="glass-strong mt-5 rounded-2xl border-gold/30 p-5 sm:p-6" data-testid="review-synthesis-card">
                   <div className="mb-3 flex items-center gap-2">

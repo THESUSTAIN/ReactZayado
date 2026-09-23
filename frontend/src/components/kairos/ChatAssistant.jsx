@@ -48,7 +48,7 @@ function ChatBody({ onClose, estElargi, onToggleTaille }) {
             <Sparkles className="h-4 w-4 text-gold" />
           </div>
           <div className="leading-tight">
-            <div className="font-display text-sm font-bold text-offwhite">Assistant Kairos</div>
+            <div className="font-display text-sm font-bold text-offwhite">Copilote IA Zayado</div>
             <div className="text-[10px] text-offwhite/50">Ton apaisé · IA</div>
           </div>
         </div>
@@ -100,7 +100,7 @@ function ChatBody({ onClose, estElargi, onToggleTaille }) {
 // ── Onglet Assistant (chat streaming + raccourcis) ──
 function ChatTab({ firstName }) {
   const { mode } = useKairos();
-  const accueil = `Bonjour${firstName ? ` ${firstName}` : ""}. Je suis Kairos, là pour t'accompagner en douceur. Par quoi commence-t-on ?`;
+  const accueil = `Bonjour${firstName ? ` ${firstName}` : ""}. Je suis le Copilote IA Zayado, là pour t'accompagner en douceur. Par quoi commence-t-on ?`;
   const [messages, setMessages] = useState([{ role: "assistant", content: accueil }]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -158,7 +158,7 @@ function ChatTab({ firstName }) {
           <div className="relative flex-1">
             <textarea rows={1} value={input} onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-              placeholder="Écris à Kairos…" data-testid="chat-input"
+              placeholder="Écris au Copilote IA…" data-testid="chat-input"
               className="max-h-32 w-full resize-none rounded-xl border border-white/10 bg-white/5 py-2.5 pl-3 pr-10 text-sm text-offwhite placeholder:text-offwhite/40 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/30" />
             <button className="absolute right-2 top-2 rounded-lg p-1 text-offwhite/50 hover:text-gold" title="Vocal (bientôt)" data-testid="chat-mic-btn">
               <Mic className="h-4 w-4" />

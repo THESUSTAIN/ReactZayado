@@ -352,7 +352,7 @@ export default function Onboarding() {
             <h2 className="mt-3 font-display text-2xl font-bold text-offwhite">Ton espace s'actualise avec tes infos</h2>
             <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-offwhite/70">
               On personnalise ton cockpit avec ta vision, tes objectifs et tes valeurs.
-              Ton Assistant Kairos s'appuiera dessus pour t'accompagner, à ton rythme.
+              Ton Copilote IA Zayado s'appuiera dessus pour t'accompagner, à ton rythme.
             </p>
             <div className="mx-auto mt-6 max-w-sm space-y-2 text-left">
               {[

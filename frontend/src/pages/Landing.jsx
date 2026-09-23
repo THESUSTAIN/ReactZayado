@@ -37,7 +37,7 @@ const PILIERS = [
 const ETAPES = [
   { num: "01", titre: "Tu poses ta vision", texte: "Cinq minutes d'onboarding guidé : ton activité, ta cible, ton cap financier. L'IA compose ton board." },
   { num: "02", titre: "Chaque matin, l'essentiel", texte: "3 priorités adaptées à ton énergie du jour, ton point business (CA, trésorerie) et 3 opportunités de croissance." },
-  { num: "03", titre: "Tu avances, sereinement", texte: "Tu valides, tu coches, tu respires. Kairos se souvient de tout et ajuste demain." },
+  { num: "03", titre: "Tu avances, sereinement", texte: "Tu valides, tu coches, tu respires. Zayado se souvient de tout et ajuste demain." },
 ];
 
 const PERSONAS = [
@@ -54,7 +54,7 @@ const AVANT_APRES = [
 ];
 
 const FAQ = [
-  { q: "Kairos remplace quoi, concrètement ?", r: "Ton tableau de tâches, ta note d'objectifs, ton suivi de chiffre d'affaires et ta liste de prospection. Un seul endroit, une seule connexion — et une IA qui connaît ton contexte." },
+  { q: "Que remplace concrètement le Cockpit IA Zayado ?", r: "Ton tableau de tâches, ta note d'objectifs, ton suivi de chiffre d'affaires et ta liste de prospection. Un seul endroit, une seule connexion — et une IA qui connaît ton contexte." },
   { q: "Est-ce adapté si je débute mon activité ?", r: "Oui. L'offre Essentielle est gratuite : cockpit quotidien, vision board et check-in d'énergie. La prospection IA arrive quand tu es prêt, avec l'offre Sérénité." },
   { q: "Mes données sont-elles à moi ?", r: "Oui. Chaque compte est isolé, tu peux exporter toutes tes données en un clic depuis les paramètres, et demander leur suppression complète à tout moment." },
   { q: "En combien de temps suis-je opérationnel ?", r: "Dix minutes : l'onboarding te pose 5 questions, pré-remplit ta vision et ton suivi business, et ton premier point du jour est généré dans la foulée." },
@@ -69,8 +69,8 @@ const REASSURANCE = [
 
 export default function Landing() {
   useSeo({
-    title: "Kairos — Le hub équilibre vie pro / vie perso pour entrepreneurs indépendants | Zayado",
-    description: "Kairos aligne ta vision, ton énergie et ta prospection dans un seul cockpit IA. L'outil Zayado pour concilier activité et équilibre personnel. 3 priorités par jour, radar d'opportunités. Essai gratuit.",
+    title: "Cockpit IA pour entrepreneurs et indépendants | Zayado",
+    description: "Le Cockpit IA Zayado aligne votre vision, vos priorités, votre prospection et votre équilibre de vie professionnelle et personnelle.",
   });
 
   return (
@@ -79,13 +79,13 @@ export default function Landing() {
       <section className="mx-auto max-w-6xl px-5 pb-16 pt-14 text-center sm:pt-20">
         <div className="tiret-rouge mx-auto" data-testid="landing-tiret" />
         <p className="mt-5 inline-block rounded-full border border-gold/30 bg-gold/10 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.24em] text-gold" data-testid="landing-eyebrow">
-          Le hub équilibre vie pro / vie perso des entrepreneurs
+          Le Cockpit IA pour entrepreneurs qui veulent garder leur équilibre
         </p>
         <h1 className="mx-auto mt-6 max-w-3xl font-display text-4xl font-extrabold leading-[1.08] sm:text-5xl lg:text-6xl" data-testid="landing-h1">
           Fais avancer ton entreprise <span className="font-serif-italic font-normal text-gradient-gold">sans te griller.</span>
         </h1>
         <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-offwhite/70 sm:text-lg">
-          Kairos réunit ta vision, tes 3 priorités du jour et ta prospection dans un seul cockpit apaisé —
+          Zayado réunit ta vision, tes 3 priorités du jour et ta prospection dans un seul cockpit apaisé —
           avec une IA qui regarde ton énergie avant de te proposer quoi que ce soit.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -98,7 +98,7 @@ export default function Landing() {
           <div className="pointer-events-none absolute -inset-10 rounded-[40px] bg-gold/[0.07] blur-3xl" />
           <img
             src="/screenshots/cockpit.png"
-            alt="Le cockpit Kairos : énergie du jour, point business et radar d'opportunités réunis"
+            alt="Le Cockpit IA Zayado : énergie du jour, point business et radar d'opportunités réunis"
             data-testid="landing-hero-img"
             className="relative w-full rounded-2xl border border-white/15 shadow-[0_40px_80px_-30px_rgba(0,0,0,0.7)]"
             loading="eager"
@@ -123,7 +123,7 @@ export default function Landing() {
           <h2 className="font-display text-2xl font-bold sm:text-3xl">Trello pour les tâches. Notion pour les notes.<br className="hidden sm:block" /> Un tableur pour le CA. <span className="text-gradient-gold font-serif-italic font-normal">Et ta tête, dans tout ça ?</span></h2>
           <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-offwhite/65 sm:text-base">
             L'indépendant moyen jongle entre 5 outils qui ne se parlent pas — et aucun ne lui demande comment il va.
-            Kairos part du principe inverse : ton énergie et ta vision d'abord, les outils ensuite.
+            Zayado part du principe inverse : ton énergie et ta vision d'abord, les outils ensuite.
           </p>
         </div>
       </section>
@@ -151,7 +151,7 @@ export default function Landing() {
           {PILIERS.map((p) => (
             <Link key={p.to} to={p.to} data-testid={p.testid} className="glass group block overflow-hidden rounded-2xl transition-all duration-300 hover:border-gold/40">
               <div className="aspect-[16/9] overflow-hidden border-b border-white/10">
-                <img src={p.img} alt={`Aperçu ${p.titre} dans Kairos`} loading="lazy" className="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.03]" />
+                <img src={p.img} alt={`Aperçu ${p.titre} dans le Cockpit IA Zayado`} loading="lazy" className="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.03]" />
               </div>
               <div className="p-6">
                 <div className="flex items-center gap-2.5">
@@ -173,7 +173,7 @@ export default function Landing() {
             <div className="w-[240px] rounded-[2.8rem] border-[6px] border-[#22335c] bg-[#0c1d33] p-2 shadow-[0_35px_70px_-25px_rgba(0,0,0,0.8)]" data-testid="landing-phone-mockup">
               <div className="relative overflow-hidden rounded-[2.2rem]">
                 <div className="absolute left-1/2 top-2 z-10 h-4 w-20 -translate-x-1/2 rounded-full bg-black/85" />
-                <img src="/screenshots/radar.png" alt="Le Radar Kairos sur mobile : les opportunités du jour dans la poche" loading="lazy" className="h-[430px] w-full object-cover object-top" />
+                <img src="/screenshots/radar.png" alt="Le Radar Zayado sur mobile : les opportunités du jour dans la poche" loading="lazy" className="h-[430px] w-full object-cover object-top" />
               </div>
             </div>
           </div>
@@ -208,10 +208,10 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Avant / Avec Kairos ── */}
+      {/* ── Avant / Avec Zayado ── */}
       <section className="mx-auto max-w-4xl px-5 pb-20">
         <div className="tiret-rouge mx-auto" />
-        <h2 className="mt-4 text-center font-display text-2xl font-bold sm:text-3xl">Avant / Avec Kairos</h2>
+        <h2 className="mt-4 text-center font-display text-2xl font-bold sm:text-3xl">Avant / Avec Zayado</h2>
         <div className="mt-10 space-y-3">
           {AVANT_APRES.map((l, i) => (
             <div key={i} className="glass grid items-center gap-3 rounded-2xl px-6 py-4 sm:grid-cols-2" data-testid={`landing-avant-apres-${i}`}>

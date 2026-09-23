@@ -5,6 +5,7 @@ import { useKairos } from "@/context/KairosContext";
 import { BatteryMedium, Brain, Smile } from "lucide-react";
 
 const MOODS = ["épuisé", "fatigué", "neutre", "aligné", "rayonnant"];
+const MOOD_FACES = ["😞", "🙁", "😐", "🙂", "😊"];
 const MOTS_ENERGIE = ["À plat", "Basse", "Moyenne", "Bonne", "Au top"];
 const MOTS_CHARGE = ["Légère", "Calme", "Chargée", "Lourde", "Débordée"];
 
@@ -47,6 +48,15 @@ export function EnergyCheckin({ open, onClose }) {
                 <span className="text-sm font-semibold text-gold capitalize">{MOODS[mood - 1]}</span>
               </div>
               <Slider value={[mood]} onValueChange={(v) => setMood(v[0])} min={1} max={5} step={1} data-testid="checkin-mood-slider" />
+              <div className="mt-3 grid grid-cols-5 gap-2" role="group" aria-label="Choisir son humeur">
+                {MOOD_FACES.map((face, i) => {
+                  const value = i + 1;
+                  return <button key={face} type="button" onClick={() => setMood(value)} aria-label={MOODS[i]} aria-pressed={mood === value} data-testid={`checkin-mood-face-${value}`}
+                    className={`flex h-11 items-center justify-center rounded-xl border text-2xl transition ${mood === value ? "border-gold/70 bg-gold/15 shadow-[0_0_0_2px_rgba(222,194,163,0.16)]" : "border-white/10 bg-white/[0.04] grayscale hover:border-white/25 hover:grayscale-0"}`}>
+                    {face}
+                  </button>;
+                })}
+              </div>
               <div className="mt-1.5 flex justify-between text-[10px] text-offwhite/45">
                 <span>Épuisé</span><span>Rayonnant</span>
               </div>

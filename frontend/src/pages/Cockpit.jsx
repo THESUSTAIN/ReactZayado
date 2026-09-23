@@ -42,7 +42,7 @@ export default function Cockpit() {
       <div className="lg:pl-[92px] xl:pr-[360px]">
         <Header />
 
-        <main className="mx-auto max-w-4xl px-4 pb-28 pt-6 sm:px-6 lg:pb-12">
+        <main className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 lg:pb-12">
           {/* Salutation */}
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3 animate-fade-up">
             <div>
@@ -73,12 +73,16 @@ export default function Cockpit() {
                       <p className="mt-2 inline-flex items-center gap-1 text-sm text-offwhite/70">
                         Niveau d'énergie <span className="text-gold">↗</span>
                       </p>
+                      <div className="mt-3 flex gap-1.5" aria-label="Humeur du jour">
+                        {["😞", "🙁", "😐", "🙂", "😊"].map((face, i) => <span key={face} className={`flex h-7 w-7 items-center justify-center rounded-lg border text-sm ${i + 1 === energy.score ? "border-gold/60 bg-gold/15" : "border-white/10 bg-white/[0.04] grayscale opacity-60"}`}>{face}</span>)}
+                      </div>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center py-2 text-center" data-testid="energy-empty">
                       <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gold/15 text-gold"><Zap className="h-5 w-5" /></span>
                       <p className="mt-3 text-sm font-medium text-offwhite">Aucune mesure pour l'instant</p>
                       <p className="mt-1 text-xs text-offwhite/55">Ton énergie s'affiche ici après ton premier check-in — 30 secondes, chaque matin.</p>
+                      <div className="mt-3 flex gap-1.5" aria-label="Échelle d’humeur"><span className="text-base">😞</span><span className="text-base opacity-70">😐</span><span className="text-base">😊</span></div>
                       <button onClick={() => setCheckinOpen(true)} className="btn-gold mt-3 !px-5 !py-2 text-xs" data-testid="energy-first-checkin">Faire mon premier check-in</button>
                     </div>
                   )}

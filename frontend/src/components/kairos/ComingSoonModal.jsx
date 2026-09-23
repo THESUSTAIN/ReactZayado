@@ -16,7 +16,7 @@ export function ComingSoonModal({ open, onClose, moduleName }) {
           <span className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-gold">Bientôt</span>
           <h3 className="mb-2 font-display text-2xl font-bold">{moduleName}</h3>
           <p className="max-w-sm text-sm leading-relaxed text-offwhite/70">
-            Ce module fait partie de la vision complète de Kairos, mais il n'est pas encore ouvert.
+            Ce module fait partie de la vision complète de Zayado, mais il n'est pas encore ouvert.
             On le prépare avec soin — tu seras prévenu·e dès son arrivée.
           </p>
           <button

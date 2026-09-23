@@ -2,9 +2,10 @@ import React from "react";
 import { Link } from "react-router-dom";
 
 const LIENS = [
-  { to: "/fonctionnalites/vision-objectifs", label: "Vision & Objectifs" },
-  { to: "/fonctionnalites/prospection-croissance", label: "Prospection" },
-  { to: "/fonctionnalites/bien-etre-dirigeant", label: "Bien-être" },
+  { to: "/", label: "Boutique" },
+  { to: "/ia", label: "Cockpit IA" },
+  { to: "/ia/prospection", label: "Prospection" },
+  { to: "/ia/equilibre-dirigeant", label: "Équilibre" },
   { to: "/pricing", label: "Tarifs" },
 ];
 
@@ -13,8 +14,8 @@ export function MarketingLayout({ children }) {
     <div className="zayado-blue min-h-screen text-offwhite" data-testid="marketing-layout">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5">
         <Link to="/" className="flex items-center gap-2.5" data-testid="mkt-logo">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#F1E2CC] to-[#DEC2A3] font-wordmark text-lg font-bold text-navy-900">K</span>
-          <span className="font-display text-base font-bold">Kairos <span className="font-normal text-offwhite/50">by Zayado</span></span>
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#F1E2CC] to-[#DEC2A3] font-wordmark text-lg font-bold text-navy-900">Z</span>
+          <span className="font-display text-base font-bold">Zayado</span>
         </Link>
         <nav className="hidden items-center gap-6 md:flex">
           {LIENS.map((l) => (
@@ -31,8 +32,8 @@ export function MarketingLayout({ children }) {
       <footer className="border-t border-white/10">
         <div className="mx-auto grid max-w-6xl gap-8 px-5 py-12 md:grid-cols-3">
           <div>
-            <p className="font-display text-lg font-bold">Kairos by Zayado</p>
-            <p className="mt-2 max-w-xs text-sm text-offwhite/55">Le cockpit apaisé de l'entrepreneur : ta vision, ton énergie et ta croissance au même endroit.</p>
+            <p className="font-display text-lg font-bold">Zayado</p>
+            <p className="mt-2 max-w-xs text-sm text-offwhite/55">La maison des entrepreneurs apaisés : boutique, services et Cockpit IA pour développer son activité sans perdre son équilibre.</p>
           </div>
           <div>
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-gold">Fonctionnalités</p>

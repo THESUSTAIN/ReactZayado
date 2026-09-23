@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { useKairos } from "@/context/KairosContext";
 
 const GOLD = "#DEC2A3";
+const MOOD_FACES = ["😞", "🙁", "😐", "🙂", "😊"];
 
 // Palette apaisée (retour Marie Esther : le vert fluo piquait les yeux) —
 // sauge douce, bleu ardoise, terracotta feutré, beige doré.
@@ -109,16 +110,16 @@ export default function BienEtre() {
               const good = val !== null && (v.reverse ? val <= 2 : val >= 4);
               return (
                 <button key={key} onClick={() => setShowCheckin(key)}
-                  className="group rounded-2xl border border-white/10 bg-white/[0.04] p-5 text-left transition hover:border-white/25 hover:bg-white/[0.06]"
+                  className="group relative overflow-hidden rounded-[18px] border border-white/10 bg-[#162f55] p-5 text-left shadow-[0_16px_36px_-24px_rgba(3,10,24,0.95)] transition duration-200 hover:-translate-y-0.5 hover:border-white/25 hover:bg-[#1b3a67]"
                   data-testid={`vital-${key}`}>
                   <div className="flex items-center justify-between">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: `${v.color}22` }}>
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl ring-1 ring-white/10" style={{ background: `${v.color}22` }}>
                       <v.icon size={17} style={{ color: v.color }} />
                     </div>
                     <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/50">{v.label}</span>
                   </div>
                   <div className="mt-4 flex items-baseline gap-1">
-                    <span className="font-display text-[44px] font-semibold leading-none">{val ?? "—"}</span>
+                    <span className="font-display text-[44px] font-semibold leading-none tracking-tight">{val ?? "—"}</span>
                     {val !== null && <span className="text-[13px] text-white/50">/ 5</span>}
                   </div>
                   <div className="mt-3 flex gap-0.5">
@@ -127,6 +128,7 @@ export default function BienEtre() {
                         style={{ background: val !== null && n <= val ? v.color : "rgba(255,255,255,0.08)" }} />
                     ))}
                   </div>
+                  {key === "energy" && <div className="mt-3 flex gap-1.5" aria-label="Échelle d’humeur"><span className="text-sm">😞</span>{MOOD_FACES.slice(1, 4).map((face) => <span key={face} className="text-sm opacity-75">{face}</span>)}<span className="text-sm">😊</span></div>}
                   <div className="mt-2.5 flex items-center gap-1 text-[11px]" style={{ color: good ? "#7A9E7E" : "rgba(255,255,255,0.5)" }}>
                     {val === null ? <>À mesurer — touche pour renseigner</> : good ? <><Sparkles size={11} /> {v.reverse ? "Bas, c'est bien" : "En forme"}</> : <>{v.desc}</>}
                   </div>
