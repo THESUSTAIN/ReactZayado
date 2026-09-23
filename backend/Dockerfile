@@ -9,7 +9,6 @@ RUN pip install --no-cache-dir -r requirements.txt --extra-index-url https://d33
 COPY . .
 
 EXPOSE 8001
-# IPv4 + IPv6 quand le conteneur a l'IPv6 (réseau privé Railway, parfois
-# IPv6 uniquement : avec 0.0.0.0 seul, le frontend ne joignait pas le backend
-# → 502). Repli 0.0.0.0 si l'IPv6 est absente, pour ne jamais bloquer le démarrage.
-CMD ["sh", "-c", "if [ -f /proc/net/if_inet6 ]; then H='::'; else H='0.0.0.0'; fi; echo \"Backend sur $H:${PORT:-8001}\"; exec uvicorn server:app --host $H --port ${PORT:-8001} --proxy-headers --forwarded-allow-ips='*'"]
+# Un seul socket IPv6 avec IPV6_V6ONLY=0 = écoute IPv4 ET IPv6 sur le même port.
+# Avant : uvicorn --host :: n'écoutait qu'en IPv6 -> healthcheck Railway (IPv4) en échec.
+CMD ["python", "-c", "import os, socket, uvicorn; p = int(os.environ.get('PORT', '8001')); v6 = socket.has_ipv6 and os.path.exists('/proc/net/if_inet6'); s = socket.socket(socket.AF_INET6 if v6 else socket.AF_INET); s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1); v6 and s.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0); s.bind(('::' if v6 else '0.0.0.0', p)); print('Backend sur', '[::] IPv4+IPv6' if v6 else '0.0.0.0', p, flush=True); uvicorn.Server(uvicorn.Config('server:app', proxy_headers=True, forwarded_allow_ips='*')).run(sockets=[s])"]
