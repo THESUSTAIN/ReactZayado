@@ -211,7 +211,7 @@ def install_vision_plus(g: dict) -> None:
             _current_uid.reset(jeton)
         cards = [c for c in (row.cards or []) if not c.get("trashed")]
         if s.hide_finances:
-            cards = [c for c in cards if not (c.get("type") == "live" and c.get("source") in ("finances", "suivi"))]
+            cards = [c for c in cards if not (c.get("type") == "live" and c.get("source") in ("finances", "suivi", "swot"))]
         if s.hide_energie:
             cards = [c for c in cards if not (c.get("type") == "live" and c.get("source") in ("energie", "roue"))]
         # Un mur vidé uniquement par le masquage (ex. « Finances ») est retiré lui aussi.

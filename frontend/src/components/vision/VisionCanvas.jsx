@@ -7,7 +7,7 @@ import {
   LayoutTemplate, Quote, FileDown, ArrowRight, Wand2, RefreshCw, Maximize2, Heart,
   Undo2, Redo2, Spline, PenTool, Trash2, LayoutGrid, Columns3, Table2, Video, Heading1,
   Activity, ChevronLeft, ChevronRight, Presentation, Download, RotateCcw, StickyNote,
-  Pencil, Pin, PinOff, Share2, Map as MapIcon, Copy, Filter,
+  Pencil, Pin, PinOff, Share2, Map as MapIcon, Copy, Filter, BookOpen, Search, Files, Upload,
 } from "lucide-react";
 import {
   fetchBoard, saveBoard, fetchStarterTemplates, generateAiDoc, generateBoard, fetchInspire, searchUnsplash,
@@ -104,6 +104,12 @@ function AiDocModal({ open, onClose, onGenerated }) {
   const [prompt, setPrompt] = useState("");
   const [docType, setDocType] = useState("note");
   const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    if (!open) return undefined;
+    const k = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", k);
+    return () => window.removeEventListener("keydown", k);
+  }, [open, onClose]);
 
   const generate = async () => {
     const value = prompt.trim();
@@ -131,7 +137,7 @@ function AiDocModal({ open, onClose, onGenerated }) {
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#060a18]/70 backdrop-blur-sm p-4" onClick={onClose}>
       <div className="sf sf-menu relative w-full max-w-lg p-6" onClick={(e) => e.stopPropagation()} data-testid="vision-ai-doc-modal">
         <button onClick={onClose} className="sf-btn absolute right-3 top-3" data-testid="vision-ai-doc-close"><X size={16} /></button>
         <p className="sf-title" style={{ fontSize: 18 }}>{t("vision.aiDoc.title")}</p>
@@ -238,6 +244,10 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
   const [shareOpen, setShareOpen] = useState(false);
   const [onboardHidden, setOnboardHidden] = useState(() => { try { return localStorage.getItem(ONBOARD_KEY) === "1"; } catch (_) { return false; } });
   const [mobileWall, setMobileWall] = useState(0);
+  const [docsOpen, setDocsOpen] = useState(false);
+  const [docQuery, setDocQuery] = useState("");
+  const [fileOver, setFileOver] = useState(false);
+  const fileInputRef = useRef(null);
 
   const rootRef = useRef(null);
   const scrollRef = useRef(null);
@@ -360,6 +370,8 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
   }, [walls]);
   const lines = useMemo(() => activeItems.filter((i) => i.type === "line"), [activeItems]);
   const trashItems = useMemo(() => items.filter((i) => i.trashed && i.type !== "line"), [items]);
+  // Tiroir « Documents » : documents IA + notes longues du board courant.
+  const docItems = useMemo(() => activeItems.filter((i) => i.type === "ai-doc" || (i.type === "note" && ((i.body?.fr || i.body || "") + "").length > 280)), [activeItems]);
 
   const isVisible = useCallback((card) => {
     if (tagFilter === "all" || ["wall", "heading", "draw", "live"].includes(card.type)) return true;
@@ -494,6 +506,72 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
     return { x: (el.scrollLeft + el.clientWidth / 2) / zoom, y: (el.scrollTop + el.clientHeight / 2) / zoom };
   };
 
+  /* ── Aller à une carte (tiroir Documents) ── */
+  const focusItem = (id) => {
+    const it = itemsRef.current.find((i) => i.id === id);
+    const r = rectsRef.current[id] || (it?.parent && rectsRef.current[it.parent]);
+    const el = scrollRef.current;
+    setSelectedId(id);
+    if (el && r) {
+      el.scrollTo({ left: Math.max(0, (r.x + r.w / 2) * zoomRef.current - el.clientWidth / 2), top: Math.max(0, r.y * zoomRef.current - 90), behavior: "smooth" });
+    }
+    if (isSmall) setDocsOpen(false);
+  };
+
+  /* ── Images depuis l'ordinateur (glisser-déposer ou bouton) ──
+     Pas de stockage de fichiers côté serveur : l'image est réduite (1400 px,
+     JPEG) puis gardée dans le board, pour rester légère à sauvegarder. */
+  const imageToDataUrl = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const img = new window.Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const max = 1400;
+        const k = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement("canvas");
+        c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        resolve({ url: c.toDataURL("image/jpeg", 0.82), ratio: c.height / c.width });
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+  const addImageFiles = async (files, point) => {
+    const list = Array.from(files || []).filter((f) => /^image\//.test(f.type)).slice(0, 6);
+    if (!list.length) { toast.error("Dépose une image (JPG, PNG, WebP…)."); return; }
+    const poids = itemsRef.current.filter((i) => typeof i.image === "string" && i.image.startsWith("data:")).reduce((n, i) => n + i.image.length, 0);
+    if (poids > 6_000_000) { toast.error("Ce board contient déjà beaucoup d'images importées : colle plutôt un lien d'image."); return; }
+    const base = point || viewCenter();
+    let n = 0;
+    for (const f of list) {
+      try {
+        const { url, ratio } = await imageToDataUrl(f);
+        const w = 380;
+        addItem({ type: "image", w, h: Math.round(w * ratio), image: url, title: { fr: "", en: "" }, x: Math.max(20, base.x - w / 2 + n * 40), y: Math.max(20, base.y - 120 + n * 40) }, { intoWall: false });
+        n += 1;
+      } catch { /* image illisible : on passe à la suivante */ }
+    }
+    if (n) toast.success(n > 1 ? `${n} images ajoutées` : "Image ajoutée");
+  };
+  const hasFiles = (e) => Array.from(e.dataTransfer?.types || []).includes("Files");
+  const onFileDragOver = (e) => { if (readOnly || !hasFiles(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = "copy"; if (!fileOver) setFileOver(true); };
+  const onFileDragLeave = (e) => { if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget)) setFileOver(false); };
+  const onFileDrop = (e) => {
+    if (readOnly || !hasFiles(e)) return;
+    e.preventDefault();
+    setFileOver(false);
+    const el = scrollRef.current;
+    let point = null;
+    if (el) {
+      const r = el.getBoundingClientRect();
+      point = { x: (e.clientX - r.left + el.scrollLeft) / zoomRef.current, y: (e.clientY - r.top + el.scrollTop) / zoomRef.current };
+    }
+    addImageFiles(e.dataTransfer.files, point);
+  };
+
   /* ── Création d'éléments ── */
   const targetWall = () => {
     const sel = items.find((i) => i.id === selectedId);
@@ -622,6 +700,12 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
       fetchStarterTemplates().then((r) => setTemplates(r.templates || [])).catch(() => toast.error(t("vision.templates.unavailable"))).finally(() => setTplLoading(false));
     }
   };
+
+  // Modèles toujours visibles au-dessus de la barre IA (comme final) : chargés une fois.
+  useEffect(() => {
+    if (readOnly || isSmall || templates.length) return;
+    fetchStarterTemplates().then((r) => setTemplates(r.templates || [])).catch(() => {});
+  }, [readOnly, isSmall]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const applyTemplate = (tpl) => {
     if (!tpl?.cards?.length) return;
@@ -916,6 +1000,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
       const { default: html2canvas } = await import("html2canvas");
       const bg = getComputedStyle(rootRef.current).getPropertyValue("--sf-canvas-solid").trim() || "#0a1230";
       const scale = Math.min(2, 8000 / Math.max(maxX - minX, maxY - minY));
+      rootRef.current?.classList.add("sf-exporting");
       const full = await html2canvas(boardRef.current, { backgroundColor: bg, useCORS: true, scale, logging: false, width: maxX, height: maxY });
       const canvas = document.createElement("canvas");
       canvas.width = Math.round((maxX - minX) * scale);
@@ -947,6 +1032,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
     } catch {
       toast.error(t("common.unavailable"));
     } finally {
+      rootRef.current?.classList.remove("sf-exporting");
       setZoom(prevZoom);
       setSelectedId(prevSel);
       setExporting(false);
@@ -964,6 +1050,64 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
     if (!url?.trim()) return;
     setMenu(null);
     addItem({ type: "image", w: 420, h: 300, image: url.trim(), title: { fr: "", en: "" } });
+  };
+
+  /* ── Vision Book : un PDF paysage, une page de garde puis un mur par page ── */
+  const handleVisionBook = async () => {
+    setMenu(null);
+    const ws = walls.filter((w) => rectsRef.current[w.id]);
+    if (!ws.length) { toast("Ajoute au moins un mur pour créer ton Vision Book."); return; }
+    setExporting(true);
+    const prevZoom = zoomRef.current;
+    const prevSel = selectedId;
+    setSelectedId(null);
+    try {
+      setZoom(1);
+      await new Promise((r) => setTimeout(r, 350));
+      const { default: html2canvas } = await import("html2canvas");
+      const jsPdfMod = await import("jspdf");
+      const JsPDF = jsPdfMod.jsPDF || jsPdfMod.default;
+      const bg = getComputedStyle(rootRef.current).getPropertyValue("--sf-canvas-solid").trim() || "#0a1230";
+      const pdf = new JsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      const W = pdf.internal.pageSize.getWidth();
+      const H = pdf.internal.pageSize.getHeight();
+      // Les polices standard du PDF ne couvrent que le Latin-1 : « → » sortait en « !' ».
+      const pdfTxt = (x) => String(x || "").replace(/→/g, "-").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/[–—]/g, "-").replace(/[^\x20-\xFF]/g, "");
+      const titre = pdfTxt((activeItems.find((i) => i.type === "heading")?.text || "Mon Vision Board").replace(/\{prenom\}/g, prenom || ""));
+      rootRef.current?.classList.add("sf-exporting");
+      // Page de garde
+      pdf.setFillColor(bg); pdf.rect(0, 0, W, H, "F");
+      pdf.setTextColor(222, 194, 163); pdf.setFontSize(11); pdf.text("ZAYADO · VISION BOOK", 20, 30);
+      pdf.setTextColor(255, 255, 255); pdf.setFontSize(30); pdf.text(pdf.splitTextToSize(titre, W - 40), 20, H / 2 - 10);
+      pdf.setFontSize(12); pdf.setTextColor(200, 205, 220);
+      pdf.text(`${ws.length} mur${ws.length > 1 ? "s" : ""} · ${new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`, 20, H / 2 + 12);
+      for (let i = 0; i < ws.length; i += 1) {
+        const node = boardRef.current?.querySelector(`[data-item-id="${ws[i].id}"]`);
+        if (!node) continue;
+        const shot = await html2canvas(node, { backgroundColor: bg, useCORS: true, scale: 2, logging: false });
+        // Mur haut et étroit → page portrait, sinon paysage : le mur remplit la page.
+        pdf.addPage("a4", shot.width / shot.height < 1 ? "portrait" : "landscape");
+        const W = pdf.internal.pageSize.getWidth();
+        const H = pdf.internal.pageSize.getHeight();
+        pdf.setFillColor(bg); pdf.rect(0, 0, W, H, "F");
+        const m = 12;
+        const ratio = shot.width / shot.height;
+        let w = W - m * 2; let h = w / ratio;
+        if (h > H - m * 2 - 8) { h = H - m * 2 - 8; w = h * ratio; }
+        pdf.addImage(shot.toDataURL("image/jpeg", 0.9), "JPEG", (W - w) / 2, m, w, h, undefined, "FAST");
+        pdf.setFontSize(9); pdf.setTextColor(160, 170, 190);
+        pdf.text(`${i + 1} / ${ws.length}`, W - m, H - 6, { align: "right" });
+      }
+      pdf.save(`vision-book-${boardKey}-${new Date().toISOString().slice(0, 10)}.pdf`);
+      toast.success("Vision Book prêt ✓");
+    } catch {
+      toast.error(t("common.unavailable"));
+    } finally {
+      rootRef.current?.classList.remove("sf-exporting");
+      setZoom(prevZoom);
+      setSelectedId(prevSel);
+      setExporting(false);
+    }
   };
 
   const jumpToMiniMap = (e) => {
@@ -993,7 +1137,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
       case "video":
         return <VideoCard card={card} editing={isEditing} onPatch={patch} onDone={done} />;
       case "live":
-        return <LiveCard card={card} live={live} onOpen={openLiveModule} />;
+        return <LiveCard card={card} live={live} onOpen={openLiveModule} onPatch={patch} />;
       case "heading":
         return isEditing ? (
           <input autoFocus defaultValue={card.text} onPointerDown={(e) => e.stopPropagation()}
@@ -1142,7 +1286,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
         onPointerDown={(e) => onPointerDownItem(e, card)}
         onDoubleClick={(e) => { e.stopPropagation(); if (canEdit) setEditingId(card.id); }}
         data-testid={`vision-card-${card.id}`}
-        className="sf-item group select-none"
+        className={`sf-item group select-none ${free ? "sf-free" : ""}`}
         style={{ ...pos, touchAction: isSmall || readOnly ? "auto" : "none", cursor: readOnly || isSmall ? "default" : mode === "line" ? "crosshair" : mode !== "select" ? "inherit" : isEditing ? "default" : "grab", filter: isDragging ? "drop-shadow(0 18px 30px rgba(0,0,0,.45))" : undefined }}>
         <div style={isSelected && !isEditing ? { borderRadius: 24, boxShadow: "0 0 0 2px var(--sf-accent)" } : undefined}>
           {renderBody(card, inWall)}
@@ -1275,6 +1419,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
     { sep: true },
     { id: "draw", icon: PenTool, label: "Dessin", action: () => setMode((m) => (m === "draw" ? "select" : "draw")), active: mode === "draw" },
     { id: "images", icon: ImageIcon, label: "Images", action: () => setMenu((m) => (m === "images" ? null : "images")), active: menu === "images" },
+    { id: "docs", icon: Files, label: "Docs", action: () => { setMenu(null); setDocsOpen((v) => !v); }, active: docsOpen, badge: docItems.length },
     { id: "trash", icon: Trash2, label: "Corbeille", action: () => setMenu((m) => (m === "trash" ? null : "trash")), active: menu === "trash", badge: trashItems.length },
   ];
 
@@ -1369,7 +1514,50 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
 
   return (
     <div ref={rootRef} data-testid="vision-canvas-container"
+      onDragOver={onFileDragOver} onDragLeave={onFileDragLeave} onDrop={onFileDrop}
       className={`sf relative overflow-hidden ${presenting ? "sf-present fixed inset-0 z-[80] h-[100dvh] w-screen" : readOnly ? "h-full" : "h-[calc(100dvh-120px)] md:h-[calc(100dvh-150px)] md:rounded-2xl md:border md:border-white/10"}`}>
+      {!readOnly && (
+        <input ref={fileInputRef} type="file" accept="image/*" multiple hidden data-testid="vision-file-input"
+          onChange={(e) => { addImageFiles(e.target.files); e.target.value = ""; setMenu(null); }} />
+      )}
+      {fileOver && (
+        <div className="pointer-events-none absolute inset-3 z-[45] flex items-center justify-center rounded-3xl border-2 border-dashed" style={{ borderColor: "var(--sf-accent)", background: "rgba(10,18,48,0.55)" }} data-testid="vision-drop-overlay">
+          <p className="sf-chrome flex items-center gap-2 rounded-full px-5 py-3 text-[15px] font-semibold"><Upload size={17} style={{ color: "var(--sf-accent)" }} /> Dépose tes images ici</p>
+        </div>
+      )}
+      {/* ── Tiroir Documents (documents IA + notes longues) ── */}
+      {docsOpen && !readOnly && (
+        <div className="sf-hide-present sf-chrome absolute bottom-3 right-3 top-16 z-40 flex w-[min(92vw,340px)] flex-col rounded-2xl p-3" data-testid="vision-docs-drawer">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="sf-title" style={{ fontSize: 16 }}>Documents <span className="sf-small" style={{ fontSize: 13 }}>· {docItems.length}</span></p>
+            <button onClick={() => setDocsOpen(false)} className="sf-btn" title="Fermer"><X size={15} /></button>
+          </div>
+          <div className="relative mb-2">
+            <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--sf-muted)" }} />
+            <input value={docQuery} onChange={(e) => setDocQuery(e.target.value)} placeholder="Rechercher dans les documents" className="sf-field" style={{ paddingLeft: 32 }} data-testid="vision-docs-search" />
+          </div>
+          <div className="sf-scroll min-h-0 flex-1 space-y-2 overflow-y-auto" onWheel={(e) => e.stopPropagation()}>
+            {docItems
+              .filter((d) => { const q = docQuery.trim().toLowerCase(); return !q || (tv(d.title, lang) + " " + tv(d.body, lang)).toLowerCase().includes(q); })
+              .map((d) => (
+                <button key={d.id} onClick={() => focusItem(d.id)} className="w-full rounded-xl p-3 text-left transition hover:brightness-110" style={{ background: "var(--sf-card)", border: "1px solid var(--sf-card-border, var(--sf-line))" }} data-testid={`vision-doc-${d.id}`}>
+                  <p className="sf-text truncate" style={{ fontWeight: 600, fontSize: 14 }}>{tv(d.title, lang) || "Sans titre"}</p>
+                  <p className="sf-small mt-0.5" style={{ fontSize: 12 }}>{d.type === "ai-doc" ? `IA · ${t(`vision.aiDoc.${AI_DOC_KEYS[d.docType] || "t1"}`)}` : "Note"}</p>
+                  <p className="sf-small mt-1 line-clamp-2" style={{ fontSize: 12.5 }}>{tv(d.body, lang).slice(0, 160)}</p>
+                </button>
+              ))}
+            {!docItems.length && (
+              <div className="rounded-xl p-4 text-center" style={{ background: "var(--sf-card)" }}>
+                <p className="sf-small" style={{ fontSize: 13 }}>Aucun document sur ce board. Demande à l'IA un brief, un plan 30 jours ou un positionnement.</p>
+                <button onClick={() => { setDocsOpen(false); setAiDocOpen(true); }} className="sf-btn sf-btn-primary mt-3" style={{ height: 34 }}><FileText size={14} /> Créer un document IA</button>
+              </div>
+            )}
+          </div>
+          {docItems.length > 0 && (
+            <button onClick={() => { setDocsOpen(false); setAiDocOpen(true); }} className="sf-btn sf-btn-outline mt-2" style={{ height: 34 }}><Plus size={14} /> Nouveau document IA</button>
+          )}
+        </div>
+      )}
       {!readOnly && <AiDocModal open={aiDocOpen} onClose={() => setAiDocOpen(false)} onGenerated={handleAiDocGenerated} />}
       {shareOpen && <ShareDialog board={boardKey} onClose={() => setShareOpen(false)} />}
 
@@ -1409,6 +1597,8 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
             )}
             <div className="mt-3"><AiImageRow onPick={addImageFromUrl} /></div>
             <input placeholder="…ou colle l'URL d'une image" onKeyDown={(e) => e.key === "Enter" && addImageFromUrl(e.target.value)} className="sf-field mt-3" />
+            <button onClick={() => fileInputRef.current?.click()} className="sf-btn sf-btn-outline mt-2 w-full justify-center" style={{ height: 34 }} data-testid="vision-import-image"><Upload size={14} /> Importer depuis l'ordinateur</button>
+            <p className="sf-small mt-1.5 text-center" style={{ fontSize: 11.5 }}>Astuce : glisse une image directement sur le canvas.</p>
           </Popover>
           <Popover open={menu === "trash"} onClose={() => setMenu(null)} className="bottom-0 left-full ml-3 w-[330px] p-2" testid="vision-trash">{trashPanel}</Popover>
         </div>
@@ -1460,6 +1650,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
             <Popover open={menu === "export"} onClose={() => setMenu(null)} className="right-0 top-full mt-2 w-[220px]">
               <button onClick={() => handleExport("png")} className="sf-menu-item" data-testid="vision-export-png"><span className="sf-mi-ico"><ImageIcon size={15} /></span>{t("vision.exportPng")}</button>
               <button onClick={() => handleExport("pdf")} className="sf-menu-item" data-testid="vision-export-pdf"><span className="sf-mi-ico"><FileDown size={15} /></span>{t("vision.exportPdf")}</button>
+              <button onClick={handleVisionBook} className="sf-menu-item" data-testid="vision-export-book"><span className="sf-mi-ico"><BookOpen size={15} /></span>Vision Book (PDF, un mur par page)</button>
             </Popover>
           </div>
           {!readOnly && <button onClick={() => setShareOpen(true)} className="sf-btn" title="Partager en lecture seule" data-testid="vision-share"><Share2 size={15} /></button>}
@@ -1500,6 +1691,16 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
       {/* ── Barre IA (bas) ── */}
       {!readOnly && (
         <div className={`sf-hide-present absolute left-1/2 z-30 -translate-x-1/2 ${isSmall ? "bottom-3 w-[calc(100%-24px)]" : "bottom-4 w-[min(94vw,620px)]"}`} data-testid="vision-prompt-bar">
+          {!isSmall && (
+            <div className="sf-chrome mx-auto mb-2 flex w-fit max-w-full items-center gap-1 overflow-x-auto rounded-full p-1" data-testid="vision-template-strip" style={{ scrollbarWidth: "none" }}>
+              <span className="shrink-0 pl-2.5 pr-1 text-[10.5px] font-semibold uppercase tracking-[0.14em]" style={{ color: "var(--sf-muted)" }}>Modèles</span>
+              <button onClick={() => addByTool("cockpit")} className="shrink-0 rounded-full px-3 py-1.5 text-[12.5px] font-medium transition hover:bg-white/10" style={{ color: "var(--sf-accent)", background: "rgba(222,194,163,0.12)" }}>Cockpit A → Z</button>
+              {templates.slice(0, 5).map((tpl) => (
+                <button key={tpl.id || tpl.label} onClick={() => applyTemplate(tpl)} className="shrink-0 rounded-full px-3 py-1.5 text-[12.5px] font-medium transition hover:bg-white/10" data-testid={`vision-tpl-chip-${tpl.id || tpl.label}`}>{tpl.label}</button>
+              ))}
+              <button onClick={openTemplates} className="shrink-0 rounded-full px-3 py-1.5 text-[12.5px] transition hover:bg-white/10" style={{ color: "var(--sf-text-2)" }}>Tous <ArrowRight size={12} className="inline" /></button>
+            </div>
+          )}
           <div className="sf-chrome flex items-center gap-2 rounded-full px-2 py-1.5">
             <button onClick={() => setMenu((m) => (m === "add" ? null : "add"))} title={t("common.add")} data-testid="vision-prompt-add"
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition" style={{ background: "rgba(222,194,163,0.18)", color: "var(--sf-accent)" }}><Plus size={17} /></button>
@@ -1524,6 +1725,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
           </Popover>
           <Popover open={menu === "images-m"} onClose={() => setMenu(null)} className="bottom-full left-0 mb-2 w-[300px] p-3">
             <input autoFocus placeholder="Colle l'URL d'une image" onKeyDown={(e) => e.key === "Enter" && addImageFromUrl(e.target.value)} className="sf-field" />
+            <button onClick={() => fileInputRef.current?.click()} className="sf-btn sf-btn-outline mt-2 w-full justify-center" style={{ height: 34 }}><Upload size={14} /> Importer une photo</button>
             <div className="mt-3"><AiImageRow onPick={addImageFromUrl} /></div>
           </Popover>
           <Popover open={menu === "live" && isSmall} onClose={() => setMenu(null)} className="bottom-full left-0 mb-2 max-h-[60vh] w-[300px] overflow-y-auto">{livePanel}</Popover>
@@ -1534,7 +1736,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
       {/* ── Modèles de départ ── */}
       {tplOpen && (
         <>
-          <div className="fixed inset-0 z-[60] bg-black/60" onClick={() => setTplOpen(false)} data-testid="vision-templates-overlay" />
+          <div className="fixed inset-0 z-[60] bg-[#060a18]/70 backdrop-blur-sm" onClick={() => setTplOpen(false)} data-testid="vision-templates-overlay" />
           <div className="sf sf-menu fixed left-1/2 top-1/2 z-[61] max-h-[80vh] w-[min(94vw,640px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto p-6" data-testid="vision-templates-panel">
             <div className="mb-4 flex items-start justify-between">
               <div>
@@ -1710,13 +1912,13 @@ function ShareDialog({ board, onClose }) {
   const copy = () => navigator.clipboard?.writeText(url).then(() => toast.success("Lien copié")).catch(() => {});
   const setOpt = (k) => { const next = { ...opts, [k]: !opts[k] }; setOpts(next); if (state?.active) save(next); };
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#060a18]/70 backdrop-blur-sm p-4" onClick={onClose}>
       <div className="sf sf-menu relative w-full max-w-md p-6" onClick={(e) => e.stopPropagation()} data-testid="vision-share-dialog">
         <button onClick={onClose} className="sf-btn absolute right-3 top-3"><X size={16} /></button>
         <p className="sf-title" style={{ fontSize: 18 }}>Partager en lecture seule</p>
         <p className="sf-small mt-1" style={{ fontSize: 14 }}>Pour un coach, un associé ou un banquier : ils voient le board sans compte et ne peuvent rien modifier.</p>
         <div className="mt-4 space-y-2">
-          {[["hide_finances", "Masquer les finances (CA, trésorerie)"], ["hide_energie", "Masquer l'énergie et la roue de l'équilibre"]].map(([k, label]) => (
+          {[["hide_finances", "Masquer les finances et le SWOT (CA, trésorerie, analyse)"], ["hide_energie", "Masquer l'énergie et la roue de l'équilibre"]].map(([k, label]) => (
             <label key={k} className="flex cursor-pointer items-center gap-3 rounded-xl p-3" style={{ background: "var(--sf-card)" }}>
               <input type="checkbox" checked={opts[k]} onChange={() => setOpt(k)} className="h-4 w-4 accent-[#DEC2A3]" />
               <span className="text-[14px]">{label}</span>

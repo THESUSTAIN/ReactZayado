@@ -5,23 +5,17 @@ import { Chip } from "@/components/kairos/Chip";
 import { useKairos } from "@/context/KairosContext";
 import { valuesLibrary } from "@/mock/data";
 import { saveProfile } from "@/lib/kairosApi";
+import { PLANS as PLANS_GRILLE, PLAN_ENTREPRISE } from "@/lib/plans";
 import { Sparkles, ArrowRight, ArrowLeft, Plus, X, Target, Clock, Heart, Check, Loader2, Rocket, User, Briefcase, TrendingUp } from "lucide-react";
 import { savePouls } from "@/lib/kairosApi";
 
 const STEPS = ["Bienvenue", "Identité", "Activité", "Cap financier", "Vision", "Objectifs 90j", "Valeurs & rituel", "Ton offre", "C'est prêt"];
 
-const PLANS = [
-  { key: "essentielle", name: "Essentielle", price: "0€", period: "pour toujours",
-    features: ["Cockpit quotidien", "3 priorités & check-in énergie", "Vision Board"], highlight: false },
-  { key: "serenite", name: "Sérénité", price: "19€", period: "/ mois",
-    features: ["Tout l'Essentiel", "Copilote IA (plafond équitable)", "Radar du jour (3 opportunités)", "Pouls Business & revue hebdo"], highlight: true },
-  { key: "pro", name: "Pro", price: "49€", period: "/ mois",
-    features: ["Tout Sérénité", "1 chatbot marque blanche", "Validation Telegram & WhatsApp", "Espace vendeur marketplace"], highlight: false },
-  { key: "business", name: "Business", price: "99€", period: "/ mois",
-    features: ["Tout Pro", "3 chatbots marque blanche", "IA sur ta base de connaissance"], highlight: false },
-  { key: "entreprise", name: "Entreprise", price: "149€", period: "/ mois",
-    features: ["Tout Business", "Chatbots illimités, ton domaine", "SLA dédié"], highlight: false },
-];
+// Offres : source unique (lib/plans.js), prix HT.
+const PLANS = [...PLANS_GRILLE.map((p) => ({
+  key: p.key, name: p.nom, price: `${p.mensuel} €`, period: p.mensuel ? "HT / mois" : "pour toujours",
+  features: p.points.slice(0, 4), highlight: !!p.star,
+})), { key: PLAN_ENTREPRISE.key, name: PLAN_ENTREPRISE.nom, price: `dès ${PLAN_ENTREPRISE.plancher} €`, period: "HT / mois, sur devis", features: PLAN_ENTREPRISE.points.slice(0, 3), highlight: false }];
 
 export default function Onboarding() {
   const navigate = useNavigate();

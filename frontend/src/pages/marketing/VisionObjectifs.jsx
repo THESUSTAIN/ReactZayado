@@ -17,7 +17,7 @@ const POINTS = [
 const FAQ = [
   { q: "Je n'ai jamais réussi à tenir une vision écrite, pourquoi ça marcherait ici ?", r: "Parce qu'elle ne reste pas sur une page — elle pilote ta priorité du jour, chaque matin. Tu ne la relis pas une fois par an, tu la vis chaque jour." },
   { q: "Combien de temps pour la construire ?", r: "5 minutes pour le premier jet, généré par l'IA à partir de ce que tu décris. Tu l'ajustes ensuite librement." },
-  { q: "C'est vraiment gratuit ?", r: "Oui, le Vision Board complet est inclus dans l'offre Essentielle, gratuite, sans limite de durée." },
+  { q: "C'est vraiment gratuit ?", r: "Oui, le Vision Board complet est inclus dans l'offre Découverte, gratuite, sans limite de durée." },
 ];
 
 export default function VisionObjectifs() {

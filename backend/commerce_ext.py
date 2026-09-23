@@ -129,16 +129,23 @@ def install_commerce(g: dict) -> None:
         plan = pricing.get(body.plan.lower())
         if not plan or plan.get(body.cycle) is None:
             raise HTTPException(400, "Cette offre est sur devis ou n'existe pas.")
-        amount = float(plan[body.cycle])
-        if amount <= 0:
+        amount_ht = float(plan[body.cycle])
+        if amount_ht <= 0:
             raise HTTPException(400, "Ce forfait est gratuit : aucun paiement requis.")
+        # Les tarifs affichés sont HT : on encaisse le TTC (TVA 20 % par défaut,
+        # réglable avec TVA_TAUX, ex. 0 pour une franchise en base de TVA).
+        try:
+            tva = float(os.environ.get("TVA_TAUX", "0.20"))
+        except ValueError:
+            tva = 0.20
+        amount = round(amount_ht * (1 + max(0.0, tva)), 2)
         uid = _uid()
         user = None if uid == DEMO_USER_ID else await db.get(User, uid)
         if not user:
             raise HTTPException(401, "Connecte-toi avant de souscrire.")
         order = CommerceOrder(user_id=uid, email=(body.email or user.email).strip().lower(), kind="saas",
-                              title=f"Zayado {plan['label']} · {body.cycle}", amount=f"{amount:.2f}",
-                              access_url=f"{_frontend_url()}/app", metadata_json={"plan": body.plan.lower(), "cycle": body.cycle})
+                              title=f"Zayado {plan['label']} · {body.cycle} · TTC", amount=f"{amount:.2f}",
+                              access_url=f"{_frontend_url()}/app", metadata_json={"plan": body.plan.lower(), "cycle": body.cycle, "montant_ht": f"{amount_ht:.2f}", "tva_taux": tva})
         db.add(order)
         await db.flush()
         payment = await _mollie_create(order)

@@ -55,7 +55,7 @@ const AVANT_APRES = [
 
 const FAQ = [
   { q: "Que remplace concrètement le Cockpit IA Zayado ?", r: "Ton tableau de tâches, ta note d'objectifs, ton suivi de chiffre d'affaires et ta liste de prospection. Un seul endroit, une seule connexion — et une IA qui connaît ton contexte." },
-  { q: "Est-ce adapté si je débute mon activité ?", r: "Oui. L'offre Essentielle est gratuite : cockpit quotidien, vision board et check-in d'énergie. La prospection IA arrive quand tu es prêt, avec l'offre Sérénité." },
+  { q: "Est-ce adapté si je débute mon activité ?", r: "Oui. L'offre Découverte est gratuite : cockpit quotidien, vision board et check-in d'énergie. La prospection IA arrive quand tu es prêt, avec l'offre Sérénité." },
   { q: "Mes données sont-elles à moi ?", r: "Oui. Chaque compte est isolé, tu peux exporter toutes tes données en un clic depuis les paramètres, et demander leur suppression complète à tout moment." },
   { q: "En combien de temps suis-je opérationnel ?", r: "Dix minutes : l'onboarding te pose 5 questions, pré-remplit ta vision et ton suivi business, et ton premier point du jour est généré dans la foulée." },
 ];
@@ -227,9 +227,9 @@ export default function Landing() {
         <div className="mx-auto max-w-6xl px-5 py-16">
           <div className="grid gap-5 md:grid-cols-3">
             {[
-              { nom: "Essentielle", prix: "0€", points: ["Cockpit quotidien & 3 priorités", "Vision Board", "Check-in énergie"] },
-              { nom: "Sérénité", prix: "19€/mois", points: ["Copilote IA illimité", "Radar du jour (3 opportunités)", "Pouls Business & revue hebdo"], star: true },
-              { nom: "Agent Business", prix: "dès 49€/mois", points: ["30 vrais prospects qualifiés/mois", "Validation Telegram & WhatsApp", "Espace vendeur marketplace"] },
+              { nom: "Découverte", prix: "0 €", points: ["Cockpit du jour & priorité du matin", "1 Vision Board", "Check-in énergie"] },
+              { nom: "Solo", prix: "24 € HT/mois", points: ["Copilote IA sans limite (usage équitable)", "Radar : 3 opportunités par jour", "Pouls business & revue hebdo"], star: true },
+              { nom: "Pro", prix: "69 € HT/mois", points: ["Ton chatbot client, à ta marque", "Documents IA : brief, plan 30 j, SWOT", "Alertes WhatsApp & Telegram"] },
             ].map((o) => (
               <div key={o.nom} className={`glass rounded-2xl p-7 ${o.star ? "border-gold/40" : ""}`} data-testid={`landing-offre-${o.nom.toLowerCase().replace(/[^a-z]/g, "-")}`}>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">{o.nom}</p>

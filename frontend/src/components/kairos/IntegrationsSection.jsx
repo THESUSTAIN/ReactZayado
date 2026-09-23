@@ -253,7 +253,7 @@ export default function IntegrationsSection({ onOnboardingChange }) {
 
       {/* Modal config */}
       {openConfig && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" role="dialog">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#060a18]/70 backdrop-blur-sm p-4 backdrop-blur-sm" role="dialog">
           <div className="w-full max-w-lg rounded-2xl border border-white/15 bg-navy-900/95 p-6">
             <div className="mb-4 flex items-start justify-between">
               <div>

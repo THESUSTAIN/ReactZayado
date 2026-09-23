@@ -241,3 +241,15 @@ body.theme-clair .sf {
   .sf .sf-text { font-size: 15px; line-height: 1.65; }
   .sf .sf-title { font-size: 15.5px; }
 }
+
+/* Pendant un export (html2canvas) : pas d'ombres intérieures ni de flou,
+   que html2canvas transforme en aplat vert/gris sur les cartes. */
+.sf-exporting .sf-live-card { box-shadow: none !important; border-color: rgba(52, 211, 153, 0.35) !important; }
+.sf-exporting .sf-card, .sf-exporting .sf-wall, .sf-exporting .sf-chrome { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+body:not(.theme-clair) .sf-exporting .sf-card { background: #17264f !important; }
+body:not(.theme-clair) .sf-exporting .sf-wall { background: #111d40 !important; }
+
+/* Carte posée librement sur le canvas (hors mur) : fond quasi opaque, sinon
+   le verre laisse voir les murs dessous et le texte devient illisible. */
+.sf .sf-free .sf-card, .sf .sf-free .sf-table-wrap { background: rgba(20, 32, 68, 0.95); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35); }
+.theme-creme .sf .sf-free .sf-card, body.theme-clair .sf .sf-free .sf-card, .theme-creme .sf .sf-free .sf-table-wrap, body.theme-clair .sf .sf-free .sf-table-wrap { background: #ffffff; }

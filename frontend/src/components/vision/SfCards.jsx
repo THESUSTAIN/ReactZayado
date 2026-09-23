@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, Calendar, Check, ExternalLink, Loader2, Play, Plus, Sparkles, Trash2, Trophy } from "lucide-react";
+import { AlertTriangle, Calendar, Check, ExternalLink, Loader2, Play, Plus, RefreshCw, Sparkles, Trash2, Trophy } from "lucide-react";
 import {
   fetchState, fetchObjectifs, fetchTaches, fetchPouls, fetchRoadmap, fetchIdees, fetchWheel, toggleTache,
-  creerTache, fetchVictoires,
+  creerTache, fetchVictoires, genererSwot,
 } from "@/lib/kairosApi";
 
 /* ───────────────────────── Étiquettes pastel ─────────────────────────
@@ -279,6 +279,7 @@ export const LIVE_SOURCES = [
   { id: "suivi",       label: "Suivi financier (tableau)", route: "/app" },
   { id: "idees",       label: "Idées à fort impact",       route: "/app/ideas" },
   { id: "victoires",   label: "Victoires",                 route: "/app/revue" },
+  { id: "swot",        label: "Analyse SWOT (IA)",         route: "/app/radar" },
 ];
 const SOURCE_LABEL = Object.fromEntries(LIVE_SOURCES.map((s) => [s.id, s.label]));
 
@@ -388,7 +389,60 @@ function MissionButton({ objectif, live }) {
   );
 }
 
-export function LiveCard({ card, live, onOpen }) {
+/* ── Carte SWOT : générée par l'IA à la demande (POST /radar/swot) puis
+   gardée dans la carte — pas de relance automatique (coût IA, lenteur). ── */
+const SWOT_Q = [
+  ["forces", "Forces", "#34D399"], ["faiblesses", "Faiblesses", "#F59E0B"],
+  ["opportunites", "Opportunités", "#60A5FA"], ["menaces", "Menaces", "#F87171"],
+];
+function SwotCard({ card, onPatch, common }) {
+  const [busy, setBusy] = useState(false);
+  const sw = card.swot;
+  const gen = async () => {
+    setBusy(true);
+    try { const r = await genererSwot(); onPatch?.({ swot: r }); toast.success("Analyse SWOT générée"); }
+    catch (e) { toast.error(e?.message || "Analyse SWOT indisponible pour l'instant."); }
+    finally { setBusy(false); }
+  };
+  const btn = (label) => !common.readOnly && (
+    <button type="button" onPointerDown={(e) => e.stopPropagation()} onClick={gen} disabled={busy} data-testid="swot-generate"
+      className="sf-btn sf-btn-primary" style={{ height: 34, fontSize: 14 }}>
+      {busy ? <Loader2 size={14} className="animate-spin" /> : label === "Régénérer" ? <RefreshCw size={14} /> : <Sparkles size={14} />} {busy ? "Analyse en cours…" : label}
+    </button>
+  );
+  if (!sw) {
+    return (
+      <div className="sf-card sf-live-card">
+        <LiveHead title="Analyse SWOT" {...common} />
+        <p className="sf-small">L'IA lit ta vision, tes objectifs et ton activité, puis te rend tes forces, faiblesses, opportunités et menaces, avec le levier n°1.</p>
+        <div className="mt-3">{btn("Générer mon SWOT")}</div>
+      </div>
+    );
+  }
+  return (
+    <div className="sf-card sf-live-card">
+      <LiveHead title="Analyse SWOT" {...common} right={<span className="sf-small" style={{ fontSize: 12 }}>{sw.genere_a ? new Date(sw.genere_a).toLocaleDateString("fr-FR") : ""}</span>} />
+      <div className="grid grid-cols-2 gap-2.5">
+        {SWOT_Q.map(([k, label, color]) => (
+          <div key={k} className="rounded-xl p-3" style={{ background: "var(--sf-card-2)", borderTop: `3px solid ${color}` }}>
+            <p className="sf-text" style={{ fontWeight: 600, fontSize: 14, color }}>{label}</p>
+            <ul className="mt-1.5 space-y-1">
+              {(sw[k] || []).slice(0, 3).map((x, i) => <li key={i} className="sf-small" style={{ fontSize: 13, lineHeight: 1.45 }}>• {x}</li>)}
+              {!(sw[k] || []).length && <li className="sf-small" style={{ fontSize: 13 }}>—</li>}
+            </ul>
+          </div>
+        ))}
+      </div>
+      {sw.synthese && <p className="sf-text mt-3" style={{ fontSize: 14, lineHeight: 1.55 }}><strong>À retenir :</strong> {sw.synthese}</p>}
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <span className="sf-small" style={{ fontSize: 12 }}>Généré par l'IA à partir de tes données</span>
+        {btn("Régénérer")}
+      </div>
+    </div>
+  );
+}
+
+export function LiveCard({ card, live, onOpen, onPatch }) {
   const { data, loading, toggleTask, readOnly } = live;
   const src = card.source;
   const st = data.state || {};
@@ -646,6 +700,8 @@ export function LiveCard({ card, live, onOpen }) {
       </div>
     );
   }
+
+  if (src === "swot") return <SwotCard card={card} onPatch={onPatch} common={common} />;
 
   if (src === "victoires") {
     const list = Array.isArray(data.victoires) ? data.victoires : [];

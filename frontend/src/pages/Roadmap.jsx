@@ -200,7 +200,7 @@ function RoadmapEditor({ item, onSave, onClose }) {
     visible: item.visible !== false,
   });
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-[#060a18]/70 backdrop-blur-sm p-4 backdrop-blur-sm" onClick={onClose}>
       <div className="glass-strong relative w-full max-w-lg rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
         <button onClick={onClose} className="absolute right-4 top-4 text-offwhite/60 hover:text-white"><X size={18} /></button>
         <h3 className="font-display text-lg font-bold text-white">{item.id ? "Modifier" : "Nouvel item"}</h3>

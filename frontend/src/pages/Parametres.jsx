@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { planNom } from "@/lib/plans";
 import {
   User, Palette, Bell, Plug, ShieldCheck, CreditCard, Gift, Loader2, Save, Download, Cloud,
   Search, X, Sun, Moon,
@@ -374,7 +375,7 @@ function SectionFacturation() {
   return (
     <>
       <Carte titre="Ton forfait">
-        <p className="text-sm">Forfait actuel : <span className="font-semibold text-gold">{profil?.plan || "Essentielle (gratuit)"}</span></p>
+        <p className="text-sm">Forfait actuel : <span className="font-semibold text-gold">{profil?.plan ? planNom(profil.plan) : "Découverte (gratuit)"}</span></p>
         <Link to="/pricing" className="mt-3 inline-block rounded-xl bg-gold px-4 py-2 text-xs font-semibold text-navy-900">
           Voir les forfaits & changer
         </Link>

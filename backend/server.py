@@ -3585,17 +3585,16 @@ async def auto_save_document(body: DocumentAutoSaveIn, db: AsyncSession = Depend
 # ─────────────────────────── Roadmap publique / admin (endpoints) ───────────────────
 
 PRICING = {
-    # Fusionné en une seule échelle (plus deux domaines séparés) : chaque
-    # palier inclut tout le cockpit + ce qui s'ajoute en montant. -20% déjà
-    # calculé sur le tarif annuel (mensuel × 12 × 0.8) pour chaque palier.
-    "essentielle": {"label": "Essentielle", "mensuel": 0.0, "annuel": 0.0, "desc": "Cockpit de base"},
-    "serenite": {"label": "Sérénité", "mensuel": 19.0, "annuel": 182.4, "desc": "Cockpit complet : Copilote IA, Radar, Pouls Business"},
-    "pro": {"label": "Pro", "mensuel": 49.0, "annuel": 470.4, "desc": "Cockpit complet + 1 chatbot marque blanche"},
-    "business": {"label": "Business", "mensuel": 99.0, "annuel": 950.4, "desc": "Cockpit complet + 3 chatbots marque blanche"},
-    # Entreprise n'est plus un prix fixe : devis avec plancher à 249€/mois,
-    # et option clé IA personnelle (le client apporte la sienne — pas de
-    # marge Zayado sur les appels dans ce cas, compensé par le plancher).
-    "entreprise": {"label": "Entreprise", "mensuel": None, "annuel": None, "plancher": 249.0, "desc": "Cockpit complet + chatbots illimités, sur devis, clé IA personnelle possible"},
+    # Grille 2026 (prix HT) — alignée sur frontend/src/lib/plans.js.
+    # Les clés restent les mêmes (abonnements existants, Mollie) ; seuls les
+    # libellés et montants changent. Annuel ≈ 2 mois offerts.
+    # Abonnés existants : ils gardent leur ancien prix tant que leur abonnement court.
+    "essentielle": {"label": "Découverte", "mensuel": 0.0, "annuel": 0.0, "desc": "Cockpit du jour, 1 Vision Board, check-in, 20 questions IA / mois"},
+    "serenite": {"label": "Solo", "mensuel": 24.0, "annuel": 228.0, "desc": "Cockpit complet : Copilote IA, Radar, Pouls Business, Vision Boards illimités"},
+    "pro": {"label": "Pro", "mensuel": 69.0, "annuel": 708.0, "desc": "Solo + chatbot client à ta marque, documents IA, alertes WhatsApp/Telegram"},
+    "business": {"label": "Équipe", "mensuel": 149.0, "annuel": 1548.0, "desc": "Pro + 3 comptes, 3 chatbots, chatbot sur tes documents"},
+    # Entreprise : devis avec plancher, clé IA personnelle possible.
+    "entreprise": {"label": "Entreprise", "mensuel": None, "annuel": None, "plancher": 299.0, "desc": "Équipe + comptes et chatbots illimités, sur devis, clé IA personnelle possible"},
 }
 
 

@@ -342,7 +342,7 @@ function CheckinModal({ focus, vitals, onSave, onClose }) {
   const v = VITALS_LABEL[tab];
   const [choix, setChoix] = useState(null);
   return (
-    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center" onClick={onClose}>
+    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-[#060a18]/70 backdrop-blur-sm p-4 backdrop-blur-sm sm:items-center" onClick={onClose}>
       <div className="w-full max-w-md rounded-t-2xl border border-white/15 p-6 sm:rounded-2xl" style={{ background: "#101a34" }} onClick={(e) => e.stopPropagation()}>
         <div className="mb-5 flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl" style={{ background: `${v.color}22` }}>

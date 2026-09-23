@@ -8,9 +8,9 @@ import {
 } from "lucide-react";
 
 const PLANS = [
-  { key: "essentielle", name: "Essentielle", price: "0€", period: "pour toujours" },
-  { key: "immersion", name: "Immersion", price: "14€", period: "/ mois", old: "29€", highlight: true },
-  { key: "vision", name: "Vision", price: "29€", period: "/ mois" },
+  { key: "essentielle", name: "Découverte", price: "0 €", period: "pour toujours" },
+  { key: "serenite", name: "Solo", price: "24 €", period: "HT / mois", highlight: true },
+  { key: "pro", name: "Pro", price: "69 €", period: "HT / mois" },
 ];
 const MASQUES = ["Sécurité / mot de passe", "Intégrations (Qonto, Pennylane, Odoo)", "Facturation Stripe", "Mémoire IA", "Recommandations Zayado", "Équipe & membres"];
 const inputCls = "w-full rounded-xl border border-white/12 bg-white/8 px-3 py-2.5 text-sm text-offwhite placeholder:text-offwhite/40 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/30";
@@ -20,7 +20,7 @@ export function SettingsModal({ open, onClose }) {
   const [prenom, setPrenom] = useState("");
   const [email, setEmail] = useState("");
   const [heure, setHeure] = useState("08:30");
-  const [plan, setPlan] = useState("immersion");
+  const [plan, setPlan] = useState("serenite");
   const [notif, setNotif] = useState(true);
   const [marche, setMarche] = useState("france");
   const [saving, setSaving] = useState(false);
@@ -30,7 +30,7 @@ export function SettingsModal({ open, onClose }) {
     if (!open) return;
     fetchState().then((s) => {
       setPrenom(s.profile?.prenom || ""); setEmail(s.profile?.email || "");
-      setHeure(s.profile?.heure_checkin || "08:30"); setPlan(s.profile?.plan || "immersion");
+      setHeure(s.profile?.heure_checkin || "08:30"); setPlan(s.profile?.plan || "essentielle");
       setNotif(s.profile?.notifications ?? true);
       setMarche(s.profile?.contexte_metier?.marche || "france");
     }).catch(() => {});
