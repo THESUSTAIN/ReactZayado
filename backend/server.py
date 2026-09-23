@@ -1324,7 +1324,8 @@ async def connexion_demo(request: Request, body: DemoIn = None, db: AsyncSession
 
 
 @api.get("/connexion/oauth/{provider}/start")
-async def connexion_oauth_start(provider: str, redirect_uri: Optional[str] = None, purpose: Optional[str] = None):
+async def connexion_oauth_start(provider: str, redirect_uri: Optional[str] = None, purpose: Optional[str] = None,
+                                request: Request = None):
     """Démarre l'OAuth si les clés sont configurées ; sinon renvoie configured=false (repli démo côté front)."""
     provider = provider.lower()
     if provider not in ("google", "microsoft"):
@@ -1334,8 +1335,9 @@ async def connexion_oauth_start(provider: str, redirect_uri: Optional[str] = Non
     if not (cid and csecret):
         return {"configured": False}
     # Clés présentes : construction de l'URL d'autorisation (flux code).
-    ru = redirect_uri or f"{os.environ.get('BACKEND_PUBLIC_URL', '')}/api/connexion/oauth/{provider}/callback"
     storage = purpose == "storage"
+    # Stockage (Drive/OneDrive) : retour sur le backend, qui garde les jetons.
+    ru = _oauth_callback_url(provider, request) if (storage or not redirect_uri) else redirect_uri
     if provider == "google":
         params = {"client_id": cid, "redirect_uri": ru, "response_type": "code",
                   "scope": "openid email profile" + (" https://www.googleapis.com/auth/drive.file" if storage else ""),
@@ -1354,53 +1356,79 @@ async def connexion_oauth_start(provider: str, redirect_uri: Optional[str] = Non
     return {"configured": True, "authorization_url": f"{base}?{urlencode(params)}"}
 
 
+def _oauth_callback_url(provider: str, request: Request = None) -> str:
+    """URL de retour OAuth côté backend. BACKEND_PUBLIC_URL si défini, sinon
+    déduite de la requête (Host transmis par nginx) — en https hors localhost,
+    car Railway termine le TLS avant nginx (qui verrait sinon « http »)."""
+    base = os.environ.get("BACKEND_PUBLIC_URL", "").rstrip("/")
+    if not base and request is not None:
+        host = request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
+        proto = "http" if host.startswith(("localhost", "127.0.0.1")) else "https"
+        base = f"{proto}://{host}" if host else ""
+    return f"{base}/api/connexion/oauth/{provider}/callback"
+
+
+def _frontend_url() -> str:
+    return (os.environ.get("FRONTEND_PUBLIC_URL") or os.environ.get("PUBLIC_FRONTEND_URL") or "").rstrip("/")
+
+
+async def _oauth_echange(provider: str, code: str, redirect_uri: str):
+    """Échange le code contre un jeton et récupère l'e-mail. Renvoie (email, token_data, access_token).
+    redirect_uri doit être EXACTEMENT celle utilisée pour l'autorisation."""
+    cid = os.environ.get(f"{provider.upper()}_CLIENT_ID")
+    csecret = os.environ.get(f"{provider.upper()}_CLIENT_SECRET")
+    if not (cid and csecret):
+        raise HTTPException(503, "OAuth non configuré.")
+    async with httpx.AsyncClient(timeout=10) as client:
+        if provider == "google":
+            tok = await client.post("https://oauth2.googleapis.com/token", data={
+                "code": code, "client_id": cid, "client_secret": csecret,
+                "redirect_uri": redirect_uri, "grant_type": "authorization_code",
+            })
+            if tok.status_code >= 400:
+                logger.warning("OAuth google token %s : %s", tok.status_code, tok.text[:300])
+            tok.raise_for_status()
+            token_data = tok.json()
+            access_token = token_data["access_token"]
+            info = await client.get("https://www.googleapis.com/oauth2/v2/userinfo",
+                                     headers={"Authorization": f"Bearer {access_token}"})
+            info.raise_for_status()
+            email = info.json().get("email")
+        else:
+            tenant = os.environ.get("MICROSOFT_TENANT", "common")
+            tok = await client.post(f"https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token", data={
+                "code": code, "client_id": cid, "client_secret": csecret,
+                "redirect_uri": redirect_uri, "grant_type": "authorization_code",
+            })
+            if tok.status_code >= 400:
+                logger.warning("OAuth microsoft token %s : %s", tok.status_code, tok.text[:300])
+            tok.raise_for_status()
+            token_data = tok.json()
+            access_token = token_data["access_token"]
+            info = await client.get("https://graph.microsoft.com/v1.0/me",
+                                     headers={"Authorization": f"Bearer {access_token}"})
+            info.raise_for_status()
+            data = info.json()
+            email = data.get("mail") or data.get("userPrincipalName")
+    return email, token_data, access_token
+
+
 @api.get("/connexion/oauth/{provider}/callback")
 async def connexion_oauth_callback(provider: str, code: Optional[str] = None, state: Optional[str] = None,
                                     error: Optional[str] = None, request: Request = None,
                                     db: AsyncSession = Depends(get_db)):
-    """Le navigateur atterrit ICI directement après le consentement Google/
-    Microsoft (redirect_uri pointe sur ce backend, pas sur le frontend) —
-    donc on termine l'échange puis on redirige le navigateur vers le
-    frontend avec le token en fragment d'URL (jamais en query, pour éviter
-    qu'il finisse dans des logs serveur)."""
+    """Retour OAuth quand redirect_uri pointe sur le backend (connexion stockage
+    Drive/OneDrive, ou connexion sans redirect_uri frontend). Termine l'échange puis
+    redirige vers le frontend avec le token en fragment d'URL (jamais en query)."""
     provider = provider.lower()
-    frontend = os.environ.get("FRONTEND_PUBLIC_URL", "").rstrip("/")
+    frontend = _frontend_url()
     if error or not code:
         return RedirectResponse(f"{frontend}/login?erreur=oauth_refuse")
-    cid = os.environ.get(f"{provider.upper()}_CLIENT_ID")
-    csecret = os.environ.get(f"{provider.upper()}_CLIENT_SECRET")
-    if not (cid and csecret):
+    if not (os.environ.get(f"{provider.upper()}_CLIENT_ID") and os.environ.get(f"{provider.upper()}_CLIENT_SECRET")):
         return RedirectResponse(f"{frontend}/login?erreur=oauth_non_configure")
-    redirect_uri = f"{os.environ.get('BACKEND_PUBLIC_URL', '')}/api/connexion/oauth/{provider}/callback"
     storage = bool(state and state.startswith("storage|"))
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            if provider == "google":
-                tok = await client.post("https://oauth2.googleapis.com/token", data={
-                    "code": code, "client_id": cid, "client_secret": csecret,
-                    "redirect_uri": redirect_uri, "grant_type": "authorization_code",
-                })
-                tok.raise_for_status()
-                token_data = tok.json()
-                access_token = token_data["access_token"]
-                info = await client.get("https://www.googleapis.com/oauth2/v2/userinfo",
-                                         headers={"Authorization": f"Bearer {access_token}"})
-                info.raise_for_status()
-                email = info.json().get("email")
-            else:
-                tenant = os.environ.get("MICROSOFT_TENANT", "common")
-                tok = await client.post(f"https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token", data={
-                    "code": code, "client_id": cid, "client_secret": csecret,
-                    "redirect_uri": redirect_uri, "grant_type": "authorization_code",
-                })
-                tok.raise_for_status()
-                token_data = tok.json()
-                access_token = token_data["access_token"]
-                info = await client.get("https://graph.microsoft.com/v1.0/me",
-                                         headers={"Authorization": f"Bearer {access_token}"})
-                info.raise_for_status()
-                data = info.json()
-                email = data.get("mail") or data.get("userPrincipalName")
+        email, token_data, access_token = await _oauth_echange(provider, code, _oauth_callback_url(provider, request))
         if not email:
             return RedirectResponse(f"{frontend}/login?erreur=oauth_sans_email")
         user = await _trouver_ou_creer_compte(db, email)
@@ -1423,6 +1451,36 @@ async def connexion_oauth_callback(provider: str, code: Optional[str] = None, st
     except Exception as e:  # noqa: BLE001 — jamais de 500 brut sur un retour de consentement utilisateur
         logger.warning("Échec callback OAuth %s : %s", provider, e)
         return RedirectResponse(f"{frontend}/login?erreur=oauth_echec")
+
+
+class OAuthEchangeIn(BaseModel):
+    code: str = Field(min_length=4, max_length=4000)
+    redirect_uri: str = Field(min_length=8, max_length=500)
+    state: Optional[str] = None
+
+
+@api.post("/connexion/oauth/{provider}/echange")
+async def connexion_oauth_echange(provider: str, body: OAuthEchangeIn, db: AsyncSession = Depends(get_db)):
+    """Connexion Google/Microsoft quand le fournisseur renvoie sur la page /login
+    du frontend (?code=…) : la page transmet le code ici, on l'échange et on
+    renvoie le jeton de session. Avant, ce retour n'était traité nulle part :
+    l'utilisateur revenait sur /login sans être connecté."""
+    provider = provider.lower()
+    if provider not in ("google", "microsoft"):
+        raise HTTPException(404, "Fournisseur inconnu.")
+    if body.state and body.state.startswith("storage|"):
+        raise HTTPException(400, "Flux de stockage : utiliser le retour backend.")
+    try:
+        email, _, _ = await _oauth_echange(provider, body.code, body.redirect_uri)
+    except HTTPException:
+        raise
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Échec échange OAuth %s : %s", provider, e)
+        raise HTTPException(400, "Connexion refusée par le fournisseur. Réessaie.")
+    if not email:
+        raise HTTPException(400, "Aucun e-mail renvoyé par le fournisseur.")
+    user = await _trouver_ou_creer_compte(db, email)
+    return {"access_token": _creer_token(user.id, user.role)}
 
 
 class LienIn(BaseModel):
