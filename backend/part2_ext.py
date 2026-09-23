@@ -263,6 +263,8 @@ def install_part2(g: dict) -> None:
         user_id: Mapped[str] = mapped_column(String(36), unique=True, index=True)
         data: Mapped[dict] = mapped_column(JSON, default=dict)
 
+    g["VendorProfile"] = VendorProfile
+
     class VendorProduct(Base):
         __tablename__ = "vendor_products"
         id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)

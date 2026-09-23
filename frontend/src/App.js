@@ -93,6 +93,7 @@ function App() {
             <Route path="/mon-espace" element={<ProtectedRoute><MonEspace /></ProtectedRoute>} />
             <Route path="/acheter" element={<ProtectedRoute><Achat /></ProtectedRoute>} />
             <Route path="/parametres" element={<ProtectedRoute><Parametres /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/pricing/success" element={<PricingSuccess />} />
             <Route path="/mockup/:page/:variant" element={<Mockup />} />

@@ -228,6 +228,11 @@ export const changerRoleUtilisateur = (userId, role) => jsend(`/admin/utilisateu
 export const fetchModerationAttente = () => jget("/vendeur/moderation/attente");
 export const publierProduitVendeur = (pid) => jsend(`/vendeur/moderation/${pid}/publier`, "POST");
 export const refuserProduitVendeur = (pid, motif) => jsend(`/vendeur/moderation/${pid}/refuser`, "POST", { motif });
+export const fetchAdminCommerceStats = () => jget("/admin/commerce/stats");
+export const fetchAdminCommerceOrders = (status = "") => jget(`/admin/commerce/orders${status ? `?status=${encodeURIComponent(status)}` : ""}`);
+export const changerStatutCommandeAdmin = (id, status) => jsend(`/admin/commerce/orders/${id}/status`, "PATCH", { status });
+export const fetchAdminCommerceProducts = () => jget("/admin/commerce/products");
+export const fetchAdminCommerceVendors = () => jget("/admin/commerce/vendors");
 export const fetchAdminParrainage = () => jget("/admin/parrainage");
 export const appliquerCodePromo = (code) => jsend("/codes-promo/appliquer", "POST", { code });
 export const fetchCodesPromo = () => jget("/admin/codes-promo");

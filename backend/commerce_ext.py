@@ -9,7 +9,7 @@ import uuid
 import httpx
 from fastapi import Depends, HTTPException, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import DateTime, JSON, String, Text, select
+from sqlalchemy import DateTime, JSON, String, Text, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -24,6 +24,8 @@ def install_commerce(g: dict) -> None:
     utcnow = g["utcnow"]
     pricing = g.get("PRICING", {})
     VendorProduct = g.get("VendorProduct")
+    VendorProfile = g.get("VendorProfile")
+    exiger_role = g.get("exiger_role")
 
     class CommerceOrder(Base):
         __tablename__ = "commerce_orders"
@@ -194,6 +196,56 @@ def install_commerce(g: dict) -> None:
         if not row:
             raise HTTPException(404, "Commande introuvable.")
         return _serialise(row)
+
+    @api.get("/admin/commerce/stats")
+    async def admin_commerce_stats(db: AsyncSession = Depends(get_db), _role=Depends(exiger_role("admin"))):
+        total = (await db.execute(select(func.count()).select_from(CommerceOrder))).scalar_one()
+        paid = (await db.execute(select(func.count()).select_from(CommerceOrder).where(CommerceOrder.status == "paid"))).scalar_one()
+        rows = (await db.execute(select(CommerceOrder.status, func.count()).group_by(CommerceOrder.status))).all()
+        return {"total": total, "paid": paid, "by_status": {status: count for status, count in rows}}
+
+    @api.get("/admin/commerce/orders")
+    async def admin_commerce_orders(status: str | None = None, limit: int = 100,
+                                     db: AsyncSession = Depends(get_db), _role=Depends(exiger_role("admin"))):
+        query = select(CommerceOrder).order_by(CommerceOrder.created_at.desc()).limit(min(max(limit, 1), 250))
+        if status:
+            query = select(CommerceOrder).where(CommerceOrder.status == status).order_by(CommerceOrder.created_at.desc()).limit(min(max(limit, 1), 250))
+        rows = (await db.execute(query)).scalars().all()
+        return {"items": [{**_serialise(row), "email": row.email, "user_id": row.user_id,
+                            "updated_at": row.updated_at.isoformat() if row.updated_at else None} for row in rows]}
+
+    @api.patch("/admin/commerce/orders/{order_id}/status")
+    async def admin_commerce_order_status(order_id: str, body: dict,
+                                           db: AsyncSession = Depends(get_db), _role=Depends(exiger_role("admin"))):
+        allowed = {"pending", "paid", "authorized", "failed", "canceled", "expired", "refunded"}
+        status = str(body.get("status") or "").strip().lower()
+        if status not in allowed:
+            raise HTTPException(422, "Statut invalide.")
+        row = await db.get(CommerceOrder, order_id)
+        if not row:
+            raise HTTPException(404, "Commande introuvable.")
+        row.status, row.updated_at = status, utcnow()
+        await db.commit()
+        return _serialise(row)
+
+    @api.get("/admin/commerce/products")
+    async def admin_commerce_products(db: AsyncSession = Depends(get_db), _role=Depends(exiger_role("admin"))):
+        rows = (await db.execute(select(VendorProduct).order_by(VendorProduct.maj_le.desc()))).scalars().all() if VendorProduct else []
+        users = {u.id: u for u in (await db.execute(select(User))).scalars()}
+        return {"items": [{"id": p.id, "title": p.titre, "price": p.prix, "status": p.statut,
+                            "vendor": p.vendeur, "vendor_email": users.get(p.user_id).email if users.get(p.user_id) else None,
+                            "shopify_id": p.shopify_id, "updated_at": p.maj_le.isoformat() if p.maj_le else None}
+                           for p in rows]}
+
+    @api.get("/admin/commerce/vendors")
+    async def admin_commerce_vendors(db: AsyncSession = Depends(get_db), _role=Depends(exiger_role("admin"))):
+        users = list((await db.execute(select(User).where(User.role.in_(["vendeur", "admin"])).order_by(User.email))).scalars())
+        result = []
+        for user in users:
+            products = (await db.execute(select(func.count()).select_from(VendorProduct).where(VendorProduct.user_id == user.id))).scalar_one() if VendorProduct else 0
+            profile = (await db.execute(select(VendorProfile).where(VendorProfile.user_id == user.id))).scalar_one_or_none() if VendorProfile else None
+            result.append({"id": user.id, "email": user.email, "role": user.role, "shop": (profile.data or {}).get("nom_boutique", "") if profile else "", "products": products})
+        return {"items": result}
 
     @api.post("/mollie/webhook")
     async def commerce_mollie_webhook(request: Request, db: AsyncSession = Depends(get_db)):

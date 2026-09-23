@@ -6,6 +6,8 @@ import {
   fetchModerationAttente, publierProduitVendeur, refuserProduitVendeur,
   fetchAdminParrainage, fetchCodesPromo, creerCodePromo, basculerCodePromo, supprimerCodePromo,
   fetchHeygenAvatars, fetchHeygenVoices, heygenGenerer, heygenStatut,
+  fetchAdminCommerceStats, fetchAdminCommerceOrders, changerStatutCommandeAdmin,
+  fetchAdminCommerceProducts, fetchAdminCommerceVendors,
 } from "@/lib/kairosApi";
 
 // Menu inspiré de la structure Sentriq (Vue d'ensemble / Utilisateurs / ...).
@@ -17,6 +19,9 @@ const ONGLETS = [
   { key: "vue", label: "Vue d'ensemble" },
   { key: "utilisateurs", label: "Utilisateurs" },
   { key: "vendeurs", label: "Modération vendeurs" },
+  { key: "commerce", label: "Commandes Mollie" },
+  { key: "catalogue", label: "Catalogue produits" },
+  { key: "comptes-vendeurs", label: "Comptes vendeurs" },
   { key: "parrainage", label: "Parrainage" },
   { key: "codes-promo", label: "Codes promo" },
   { key: "videos-ia", label: "Vidéos IA" },
@@ -29,7 +34,7 @@ export default function Admin() {
 
   const ICONS = {
     vue: <LayoutDashboard size={16} />, utilisateurs: <Users size={16} />, vendeurs: <Store size={16} />,
-    parrainage: <Gift size={16} />, "codes-promo": <Ticket size={16} />, "videos-ia": <Video size={16} />,
+    parrainage: <Gift size={16} />, "codes-promo": <Ticket size={16} />, commerce: <Ticket size={16} />, catalogue: <Store size={16} />, "comptes-vendeurs": <Users size={16} />, "videos-ia": <Video size={16} />,
     "emails-ia": <Mail size={16} />, "articles-seo": <Newspaper size={16} />,
   };
   const menuItems = ONGLETS.map((o) => ({ key: o.key, label: o.label, icon: ICONS[o.key] }));
@@ -52,6 +57,9 @@ export default function Admin() {
         {onglet === "vue" && <VueEnsemble />}
         {onglet === "utilisateurs" && <Utilisateurs />}
         {onglet === "vendeurs" && <ModerationVendeurs />}
+        {onglet === "commerce" && <CommandesMollie />}
+        {onglet === "catalogue" && <CatalogueAdmin />}
+        {onglet === "comptes-vendeurs" && <ComptesVendeurs />}
         {onglet === "parrainage" && <Parrainage />}
         {onglet === "codes-promo" && <CodesPromo />}
         {onglet === "videos-ia" && <VideosIA />}
@@ -83,6 +91,32 @@ function VueEnsemble() {
       <Carte><p className="text-offwhite/50 text-xs uppercase tracking-wide">Admins</p><p className="text-3xl font-bold mt-1">{donnees.par_role.admin}</p></Carte>
     </div>
   );
+}
+
+function CommandesMollie() {
+  const [data, setData] = useState(null); const [stats, setStats] = useState(null);
+  const [status, setStatus] = useState("");
+  const [error, setError] = useState("");
+  const load = () => Promise.all([fetchAdminCommerceOrders(status), fetchAdminCommerceStats()]).then(([orders, summary]) => { setData(orders); setStats(summary); }).catch((e) => setError(e.message));
+  useEffect(load, [status]);
+  const update = async (id, next) => { try { await changerStatutCommandeAdmin(id, next); load(); } catch (e) { setError(e.message); } };
+  return <div className="space-y-4"><div className="grid grid-cols-3 gap-4"><Carte><p className="text-xs uppercase tracking-wide text-offwhite/50">Commandes</p><p className="mt-1 text-3xl font-bold">{stats?.total ?? "—"}</p></Carte><Carte><p className="text-xs uppercase tracking-wide text-offwhite/50">Payées</p><p className="mt-1 text-3xl font-bold text-gold">{stats?.paid ?? "—"}</p></Carte><Carte><p className="text-xs uppercase tracking-wide text-offwhite/50">Filtre</p><select value={status} onChange={(e) => setStatus(e.target.value)} className="mt-2 rounded-lg border border-white/15 bg-navy-800 px-2 py-1 text-sm"><option value="">Tous les statuts</option>{["pending", "paid", "failed", "canceled", "expired", "refunded"].map((s) => <option key={s}>{s}</option>)}</select></Carte></div>{error && <Carte><p className="text-sm text-red-400">{error}</p></Carte>}<Carte><div className="overflow-x-auto"><table className="w-full min-w-[760px] text-sm"><thead><tr className="border-b border-white/10 text-left text-offwhite/50"><th className="pb-2">Date</th><th className="pb-2">Client</th><th className="pb-2">Commande</th><th className="pb-2">Montant</th><th className="pb-2">Statut</th><th className="pb-2">Action</th></tr></thead><tbody>{data?.items?.map((o) => <tr key={o.id} className="border-b border-white/5"><td className="py-2.5 text-offwhite/55">{o.created_at ? new Date(o.created_at).toLocaleDateString("fr-FR") : "—"}</td><td className="py-2.5">{o.email}</td><td className="py-2.5"><span className="text-xs text-offwhite/50">{o.kind}</span><br />{o.title}</td><td className="py-2.5">{o.amount} {o.currency}</td><td className="py-2.5"><span className="rounded-full bg-white/10 px-2 py-1 text-xs">{o.status}</span></td><td className="py-2.5"><select value={o.status} onChange={(e) => update(o.id, e.target.value)} className="rounded-lg border border-white/15 bg-navy-800 px-2 py-1 text-xs">{["pending", "paid", "failed", "canceled", "expired", "refunded"].map((s) => <option key={s}>{s}</option>)}</select></td></tr>)}{data && !data.items.length && <tr><td colSpan={6} className="py-6 text-center text-offwhite/50">Aucune commande.</td></tr>}</tbody></table></div></Carte></div>;
+}
+
+function CatalogueAdmin() {
+  const [items, setItems] = useState(null); const [error, setError] = useState("");
+  useEffect(() => { fetchAdminCommerceProducts().then((d) => setItems(d.items)).catch((e) => setError(e.message)); }, []);
+  if (error) return <Carte><p className="text-sm text-red-400">{error}</p></Carte>;
+  if (!items) return <Carte><p className="text-sm text-offwhite/50">Chargement…</p></Carte>;
+  return <Carte><div className="overflow-x-auto"><table className="w-full min-w-[700px] text-sm"><thead><tr className="border-b border-white/10 text-left text-offwhite/50"><th className="pb-2">Produit</th><th className="pb-2">Vendeur</th><th className="pb-2">Prix</th><th className="pb-2">Statut</th><th className="pb-2">Shopify</th></tr></thead><tbody>{items.map((p) => <tr key={p.id} className="border-b border-white/5"><td className="py-2.5">{p.title}<br /><span className="text-[10px] text-offwhite/40">{p.id}</span></td><td className="py-2.5">{p.vendor}<br /><span className="text-xs text-offwhite/45">{p.vendor_email || "—"}</span></td><td className="py-2.5">{p.price} €</td><td className="py-2.5"><span className="rounded-full bg-white/10 px-2 py-1 text-xs">{p.status}</span></td><td className="py-2.5 text-xs text-offwhite/55">{p.shopify_id || "Non synchronisé"}</td></tr>)}{!items.length && <tr><td colSpan={5} className="py-6 text-center text-offwhite/50">Aucun produit.</td></tr>}</tbody></table></div></Carte>;
+}
+
+function ComptesVendeurs() {
+  const [items, setItems] = useState(null); const [error, setError] = useState("");
+  useEffect(() => { fetchAdminCommerceVendors().then((d) => setItems(d.items)).catch((e) => setError(e.message)); }, []);
+  if (error) return <Carte><p className="text-sm text-red-400">{error}</p></Carte>;
+  if (!items) return <Carte><p className="text-sm text-offwhite/50">Chargement…</p></Carte>;
+  return <Carte><table className="w-full text-sm"><thead><tr className="border-b border-white/10 text-left text-offwhite/50"><th className="pb-2">Email</th><th className="pb-2">Boutique</th><th className="pb-2">Rôle</th><th className="pb-2">Produits</th></tr></thead><tbody>{items.map((v) => <tr key={v.id} className="border-b border-white/5"><td className="py-2.5">{v.email}</td><td className="py-2.5">{v.shop || "—"}</td><td className="py-2.5"><span className="rounded-full bg-white/10 px-2 py-1 text-xs">{v.role}</span></td><td className="py-2.5">{v.products}</td></tr>)}</tbody></table></Carte>;
 }
 
 function Utilisateurs() {
