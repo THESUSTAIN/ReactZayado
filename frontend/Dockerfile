@@ -28,7 +28,8 @@ ENV PORT=80
 # Sur Railway, remplacer par l'URL privée du service kairos-backend.
 ENV BACKEND_URL=http://127.0.0.1:8001
 COPY nginx.conf /etc/nginx/templates/default.conf.template
-COPY docker-entrypoint.d/05-backend-default.sh /docker-entrypoint.d/05-backend-default.sh
-RUN chmod +x /docker-entrypoint.d/05-backend-default.sh
+COPY docker-entrypoint.d/05-backend-default.envsh /docker-entrypoint.d/05-backend-default.envsh
+# Seules ces trois variables sont substituées : les $uri, $host… de nginx restent intacts.
+ENV NGINX_ENVSUBST_FILTER="^(PORT|BACKEND_URL|NGINX_RESOLVER)$"
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
