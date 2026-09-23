@@ -293,7 +293,7 @@ async def send_email(*, to: str, subject: str, html: str) -> Optional[str]:
         logger.error(f"Email send error: {e}")
         raise HTTPException(status_code=500, detail="Échec de l'envoi de l'email")
 
-engine = create_async_engine(DATABASE_URL, echo=False, future=True)
+engine = create_async_engine(DATABASE_URL, echo=False, future=True, **({} if DATABASE_URL.startswith("sqlite") else {"pool_pre_ping": True, "pool_recycle": 280}))  # MySQL distant : ferme les connexions inactives → on vérifie avant usage
 async_session = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
 
