@@ -1,4 +1,4 @@
-"""Kairos by Zayado — backend SQL (SQLAlchemy async + SQLite, prêt PostgreSQL via DATABASE_URL).
+"""Zayado — backend SQL (SQLAlchemy async + SQLite, prêt PostgreSQL via DATABASE_URL).
 
 Porté depuis News-main (Copilote IA) : chat en streaming (Claude Sonnet 4.5) avec
 contexte injecté + garde-fous + repli local, Point du jour, Décisions (« il prépare,
@@ -156,7 +156,7 @@ class _AuthMiddleware(BaseHTTPMiddleware):
 # ── Email (Resend géré par Emergent) ──
 EMAIL_BASE_URL = "https://integrations.emergentagent.com"
 EMAIL_KEY = os.environ.get("EMERGENT_EMAIL_KEY")
-EMAIL_FROM_NAME = os.environ.get("EMAIL_FROM_NAME", "Kairos by Zayado")
+EMAIL_FROM_NAME = os.environ.get("EMAIL_FROM_NAME", "Zayado")
 _SHORTENERS = ("bit.ly", "tinyurl.com", "t.co", "is.gd", "cutt.ly", "goo.gl", "rebrand.ly")
 _CRED_ASK = ("reply with your password", "send your password", "cvv", "seed phrase",
              "recovery phrase", "verify your card", "social security number")
@@ -584,7 +584,7 @@ MESSAGES = {
 # ─────────────────────────── Copilote IA ───────────────────────────
 
 SYSTEM_PROMPT = (
-    "Tu es Kairos, le Copilote de « Kairos by Zayado », l'application de vision board d'une "
+    "Tu es le Copilote Zayado, l'application de vision board d'une "
     "entrepreneure francophone. Tu réponds TOUJOURS en français, en tutoyant, de façon concrète "
     "et brève (3 à 6 phrases), sans jargon et sans flatterie.\n\n"
     "Règles absolues :\n"
@@ -662,7 +662,7 @@ api = APIRouter(prefix="/api")
 
 @api.get("/")
 async def root():
-    return {"message": "Kairos by Zayado API (SQL)"}
+    return {"message": "Zayado API (SQL)"}
 
 
 # ─────────────── Authentification multi-compte (ajouté) ───────────────
@@ -1256,7 +1256,7 @@ def _en_prod(request) -> bool:
 
 @api.get("/connexion/options")
 async def connexion_options(request: Request = None):
-    return {"nom_appli": "Kairos by Zayado",
+    return {"nom_appli": "Zayado",
             "apercu_actif": bool(os.environ.get("APERCU_CODE")) and not _en_prod(request),
             "google": bool(os.environ.get("GOOGLE_CLIENT_ID") and os.environ.get("GOOGLE_CLIENT_SECRET")),
             "microsoft": bool(os.environ.get("MICROSOFT_CLIENT_ID") and os.environ.get("MICROSOFT_CLIENT_SECRET"))}
@@ -1402,12 +1402,12 @@ async def connexion_lien(body: LienIn, request: Request = None, db: AsyncSession
     if lien and (EMAIL_KEY or os.environ.get("BREVO_API_KEY")):
         html = (
             '<table role="presentation" width="100%"><tr><td style="padding:24px;font-family:Arial,sans-serif;color:#0B1F3A">'
-            '<p>Bonjour,</p><p>Voici ton lien de connexion à Kairos. Il est valable 15 minutes et ne fonctionne qu\'une fois.</p>'
+            '<p>Bonjour,</p><p>Voici ton lien de connexion à Zayado. Il est valable 15 minutes et ne fonctionne qu\'une fois.</p>'
             f'<p style="margin:22px 0"><a href="{escape(lien, quote=True)}" style="background:#DEC2A3;color:#0B1F3A;padding:12px 22px;border-radius:10px;text-decoration:none;font-weight:bold">Me connecter</a></p>'
-            '<p style="font-size:12px;color:#888">Tu n\'as pas demandé ce lien ? Ignore cet email. Kairos by Zayado ne demande jamais de mot de passe par email.</p></td></tr></table>'
+            '<p style="font-size:12px;color:#888">Tu n\'as pas demandé ce lien ? Ignore cet email. Zayado ne demande jamais de mot de passe par email.</p></td></tr></table>'
         )
         try:
-            await send_email(to=email, subject="Ton lien de connexion Kairos", html=html)
+            await send_email(to=email, subject="Ton lien de connexion Zayado", html=html)
             envoye = True
         except Exception as e:  # noqa: BLE001
             logger.warning("Lien magique non envoyé : %s", e)
@@ -3135,7 +3135,7 @@ async def telegram_webhook(uid: str, request: Request, db: AsyncSession = Depend
     return {"ok": True}
 
 
-app = FastAPI(title="Kairos by Zayado")
+app = FastAPI(title="Zayado — espace privé")
 # ─────────────────────────── Roadmap publique / admin ───────────────────────────
 
 ADMIN_EMAILS = {"thomas@zayado.net", "admin@zayado.net"}
@@ -3258,12 +3258,12 @@ async def _send_welcome_email(to_email: str) -> dict:
     if not api_key:
         return {"ok": False, "reason": "missing_key"}
     payload = {
-        "sender": {"email": sender, "name": "Kairos by Zayado"},
+        "sender": {"email": sender, "name": "Zayado"},
         "to": [{"email": to_email}],
-        "subject": "Bienvenue dans Kairos — respire, on avance ensemble.",
+        "subject": "Bienvenue dans Zayado — respire, on avance ensemble.",
         "htmlContent": (
             "<div style=\"font-family: Georgia, serif; max-width: 560px; margin: 0 auto; padding: 32px; color: #0B1F3A;\">"
-            "<div style=\"font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: #DEC2A3; margin-bottom: 12px;\">Kairos · by Zayado</div>"
+            "<div style=\"font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: #DEC2A3; margin-bottom: 12px;\">Zayado</div>"
             "<h1 style=\"font-family: Georgia, serif; font-size: 28px; line-height: 1.15; margin: 0 0 16px;\">"
             "Bienvenue. <em style=\"color:#DEC2A3;\">On avance doucement.</em></h1>"
             "<p style=\"font-size: 15.5px; line-height: 1.6; color: #4a5568;\">"

@@ -162,9 +162,9 @@ export default function Login() {
         <GlassCard data-testid="login-card">
           <div className="mb-6 text-center">
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#F1E2CC] to-[#DEC2A3] font-wordmark text-2xl font-bold text-navy-900">K</div>
-            <h1 className="font-display text-3xl font-extrabold text-offwhite">Kairos</h1>
+            <h1 className="font-display text-3xl font-extrabold text-offwhite">Zayado</h1>
             <p className="mt-1 text-[11px] uppercase tracking-[0.25em] text-gold">by Zayado</p>
-            <p className="mt-4 text-sm text-offwhite/70">Connecte-toi ou crée ton compte en un clic — sans mot de passe à retenir.</p>
+            <p className="mt-4 text-sm text-offwhite/70">Connecte-toi à ton espace privé Zayado — sans mot de passe à retenir.</p>
           </div>
 
           {/* Boutons sociaux */}

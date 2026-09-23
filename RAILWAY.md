@@ -1,80 +1,62 @@
-# Déploiement Railway — Kairos by Zayado
+# Déploiement Zayado — Shopify public + espace privé
 
-## Correctif de connexion du 23 septembre 2026
+## Architecture retenue
 
-La page `https://app.zayado.net/login` chargeait correctement, mais elle ne pouvait pas authentifier un utilisateur. Le build React appelait `https://api.zayado.net/api/...`, alors que **`api.zayado.net` ne possède aucun enregistrement DNS**. Les requêtes de connexion échouaient donc avant même d’atteindre FastAPI.
+La vitrine publique et la marketplace ne sont pas une application React à héberger ici : elles restent sur **Shopify**, avec `https://zayado.net` comme domaine public.
 
-Le frontend utilise désormais l’API en **même origine** (`/api/...`). Nginx, dans le service frontend Railway, relaie ces requêtes vers le backend sur le réseau privé Railway. Cette configuration supprime la dépendance à `api.zayado.net` et évite les problèmes CORS entre le navigateur et l’API.
+L’application React de connexion et d’espace privé reste sur `https://app.zayado.net`. Elle appelle le backend Zayado via `/api`. Le backend contient l’authentification, les données privées, l’espace vendeur, les intégrations et les routes métier.
 
-> Ne pas créer ni réutiliser `api.zayado.net` pour ce déploiement. Le point d’entrée public de l’API est maintenant `https://app.zayado.net/api/...`.
+| Élément | Domaine / service | Rôle |
+|---|---|---|
+| Boutique publique | `zayado.net` / Shopify | Vitrine, marketplace et parcours d’achat public |
+| Application privée | `app.zayado.net` | Connexion et espace utilisateur après authentification |
+| Backend privé | service Railway `zayado-backend` | API FastAPI et données privées |
+| Service WhatsApp | service Railway séparé | Passerelle WhatsApp si utilisée |
 
-## Architecture
+**Kairos est l’ancien nom interne**. Certains noms de fichiers, fonctions, clés de stockage et routes historiques le contiennent encore pour préserver la compatibilité ; le nom produit et le nom des services de déploiement doivent être **Zayado**.
 
-| Service Railway | Root Directory | Domaine public | Rôle |
-|---|---:|---|---|
-| `kairos-backend` | `backend/` | aucun requis | API FastAPI, base SQLite persistante |
-| `kairos-saas` | `frontend/` | `app.zayado.net` | Kairos SaaS et proxy `/api` |
-| `zayado-admin` | `frontend/` | `admin.zayado.net` | Console admin et proxy `/api` |
-| `whatsapp-service` | `WhatsApp-service/` | URL Railway si nécessaire | Passerelle WhatsApp |
+## Correctif de connexion
 
-Les services `kairos-saas`, `zayado-admin` et `kairos-backend` doivent être placés dans **le même projet et le même environnement Railway** afin que le réseau privé soit disponible.
+Le frontend appelle désormais `/api/...` sur son propre domaine. Nginx doit relayer `/api` vers le backend Railway privé. Si `https://app.zayado.net/api/connexion/options` renvoie `502`, le frontend est bien publié mais `BACKEND_URL` est absent, invalide ou pointe vers un service qui n’est pas l’API Zayado.
 
-## Configuration Railway à appliquer
-
-### 1. Service `kairos-backend`
-
-Conserver le `Root Directory` sur `backend/`, le Dockerfile de ce dossier et un volume monté sur `/data`. Définir au minimum les variables suivantes.
-
-| Variable | Valeur |
-|---|---|
-| `DATABASE_URL` | `sqlite+aiosqlite:////data/kairos.db` |
-| `JWT_SECRET` | secret long, unique et conservé entre les déploiements |
-| `FERNET_KEY` | clé Fernet persistante |
-| `FRONTEND_PUBLIC_URL` | `https://app.zayado.net` |
-| `PUBLIC_FRONTEND_URL` | `https://app.zayado.net` |
-| `BACKEND_PUBLIC_URL` | `https://app.zayado.net` |
-| `CORS_ORIGINS` | `https://app.zayado.net,https://admin.zayado.net` |
-| `REQUIRE_AUTH` | `1` en production |
-
-Les clés métier optionnelles ou nécessaires à certaines fonctions restent : `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, `MOLLIE_API_KEY`, `UNSPLASH_ACCESS_KEY`, etc.
-
-### 2. Services `kairos-saas` et `zayado-admin`
-
-Conserver le `Root Directory` sur `frontend/`. Pour **chacun** des deux services, ajouter cette variable runtime :
-
-| Variable | Valeur Railway |
-|---|---|
-| `BACKEND_URL` | `http://${{kairos-backend.RAILWAY_PRIVATE_DOMAIN}}:${{kairos-backend.PORT}}` |
-
-La syntaxe ci-dessus est une référence Railway vers le service `kairos-backend`. Si le nom du service diffère dans votre projet, remplacer `kairos-backend` par son nom Railway exact.
-
-Supprimer la variable de build `REACT_APP_BACKEND_URL` si elle existe encore. Le Dockerfile force maintenant la valeur vide afin que les builds utilisent `/api`; la suppression évite toute confusion lors d’un futur changement de configuration. Conserver `REACT_APP_FLAVOR=saas` pour `kairos-saas` et `REACT_APP_FLAVOR=console` pour `zayado-admin`.
-
-### 3. OAuth et intégrations publiques
-
-Comme les callbacks OAuth arrivent désormais via le proxy frontend, remplacer dans Google Cloud Console et Azure les URI de redirection par :
+Dans le service frontend privé, définir :
 
 ```text
-https://app.zayado.net/api/connexion/oauth/google/callback
-https://app.zayado.net/api/connexion/oauth/microsoft/callback
+BACKEND_URL=http://${{zayado-backend.RAILWAY_PRIVATE_DOMAIN}}:${{zayado-backend.PORT}}
 ```
 
-Pour le service WhatsApp exposé à l’extérieur, définir `BACKEND_URL=https://app.zayado.net` afin qu’il utilise également le proxy public. Les appels internes peuvent aussi utiliser une URL Railway privée lorsque le service est dans le même projet.
+Si le service backend porte encore un autre nom dans Railway, remplacer `zayado-backend` par son nom exact. Ne pas utiliser `myextension-ai.com` : ce domaine redirige vers Shopify et n’est pas l’API Zayado.
 
-## Ordre de redéploiement
+## Backend `zayado-backend`
 
-1. Déployer ou redéployer `kairos-backend` et vérifier que son healthcheck `/api/` est vert.
-2. Ajouter `BACKEND_URL` aux deux services frontend avec la référence privée ci-dessus.
-3. Redéployer `kairos-saas`, puis `zayado-admin` si celui-ci est utilisé.
-4. Purger toute ancienne variable `REACT_APP_BACKEND_URL=https://api.zayado.net` et toute redirection DNS applicative vers ce sous-domaine.
+Le service backend doit utiliser le dossier `backend/`, son Dockerfile et un volume monté sur `/data`. Variables minimales :
 
-## Vérification après déploiement
+```text
+DATABASE_URL=sqlite+aiosqlite:////data/kairos.db
+JWT_SECRET=<secret persistant>
+FERNET_KEY=<clé persistante>
+FRONTEND_PUBLIC_URL=https://app.zayado.net
+PUBLIC_FRONTEND_URL=https://app.zayado.net
+BACKEND_PUBLIC_URL=https://app.zayado.net
+CORS_ORIGINS=https://app.zayado.net
+REQUIRE_AUTH=1
+```
 
-Les deux commandes suivantes doivent renvoyer du JSON — jamais le HTML de l’application React :
+Le nom historique `kairos.db` peut rester tel quel : il s’agit du fichier de données, pas du nom public du produit.
+
+## Frontend privé `app.zayado.net`
+
+Le service frontend doit utiliser le dossier `frontend/`, le Dockerfile fourni et la variable runtime `BACKEND_URL` ci-dessus. La variable de build `REACT_APP_BACKEND_URL=https://api.zayado.net` doit être supprimée. Le build utilise maintenant une URL relative `/api`.
+
+Le domaine `app.zayado.net` est nécessaire pour l’espace privé ; il ne sert pas de vitrine publique. La vitrine `zayado.net` reste entièrement Shopify.
+
+## Vérifications après déploiement
 
 ```bash
 curl -i https://app.zayado.net/api/connexion/options
 curl -i https://app.zayado.net/api/state
 ```
 
-La première doit répondre `200` avec un objet JSON. La seconde peut répondre `401` sans jeton, ce qui confirme que la requête atteint FastAPI. Sur la page `/login`, tester ensuite l’onglet **Mot de passe** avec un compte existant, puis le lien magique. Si Brevo est configuré, le lien magique doit être reçu et revenir vers `https://app.zayado.net/login?token=...`.
+La première commande doit renvoyer `200` avec du JSON. La seconde peut renvoyer `401` sans jeton, ce qui confirme que la requête atteint FastAPI. Une réponse `502` signifie que Nginx ne peut pas joindre `zayado-backend`.
+
+Le domaine public Shopify ne doit pas être utilisé comme URL API privée. Pour les callbacks OAuth de l’espace privé, utiliser les URLs sous `app.zayado.net/api/...`.
