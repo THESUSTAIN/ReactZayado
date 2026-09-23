@@ -141,6 +141,7 @@ _ROUTES_PUBLIQUES_EXACTES = {
     "/api/mollie/webhook",             # appelé par Mollie
     "/api/commerce/health",
     "/api/codes-promo/appliquer",      # simple vérification d'un code
+    "/api/subscribe",                  # inscription newsletter (e-mail de bienvenue)
 }
 _ROUTES_PUBLIQUES_PREFIXES = (
     "/api/connexion/",                 # options, lien magique, OAuth (démo bloquée à part)
@@ -172,7 +173,7 @@ class _AuthMiddleware(BaseHTTPMiddleware):
                 payload = _pyjwt.decode(auth[7:], JWT_SECRET, algorithms=[JWT_ALGO])
                 if payload.get("sub"):
                     uid = payload["sub"]
-                    jeton_valide = True
+                    jeton_valide = payload["sub"] != DEMO_USER_ID
                 # "client" de repli pour les anciens tokens émis avant l'ajout
                 # du rôle (pas de champ "role" dedans) — jamais élevé par défaut.
                 role = payload.get("role") or "client"
@@ -3210,9 +3211,15 @@ class RoadmapPublic(Base):
 
 
 def _is_admin(request: Request) -> bool:
+    """Admin = jeton JWT avec le rôle admin, ou clé ADMIN_KEY (variable
+    d'environnement, sans valeur par défaut). Corrigé : l'en-tête
+    x-user-email et la clé écrite en dur suffisaient à devenir admin."""
+    if _role_courant() == "admin" and _uid() != DEMO_USER_ID:
+        return True
+    cle_attendue = os.environ.get("ADMIN_KEY", "")
     key = request.headers.get("x-admin-key", "")
-    email = request.headers.get("x-user-email", "").lower()
-    return key == os.environ.get("ADMIN_KEY", "thomas-zayado-2025") or email in ADMIN_EMAILS
+    import hmac
+    return bool(cle_attendue) and len(key) >= 16 and hmac.compare_digest(key, cle_attendue)
 
 
 @api.get("/roadmap")
@@ -3568,6 +3575,125 @@ install_commerce(globals())
 # ── Vision+ : victoires, partage public en lecture seule, e-mail du lundi ──
 from vision_plus import install_vision_plus  # noqa: E402
 install_vision_plus(globals())
+
+# ─────────────── Demandes Collaborateurs (page /app/collaborateurs) ───────────────
+# Corrigé : le formulaire postait vers une route inexistante et affichait
+# « Demande envoyée » sans rien enregistrer.
+
+class DemandeCollaborateur(Base):
+    __tablename__ = "demandes_collaborateur"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
+    user_id: Mapped[str] = mapped_column(String(36), index=True)
+    message: Mapped[str] = mapped_column(Text)
+    contact: Mapped[str] = mapped_column(String(255), default="")
+    canal: Mapped[str] = mapped_column(String(50), default="collaborateur")
+    statut: Mapped[str] = mapped_column(String(20), default="nouvelle")  # nouvelle / traitee
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class DemandeCollaborateurIn(BaseModel):
+    message: str
+    contact: str = ""
+    channel: str = "collaborateur"
+
+
+@api.post("/growth/work-request")
+async def creer_demande_collaborateur(body: DemandeCollaborateurIn, db: AsyncSession = Depends(get_db)):
+    message = (body.message or "").strip()
+    if not message:
+        raise HTTPException(422, "Le message est vide.")
+    uid = _uid()
+    profil = await _profil(db, uid)
+    d = DemandeCollaborateur(user_id=uid, message=message[:5000], contact=(body.contact or "").strip()[:255],
+                             canal=(body.channel or "collaborateur")[:50])
+    db.add(d)
+    await db.commit()
+    # Notification e-mail à l'équipe (best effort : la demande est déjà enregistrée).
+    dest = os.environ.get("NOTIF_EMAIL", "contact@zayado.net")
+    try:
+        import html as _html
+        await send_email(to=dest, subject="Nouvelle demande Collaborateurs",
+                         html=(f"<p><b>De :</b> {_html.escape(profil.prenom or '')} {_html.escape(profil.email or '')}</p>"
+                               f"<p><b>Contact indiqué :</b> {_html.escape(d.contact or '—')}</p>"
+                               f"<p>{_html.escape(d.message).replace(chr(10), '<br>')}</p>"))
+    except Exception:  # noqa: BLE001
+        logger.warning("Notification e-mail de la demande collaborateur non envoyée.")
+    return {"ok": True, "id": d.id}
+
+
+@api.get("/admin/demandes-collaborateur")
+async def admin_demandes_collaborateur(db: AsyncSession = Depends(get_db), _role=Depends(exiger_role("admin"))):
+    rows = (await db.execute(select(DemandeCollaborateur).order_by(DemandeCollaborateur.created_at.desc()).limit(200))).scalars().all()
+    return {"demandes": [{"id": r.id, "user_id": r.user_id, "message": r.message, "contact": r.contact,
+                          "statut": r.statut, "created_at": r.created_at.isoformat() if r.created_at else None} for r in rows]}
+
+
+# ─────────────── Récupération des données du compte démo ───────────────
+# Avant le verrou d'authentification, les requêtes sans jeton étaient rangées
+# dans le compte DEMO_USER_ID. Ces deux routes admin permettent de voir ce
+# qu'il contient et de transférer ces lignes vers un vrai compte.
+
+def _tables_avec_user_id():
+    return [t for t in Base.metadata.sorted_tables if "user_id" in t.c]
+
+
+def _user_id_unique(table) -> bool:
+    col = table.c.user_id
+    if col.unique:
+        return True
+    return any(getattr(c, "columns", None) is not None and list(c.columns) == [col] for c in table.constraints
+               if c.__class__.__name__ == "UniqueConstraint")
+
+
+@api.get("/admin/compte-demo")
+async def admin_compte_demo(db: AsyncSession = Depends(get_db), _role=Depends(exiger_role("admin"))):
+    """Nombre de lignes rattachées au compte démo, table par table, avec un aperçu."""
+    resultat = []
+    for t in _tables_avec_user_id():
+        n = (await db.execute(select(func.count()).select_from(t).where(t.c.user_id == DEMO_USER_ID))).scalar_one()
+        if not n:
+            continue
+        cols = [c for c in t.c if c.name not in ("user_id",)][:6]
+        apercu = (await db.execute(select(*cols).where(t.c.user_id == DEMO_USER_ID).limit(5))).mappings().all()
+        resultat.append({"table": t.name, "lignes": n, "unique_par_utilisateur": _user_id_unique(t),
+                         "apercu": [{k: (str(v)[:120] if v is not None else None) for k, v in dict(r).items()} for r in apercu]})
+    return {"compte_demo": DEMO_USER_ID, "tables": resultat}
+
+
+class TransfertDemoIn(BaseModel):
+    email: str
+    tables: Optional[list[str]] = None  # None = toutes les tables transférables
+
+
+@api.post("/admin/compte-demo/transferer")
+async def admin_transferer_compte_demo(body: TransfertDemoIn, db: AsyncSession = Depends(get_db),
+                                       _role=Depends(exiger_role("admin"))):
+    """Réattribue les lignes du compte démo au compte réel dont l'e-mail est donné.
+    Les tables à une seule ligne par utilisateur (profil, réglages…) ne sont
+    transférées que si le compte cible n'en a pas encore — sinon on les signale."""
+    email = body.email.strip().lower()
+    cible = (await db.execute(select(User).where(func.lower(User.email) == email))).scalar_one_or_none()
+    if not cible:
+        raise HTTPException(404, "Aucun compte avec cet e-mail.")
+    choisies = set(body.tables) if body.tables else None
+    transferts, ignorees = {}, {}
+    for t in _tables_avec_user_id():
+        if choisies is not None and t.name not in choisies:
+            continue
+        n = (await db.execute(select(func.count()).select_from(t).where(t.c.user_id == DEMO_USER_ID))).scalar_one()
+        if not n:
+            continue
+        if _user_id_unique(t):
+            deja = (await db.execute(select(func.count()).select_from(t).where(t.c.user_id == cible.id))).scalar_one()
+            if deja:
+                ignorees[t.name] = "le compte cible a déjà sa propre ligne (table 1 ligne par utilisateur)"
+                continue
+        await db.execute(t.update().where(t.c.user_id == DEMO_USER_ID).values(user_id=cible.id))
+        transferts[t.name] = n
+    await db.commit()
+    logger.info("Transfert compte démo → %s : %s", cible.id, transferts)
+    return {"ok": True, "vers": {"id": cible.id, "email": cible.email}, "transferes": transferts, "ignores": ignorees}
+
 
 app.include_router(api)
 app.include_router(heygen_router, prefix="/api")

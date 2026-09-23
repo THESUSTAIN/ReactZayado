@@ -16,7 +16,7 @@ const STATUS = {
 };
 
 const adminHeaders = (user) => {
-  const stored = localStorage.getItem(ADMIN_KEY_LOCAL) || "thomas-zayado-2025";
+  const stored = localStorage.getItem(ADMIN_KEY_LOCAL) || "";
   return {
     "Content-Type": "application/json",
     "x-admin-key": stored,

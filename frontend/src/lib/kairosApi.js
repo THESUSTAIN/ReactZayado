@@ -242,3 +242,8 @@ export const supprimerCodePromo = (id) => jsend(`/admin/codes-promo/${id}`, "DEL
 export const fetchConnections = () => jget("/connections");
 export const fetchMesFilleuls = () => jget("/parrainage/mes-filleuls");
 export const inviterParrainage = (email) => jsend("/parrainage/inviter", "POST", { email });
+
+// ── Admin : demandes Collaborateurs + récupération du compte démo ──
+export const fetchDemandesCollaborateur = () => jget("/admin/demandes-collaborateur");
+export const fetchCompteDemo = () => jget("/admin/compte-demo");
+export const transfererCompteDemo = (email, tables) => jsend("/admin/compte-demo/transferer", "POST", { email, tables });

@@ -187,7 +187,10 @@ def install_part2(g: dict) -> None:
                 return JSONResponse({"detail": "Authentification requise."}, status_code=401)
             return await call_next(request)
 
-    app.add_middleware(_RequireAuth)
+    # Désactivé : remplacé par le verrou unique de server.py (_AuthMiddleware),
+    # actif par défaut et avec la liste complète des routes publiques. Garder
+    # deux verrous aux listes différentes bloquait p. ex. /api/leads en prod.
+    # app.add_middleware(_RequireAuth)
 
     # ══════════════ 2. Images IA (Vision Board) ══════════════
 

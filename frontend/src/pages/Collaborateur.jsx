@@ -24,14 +24,19 @@ export default function Collaborateur() {
     setSending(true);
     try {
       const BACKEND = process.env.REACT_APP_BACKEND_URL || "";
-      await fetch(`${BACKEND}/api/growth/work-request`, {
+      const r = await fetch(`${BACKEND}/api/growth/work-request`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: `[${NIVEAUX.find((n) => n.value === niveau)?.label}] ${message.trim()}`, contact, channel: "collaborateur" }),
       });
-    } catch {}
-    setSent(true);
-    setSending(false);
-    toast.success("Demande envoyée à l'équipe Zayado.");
+      if (!r.ok) throw new Error(String(r.status));
+      setSent(true);
+      toast.success("Demande envoyée à l'équipe Zayado.");
+    } catch {
+      // Corrigé : affichait « envoyée » même quand rien n'était enregistré.
+      toast.error("La demande n'a pas pu être envoyée. Réessaie dans un instant.");
+    } finally {
+      setSending(false);
+    }
   };
 
   return (

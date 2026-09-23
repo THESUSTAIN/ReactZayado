@@ -8,6 +8,7 @@ import {
   fetchHeygenAvatars, fetchHeygenVoices, heygenGenerer, heygenStatut,
   fetchAdminCommerceStats, fetchAdminCommerceOrders, changerStatutCommandeAdmin,
   fetchAdminCommerceProducts, fetchAdminCommerceVendors,
+  fetchDemandesCollaborateur, fetchCompteDemo, transfererCompteDemo,
 } from "@/lib/kairosApi";
 
 // Menu inspiré de la structure Sentriq (Vue d'ensemble / Utilisateurs / ...).
@@ -24,6 +25,8 @@ const ONGLETS = [
   { key: "comptes-vendeurs", label: "Comptes vendeurs" },
   { key: "parrainage", label: "Parrainage" },
   { key: "codes-promo", label: "Codes promo" },
+  { key: "demandes", label: "Demandes collaborateurs" },
+  { key: "compte-demo", label: "Compte démo" },
   { key: "videos-ia", label: "Vidéos IA" },
   { key: "emails-ia", label: "Emails IA" },
   { key: "articles-seo", label: "Articles SEO" },
@@ -62,11 +65,108 @@ export default function Admin() {
         {onglet === "comptes-vendeurs" && <ComptesVendeurs />}
         {onglet === "parrainage" && <Parrainage />}
         {onglet === "codes-promo" && <CodesPromo />}
+        {onglet === "demandes" && <DemandesCollaborateur />}
+        {onglet === "compte-demo" && <CompteDemo />}
         {onglet === "videos-ia" && <VideosIA />}
         {onglet === "emails-ia" && <AVenir label="Emails IA" description="Génération de séquences email par IA — pas encore construit côté serveur ici. Existe en référence chez Sentriq (onglet « Emails IA ») ; à porter si tu confirmes le périmètre exact voulu." />}
         {onglet === "articles-seo" && <AVenir label="Articles SEO" description="Génération d'articles SEO par IA — même remarque : référence Sentriq disponible, pas encore de route serveur ici." />}
       </div>
       </div>
+    </div>
+  );
+}
+
+function DemandesCollaborateur() {
+  const [donnees, setDonnees] = useState(null);
+  const [erreur, setErreur] = useState(null);
+  useEffect(() => {
+    fetchDemandesCollaborateur().then(setDonnees).catch(() => setErreur("Accès refusé ou erreur serveur."));
+  }, []);
+  if (erreur) return <Carte><p className="text-red-400 text-sm">{erreur}</p></Carte>;
+  if (!donnees) return <Carte><p className="text-offwhite/50 text-sm">Chargement…</p></Carte>;
+  if (!donnees.demandes.length) return <Carte><p className="text-offwhite/50 text-sm">Aucune demande pour l'instant.</p></Carte>;
+  return (
+    <div className="space-y-3">
+      {donnees.demandes.map((d) => (
+        <Carte key={d.id}>
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-offwhite/50">
+            <span>{d.created_at ? new Date(d.created_at).toLocaleString("fr-FR") : ""}</span>
+            <span>Contact : {d.contact || "—"}</span>
+          </div>
+          <p className="mt-2 whitespace-pre-wrap text-sm">{d.message}</p>
+        </Carte>
+      ))}
+    </div>
+  );
+}
+
+function CompteDemo() {
+  const [donnees, setDonnees] = useState(null);
+  const [erreur, setErreur] = useState(null);
+  const [email, setEmail] = useState("");
+  const [choix, setChoix] = useState({});
+  const [resultat, setResultat] = useState(null);
+  const [envoi, setEnvoi] = useState(false);
+  const charger = () => {
+    fetchCompteDemo()
+      .then((d) => { setDonnees(d); setChoix(Object.fromEntries(d.tables.map((t) => [t.table, true]))); })
+      .catch(() => setErreur("Accès refusé ou erreur serveur."));
+  };
+  useEffect(charger, []);
+  const transferer = async () => {
+    const tables = Object.keys(choix).filter((k) => choix[k]);
+    if (!email.includes("@") || !tables.length) return;
+    if (!window.confirm(`Transférer ${tables.length} table(s) du compte démo vers ${email} ? Action définitive.`)) return;
+    setEnvoi(true);
+    try { setResultat(await transfererCompteDemo(email, tables)); charger(); }
+    catch { setResultat({ erreur: "Transfert impossible (e-mail inconnu ou erreur serveur)." }); }
+    finally { setEnvoi(false); }
+  };
+  if (erreur) return <Carte><p className="text-red-400 text-sm">{erreur}</p></Carte>;
+  if (!donnees) return <Carte><p className="text-offwhite/50 text-sm">Chargement…</p></Carte>;
+  return (
+    <div className="space-y-4">
+      <Carte>
+        <p className="text-sm text-offwhite/70">
+          Avant le verrou de connexion, certaines données étaient enregistrées dans le compte démo commun.
+          Coche les tables à rattacher, indique l'e-mail du compte réel, puis transfère.
+        </p>
+      </Carte>
+      {!donnees.tables.length && <Carte><p className="text-sm text-offwhite/50">Le compte démo est vide. Rien à récupérer.</p></Carte>}
+      {donnees.tables.map((t) => (
+        <Carte key={t.table}>
+          <label className="flex items-center gap-3 text-sm font-semibold">
+            <input type="checkbox" checked={!!choix[t.table]} onChange={(e) => setChoix({ ...choix, [t.table]: e.target.checked })} />
+            {t.table} — {t.lignes} ligne(s){t.unique_par_utilisateur ? " · 1 par utilisateur" : ""}
+          </label>
+          <div className="mt-2 space-y-1 text-xs text-offwhite/50">
+            {t.apercu.map((r, i) => <p key={i} className="truncate">{Object.values(r).filter(Boolean).slice(1, 4).join(" · ")}</p>)}
+          </div>
+        </Carte>
+      ))}
+      {!!donnees.tables.length && (
+        <Carte>
+          <div className="flex flex-wrap gap-2">
+            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email du compte réel"
+              className="min-w-[240px] flex-1 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm" />
+            <button onClick={transferer} disabled={envoi}
+              className="rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-navy-900 disabled:opacity-50">
+              {envoi ? "Transfert…" : "Transférer"}
+            </button>
+          </div>
+        </Carte>
+      )}
+      {resultat && (
+        <Carte>
+          {resultat.erreur ? <p className="text-sm text-red-400">{resultat.erreur}</p> : (
+            <div className="text-sm">
+              <p className="font-semibold text-gold">Transféré vers {resultat.vers.email}</p>
+              {Object.entries(resultat.transferes).map(([k, v]) => <p key={k}>{k} : {v} ligne(s)</p>)}
+              {Object.entries(resultat.ignores).map(([k, v]) => <p key={k} className="text-offwhite/50">{k} ignorée : {v}</p>)}
+            </div>
+          )}
+        </Carte>
+      )}
     </div>
   );
 }
