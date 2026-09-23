@@ -20,6 +20,8 @@ COPY --from=build /app/build /usr/share/nginx/html
 # Les fichiers *.template de ce répertoire sont interpolés par
 # 20-envsubst-on-templates.sh avec la variable PORT fournie par Railway.
 ENV PORT=80
+# Nom privé Railway du service backend ; surchargeable par variable Railway.
+ENV BACKEND_UPSTREAM=http://kairos-backend:8000
 COPY nginx.conf /etc/nginx/templates/default.conf.template
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
