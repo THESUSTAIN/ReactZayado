@@ -43,7 +43,7 @@ export default function PublicVision() {
   return (
     <div className="sf flex h-[100dvh] flex-col">
       <header className="flex shrink-0 items-center gap-3 border-b px-4 py-3 sm:px-6" style={{ borderColor: "var(--sf-line)", background: "var(--sf-chrome)" }}>
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#F1E2CC] to-[#DEC2A3] text-[15px] font-bold text-[#0b1f3a]" style={{ fontFamily: "Fraunces, Georgia, serif" }}>K</span>
+        <img src="/logo.png" alt="Zayado" className="h-8 w-8 shrink-0 object-contain" />
         <div className="min-w-0 flex-1">
           <p className="sf-title truncate">{prenom ? `Vision Board de ${prenom}` : "Vision Board"}</p>
           <p className="sf-small" style={{ fontSize: 12.5 }}>

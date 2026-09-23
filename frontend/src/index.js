@@ -22,9 +22,13 @@ root.render(
   </React.StrictMode>,
 );
 
-// Register PWA service worker.
+// Plus de service worker : on désinscrit tout ancien SW et on vide ses caches
+// (l'ancien sw.js provoquait un écran blanc).
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => {});
-  });
+  navigator.serviceWorker.getRegistrations()
+    .then((regs) => regs.forEach((r) => r.unregister()))
+    .catch(() => {});
+  if (window.caches) {
+    caches.keys().then((keys) => keys.forEach((k) => caches.delete(k))).catch(() => {});
+  }
 }

@@ -72,8 +72,8 @@ export function Sidebar() {
 
   return (
     <aside className="side-nav hidden lg:flex" data-testid="sidebar">
-      <button onClick={() => navigate("/")} className="mt-3.5 mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#F1E2CC] to-[#DEC2A3] font-wordmark text-2xl font-bold text-navy-900 shadow-[0_8px_22px_-8px_rgba(222,194,163,0.7)]" aria-label="Accueil">
-        Z
+      <button onClick={() => navigate("/")} className="mt-3.5 mb-3 flex h-12 w-12 items-center justify-center" aria-label="Accueil">
+        <img src="/logo.png" alt="Zayado" className="h-12 w-12 object-contain drop-shadow-[0_6px_14px_rgba(0,0,0,0.35)]" />
       </button>
       <p className="text-[8px] font-bold uppercase tracking-[0.18em] text-gold mb-2">Zayado</p>
 

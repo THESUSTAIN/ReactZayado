@@ -12,7 +12,7 @@ export function SideMenuPro({ titre, sousTitre, items, actif, onChange, retour }
   return (
     <aside className="fixed left-0 top-0 z-30 hidden h-screen w-[248px] flex-col px-5 py-6 lg:flex" style={{ background: "linear-gradient(180deg, #1a3a6e 0%, #102945 60%, #0c1d33 100%)" }} data-testid="side-menu-pro">
       <div className="flex items-center gap-3 px-1">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#F1E2CC] to-[#DEC2A3] font-wordmark text-xl font-bold text-[#14243F]">K</span>
+        <img src="/logo.png" alt="Zayado" className="h-10 w-10 object-contain" />
         <div>
           <p className="font-display text-[15px] font-bold text-white">{titre}</p>
           <p className="text-[10px] leading-tight text-white/45">{sousTitre}</p>

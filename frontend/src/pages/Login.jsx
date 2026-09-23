@@ -161,7 +161,7 @@ export default function Login() {
       <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-md">
         <GlassCard data-testid="login-card">
           <div className="mb-6 text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#F1E2CC] to-[#DEC2A3] font-wordmark text-2xl font-bold text-navy-900">K</div>
+            <img src="/logo.png" alt="Zayado" className="mx-auto mb-3 h-14 w-14 object-contain" />
             <h1 className="font-display text-3xl font-extrabold text-offwhite">Zayado</h1>
             <p className="mt-1 text-[11px] uppercase tracking-[0.25em] text-gold">ESPACE PRIVÉ</p>
             <p className="mt-4 text-sm text-offwhite/70">Connecte-toi à ton espace privé Zayado — sans mot de passe à retenir.</p>
