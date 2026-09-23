@@ -1,8 +1,12 @@
 FROM node:20-bookworm-slim AS build
 
 WORKDIR /app
-ARG REACT_APP_BACKEND_URL
-ENV REACT_APP_BACKEND_URL=$REACT_APP_BACKEND_URL
+
+# L'application appelle toujours /api sur son origine. Le proxy nginx du
+# conteneur frontal relaie ensuite ces requêtes vers le backend Railway privé.
+# Cette valeur écrase volontairement toute ancienne variable Railway
+# REACT_APP_BACKEND_URL qui pointerait vers api.zayado.net.
+ENV REACT_APP_BACKEND_URL=""
 
 COPY package.json ./
 # Corrigé : aucun yarn.lock n'a jamais été généré pour ce projet, et il
@@ -18,8 +22,11 @@ RUN yarn build
 FROM nginx:alpine
 COPY --from=build /app/build /usr/share/nginx/html
 # Les fichiers *.template de ce répertoire sont interpolés par
-# 20-envsubst-on-templates.sh avec la variable PORT fournie par Railway.
+# 20-envsubst-on-templates.sh avec les variables Railway fournies au runtime.
 ENV PORT=80
+# Valeur sûre pour éviter un échec nginx local si BACKEND_URL est oublié.
+# Sur Railway, remplacer par l'URL privée du service kairos-backend.
+ENV BACKEND_URL=http://127.0.0.1:8001
 COPY nginx.conf /etc/nginx/templates/default.conf.template
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
