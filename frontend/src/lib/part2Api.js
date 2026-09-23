@@ -1,6 +1,6 @@
 import { getToken, setToken } from "./kairosApi";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${process.env.REACT_APP_BACKEND_URL || ""}/api`;
 
 // Appel JSON avec le jeton de l'utilisateur. Sur une erreur, lève une Error dont
 // .message est le texte lisible du backend et .erreurs la liste détaillée (422 fiche produit).

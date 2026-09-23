@@ -1,8 +1,6 @@
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || (
-  typeof window !== "undefined" && /localhost|127\.0\.0\.1/.test(window.location.hostname)
-    ? "http://localhost:8000"
-    : "https://api.zayado.net"
-);
+// En production, l’API est servie sous le même domaine que l’application (/api).
+// En local, REACT_APP_BACKEND_URL peut pointer vers un backend séparé.
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
 const API = `${BACKEND_URL}/api`;
 const TOKEN_KEY = "kairos_access_token";
 

@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useKairos } from "@/context/KairosContext";
 
 const ADMIN_EMAILS = ["thomas@zayado.net", "admin@zayado.net"];
-const BACKEND = process.env.REACT_APP_BACKEND_URL;
+const BACKEND = process.env.REACT_APP_BACKEND_URL || "";
 const ADMIN_KEY_LOCAL = "zayado_admin_key";
 
 const QUARTERS = ["Q3 2025", "Q4 2025", "Q1 2026", "Q2 2026"];

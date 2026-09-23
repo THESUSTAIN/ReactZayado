@@ -6,7 +6,7 @@ import {
 import { toast } from "sonner";
 import { GlassCard } from "@/components/kairos/GlassCard";
 
-const BACKEND = process.env.REACT_APP_BACKEND_URL;
+const BACKEND = process.env.REACT_APP_BACKEND_URL || "";
 
 const CATEGORY_META = {
   IA:       { icon: Sparkles,      label: "IA & Contenu" },

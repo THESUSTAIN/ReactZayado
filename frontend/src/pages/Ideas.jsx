@@ -131,7 +131,7 @@ function AISuggestions({ onCreated }) {
     setLoading(true);
     setSuggestions([]);
     try {
-      const BACKEND = process.env.REACT_APP_BACKEND_URL;
+      const BACKEND = process.env.REACT_APP_BACKEND_URL || "";
       // Try Copilote chat with structured prompt
       const prompt = `Propose 5 idées business courtes et concrètes pour un entrepreneur solo${context ? ` dans le contexte : "${context}"` : ""}. Format JSON strict : [{"titre":"...","description":"une phrase courte","impact":4,"effort":2}] — impact et effort de 1 à 5. Réponds UNIQUEMENT avec le JSON, sans commentaire.`;
       const r = await fetch(`${BACKEND}/api/copilote/chat`, {

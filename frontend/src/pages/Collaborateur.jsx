@@ -23,7 +23,7 @@ export default function Collaborateur() {
     if (!message.trim()) return;
     setSending(true);
     try {
-      const BACKEND = process.env.REACT_APP_BACKEND_URL;
+      const BACKEND = process.env.REACT_APP_BACKEND_URL || "";
       await fetch(`${BACKEND}/api/growth/work-request`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: `[${NIVEAUX.find((n) => n.value === niveau)?.label}] ${message.trim()}`, contact, channel: "collaborateur" }),

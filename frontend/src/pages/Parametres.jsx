@@ -280,7 +280,7 @@ function SectionParrainage() {
 }
 
 function SectionSecurite() {
-  const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+  const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
   return (
     <Carte titre="Tes données" desc="Tes données t'appartiennent — toujours exportables.">
       <a href={`${BACKEND_URL}/api/export`} download className="inline-flex items-center gap-2 rounded-xl border border-white/15 px-4 py-2 text-sm hover:bg-white/5" data-testid="parametres-export">

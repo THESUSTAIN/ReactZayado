@@ -36,7 +36,7 @@ export default function ChatbotB2B() {
   const startCheckout = async () => {
     setLoading(true);
     try {
-      const BACKEND = process.env.REACT_APP_BACKEND_URL;
+      const BACKEND = process.env.REACT_APP_BACKEND_URL || "";
       // Aligné sur l'échelle tarifaire unique du backend : le chatbot est
       // inclus dans les paliers Pro (1) et Business (3) ; au-delà c'est
       // Entreprise, sur devis — jamais de paiement Mollie direct.

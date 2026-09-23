@@ -10,7 +10,7 @@ export const STICKY_PALETTE = {
   mint:   { bg: "#e5f5e6", text: "#0f3f22", label: "#256b3d" },
   orange: { bg: "#ffe1c9", text: "#4a2405", label: "#8a4a12" },
   blue:   { bg: "#d7e6f5", text: "#0f2547", label: "#1e468b" },
-  purple: { bg: "#ecdcff", text: "#2a0f4a", label: "#5a2ea6" },
+  navy:   { bg: "#cbd9f0", text: "#102945", label: "#1a3a6e" },
   yellow: { bg: "#fef3c7", text: "#3f2b04", label: "#7a5a12" },
   slate:  { bg: "#dde3ea", text: "#17222f", label: "#3f5468" },
   coral:  { bg: "#ffdfd3", text: "#4a1d0d", label: "#9c3d1b" },
@@ -22,7 +22,7 @@ export const stickyOf = (name) => STICKY_PALETTE[name] || STICKY_PALETTE.cream;
 
 /* Palette hex (note / ai-doc / image) */
 export const HEX_PALETTE = [
-  "#DEC2A3", "#4a6a9e", "#2FB89A", "#8b6fbf", "#E4A33A",
+  "#DEC2A3", "#4a6a9e", "#2FB89A", "#1a3a6e", "#E4A33A",
   "#D6604D", "#3FA7D6", "#7BA05B", "#C56B8E", "#8A8F98",
 ];
 

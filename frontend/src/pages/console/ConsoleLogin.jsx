@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ShieldCheck, Loader2 } from "lucide-react";
 import { setToken } from "@/lib/kairosApi";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${process.env.REACT_APP_BACKEND_URL || ""}/api`;
 
 // Porte unique de la console admin (admin.zayado.net).
 // L'espace vendeur vit dans la SaaS (app.zayado.net) : un utilisateur peut être vendeur.
