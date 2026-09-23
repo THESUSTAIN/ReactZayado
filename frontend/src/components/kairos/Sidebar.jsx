@@ -11,7 +11,7 @@ import { fetchActualite } from "@/lib/kairosApi";
 // cap-vivant-scoops-light, un projet précédent où elle existait déjà.
 // "Scoops" retiré comme bouton (ce n'était pas un vrai lien, juste
 // l'ancien porteur de l'alerte actualité — déplacée sur "today").
-// "Marketplace" retiré : accessible depuis le Header (menu Écosystème).
+// La marketplace publique est gérée par Shopify et ne fait pas partie du cockpit privé.
 const ITEMS = [
   { key: "today", name: "Aujourd'hui", Icon: LayoutDashboard },
   { key: "vision", name: "Vision", Icon: Compass },
@@ -51,7 +51,7 @@ export function Sidebar() {
   const [active, setActive] = useState(deriveActive());
   useEffect(() => { setActive(deriveActive()); }, [deriveActive]);
 
-  // Hors saveur SaaS (console admin/vendeur), le rail Kairos n'a pas lieu d'être
+  // Hors saveur SaaS, le rail du cockpit n'a pas lieu d'être.
   if ((process.env.REACT_APP_FLAVOR || "saas") !== "saas") return null;
 
   const go = (key) => {
@@ -73,7 +73,7 @@ export function Sidebar() {
   return (
     <aside className="side-nav hidden lg:flex" data-testid="sidebar">
       <button onClick={() => navigate("/")} className="mt-3.5 mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#F1E2CC] to-[#DEC2A3] font-wordmark text-2xl font-bold text-navy-900 shadow-[0_8px_22px_-8px_rgba(222,194,163,0.7)]" aria-label="Accueil">
-        K
+        Z
       </button>
       <p className="text-[8px] font-bold uppercase tracking-[0.18em] text-gold mb-2">Zayado</p>
 

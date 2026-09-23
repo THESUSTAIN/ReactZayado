@@ -3516,57 +3516,13 @@ async def capturer_lead(body: LeadIn, db: AsyncSession = Depends(get_db)):
     return {"ok": True}
 
 
-@api.post("/checkout")
-async def create_checkout(payload: CheckoutIn):
-    plan = PRICING.get(payload.plan.lower())
-    if not plan or payload.cycle not in ("mensuel", "annuel"):
-        raise HTTPException(400, "invalid_plan")
-    amount = plan[payload.cycle]
-    if amount is None:
-        # Entreprise n'a pas de prix fixe (devis) — jamais de paiement
-        # Mollie direct, on oriente vers le contact.
-        raise HTTPException(400, f"Ce palier est sur devis (à partir de {plan['plancher']}€/mois) — contacte l'équipe Zayado.")
-    if amount <= 0:
-        # Le plan gratuit (Essentielle) ne doit jamais déclencher un paiement
-        # Mollie à 0€ — Mollie refuse ces montants. Aucune route actuelle
-        # n'appelle ceci pour ce plan, mais on se protège quand même.
-        raise HTTPException(400, "Ce forfait est gratuit — aucun paiement requis.")
-    frontend_url = os.environ.get("PUBLIC_FRONTEND_URL", "https://app.zayado.net")
-    api_key = os.environ.get("MOLLIE_API_KEY", "")
-    if not api_key:
-        # Fallback mock (no key configured)
-        return {"ok": True, "mock": True, "checkoutUrl": f"{frontend_url}/pricing?mock=1&plan={payload.plan}&cycle={payload.cycle}"}
-    try:
-        from mollie.api.client import Client as MollieClient
-        mollie_client = MollieClient()
-        mollie_client.set_api_key(api_key)
-        description = f"Kairos {plan['label']} · {payload.cycle.capitalize()}"
-        result = mollie_client.payments.create({
-            "amount": {"currency": "EUR", "value": f"{amount:.2f}"},
-            "description": description,
-            "redirectUrl": f"{frontend_url}/pricing/success?plan={payload.plan}&cycle={payload.cycle}",
-            "webhookUrl": f"{frontend_url}/api/mollie/webhook",
-            "metadata": {"plan": payload.plan, "cycle": payload.cycle, "email": payload.email or ""},
-        })
-        return {"ok": True, "checkoutUrl": result.checkout_url, "paymentId": result.id}
-    except Exception as e:
-        logger.error("Mollie checkout error: %s", e)
-        raise HTTPException(500, f"mollie_error: {str(e)[:120]}")
-
-
-@api.post("/mollie/webhook")
-async def mollie_webhook(request: Request):
-    # Mollie sends payment id, we could persist status here. Kept minimal for MVP.
-    form = await request.form()
-    logger.info("Mollie webhook: %s", dict(form))
-    return {"ok": True}
-
-
-
-
 # ── Partie 2 : auth obligatoire en prod, images IA, marketplace, Qonto ──
 from part2_ext import install_part2  # noqa: E402
 install_part2(globals())
+
+# ── Commerce : commandes produits/services, SaaS et paiements Mollie ──
+from commerce_ext import install_commerce  # noqa: E402
+install_commerce(globals())
 
 # ── Vision+ : victoires, partage public en lecture seule, e-mail du lundi ──
 from vision_plus import install_vision_plus  # noqa: E402

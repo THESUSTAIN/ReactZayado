@@ -284,6 +284,8 @@ def install_part2(g: dict) -> None:
         soumis_le: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
         publie_le: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    g["VendorProduct"] = VendorProduct
+
     def _pj(p) -> dict:
         return {"id": p.id, "titre": p.titre, "description": p.description, "prix": p.prix, "stock": p.stock,
                 "sku": p.sku, "categorie": p.categorie, "images": p.images or [], "statut": p.statut,

@@ -22,16 +22,17 @@ import Roadmap from "@/pages/Roadmap";
 import Pricing from "@/pages/Pricing";
 import PricingSuccess from "@/pages/PricingSuccess";
 import Mockup from "@/pages/Mockup";
-import Parametres from "@/pages/Parametres";
 import Marketplace from "@/pages/Marketplace";
+import MonEspace from "@/pages/MonEspace";
+import Achat from "@/pages/Achat";
+import Parametres from "@/pages/Parametres";
 import Admin from "@/pages/Admin";
 import ConsoleLogin from "@/pages/console/ConsoleLogin";
 import PublicVision from "@/pages/PublicVision";
 import { getToken } from "@/lib/kairosApi";
 
 // Deux apps séparées issues du même code — la saveur est choisie AU BUILD :
-//   REACT_APP_FLAVOR=saas     → Cockpit IA Zayado (app.zayado.net) : cockpit + espace VENDEUR inclus
-//                               (un utilisateur peut être vendeur, même compte)
+//   REACT_APP_FLAVOR=saas     → Cockpit IA Zayado (app.zayado.net)
 //   REACT_APP_FLAVOR=console  → admin.zayado.net : console admin seule, sa propre porte
 const FLAVOR = process.env.REACT_APP_FLAVOR || "saas";
 
@@ -86,7 +87,11 @@ function App() {
             <Route path="/app/chatbot-b2b" element={<ProtectedRoute><ChatbotB2B /></ProtectedRoute>} />
             <Route path="/app/processus" element={<ProtectedRoute><Processus /></ProtectedRoute>} />
             <Route path="/app/collaborateurs" element={<ProtectedRoute><Collaborateur /></ProtectedRoute>} />
-            <Route path="/app/marketplace" element={<ProtectedRoute><Marketplace /></ProtectedRoute>} />
+            {/* L'espace vendeur est privé et distinct de la marketplace publique Shopify. */}
+            <Route path="/espace-vendeur" element={<ProtectedRoute><Marketplace /></ProtectedRoute>} />
+            <Route path="/app/marketplace" element={<Navigate to="/espace-vendeur" replace />} />
+            <Route path="/mon-espace" element={<ProtectedRoute><MonEspace /></ProtectedRoute>} />
+            <Route path="/acheter" element={<ProtectedRoute><Achat /></ProtectedRoute>} />
             <Route path="/parametres" element={<ProtectedRoute><Parametres /></ProtectedRoute>} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/pricing/success" element={<PricingSuccess />} />

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Search, Moon, Sun, Mail, Grid3x3, Bell, Store, LayoutGrid, Network, Sparkles, Bot, Map, Users, MessageCircle, Workflow, Radio, CheckSquare } from "lucide-react";
+import { Search, Moon, Sun, Mail, Grid3x3, Bell, LayoutGrid, Network, Sparkles, Bot, Map, Users, MessageCircle, Workflow, Radio, CheckSquare } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
@@ -8,7 +8,7 @@ import {
 import { useKairos } from "@/context/KairosContext";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { useI18n } from "@/i18n";
-import { fetchMoi, fetchActualite, fetchDecisions } from "@/lib/kairosApi";
+import { fetchActualite, fetchDecisions } from "@/lib/kairosApi";
 
 const THEME_KEY = "kairos_theme";
 
@@ -23,15 +23,8 @@ export function Header() {
   const navigate = useNavigate();
   const location = useLocation();
   const [q, setQ] = useState("");
-  // L'Espace Vendeur ne s'affiche que si le compte a le rôle vendeur/admin —
-  // un client lambda ne doit pas voir une entrée qui le mène à un refus.
-  const [estVendeur, setEstVendeur] = useState(false);
-  useEffect(() => {
-    fetchMoi().then((m) => setEstVendeur(m?.role === "vendeur" || m?.role === "admin")).catch(() => setEstVendeur(false));
-  }, []);
-  const modules = estVendeur
-    ? [...MODULES, { name: "Espace Vendeur", icon: Store, path: "/app/marketplace" }]
-    : MODULES;
+  // La marketplace publique est gérée par Shopify, pas dans le cockpit privé.
+  const modules = MODULES;
 
   // Thème clair/sombre — persisté en local, classe posée sur <body>.
   const [clair, setClair] = useState(() => {
