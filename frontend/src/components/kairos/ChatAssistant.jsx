@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   Sparkles, Send, Mic, Lightbulb, BatteryLow, Compass, X, Loader2,
   Sun, ListChecks, Newspaper, Check, Clock, XCircle, ExternalLink, RefreshCw, Mail, Bookmark,
-  Maximize2, Minimize2,
+  Maximize2, Minimize2, CloudCheck,
 } from "lucide-react";
 import { useKairos } from "@/context/KairosContext";
 import {
@@ -25,12 +25,19 @@ const TABS = [
 function ChatBody({ onClose, estElargi, onToggleTaille }) {
   const { user } = useKairos();
   const [tab, setTab] = useState("chat");
+  const [cloudSync, setCloudSync] = useState(null);
 
   // Un clic sur « Scoops » (rail gauche) bascule ce panneau sur l'onglet Actualité
   useEffect(() => {
     const ouvrir = () => setTab("actu");
     window.addEventListener("kairos:ouvrir-actu", ouvrir);
     return () => window.removeEventListener("kairos:ouvrir-actu", ouvrir);
+  }, []);
+
+  useEffect(() => {
+    const onSync = (event) => setCloudSync(event.detail || { provider: "cloud" });
+    window.addEventListener("zayado:cloud-sync", onSync);
+    return () => window.removeEventListener("zayado:cloud-sync", onSync);
   }, []);
 
   return (
@@ -46,6 +53,11 @@ function ChatBody({ onClose, estElargi, onToggleTaille }) {
           </div>
         </div>
         <div className="flex items-center gap-1">
+          {cloudSync && (
+            <span className="mr-1 inline-flex items-center gap-1 rounded-lg bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold text-emerald-300" title={`Document transmis dans ${cloudSync.provider === "google" ? "Google Drive" : "OneDrive / SharePoint"}`} data-testid="chat-cloud-sync-status">
+              <CloudCheck className="h-3.5 w-3.5" /> Transmis
+            </span>
+          )}
           {onToggleTaille && (
             <button onClick={onToggleTaille} className="rounded-lg p-1.5 text-offwhite/50 hover:bg-white/5 hover:text-offwhite" data-testid="chat-toggle-taille-btn" title={estElargi ? "Réduire" : "Agrandir"}>
               {estElargi ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}

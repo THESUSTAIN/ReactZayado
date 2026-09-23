@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import {
   fetchBoard, saveBoard, fetchStarterTemplates, generateAiDoc, generateBoard, fetchInspire, searchUnsplash,
-  fetchShare, saveShare, revokeShare,
+  fetchShare, saveShare, revokeShare, saveGeneratedDocument,
 } from "@/lib/kairosApi";
 import { useI18n } from "@/i18n";
 import {
@@ -112,6 +112,13 @@ function AiDocModal({ open, onClose, onGenerated }) {
     try {
       const res = await generateAiDoc(value, docType);
       onGenerated({ title: res.title, content: res.content, docType: res.doc_type });
+      try {
+        const sync = await saveGeneratedDocument(res.title, res.content);
+        if (sync?.ok && !sync.skipped) {
+          window.dispatchEvent(new CustomEvent("zayado:cloud-sync", { detail: { provider: sync.provider, name: sync.name, url: sync.url } }));
+          toast.success("Document ajouté au tableau et transmis dans ton cloud.");
+        }
+      } catch { toast.info("Document ajouté au tableau. Active une destination cloud dans Paramètres pour l’enregistrer automatiquement."); }
       onClose();
       setPrompt("");
       toast.success(t("vision.aiDoc.added"));

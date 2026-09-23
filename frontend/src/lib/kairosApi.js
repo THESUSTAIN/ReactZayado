@@ -219,6 +219,7 @@ export const savePouls = (data) => jsend("/cockpit/pouls", "PUT", data);
 export const fetchRadar = () => jget("/cockpit/radar");
 export const genererSwot = () => jsend("/radar/swot", "POST");
 export const fetchImpact = () => jget("/cockpit/impact");
+export const saveGeneratedDocument = (title, content, provider) => jsend("/documents/auto-save", "POST", { title, content, provider });
 
 // ── Admin (accès réservé au rôle admin — vérifié côté serveur, pas ici) ──
 export const fetchAdminVueEnsemble = () => jget("/admin/vue-ensemble");

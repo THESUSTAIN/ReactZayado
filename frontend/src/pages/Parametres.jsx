@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
 import {
-  User, Palette, Bell, Plug, ShieldCheck, CreditCard, Gift, Loader2, Save, Download,
+  User, Palette, Bell, Plug, ShieldCheck, CreditCard, Gift, Loader2, Save, Download, Cloud,
   Search, X, Sun, Moon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { fetchState, saveProfile, fetchConnections, fetchMesFilleuls, inviterParrainage, appliquerCodePromo, fetchMoi } from "@/lib/kairosApi";
 import { useI18n } from "@/i18n";
 import { Link, useNavigate } from "react-router-dom";
+import IntegrationsSection from "@/components/kairos/IntegrationsSection";
 
 // Paramètres en grande fenêtre modale — structure inspirée de
 // ReactZayado/SettingsModal.jsx (v13) : recherche + sections latérales.
@@ -16,6 +17,7 @@ const SECTIONS = [
   { id: "general", label: "Général", Icon: Palette, mots: "langue français english thème clair sombre apparence" },
   { id: "notifications", label: "Notifications", Icon: Bell, mots: "alerte rappel email" },
   { id: "integrations", label: "Intégrations", Icon: Plug, mots: "whatsapp telegram qonto connexion" },
+  { id: "cloud-save", label: "Enregistrement cloud", Icon: Cloud, mots: "drive google onedrive sharepoint document automatique nuage" },
   { id: "parrainage", label: "Parrainage", Icon: Gift, mots: "inviter filleul crédit bonus" },
   { id: "securite", label: "Sécurité & données", Icon: ShieldCheck, mots: "export rgpd données suppression" },
   { id: "facturation", label: "Forfait & promo", Icon: CreditCard, mots: "plan abonnement prix code réduction" },
@@ -93,7 +95,8 @@ export default function Parametres() {
               {active === "profil" && <SectionProfil />}
               {active === "general" && <SectionGeneral />}
               {active === "notifications" && <SectionNotifications />}
-              {active === "integrations" && <SectionIntegrations />}
+              {active === "integrations" && <IntegrationsSection />}
+              {active === "cloud-save" && <SectionCloudSave />}
               {active === "parrainage" && <SectionParrainage />}
               {active === "securite" && <SectionSecurite />}
               {active === "facturation" && <SectionFacturation />}
@@ -223,13 +226,10 @@ function SectionNotifications() {
 function SectionIntegrations() {
   const [connexions, setConnexions] = useState(null);
   useEffect(() => { fetchConnections().then(setConnexions).catch(() => setConnexions([])); }, []);
-  // Seules WhatsApp, Telegram et Qonto ont une vraie route de connexion ici
-  // (vérifié dans server.py / part2_ext.py) — les autres (Drive, Notion,
-  // Trello, Slack...) existent chez ReactZayado mais pas dans ce backend.
-  const DISPONIBLES = ["whatsapp", "telegram", "qonto"];
+  const DISPONIBLES = ["google_drive", "microsoft_drive", "whatsapp", "telegram", "qonto"];
   if (connexions === null) return <Carte><p className="text-sm text-offwhite/50">Chargement…</p></Carte>;
   return (
-    <Carte titre="Tes connexions" desc={`Disponibles ici : ${DISPONIBLES.join(", ")}. Drive, Notion, Trello, Slack existent en référence chez ReactZayado, pas encore portés dans ce backend.`}>
+    <Carte titre="Tes connexions" desc="Google Drive et OneDrive/SharePoint peuvent recevoir automatiquement tes documents IA. Connecte-les dans la carte Intégrations.">
       <p className="text-sm text-offwhite/70">Connexions actives : {connexions.length}</p>
       {connexions.map((c) => (
         <div key={c.provider} className="mt-2 flex items-center justify-between text-sm">
@@ -238,6 +238,67 @@ function SectionIntegrations() {
         </div>
       ))}
     </Carte>
+  );
+}
+
+function SectionCloudSave() {
+  const [state, setState] = useState(null);
+  const [connections, setConnections] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [enabled, setEnabled] = useState(false);
+  const [provider, setProvider] = useState("google");
+
+  useEffect(() => {
+    Promise.all([fetchState(), fetchConnections()]).then(([s, c]) => {
+      const ctx = s.vision?.contexte_metier || {};
+      setState(ctx);
+      setEnabled(ctx.auto_save_documents === true);
+      setProvider(ctx.document_provider || "google");
+      setConnections(c || []);
+    }).catch(() => toast.error("Impossible de charger le réglage cloud."));
+  }, []);
+
+  const connected = (provider === "google" ? "google_drive" : "microsoft_drive");
+  const isConnected = connections.some((c) => c.provider === connected && c.status === "ready");
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await saveProfile({ contexte_metier: { ...(state || {}), auto_save_documents: enabled, document_provider: provider } });
+      toast.success(enabled ? "Enregistrement cloud activé." : "Enregistrement cloud désactivé.");
+    } catch { toast.error("Impossible d’enregistrer ce réglage."); }
+    finally { setSaving(false); }
+  };
+
+  if (!state) return <Carte><p className="text-sm text-offwhite/50">Chargement…</p></Carte>;
+  return (
+    <>
+      <Carte titre="Enregistrer automatiquement mes documents" desc="Quand l’IA crée un document, Zayado l’envoie dans ton espace cloud choisi. Aucun envoi n’est effectué si ce réglage est désactivé.">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${enabled ? "bg-emerald-500/15 text-emerald-300" : "bg-white/5 text-offwhite/50"}`}><Cloud size={18} /></span>
+            <div><p className="text-sm font-semibold text-offwhite">Sauvegarde automatique</p><p className="text-xs text-offwhite/50">{enabled ? "Activée pour les nouveaux documents" : "Désactivée"}</p></div>
+          </div>
+          <button onClick={() => setEnabled((v) => !v)} role="switch" aria-checked={enabled} data-testid="cloud-auto-save-toggle" className={`relative h-6 w-11 rounded-full transition-colors ${enabled ? "bg-gold" : "bg-white/15"}`}>
+            <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${enabled ? "translate-x-5" : "translate-x-0.5"}`} />
+          </button>
+        </div>
+        <label className="mt-5 block text-xs font-medium text-offwhite/60">Destination</label>
+        <select value={provider} onChange={(e) => setProvider(e.target.value)} className={`${INPUT} mt-1`} data-testid="cloud-auto-save-provider">
+          <option value="google">Google Drive</option>
+          <option value="microsoft">OneDrive / SharePoint</option>
+        </select>
+        <p className={`mt-2 text-xs ${isConnected ? "text-emerald-300" : "text-amber-300"}`}>
+          {isConnected ? "Connexion cloud active : les prochains documents seront transmis automatiquement." : "Connecte d’abord cette destination dans Intégrations."}
+        </p>
+        <button onClick={save} disabled={saving || (enabled && !isConnected)} className={`${BTN_OR} mt-4`} data-testid="cloud-auto-save-save">
+          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Enregistrer ce réglage
+        </button>
+      </Carte>
+      <Carte titre="Confidentialité" desc="Chaque fichier est transmis uniquement après ton consentement OAuth. Zayado ne demande pas l’accès global à ton disque : Drive utilise l’accès aux fichiers créés par l’application et Microsoft utilise Files.ReadWrite.">
+        <p className="text-xs leading-relaxed text-offwhite/60">Tu peux couper la sauvegarde automatique à tout moment. Les documents déjà transmis restent dans ton espace cloud et ne sont pas supprimés par Zayado.</p>
+      </Carte>
+    </>
   );
 }
 

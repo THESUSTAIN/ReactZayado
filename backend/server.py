@@ -13,12 +13,13 @@ import math
 import os
 import re
 import ipaddress
+import time
 import uuid
 from datetime import date, datetime, timedelta, timezone
 from html import escape
 from html.parser import HTMLParser
 from typing import List, Optional
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 import httpx
 from dotenv import load_dotenv
@@ -1281,7 +1282,7 @@ async def connexion_demo(body: DemoIn = None, db: AsyncSession = Depends(get_db)
 
 
 @api.get("/connexion/oauth/{provider}/start")
-async def connexion_oauth_start(provider: str, redirect_uri: Optional[str] = None):
+async def connexion_oauth_start(provider: str, redirect_uri: Optional[str] = None, purpose: Optional[str] = None):
     """Démarre l'OAuth si les clés sont configurées ; sinon renvoie configured=false (repli démo côté front)."""
     provider = provider.lower()
     if provider not in ("google", "microsoft"):
@@ -1292,14 +1293,20 @@ async def connexion_oauth_start(provider: str, redirect_uri: Optional[str] = Non
         return {"configured": False}
     # Clés présentes : construction de l'URL d'autorisation (flux code).
     ru = redirect_uri or f"{os.environ.get('BACKEND_PUBLIC_URL', '')}/api/connexion/oauth/{provider}/callback"
+    storage = purpose == "storage"
     if provider == "google":
         params = {"client_id": cid, "redirect_uri": ru, "response_type": "code",
-                  "scope": "openid email profile", "state": f"google_{uuid.uuid4().hex}", "access_type": "online"}
+                  "scope": "openid email profile" + (" https://www.googleapis.com/auth/drive.file" if storage else ""),
+                  "state": f"storage|google|{uuid.uuid4().hex}" if storage else f"google_{uuid.uuid4().hex}",
+                  "access_type": "offline" if storage else "online"}
+        if storage:
+            params["prompt"] = "consent"
         base = "https://accounts.google.com/o/oauth2/v2/auth"
     else:
         tenant = os.environ.get("MICROSOFT_TENANT", "common")
         params = {"client_id": cid, "redirect_uri": ru, "response_type": "code",
-                  "scope": "openid profile email", "state": f"microsoft_{uuid.uuid4().hex}"}
+                  "scope": "openid profile email" + (" User.Read Files.ReadWrite offline_access" if storage else ""),
+                  "state": f"storage|microsoft|{uuid.uuid4().hex}" if storage else f"microsoft_{uuid.uuid4().hex}"}
         base = f"https://login.microsoftonline.com/{tenant}/oauth2/v2.0/authorize"
     from urllib.parse import urlencode
     return {"configured": True, "authorization_url": f"{base}?{urlencode(params)}"}
@@ -1323,6 +1330,7 @@ async def connexion_oauth_callback(provider: str, code: Optional[str] = None, st
     if not (cid and csecret):
         return RedirectResponse(f"{frontend}/login?erreur=oauth_non_configure")
     redirect_uri = f"{os.environ.get('BACKEND_PUBLIC_URL', '')}/api/connexion/oauth/{provider}/callback"
+    storage = bool(state and state.startswith("storage|"))
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             if provider == "google":
@@ -1331,7 +1339,8 @@ async def connexion_oauth_callback(provider: str, code: Optional[str] = None, st
                     "redirect_uri": redirect_uri, "grant_type": "authorization_code",
                 })
                 tok.raise_for_status()
-                access_token = tok.json()["access_token"]
+                token_data = tok.json()
+                access_token = token_data["access_token"]
                 info = await client.get("https://www.googleapis.com/oauth2/v2/userinfo",
                                          headers={"Authorization": f"Bearer {access_token}"})
                 info.raise_for_status()
@@ -1343,7 +1352,8 @@ async def connexion_oauth_callback(provider: str, code: Optional[str] = None, st
                     "redirect_uri": redirect_uri, "grant_type": "authorization_code",
                 })
                 tok.raise_for_status()
-                access_token = tok.json()["access_token"]
+                token_data = tok.json()
+                access_token = token_data["access_token"]
                 info = await client.get("https://graph.microsoft.com/v1.0/me",
                                          headers={"Authorization": f"Bearer {access_token}"})
                 info.raise_for_status()
@@ -1353,6 +1363,20 @@ async def connexion_oauth_callback(provider: str, code: Optional[str] = None, st
             return RedirectResponse(f"{frontend}/login?erreur=oauth_sans_email")
         user = await _trouver_ou_creer_compte(db, email)
         jwt_token = _creer_token(user.id, user.role)
+        if storage:
+            provider_key = f"{provider}_drive"
+            conn = await _get_connection(db, provider_key, uid=user.id)
+            if not conn:
+                conn = UserConnection(user_id=user.id, provider=provider_key, label=("Google Drive" if provider == "google" else "OneDrive / SharePoint"))
+                db.add(conn)
+            conn.status = "ready"
+            conn.credentials_enc = _chiffrer(json.dumps({
+                "access_token": access_token,
+                "refresh_token": token_data.get("refresh_token"),
+                "expires_at": time.time() + int(token_data.get("expires_in", 3600)),
+            }))
+            await db.commit()
+            return RedirectResponse(f"{frontend}/login?cloud_connected={provider}#access_token={jwt_token}")
         return RedirectResponse(f"{frontend}/login#access_token={jwt_token}")
     except Exception as e:  # noqa: BLE001 — jamais de 500 brut sur un retour de consentement utilisateur
         logger.warning("Échec callback OAuth %s : %s", provider, e)
@@ -3367,6 +3391,87 @@ async def integrations_save(body: IntegrationTokenIn):
         if k in spec["env"] and isinstance(v, str) and v.strip():
             os.environ[k] = v.strip()
     return {"ok": True, "provider": body.provider, "configured": all(os.environ.get(k) for k in spec["env"])}
+
+
+class DocumentAutoSaveIn(BaseModel):
+    title: str
+    content: str
+    provider: Optional[str] = None
+
+
+async def _cloud_token(db: AsyncSession, provider: str) -> tuple[str, UserConnection]:
+    key = "google_drive" if provider == "google" else "microsoft_drive"
+    conn = await _get_connection(db, key)
+    if not conn or conn.status != "ready" or not conn.credentials_enc:
+        raise HTTPException(409, "cloud_not_connected")
+    credentials = json.loads(_dechiffrer(conn.credentials_enc))
+    if credentials.get("expires_at", 0) <= time.time() and credentials.get("refresh_token"):
+        cid = os.environ.get(f"{provider.upper()}_CLIENT_ID")
+        csecret = os.environ.get(f"{provider.upper()}_CLIENT_SECRET")
+        if not cid or not csecret:
+            raise HTTPException(503, "cloud_refresh_not_configured")
+        async with httpx.AsyncClient(timeout=15) as client:
+            if provider == "google":
+                refreshed = await client.post("https://oauth2.googleapis.com/token", data={
+                    "client_id": cid, "client_secret": csecret, "refresh_token": credentials["refresh_token"],
+                    "grant_type": "refresh_token",
+                })
+            else:
+                tenant = os.environ.get("MICROSOFT_TENANT", "common")
+                refreshed = await client.post(f"https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token", data={
+                    "client_id": cid, "client_secret": csecret, "refresh_token": credentials["refresh_token"],
+                    "grant_type": "refresh_token", "scope": "Files.ReadWrite offline_access",
+                })
+        refreshed.raise_for_status()
+        fresh = refreshed.json()
+        credentials.update({"access_token": fresh["access_token"], "expires_at": time.time() + int(fresh.get("expires_in", 3600))})
+        if fresh.get("refresh_token"):
+            credentials["refresh_token"] = fresh["refresh_token"]
+        conn.credentials_enc = _chiffrer(json.dumps(credentials))
+        await db.commit()
+    return credentials["access_token"], conn
+
+
+@api.post("/documents/auto-save")
+async def auto_save_document(body: DocumentAutoSaveIn, db: AsyncSession = Depends(get_db)):
+    """Enregistre un document IA dans le cloud choisi par l’utilisateur.
+
+    Cette route ne s’exécute que lorsqu’un réglage d’auto-enregistrement est
+    activé côté profil et qu’une connexion OAuth Drive/OneDrive existe.
+    """
+    profile = await _profil(db, _uid())
+    context = profile.contexte_metier or {}
+    if context.get("auto_save_documents") is not True:
+        return {"ok": True, "skipped": True, "reason": "auto_save_disabled"}
+    provider = (body.provider or context.get("document_provider") or "google").lower()
+    if provider not in ("google", "microsoft"):
+        raise HTTPException(422, "unsupported_cloud_provider")
+    token, _ = await _cloud_token(db, provider)
+    filename = re.sub(r"[^a-zA-Z0-9._-]+", "-", body.title.strip() or "document")[:120] + ".md"
+    async with httpx.AsyncClient(timeout=30) as client:
+        if provider == "google":
+            metadata = {"name": filename, "mimeType": "text/markdown"}
+            response = await client.post(
+                "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink",
+                headers={"Authorization": f"Bearer {token}"},
+                files={
+                    "metadata": ("metadata.json", json.dumps(metadata), "application/json"),
+                    "file": (filename, body.content.encode("utf-8"), "text/markdown"),
+                },
+            )
+        else:
+            path = quote(f"Zayado/{filename}", safe="/")
+            response = await client.put(
+                f"https://graph.microsoft.com/v1.0/me/drive/root:/{path}:/content",
+                headers={"Authorization": f"Bearer {token}", "Content-Type": "text/markdown"},
+                content=body.content.encode("utf-8"),
+            )
+    if response.status_code >= 400:
+        logger.warning("Cloud document upload failed (%s): %s", response.status_code, response.text[:300])
+        raise HTTPException(response.status_code, "cloud_upload_failed")
+    data = response.json()
+    return {"ok": True, "provider": provider, "name": filename, "id": data.get("id"),
+            "url": data.get("webViewLink") or data.get("webUrl")}
 
 
 

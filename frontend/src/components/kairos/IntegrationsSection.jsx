@@ -135,7 +135,8 @@ export default function IntegrationsSection({ onOnboardingChange }) {
   const connect = async (it) => {
     if (it.oauth) {
       try {
-        const r = await fetch(`${BACKEND}/api/connexion/oauth/${it.id}/start`);
+        const storage = it.id === "google" || it.id === "microsoft";
+        const r = await fetch(`${BACKEND}/api/connexion/oauth/${it.id}/start${storage ? "?purpose=storage" : ""}`);
         const d = await r.json();
         if (d.configured && d.authorization_url) window.location.href = d.authorization_url;
         else toast.error("Cette intégration n'est pas encore configurée côté serveur.");
