@@ -135,7 +135,7 @@ export default function Onboarding() {
               <Sparkles className="h-8 w-8 text-gold" />
             </div>
             <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Bienvenue</span>
-            <h1 className="mt-3 font-display text-3xl font-extrabold text-offwhite">Bienvenue dans l'univers Kairos</h1>
+            <h1 className="mt-3 font-display text-3xl font-extrabold text-offwhite">Bienvenue dans l'univers Zayado</h1>
             <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-offwhite/70">
               Ici, on transforme ta vision en action — sans jamais oublier de prendre soin de toi.
               Quelques minutes pour poser tes fondations, à ton rythme.
@@ -150,7 +150,7 @@ export default function Onboarding() {
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Identité</span>
             </div>
             <h2 className="mt-2 font-display text-2xl font-bold text-offwhite">Comment tu t'appelles ?</h2>
-            <p className="mt-1 text-sm text-offwhite/60">Kairos te parlera avec ce prénom.</p>
+            <p className="mt-1 text-sm text-offwhite/60">Zayado te parlera avec ce prénom.</p>
             <div className="mt-4 space-y-3">
               <input value={identite.prenom} onChange={(e) => setIdentite({ ...identite, prenom: e.target.value })}
                 placeholder="Ton prénom" data-testid="onboarding-prenom"
@@ -384,7 +384,7 @@ export default function Onboarding() {
             </button>
           ) : (
             <button onClick={finish} disabled={saving} className="btn-gold disabled:opacity-60" data-testid="onboarding-finish">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Entrer dans Kairos <Sparkles className="h-4 w-4" /></>}
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Entrer dans Zayado <Sparkles className="h-4 w-4" /></>}
             </button>
           )}
         </div>
@@ -401,7 +401,7 @@ export default function Onboarding() {
             <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gold/15 ring-1 ring-gold/30">
               <Sparkles className="h-8 w-8 animate-pulse text-gold" />
             </div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Kairos prépare ton espace</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Zayado prépare ton espace</p>
             <h2 className="mt-3 font-display text-2xl font-bold text-offwhite">On relie tes informations</h2>
             <p className="mt-2 text-sm text-offwhite/60">{["Lecture de ta vision…", "Structuration de tes objectifs…", "Préparation de ton cockpit…", "Dernières vérifications…"][savePhase]}</p>
             <div className="mt-6 h-2 overflow-hidden rounded-full bg-white/10"><div className="onboarding-progress-shimmer h-full rounded-full bg-gold" /></div>

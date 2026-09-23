@@ -79,8 +79,8 @@ export default function Pricing() {
   const [cycle, setCycle] = useState("mensuel");
 
   useSeo({
-    title: "Tarifs Kairos — du gratuit à Entreprise, une seule échelle claire",
-    description: "Cockpit Kairos gratuit ou Sérénité à 19€/mois. Chatbot marque blanche dès Pro (49€). -20% en facturation annuelle. Sans engagement, maintenance incluse.",
+    title: "Tarifs Zayado — du gratuit à Entreprise, une seule échelle claire",
+    description: "Cockpit Zayado gratuit ou Sérénité à 19€/mois. Chatbot marque blanche dès Pro (49€). -20% en facturation annuelle. Sans engagement, maintenance incluse.",
   });
 
   return (

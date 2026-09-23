@@ -1,4 +1,4 @@
-// Données fictives locales pour le cockpit Kairos (aucun backend requis).
+// Données fictives locales pour le cockpit Zayado (aucun backend requis).
 
 export const mockUser = {
   name: "Camille",

@@ -18,8 +18,8 @@ const FAQ = [
 
 export default function ProspectionCroissance() {
   useSeo({
-    title: "Trouver des clients quand on est indépendant — prospection IA apaisée | Kairos",
-    description: "Le Radar Kairos propose 3 opportunités qualifiées par jour, reliées à ta vision, avec message pré-rédigé. Prospection automatisée par IA pour indépendants, sans y passer ses soirées.",
+    title: "Trouver des clients quand on est indépendant — prospection IA apaisée | Zayado",
+    description: "Le Radar Zayado propose 3 opportunités qualifiées par jour, reliées à ta vision, avec message pré-rédigé. Prospection automatisée par IA pour indépendants, sans y passer ses soirées.",
   });
 
   return (
@@ -36,7 +36,7 @@ export default function ProspectionCroissance() {
         </p>
 
         <div className="mt-7">
-          <Link to="/login" data-testid="prospection-cta-hero" className="btn-gold inline-block !px-8 !py-3.5">Découvrir Kairos, gratuitement</Link>
+          <Link to="/login" data-testid="prospection-cta-hero" className="btn-gold inline-block !px-8 !py-3.5">Découvrir Zayado, gratuitement</Link>
         </div>
       </section>
 
@@ -52,7 +52,7 @@ export default function ProspectionCroissance() {
             </div>
           ))}
         </div>
-        <img src="/screenshots/radar-demo.gif" alt="Démo animée du Radar Kairos : balayage des signaux et opportunités qualifiées en temps réel" data-testid="prospection-img" className="w-full rounded-2xl border border-white/15 shadow-[0_30px_60px_-25px_rgba(0,0,0,0.7)] lg:order-2 order-1" loading="lazy" />
+        <img src="/screenshots/radar-demo.gif" alt="Démo animée du Radar Zayado : balayage des signaux et opportunités qualifiées en temps réel" data-testid="prospection-img" className="w-full rounded-2xl border border-white/15 shadow-[0_30px_60px_-25px_rgba(0,0,0,0.7)] lg:order-2 order-1" loading="lazy" />
       </section>
 
       <section className="border-t border-white/8 bg-white/[0.02]">
@@ -72,7 +72,7 @@ export default function ProspectionCroissance() {
       <section className="mx-auto max-w-4xl px-5 py-16 text-center">
         <h2 className="font-display text-2xl font-bold sm:text-3xl">La prospection fonctionne si tu tiens le rythme.</h2>
         <p className="mx-auto mt-3 max-w-xl text-sm text-offwhite/65 sm:text-base">
-          Et on tient un rythme quand on n'est pas épuisé. C'est pour ça que Kairos surveille aussi ton énergie.
+          Et on tient un rythme quand on n'est pas épuisé. C'est pour ça que Zayado surveille aussi ton énergie.
         </p>
         <Link to="/login" data-testid="prospection-cta-final" className="btn-gold mt-6 inline-block !px-8 !py-3.5">Activer mon Radar — gratuit</Link>
         <p className="mt-4"><Link to="/fonctionnalites/bien-etre-dirigeant" data-testid="prospection-lien-bienetre" className="inline-flex items-center gap-2 text-sm font-semibold text-gold hover:underline">Découvrir le pilier bien-être <ArrowRight size={14} /></Link></p>

@@ -98,10 +98,9 @@ export default function Login() {
         window.location.href = res.authorization_url;
         return;
       }
-      // Preview : pas encore de clés OAuth → on ouvre le compte démo.
-      await connexionDemo();
-      toast.info(`${label} : connexion réelle bientôt (production). Ouverture de l'aperçu.`);
-      enter();
+      // Plus de repli sur le compte démo : sans clés OAuth, on n'ouvre
+      // AUCUN compte (avant, le clic menait à l'onboarding sans connexion).
+      toast.error(`La connexion ${label} n'est pas encore disponible. Utilise ton email.`);
     } catch {
       toast.error(`Connexion ${label} indisponible pour l'instant.`);
     } finally {
@@ -260,10 +259,12 @@ export default function Login() {
 
           <div className="my-4 h-px bg-white/10" />
 
-          <button onClick={openThesustain} data-testid="login-thesustain-btn"
+{(options.apercu_actif || PREVIEW) && (
+                    <button onClick={openThesustain} data-testid="login-thesustain-btn"
             className="flex w-full items-center justify-center gap-2 rounded-xl border border-gold/40 bg-transparent px-3 py-2.5 text-sm font-semibold text-gold transition hover:bg-gold/10">
             Connexion SSO (thesustain.net)
           </button>
+          )}
 
           {(options.apercu_actif || PREVIEW) && (
             <>

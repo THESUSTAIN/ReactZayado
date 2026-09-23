@@ -275,7 +275,7 @@ function PointDuJourCard({ modeInfo }) {
         <div className="flex-1">
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-gold">Ton point du jour</p>
           <p className="whitespace-pre-wrap font-display text-[15.5px] font-medium leading-8 text-offwhite" data-testid="point-du-jour-texte">
-            {loading ? "Kairos prépare ton point du jour…" : texte}
+            {loading ? "Zayado prépare ton point du jour…" : texte}
           </p>
         </div>
       </div>

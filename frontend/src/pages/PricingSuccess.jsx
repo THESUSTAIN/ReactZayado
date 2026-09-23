@@ -9,7 +9,7 @@ const NAVY = "#0B1F3A";
 export default function PricingSuccess() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const plan = params.get("plan")?.toUpperCase() || "KAIROS";
+  const plan = params.get("plan")?.toUpperCase() || "ZAYADO";
   const cycle = params.get("cycle") || "mensuel";
 
   useEffect(() => {
@@ -30,7 +30,7 @@ export default function PricingSuccess() {
         </div>
         <span className="mt-6 inline-block text-[11px] font-semibold uppercase tracking-[0.24em]" style={{ color: GOLD }}>Paiement confirmé</span>
         <h1 className="mt-3 font-display text-[32px] font-semibold text-white">
-          Bienvenue dans <span style={{ color: GOLD }}>Kairos {plan}</span>
+          Bienvenue dans <span style={{ color: GOLD }}>Zayado {plan}</span>
         </h1>
         <p className="mt-4 font-serif-italic italic text-[18px] text-white/85">
           « Prends une inspiration. On avance ensemble. »

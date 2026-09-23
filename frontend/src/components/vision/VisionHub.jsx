@@ -7,7 +7,7 @@ import {
 import { fetchObjectifs } from "@/lib/kairosApi";
 
 const CREATE = [
-  { id: "canvas", icon: Sparkles, title: "Générer avec l'IA", desc: "Décris ton projet, Kairos construit un board vision + piliers + actions.", accent: true },
+  { id: "canvas", icon: Sparkles, title: "Générer avec l'IA", desc: "Décris ton projet, Zayado construit un board vision + piliers + actions.", accent: true },
   { id: "canvas", icon: PenLine, title: "Tableau vierge", desc: "Pars d'une page blanche et compose ton board librement.", blank: true },
 ];
 

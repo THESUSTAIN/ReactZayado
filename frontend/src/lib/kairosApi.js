@@ -202,7 +202,7 @@ export const deleteBoard = (key) => jsend(`/vision/boards/${encodeURIComponent(k
 export const fetchCountdown = () => jget("/vision/countdown");
 export const saveCountdown = (data) => jsend("/vision/countdown", "PUT", data);
 
-// ── Revue hebdomadaire guidée par Kairos ──
+// ── Revue hebdomadaire guidée par Zayado ──
 export const fetchRevue = () => jget("/revue-hebdo");
 export const fetchRevueHistorique = () => jget("/revue-hebdo/historique");
 export const postRevueSynthese = (data) => jsend("/revue-hebdo/synthese", "POST", data);

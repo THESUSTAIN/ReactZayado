@@ -510,7 +510,7 @@ class LoginToken(Base):
 class UserConnection(Base):
     """Connexion à un service externe (WhatsApp, Telegram...). Porté depuis
     app-main/backend/routes/connections.py, simplifié pour le mono-compte
-    Kairos : un seul user_id (_uid()), les identifiants sensibles
+    Zayado : un seul user_id (_uid()), les identifiants sensibles
     (tokens) sont chiffrés au repos avec Fernet (clé FERNET_KEY)."""
     __tablename__ = "user_connections"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
@@ -540,7 +540,7 @@ class VisionBoardSpace(Base):
 
 
 class RevueHebdo(Base):
-    """Revue hebdomadaire guidée par Kairos : 5 questions + synthèse IA."""
+    """Revue hebdomadaire guidée par Zayado : 5 questions + synthèse IA."""
     __tablename__ = "revues_hebdo"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
     user_id: Mapped[str] = mapped_column(String(36), index=True)
@@ -780,7 +780,7 @@ async def admin_vue_ensemble(db: AsyncSession = Depends(get_db), _role=Depends(e
 
 
 # Catalogue des notifications de l'app (inspiré de Zayado v13, restreint aux
-# types réellement pertinents pour Kairos). L'admin voit ici qui reçoit quoi.
+# types réellement pertinents pour Zayado). L'admin voit ici qui reçoit quoi.
 NOTIF_CATALOGUE = [
     {"cle": "rappel_checkin", "label": "Rappel check-in du matin", "desc": "Point énergie quotidien à l'heure choisie"},
     {"cle": "actualite", "label": "Veille du jour", "desc": "Notification quand la veille RSS est prête"},
@@ -1268,8 +1268,12 @@ class DemoIn(BaseModel):
 
 
 @api.post("/connexion/demo")
-async def connexion_demo(body: DemoIn = None, db: AsyncSession = Depends(get_db)):
+async def connexion_demo(request: Request, body: DemoIn = None, db: AsyncSession = Depends(get_db)):
     """Ouvre le compte de démonstration (Thomas) — preview uniquement. Mono-utilisateur SQL."""
+    # Refusé en production : ce point d'entrée ne doit jamais ouvrir de session
+    # sur app.zayado.net (il servait de fausse connexion Google/Microsoft/SSO).
+    if _en_prod(request) or not os.environ.get("APERCU_CODE"):
+        raise HTTPException(status_code=403, detail="Compte démo désactivé.")
     profil = await _profil(db, _uid())
     if body and body.email:
         profil.email = body.email.strip()
@@ -1546,11 +1550,11 @@ async def valider_par_email(decision_id: str, db: AsyncSession = Depends(get_db)
     d = (await db.execute(select(CopiloteDecision).where(CopiloteDecision.id == decision_id, CopiloteDecision.user_id == uid))).scalar_one_or_none()
     if not d:
         raise HTTPException(status_code=404, detail="Décision introuvable.")
-    subject = "Kairos — décision validée"
+    subject = "Zayado — décision validée"
     html = (
         '<table role="presentation" width="100%"><tr><td style="padding:24px;font-family:Arial,sans-serif;color:#0B1F3A">'
         f'<p>Bonjour {escape(profil.prenom or "")},</p>'
-        f'<p>Tu viens de valider cette décision dans Kairos :</p>'
+        f'<p>Tu viens de valider cette décision dans Zayado :</p>'
         f'<p style="padding:12px 16px;background:#F4EEE4;border-radius:10px"><strong>{escape(d.titre)}</strong>'
         + (f'<br><span style="color:#555">{escape(d.note)}</span>' if d.note else "") +
         '</p>'
@@ -2033,7 +2037,7 @@ async def put_countdown(body: CountdownIn, db: AsyncSession = Depends(get_db)):
     return _countdown_json(p)
 
 
-# ─────────────── Revue hebdomadaire guidée par Kairos ───────────────
+# ─────────────── Revue hebdomadaire guidée par Zayado ───────────────
 
 REVUE_QUESTIONS = ["q1", "q2", "q3", "q4", "q5"]
 
@@ -2119,7 +2123,7 @@ def _revue_repli(reponses: dict, langue: str) -> str:
 
 @api.post("/revue-hebdo/synthese")
 async def revue_synthese(body: RevueIn, db: AsyncSession = Depends(get_db)):
-    """Kairos relit la semaine et renvoie une synthèse courte + la priorité retenue."""
+    """Zayado relit la semaine et renvoie une synthèse courte + la priorité retenue."""
     reponses = {k: str(v).strip()[:1200] for k, v in (body.reponses or {}).items() if k in REVUE_QUESTIONS and str(v).strip()}
     if not reponses:
         raise HTTPException(status_code=400, detail="Aucune réponse à analyser.")
@@ -2464,7 +2468,7 @@ async def cockpit_pouls_get(db: AsyncSession = Depends(get_db)):
         else:
             data["phrase_ia"] = "Mois calme. Priorise 1 action commerciale à impact rapide."
     else:
-        data["phrase_ia"] = "Fixe ton objectif de CA mensuel pour que Kairos ajuste ta boussole."
+        data["phrase_ia"] = "Fixe ton objectif de CA mensuel pour que Zayado ajuste ta boussole."
     return data
 
 
@@ -2509,7 +2513,7 @@ async def cockpit_radar(db: AsyncSession = Depends(get_db)):
     # ça ne fonctionne pas ») — les opportunités sont générées depuis le vrai
     # contexte du compte ; le repli local ne sert qu'en cas d'indisponibilité.
     systeme = (
-        "Tu es le radar business de Kairos. À partir du contexte, tu proposes exactement 3 opportunités "
+        "Tu es le radar business de Zayado. À partir du contexte, tu proposes exactement 3 opportunités "
         "concrètes et actionnables aujourd'hui, reliées aux objectifs. Tu réponds UNIQUEMENT en JSON valide : "
         '{"opportunities":[{"titre":"...","canal":"email|linkedin|appel|whatsapp","message":"...","score":0-100,"objectif":"..."}],'
         '"phrase_ia":"une phrase courte qui résume pourquoi ces 3-là"}. Le message doit être prêt à envoyer, '
@@ -2660,7 +2664,7 @@ async def sources_analyser(body: SourceIn):
             note = "Cette source privée (SharePoint/OneDrive) nécessitera une connexion Microsoft — bientôt (V1.5). J'analyse pour l'instant ce que je peux lire publiquement."
         try:
             async with httpx.AsyncClient(timeout=12, follow_redirects=True) as client:
-                r = await client.get(contenu, headers={"User-Agent": "Mozilla/5.0 KairosBot"})
+                r = await client.get(contenu, headers={"User-Agent": "Mozilla/5.0 ZayadoBot"})
                 contenu = _extraire_texte_html(r.text)[:6000] or contenu
         except Exception as e:  # noqa: BLE001
             logger.info("Fetch source impossible : %s", e)
@@ -2805,7 +2809,7 @@ async def _migrer_colonnes() -> None:
 
 # ─────────────── Connexions externes (WhatsApp Web via microservice QR) ───────────────
 # Porté depuis app-main (connections.py + whatsapp_global.py + agent_webhooks.py),
-# simplifié pour le mono-compte Kairos : pas de couche multi-agent/token, le
+# simplifié pour le mono-compte Zayado : pas de couche multi-agent/token, le
 # microservice WhatsApp-service est appelé directement pour l'utilisateur courant, et
 # les messages entrants sont traités par le même moteur IA que le Copilote.
 
@@ -3022,7 +3026,7 @@ async def telegram_webhook(uid: str, request: Request, db: AsyncSession = Depend
     # /start : accueil propre + porte d'entrée vers l'app
     if text.lower().startswith("/start"):
         await _tg_send(token, chat_id,
-                       "Bienvenue — je suis Kairos, ton copilote apaisé.\n\n"
+                       "Bienvenue — je suis Zayado, ton copilote apaisé.\n\n"
                        "Demande-moi une micro-action douce, un point sur tes objectifs, ou dis-moi simplement "
                        "ce que tu veux avancer. Tout se retrouve dans ton app : " + f"{front}/app")
         return {"ok": True}
@@ -3033,7 +3037,7 @@ async def telegram_webhook(uid: str, request: Request, db: AsyncSession = Depend
             select(VisionChatMessage)
             .where(VisionChatMessage.user_id == uid, VisionChatMessage.role == "assistant")
             .order_by(VisionChatMessage.created_at.desc()).limit(5))).scalars()
-        titre = "Micro-action proposée par Kairos"
+        titre = "Micro-action proposée par Zayado"
         for last in derniers:
             if not last or not last.contenu:
                 continue
@@ -3082,7 +3086,7 @@ async def telegram_webhook(uid: str, request: Request, db: AsyncSession = Depend
             gras = re.findall(r"\*\*(.+?)\*\*", last.contenu)
             titre_prop = (gras[0].strip()[:90] if gras else
                           next((l.strip()[2:].strip()[:90] for l in brut.splitlines() if l.strip().startswith("- ") and "?" not in l), None) or
-                          next((l.strip()[:90] for l in brut.splitlines() if l.strip() and "?" not in l and not l.strip().endswith(":")), "Proposition de Kairos"))
+                          next((l.strip()[:90] for l in brut.splitlines() if l.strip() and "?" not in l and not l.strip().endswith(":")), "Proposition de Zayado"))
             if re.search(r"(t[âa]che|micro-action|board|tracker)", questions):
                 db.add(VisionTache(user_id=uid, titre=titre_prop, duree_min=5, micro=True, statut="a_faire"))
                 reply = f"C'est fait — **{titre_prop}** est dans tes priorités du jour. Tu la retrouves ici : {front}/app"

@@ -295,7 +295,7 @@ export default function Radar() {
               </h1>
               <MaskedLine delay={0.55} className="mt-6 max-w-md">
                 <p className="text-sm leading-relaxed text-offwhite/65 sm:text-base">
-                  Chaque matin, Kairos balaie les signaux autorisés et les croise avec ta Vision.
+                  Chaque matin, Zayado balaie les signaux autorisés et les croise avec ta Vision.
                   Trois opportunités qualifiées, un message pré-rédigé. Tu valides, c'est envoyé.
                 </p>
               </MaskedLine>

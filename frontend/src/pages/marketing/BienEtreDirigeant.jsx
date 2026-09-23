@@ -6,7 +6,7 @@ import { useSeo } from "@/lib/useSeo";
 
 const POINTS = [
   { titre: "Un check-in d'énergie chaque matin", texte: "Trois glissières, dix secondes : énergie, stress, sommeil. Ta journée se cale sur ton état réel, pas sur une liste idéale." },
-  { titre: "La charge mentale surveillée", texte: "Quand la tension monte plusieurs jours de suite, Kairos allège tes priorités et te le dit franchement — avant la cassure." },
+  { titre: "La charge mentale surveillée", texte: "Quand la tension monte plusieurs jours de suite, Zayado allège tes priorités et te le dit franchement — avant la cassure." },
   { titre: "Des rituels doux, pas des injonctions", texte: "Respiration guidée 4-7-8, journal des 3, pause consciente. Trois rituels courts à cocher, sans objectif ni pression." },
 ];
 
@@ -18,8 +18,8 @@ const FAQ = [
 
 export default function BienEtreDirigeant() {
   useSeo({
-    title: "Éviter le burn-out du dirigeant : énergie et charge mentale suivies | Kairos",
-    description: "Kairos suit l'énergie, le stress et la charge mentale de l'entrepreneur chaque jour et adapte ses priorités. L'anti-burn-out intégré à ton cockpit business.",
+    title: "Éviter le burn-out du dirigeant : énergie et charge mentale suivies | Zayado",
+    description: "Zayado suit l'énergie, le stress et la charge mentale de l'entrepreneur chaque jour et adapte ses priorités. L'anti-burn-out intégré à ton cockpit business.",
   });
 
   return (
@@ -31,17 +31,17 @@ export default function BienEtreDirigeant() {
           L'énergie du dirigeant d'abord. <span className="font-serif-italic font-normal text-gradient-gold">Le business suit.</span>
         </h1>
         <p className="mt-5 max-w-2xl text-base leading-relaxed text-offwhite/70 sm:text-lg">
-          Aucun outil de productivité ne te demande comment tu vas. Kairos, si — chaque matin — et il adapte ta journée
+          Aucun outil de productivité ne te demande comment tu vas. Zayado, si — chaque matin — et il adapte ta journée
           à ta réponse. C'est notre différence, pas une option.
         </p>
 
         <div className="mt-7">
-          <Link to="/login" data-testid="bienetre-cta-hero" className="btn-gold inline-block !px-8 !py-3.5">Découvrir Kairos, gratuitement</Link>
+          <Link to="/login" data-testid="bienetre-cta-hero" className="btn-gold inline-block !px-8 !py-3.5">Découvrir Zayado, gratuitement</Link>
         </div>
       </section>
 
       <section className="mx-auto grid max-w-6xl items-center gap-10 px-5 pb-16 lg:grid-cols-2">
-        <img src="/screenshots/bien-etre.png" alt="Suivi bien-être Kairos : énergie, stress, sommeil et charge du dirigeant avec rituels doux" data-testid="bienetre-img" className="w-full rounded-2xl border border-white/15 shadow-[0_30px_60px_-25px_rgba(0,0,0,0.7)]" loading="lazy" />
+        <img src="/screenshots/bien-etre.png" alt="Suivi bien-être Zayado : énergie, stress, sommeil et charge du dirigeant avec rituels doux" data-testid="bienetre-img" className="w-full rounded-2xl border border-white/15 shadow-[0_30px_60px_-25px_rgba(0,0,0,0.7)]" loading="lazy" />
         <div className="space-y-6">
           {POINTS.map((p) => (
             <div key={p.titre} className="flex gap-4">

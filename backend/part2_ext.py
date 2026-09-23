@@ -1,4 +1,4 @@
-"""Kairos — Partie 2 : extensions branchées sur server.py sans le réécrire.
+"""Zayado — Partie 2 : extensions branchées sur server.py sans le réécrire.
 
 server.py appelle `install_part2(globals())` juste avant `app.include_router(api)`.
 Ce module reçoit donc les objets de server.py (Base, api, app, get_db, _uid…) au

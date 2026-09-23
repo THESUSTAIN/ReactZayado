@@ -181,7 +181,7 @@ function AISuggestions({ onCreated }) {
       <div className="flex items-center gap-2 mb-3">
         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gold/15 text-gold"><Sparkles size={17} /></span>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-offwhite">Kairos propose des idées</p>
+          <p className="text-sm font-semibold text-offwhite">Zayado propose des idées</p>
           <p className="text-[11.5px] text-offwhite/55">Écris ton contexte (optionnel), l'IA propose 5 idées scorées.</p>
         </div>
         <button onClick={generate} disabled={loading}

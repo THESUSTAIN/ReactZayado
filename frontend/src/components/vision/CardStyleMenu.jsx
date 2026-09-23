@@ -26,7 +26,7 @@ export const HEX_PALETTE = [
   "#D6604D", "#3FA7D6", "#7BA05B", "#C56B8E", "#8A8F98",
 ];
 
-/* Tags produit — les deux polarités du cockpit Kairos */
+/* Tags produit — les deux polarités du cockpit Zayado */
 export const CARD_TAGS = [
   { id: "elan", Icon: Flame, color: "#E4A33A", bg: "rgba(228,163,58,0.16)" },
   { id: "refuge", Icon: Leaf, color: "#2FB89A", bg: "rgba(47,184,154,0.16)" },
