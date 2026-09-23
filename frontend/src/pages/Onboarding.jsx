@@ -50,6 +50,13 @@ export default function Onboarding() {
   const next = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
   const back = () => setStep((s) => Math.max(s - 1, 0));
 
+  // « Passer » : on mémorise que l'onboarding est fait (sinon il revenait à chaque connexion)
+  // et on va au Cockpit — avant, le bouton renvoyait vers « / » puis /login.
+  const passer = async () => {
+    try { await saveProfile({ onboarded: true, ...(identite.prenom ? { prenom: identite.prenom } : {}) }); } catch (_) { /* on laisse passer quand même */ }
+    navigate("/app");
+  };
+
   const finish = async () => {
     const startedAt = Date.now();
     setSaveError("");
@@ -375,7 +382,7 @@ export default function Onboarding() {
               <ArrowLeft className="h-4 w-4" /> Retour
             </button>
           ) : (
-            <button onClick={() => navigate("/")} className="btn-ghost" data-testid="onboarding-skip">Passer</button>
+            <button onClick={passer} className="btn-ghost" data-testid="onboarding-skip">Passer</button>
           )}
 
           {step < STEPS.length - 1 ? (
@@ -396,8 +403,8 @@ export default function Onboarding() {
         )}
       </GlassCard>
       {saving && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071a31]/90 p-5 backdrop-blur-md" data-testid="onboarding-processing">
-          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#102945] p-7 text-center shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0a1230]/90 p-5 backdrop-blur-md" data-testid="onboarding-processing">
+          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#101a34] p-7 text-center shadow-2xl">
             <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gold/15 ring-1 ring-gold/30">
               <Sparkles className="h-8 w-8 animate-pulse text-gold" />
             </div>

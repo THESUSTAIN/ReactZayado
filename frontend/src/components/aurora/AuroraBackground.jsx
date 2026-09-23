@@ -1,56 +1,42 @@
 import React from "react";
 
-// Ciel navy immersif — dégradé bleu navy vers noir + ruban aurora teal VISIBLE (comme la maquette validée).
+/**
+ * Ciel navy de final 13 (« Apple Weather ») : bleu roi profond → quasi-noir,
+ * halos bleus en haut, nuages blancs très doux qui dérivent, léger grain.
+ * Plus de rubans teal/cyan : c'étaient eux qui donnaient ce bleu « bizarre ».
+ */
+const NOISE =
+  "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='4'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.06 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")";
+
 export function AuroraBackground() {
   return (
     <div className="aurora-bg pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
-      {/* Dégradé navy → noir */}
       <div
         className="absolute inset-0"
         style={{
           background:
-            "linear-gradient(180deg, #16305C 0%, #101F47 40%, #0B1F3A 74%, #081734 100%)",
+            "radial-gradient(ellipse at 20% 10%, rgba(45,81,150,0.45) 0%, transparent 50%)," +
+            "radial-gradient(ellipse at 80% 8%, rgba(30,60,110,0.35) 0%, transparent 55%)," +
+            "radial-gradient(ellipse at 50% 90%, rgba(5,8,20,0.95) 0%, transparent 60%)," +
+            "linear-gradient(180deg, #172c5c 0%, #101f47 30%, #0a1230 60%, #05081a 100%)",
         }}
       />
-      {/* Grand ruban aurora teal/cyan diagonal, bien visible */}
+      {/* Nuages doux */}
       <div
-        className="absolute left-[28%] top-[-18%] h-[125vh] w-[46vw] animate-aurora-drift"
+        className="absolute inset-0 animate-aurora-drift"
         style={{
-          background:
-            "radial-gradient(closest-side, rgba(74,206,224,0.38) 0%, rgba(56,180,214,0.20) 42%, rgba(56,180,214,0) 72%)",
-          filter: "blur(46px)",
-          transform: "rotate(22deg)",
+          backgroundImage:
+            "radial-gradient(ellipse 800px 300px at 15% 25%, rgba(255,255,255,0.12) 0%, transparent 55%)," +
+            "radial-gradient(ellipse 600px 200px at 75% 35%, rgba(255,255,255,0.08) 0%, transparent 60%)," +
+            "radial-gradient(ellipse 900px 250px at 40% 60%, rgba(255,255,255,0.06) 0%, transparent 60%)",
+          filter: "blur(20px)",
+          animationDuration: "90s",
         }}
       />
-      {/* Second ruban teal plus étroit et lumineux au centre */}
-      <div
-        className="absolute left-[44%] top-[-8%] h-[110vh] w-[22vw] animate-aurora-drift"
-        style={{
-          background:
-            "radial-gradient(closest-side, rgba(120,225,235,0.30) 0%, rgba(120,225,235,0) 68%)",
-          filter: "blur(38px)",
-          transform: "rotate(24deg)",
-          animationDelay: "-7s",
-        }}
-      />
-      {/* Halo bleu doux à droite */}
-      <div
-        className="absolute right-[-6%] top-[4%] h-[60vw] w-[42vw] rounded-full animate-aurora-drift"
-        style={{
-          background: "radial-gradient(circle, rgba(60,120,210,0.20) 0%, rgba(60,120,210,0) 62%)",
-          filter: "blur(70px)",
-          animationDelay: "-12s",
-        }}
-      />
-      {/* Halo teal bas-gauche */}
-      <div
-        className="absolute bottom-[-16%] left-[-8%] h-[46vw] w-[46vw] rounded-full animate-aurora-drift"
-        style={{
-          background: "radial-gradient(circle, rgba(40,170,190,0.18) 0%, rgba(40,170,190,0) 60%)",
-          filter: "blur(72px)",
-          animationDelay: "-16s",
-        }}
-      />
+      {/* Grain */}
+      <div className="absolute inset-0" style={{ backgroundImage: NOISE, opacity: 0.35, mixBlendMode: "overlay" }} />
     </div>
   );
 }
+
+export default AuroraBackground;

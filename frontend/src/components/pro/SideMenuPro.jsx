@@ -10,7 +10,7 @@ export function SideMenuPro({ titre, sousTitre, items, actif, onChange, retour }
   const connecte = !!getToken();
 
   return (
-    <aside className="fixed left-0 top-0 z-30 hidden h-screen w-[248px] flex-col px-5 py-6 lg:flex" style={{ background: "linear-gradient(180deg, #1a3a6e 0%, #102945 60%, #0c1d33 100%)" }} data-testid="side-menu-pro">
+    <aside className="fixed left-0 top-0 z-30 hidden h-screen w-[248px] flex-col px-5 py-6 lg:flex" style={{ background: "linear-gradient(180deg, #1e3a8a 0%, #0f2560 55%, #0a1f4e 100%)" }} data-testid="side-menu-pro">
       <div className="flex items-center gap-3 px-1">
         <img src="/logo.png" alt="Zayado" className="h-10 w-10 object-contain" />
         <div>
@@ -29,14 +29,14 @@ export function SideMenuPro({ titre, sousTitre, items, actif, onChange, retour }
               data-testid={`pro-menu-${it.key}`}
               className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-sm transition-all duration-200 border-l-2 ${
                 isActive
-                  ? "bg-gradient-to-r from-[#F1E2CC] to-[#DEC2A3] font-semibold text-[#14243F] border-l-[#C1272D]"
+                  ? "bg-gradient-to-r from-[#F1E2CC] to-[#DEC2A3] font-semibold text-[#0f1b3a] border-l-[#C1272D]"
                   : "border-l-transparent text-white/65 backdrop-blur-md hover:bg-white/10 hover:border-l-[#C1272D]/50 hover:text-white"
               }`}
             >
               <span className="flex h-5 w-5 items-center justify-center">{it.icon}</span>
               <span className="flex-1">{it.label}</span>
               {it.badge != null && it.badge > 0 && (
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${isActive ? "bg-[#14243F]/15 text-[#14243F]" : "bg-[#C1272D] text-white"}`}>{it.badge}</span>
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${isActive ? "bg-[#0f1b3a]/15 text-[#0f1b3a]" : "bg-[#C1272D] text-white"}`}>{it.badge}</span>
               )}
             </button>
           );

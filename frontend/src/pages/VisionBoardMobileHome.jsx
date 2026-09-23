@@ -57,10 +57,10 @@ export default function VisionBoardMobileHome({ onOpenBoard }) {
 
   return (
     <div className="min-h-screen text-white" style={{
-      background: `#0B1F3A radial-gradient(ellipse 800px 500px at 50% 0%, rgba(74,106,158,0.35) 0%, transparent 60%) no-repeat`,
+      background: `#0f1b3a radial-gradient(ellipse 800px 500px at 50% 0%, rgba(74,106,158,0.35) 0%, transparent 60%) no-repeat`,
     }}>
       {/* Top bar */}
-      <header className="sticky top-0 z-30 flex items-center justify-between px-5 pt-4 pb-3 backdrop-blur-xl" style={{ background: "rgba(11,31,58,0.72)" }}>
+      <header className="sticky top-0 z-30 flex items-center justify-between px-5 pt-4 pb-3 backdrop-blur-xl" style={{ background: "rgba(15,27,58,0.72)" }}>
         <button className="rounded-lg p-2 hover:bg-white/5"><Menu size={22} /></button>
         <div className="text-center">
           <div className="text-[10px] uppercase tracking-[0.22em]" style={{ color: GOLD }}>Zayado</div>
@@ -115,7 +115,7 @@ export default function VisionBoardMobileHome({ onOpenBoard }) {
               <button key={b.key} onClick={() => openBoard(b)}
                 className="group relative aspect-[4/5] overflow-hidden rounded-2xl border border-white/10 text-left transition active:scale-[0.98]">
                 <img src={b.image} alt={b.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0B1F3A] via-[#0B1F3A]/40 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0f1b3a] via-[#0f1b3a]/40 to-transparent" />
                 <div className="absolute inset-x-3 bottom-3">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[16px]">{b.emoji}</span>
@@ -141,7 +141,7 @@ export default function VisionBoardMobileHome({ onOpenBoard }) {
           </div>
           <div className="relative overflow-hidden rounded-2xl border border-white/10 p-5"
             style={{
-              backgroundImage: `linear-gradient(135deg, rgba(11,31,58,0.7), rgba(11,31,58,0.4)), url(https://images.unsplash.com/photo-1518020382113-a7e8fc38eac9?w=800&q=60)`,
+              backgroundImage: `linear-gradient(135deg, rgba(15,27,58,0.7), rgba(15,27,58,0.4)), url(https://images.unsplash.com/photo-1518020382113-a7e8fc38eac9?w=800&q=60)`,
               backgroundSize: "cover",
               backgroundPosition: "center",
             }}>
@@ -166,7 +166,7 @@ export default function VisionBoardMobileHome({ onOpenBoard }) {
       </main>
 
       {/* Bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 backdrop-blur-2xl" style={{ background: "rgba(11,31,58,0.85)" }}>
+      <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 backdrop-blur-2xl" style={{ background: "rgba(15,27,58,0.85)" }}>
         <div className="relative flex items-center justify-around px-2 py-2.5">
           <TabItem icon={HomeIcon} label="Cockpit" active onClick={() => navigate("/app")} />
           <TabItem icon={LayoutGrid} label="Boards" onClick={() => navigate("/app/vision")} />

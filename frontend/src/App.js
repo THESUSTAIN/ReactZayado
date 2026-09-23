@@ -1,4 +1,6 @@
 import "@/App.css";
+import GlobalChat from "@/components/kairos/GlobalChat";
+import GuidedTour from "@/components/kairos/GuidedTour";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { KairosProvider } from "@/context/KairosContext";
@@ -68,6 +70,8 @@ function App() {
       <I18nProvider>
         <KairosProvider>
           <BrowserRouter>
+          <GlobalChat />
+          <GuidedTour />
           <Routes>
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<Login />} />

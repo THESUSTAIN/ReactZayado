@@ -99,7 +99,7 @@ export function BalanceWheel() {
                 </g>
               );
             })}
-            <circle cx={CX} cy={CY} r="30" fill="#0B1F3A" stroke="rgba(222,194,163,0.4)" />
+            <circle cx={CX} cy={CY} r="30" fill="#0f1b3a" stroke="rgba(222,194,163,0.4)" />
             <text x={CX} y={CY - 3} textAnchor="middle" fill="#DEC2A3" fontSize="20" fontWeight="700">{globalScore}</text>
             <text x={CX} y={CY + 13} textAnchor="middle" fill="#EDF2FF" fillOpacity="0.6" fontSize="8">ÉQUILIBRE</text>
           </svg>

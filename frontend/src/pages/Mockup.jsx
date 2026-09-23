@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 
 const GOLD = "#DEC2A3";
-const NAVY = "#0B1F3A";
+const NAVY = "#0f1b3a";
 
 export default function Mockup() {
   const { page, variant } = useParams();
@@ -89,7 +89,7 @@ function BienEtreV1() {
               </button>
             ))}
           </div>
-          <button className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-[13px] font-semibold text-[#0B1F3A]" style={{ background: GOLD }}>
+          <button className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-[13px] font-semibold text-[#0f1b3a]" style={{ background: GOLD }}>
             <Play size={14} fill="currentColor" /> Lancer la séance · 8 min
           </button>
         </div>
@@ -256,7 +256,7 @@ function IdeesV1() {
         <div className="flex items-center gap-2">
           <button className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 p-2.5 hover:border-[color:var(--g)]/40" style={{ "--g": GOLD }}><Mic size={15} style={{ color: GOLD }} /></button>
           <button className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 p-2.5 hover:border-[color:var(--g)]/40" style={{ "--g": GOLD }}><ImageIcon size={15} /></button>
-          <button className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-[#0B1F3A]" style={{ background: GOLD }}><Plus size={14} /> Nouvelle idée</button>
+          <button className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-[#0f1b3a]" style={{ background: GOLD }}><Plus size={14} /> Nouvelle idée</button>
         </div>
       </div>
 
@@ -320,7 +320,7 @@ function IdeesV2() {
             <button className="rounded-md bg-white/10 p-1.5"><List size={13} /></button>
             <button className="rounded-md p-1.5 text-white/50 hover:text-white"><Grid3x3 size={13} /></button>
           </div>
-          <button className="flex items-center gap-2 rounded-xl px-4 py-2 text-[13px] font-semibold text-[#0B1F3A]" style={{ background: GOLD }}><Plus size={14} /> Nouvelle idée</button>
+          <button className="flex items-center gap-2 rounded-xl px-4 py-2 text-[13px] font-semibold text-[#0f1b3a]" style={{ background: GOLD }}><Plus size={14} /> Nouvelle idée</button>
         </div>
       </div>
 

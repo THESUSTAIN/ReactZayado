@@ -8,19 +8,24 @@
    ───────────────────────────────────────────────────────────── */
 
 .sf {
-  --sf-canvas: #0f1a2b;
-  --sf-dot: rgba(255, 255, 255, 0.06);
-  --sf-wall: #14223a;
-  --sf-card: #1a2b46;
-  --sf-card-2: #213452;
-  --sf-chip: #22375a;
-  --sf-text: rgba(255, 255, 255, 0.92);
-  --sf-text-2: rgba(255, 255, 255, 0.74);
-  --sf-muted: #9aa8bd;
-  --sf-line: rgba(255, 255, 255, 0.08);
-  --sf-chrome: #16253d;
-  --sf-chrome-border: rgba(255, 255, 255, 0.08);
-  --sf-accent: #dec2a3;
+  /* Couleurs de final 13 : le ciel navy de l'app reste visible derrière le
+     canvas, murs et cartes en verre blanc translucide, or #DEC2A3. */
+  --sf-canvas: transparent;
+  --sf-canvas-solid: #0a1230;
+  --sf-dot: rgba(255, 255, 255, 0.14);
+  --sf-wall: rgba(255, 255, 255, 0.06);
+  --sf-wall-border: rgba(255, 255, 255, 0.10);
+  --sf-card: rgba(255, 255, 255, 0.10);
+  --sf-card-border: rgba(255, 255, 255, 0.14);
+  --sf-card-2: rgba(255, 255, 255, 0.14);
+  --sf-chip: rgba(255, 255, 255, 0.12);
+  --sf-text: #ffffff;
+  --sf-text-2: rgba(255, 255, 255, 0.80);
+  --sf-muted: rgba(255, 255, 255, 0.62);
+  --sf-line: rgba(255, 255, 255, 0.10);
+  --sf-chrome: rgba(16, 26, 52, 0.92);
+  --sf-chrome-border: rgba(255, 255, 255, 0.14);
+  --sf-accent: #DEC2A3;
 
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -32,6 +37,9 @@
 .theme-creme .sf,
 body.theme-clair .sf {
   --sf-canvas: #f3f1ec;
+  --sf-canvas-solid: #f3f1ec;
+  --sf-wall-border: rgba(27, 36, 54, 0.08);
+  --sf-card-border: rgba(27, 36, 54, 0.08);
   --sf-dot: rgba(31, 42, 68, 0.10);
   --sf-wall: #e9e5dc;
   --sf-card: #ffffff;
@@ -49,13 +57,15 @@ body.theme-clair .sf {
 
 .sf-surface {
   background-color: var(--sf-canvas);
-  background-image: radial-gradient(var(--sf-dot) 1.2px, transparent 1.2px);
-  background-size: 28px 28px;
+  background-image: radial-gradient(var(--sf-dot) 1.4px, transparent 1.4px);
+  background-size: 20px 20px;
 }
 
 /* ── Chrome (barres d'outils) ── */
 .sf-chrome {
   background: var(--sf-chrome);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   border: 1px solid var(--sf-chrome-border);
   box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.5);
 }
@@ -67,7 +77,7 @@ body.theme-clair .sf {
   transition: background .15s ease, color .15s ease;
 }
 .sf-tool:hover { background: rgba(255, 255, 255, 0.06); color: var(--sf-text); }
-.sf-tool[data-active="true"] { background: rgba(222, 194, 163, 0.14); color: var(--sf-accent); }
+.sf-tool[data-active="true"] { background: rgba(222,194,163, 0.14); color: var(--sf-accent); }
 .sf-tool-ico {
   display: flex; align-items: center; justify-content: center;
   width: 34px; height: 30px; border-radius: 8px; background: var(--sf-card);
@@ -80,12 +90,13 @@ body.theme-clair .sf {
 }
 .sf-btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.07); color: var(--sf-text); }
 .sf-btn:disabled { opacity: .35; }
-.sf-btn[data-active="true"] { background: rgba(222, 194, 163, 0.16); color: var(--sf-accent); }
+.sf-btn[data-active="true"] { background: rgba(222,194,163, 0.16); color: var(--sf-accent); }
 .sf-btn-outline { border: 1px solid var(--sf-chrome-border); padding: 0 12px; color: var(--sf-text); }
-.sf-btn-primary { background: var(--sf-accent); color: #0b1f3a; padding: 0 14px; font-weight: 600; }
-.sf-btn-primary:hover:not(:disabled) { background: #f1e2cc; color: #0b1f3a; }
+.sf-btn-primary { background: var(--sf-accent); color: #0f1b3a; padding: 0 14px; font-weight: 600; }
+.sf-btn-primary:hover:not(:disabled) { background: #F1E2CC; color: #0f1b3a; }
 .sf-menu {
   background: var(--sf-chrome); border: 1px solid var(--sf-chrome-border);
+  backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
   border-radius: 14px; box-shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.6);
 }
 .sf-menu-item {
@@ -103,6 +114,10 @@ body.theme-clair .sf {
 /* ── Mur ── */
 .sf-wall {
   background: var(--sf-wall);
+  border: 1px solid var(--sf-wall-border);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
   border-radius: 32px;
   padding: 22px 16px 16px;
 }
@@ -117,6 +132,7 @@ body.theme-clair .sf {
 /* ── Carte ── */
 .sf-card {
   background: var(--sf-card);
+  border: 1px solid var(--sf-card-border);
   border-radius: 22px;
   padding: 22px 24px;
   color: var(--sf-text);
@@ -148,7 +164,7 @@ body.theme-clair .sf {
 .sf-track { background: rgba(255, 255, 255, 0.09); border-radius: 999px; overflow: hidden; }
 .theme-creme .sf-track, body.theme-clair .sf-track { background: rgba(27, 36, 54, 0.08); }
 
-.sf-table-wrap { border-radius: 22px; overflow: hidden; background: var(--sf-card); }
+.sf-table-wrap { border-radius: 22px; overflow: hidden; background: var(--sf-card); border: 1px solid var(--sf-card-border); }
 .sf-table { width: 100%; border-collapse: collapse; }
 .sf-table th {
   text-align: left; font-size: 17px; font-weight: 400; color: #a3a3a3; color: var(--sf-muted);
@@ -194,6 +210,12 @@ body.theme-clair .sf {
 .sf-scroll { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.14) transparent; }
 
 .sf-present .sf-hide-present { display: none !important; }
+/* Présentation / pages isolées : le ciel de final 13 en fond opaque */
+.sf-present, .sf-standalone {
+  background:
+    radial-gradient(ellipse at 20% 10%, rgba(45, 81, 150, 0.45) 0%, transparent 50%),
+    linear-gradient(180deg, #172c5c 0%, #101f47 30%, #0a1230 60%, #05081a 100%);
+}
 
 /* ── Cartes LIVE : distinctes des notes (liseré + bandeau source) ── */
 .sf-live-card { box-shadow: inset 0 0 0 1px rgba(52, 211, 153, 0.28); }

@@ -305,7 +305,7 @@ export default function Agents() {
       {/* QR modal */}
       {qrOpen && (
         <div onClick={() => setQrOpen(false)} className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm rounded-2xl border border-white/15 p-6 text-center" style={{ background: "#111f38" }}>
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm rounded-2xl border border-white/15 p-6 text-center" style={{ background: "#101a34" }}>
             <button onClick={() => setQrOpen(false)} className="absolute right-4 top-4 text-white/60 hover:text-white"><X size={16} /></button>
             <MessageCircle size={28} className="mx-auto" style={{ color: "#25D366" }} />
             <h3 className="mt-3 font-display text-[18px] font-semibold text-white">Scanne le QR avec WhatsApp</h3>

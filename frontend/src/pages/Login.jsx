@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Mail, ArrowRight, Loader2, Eye, ShieldCheck, Server, Lock, RotateCcw } from "lucide-react";
 import { GlassCard } from "@/components/kairos/GlassCard";
 import {
-  fetchConnexionOptions, demanderLien, entrerApercu, connexionDemo, oauthStart, verifierLien, setToken, fetchState,
+  fetchConnexionOptions, demanderLien, entrerApercu, connexionDemo, oauthStart, oauthEchange, verifierLien, setToken, fetchState,
   connexionMdp, inscriptionMdp,
 } from "@/lib/kairosApi";
 
@@ -56,7 +56,9 @@ export default function Login() {
       ? requested : null;
     try {
       const d = await fetchState();
-      navigate(next || (d?.profile?.onboarded ? "/app" : "/onboarding"));
+      // /state renvoie « onboarded » à la racine (pas dans profile) : l'ancien test
+      // lisait toujours undefined et renvoyait vers l'onboarding à chaque connexion.
+      navigate(next || ((d?.onboarded ?? d?.profile?.onboarded) ? "/app" : "/onboarding"));
     } catch {
       navigate(next || "/onboarding");
     }
@@ -73,6 +75,32 @@ export default function Login() {
       toast.success("Connexion réussie.");
       enter();
     }
+  }, []);
+
+  // Retour Google / Microsoft : le fournisseur renvoie sur /login?code=…&state=google_…
+  // (redirect_uri = cette page). Avant, ce code n'était jamais échangé : on
+  // revenait sur l'écran de connexion sans être connecté.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const state = params.get("state") || "";
+    const oauthErr = params.get("error") || params.get("erreur");
+    if (oauthErr && !code) {
+      window.history.replaceState({}, "", "/login");
+      toast.error("Connexion annulée ou refusée. Réessaie, ou utilise ton email.");
+      return;
+    }
+    if (!code) return;
+    const provider = state.startsWith("microsoft") ? "microsoft" : state.startsWith("google") ? "google" : null;
+    if (!provider) return;
+    setVerification(true);
+    window.history.replaceState({}, "", "/login");
+    oauthEchange(provider, code, `${window.location.origin}/login`, state)
+      .then((rep) => { setToken(rep.access_token); toast.success("Connexion réussie."); enter(); })
+      .catch(() => {
+        setVerification(false);
+        toast.error(`Connexion ${provider === "google" ? "Google" : "Microsoft"} impossible. Réessaie, ou utilise ton email.`);
+      });
   }, []);
 
   // Lien magique : /login?token=xxx — vérifié une seule fois au chargement.

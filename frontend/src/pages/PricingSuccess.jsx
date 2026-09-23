@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { Check, ArrowRight, Sparkles } from "lucide-react";
 
 const GOLD = "#DEC2A3";
-const NAVY = "#0B1F3A";
+const NAVY = "#0f1b3a";
 
 export default function PricingSuccess() {
   const navigate = useNavigate();
@@ -26,7 +26,7 @@ export default function PricingSuccess() {
         }}>
         <div className="pointer-events-none absolute -top-32 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full opacity-20 blur-3xl" style={{ background: GOLD }} />
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full" style={{ background: GOLD }}>
-          <Check size={30} className="text-[#0B1F3A]" strokeWidth={3} />
+          <Check size={30} className="text-[#0f1b3a]" strokeWidth={3} />
         </div>
         <span className="mt-6 inline-block text-[11px] font-semibold uppercase tracking-[0.24em]" style={{ color: GOLD }}>Paiement confirmé</span>
         <h1 className="mt-3 font-display text-[32px] font-semibold text-white">
@@ -39,7 +39,7 @@ export default function PricingSuccess() {
           Ton abonnement <b className="text-white">{cycle}</b> est actif. Ton reçu arrive par email dans quelques minutes.
         </p>
         <button onClick={() => navigate("/onboarding")}
-          className="mt-8 inline-flex items-center gap-2 rounded-xl px-6 py-3 text-[13px] font-semibold uppercase tracking-[0.14em] text-[#0B1F3A]"
+          className="mt-8 inline-flex items-center gap-2 rounded-xl px-6 py-3 text-[13px] font-semibold uppercase tracking-[0.14em] text-[#0f1b3a]"
           style={{ background: GOLD, boxShadow: "0 8px 24px -6px rgba(222,194,163,0.6)" }}>
           <Sparkles size={15} /> Commencer mon onboarding <ArrowRight size={14} />
         </button>

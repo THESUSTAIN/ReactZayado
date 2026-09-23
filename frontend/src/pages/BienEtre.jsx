@@ -110,7 +110,7 @@ export default function BienEtre() {
               const good = val !== null && (v.reverse ? val <= 2 : val >= 4);
               return (
                 <button key={key} onClick={() => setShowCheckin(key)}
-                  className="group relative overflow-hidden rounded-[18px] border border-white/10 bg-[#162f55] p-5 text-left shadow-[0_16px_36px_-24px_rgba(3,10,24,0.95)] transition duration-200 hover:-translate-y-0.5 hover:border-white/25 hover:bg-[#1b3a67]"
+                  className="group relative overflow-hidden rounded-[18px] border border-white/10 bg-white/10 backdrop-blur-xl p-5 text-left shadow-[0_16px_36px_-24px_rgba(3,10,24,0.95)] transition duration-200 hover:-translate-y-0.5 hover:border-white/25 hover:bg-[#1b3a67]"
                   data-testid={`vital-${key}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex h-11 w-11 items-center justify-center rounded-2xl ring-1 ring-white/10" style={{ background: `${v.color}22` }}>
@@ -343,7 +343,7 @@ function CheckinModal({ focus, vitals, onSave, onClose }) {
   const [choix, setChoix] = useState(null);
   return (
     <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center" onClick={onClose}>
-      <div className="w-full max-w-md rounded-t-2xl border border-white/15 p-6 sm:rounded-2xl" style={{ background: "#111f38" }} onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-md rounded-t-2xl border border-white/15 p-6 sm:rounded-2xl" style={{ background: "#101a34" }} onClick={(e) => e.stopPropagation()}>
         <div className="mb-5 flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl" style={{ background: `${v.color}22` }}>
             <v.icon size={20} style={{ color: v.color }} />

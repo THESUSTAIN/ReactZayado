@@ -31,7 +31,7 @@ function Shell({ children, menu }) {
   <div className="min-h-screen">
     {menu}
     <div className="theme-creme lg:pl-[248px]">
-      <header className="entete-navy sticky top-0 z-20 flex items-center gap-3 border-b border-white/10 px-4 py-3 backdrop-blur-2xl sm:px-6" style={{ background: "linear-gradient(135deg, #1a3a6e 0%, #102945 100%)" }}>
+      <header className="entete-navy sticky top-0 z-20 flex items-center gap-3 border-b border-white/10 px-4 py-3 backdrop-blur-2xl sm:px-6" style={{ background: "rgba(15,27,58,0.86)" }}>
         <Store size={18} className="text-gold" />
         <h1 className="font-display text-lg font-bold text-offwhite sm:text-xl">Espace Vendeur</h1>
       </header>

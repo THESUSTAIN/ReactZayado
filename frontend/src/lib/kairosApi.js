@@ -103,6 +103,8 @@ export const verifierLien = (token) => jsend("/connexion/verifier", "POST", { to
 export const entrerApercu = () => jsend("/connexion/apercu", "POST");
 export const connexionDemo = (email, prenom) => jsend("/connexion/demo", "POST", { email, prenom });
 export const oauthStart = (provider, redirect_uri) => jget(`/connexion/oauth/${provider}/start?redirect_uri=${encodeURIComponent(redirect_uri || "")}`);
+// Retour Google/Microsoft sur /login?code=… : échange du code contre la session.
+export const oauthEchange = (provider, code, redirect_uri, state) => jsend(`/connexion/oauth/${provider}/echange`, "POST", { code, redirect_uri, state });
 
 // ── Idées ──
 async function jsendDetail(path, method, body) {

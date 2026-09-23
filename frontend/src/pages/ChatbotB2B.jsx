@@ -187,7 +187,7 @@ export default function ChatbotB2B() {
                 </div>
                 <div className="space-y-2 p-4">
                   <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-white/10 px-3.5 py-2 text-[12.5px] text-white">{config.welcomeMsg}</div>
-                  <div className="ml-auto max-w-[85%] rounded-2xl rounded-br-md px-3.5 py-2 text-[12.5px] font-medium" style={{ background: config.primaryColor, color: "#0B1F3A" }}>
+                  <div className="ml-auto max-w-[85%] rounded-2xl rounded-br-md px-3.5 py-2 text-[12.5px] font-medium" style={{ background: config.primaryColor, color: "#0f1b3a" }}>
                     Quels sont vos horaires ?
                   </div>
                   <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-white/10 px-3.5 py-2 text-[12.5px] text-white">

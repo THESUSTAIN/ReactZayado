@@ -6,23 +6,23 @@
 
 @layer base {
     :root {
-        --background: 218 55% 14%;
+        --background: 222 59% 14%;
         --foreground: 222 60% 96%;
-        --card: 218 45% 20%;
+        --card: 222 50% 18%;
         --card-foreground: 222 60% 96%;
-        --popover: 218 50% 13%;
+        --popover: 222 55% 14%;
         --popover-foreground: 222 60% 96%;
         --primary: 38 44% 60%;
         --primary-foreground: 222 44% 6%;
-        --secondary: 222 30% 16%;
+        --secondary: 222 45% 18%;
         --secondary-foreground: 222 60% 96%;
-        --muted: 222 30% 16%;
+        --muted: 222 45% 18%;
         --muted-foreground: 215 20% 65%;
-        --accent: 222 30% 18%;
+        --accent: 222 45% 21%;
         --accent-foreground: 222 60% 96%;
         --destructive: 0 66% 51%;
         --destructive-foreground: 0 0% 98%;
-        --border: 222 30% 20%;
+        --border: 222 35% 24%;
         --input: 222 30% 18%;
         --ring: 38 44% 60%;
         --chart-1: 187 100% 45%;
@@ -44,12 +44,12 @@
     body {
         margin: 0;
         @apply text-offwhite font-sans;
-        /* Bleu EXACT ReactZayado (charte v13 : --zayado-navy-gradient) —
-           diagonale 135° plus lumineuse, halos réduits à un voile léger.
-           Le rouge de marque #a01722 reste réservé aux petits accents. */
+        /* Ciel navy de final 13 : bleu roi profond vers quasi-noir, vertical,
+           sans ruban teal (c'est lui qui donnait ce bleu « bizarre »). */
         background:
-            radial-gradient(ellipse 70% 50% at 15% 0%, rgba(45, 81, 150, 0.22), transparent 62%),
-            linear-gradient(135deg, #1a3a6e 0%, #102945 60%, #0c1d33 100%);
+            radial-gradient(ellipse at 20% 10%, rgba(45, 81, 150, 0.45) 0%, transparent 50%),
+            radial-gradient(ellipse at 80% 8%, rgba(30, 60, 110, 0.35) 0%, transparent 55%),
+            linear-gradient(180deg, #172c5c 0%, #101f47 30%, #0a1230 60%, #05081a 100%);
         background-attachment: fixed;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
@@ -61,15 +61,19 @@
 
 @layer components {
     .glass {
-        /* Revo : surfaces simples, lisibles et régulières. Couleur remplacée
-           par le navy Zayado ; pas de faux verre sur les écrans métier. */
-        background: #162f55;
-        border: 1px solid rgba(181, 207, 241, 0.14);
-        box-shadow: 0 18px 46px -28px rgba(4, 10, 26, 0.9);
+        /* Verre de final 13 : blanc translucide + flou, bord fin clair. */
+        background: rgba(255, 255, 255, 0.10);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
     }
     .glass-strong {
-        background: #102945;
-        border: 1px solid rgba(181, 207, 241, 0.16);
+        background: rgba(16, 26, 52, 0.96);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        backdrop-filter: blur(22px);
+        -webkit-backdrop-filter: blur(22px);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
     }
     .glass-gold {
         border-color: rgba(201, 169, 106, 0.40);
@@ -86,7 +90,7 @@
     }
     .btn-gold {
         @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gold px-5 py-2.5 font-semibold text-navy-900 transition-all duration-200 hover:bg-gold-hover active:scale-95;
-        box-shadow: 0 6px 20px -6px rgba(222, 194, 163, 0.6);
+        box-shadow: 0 6px 20px -6px rgba(222,194,163, 0.6);
     }
     .btn-ghost {
         @apply inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 font-medium text-offwhite transition-all duration-200 hover:bg-white/10;
@@ -155,7 +159,7 @@
 .zayado-blue {
   background:
     radial-gradient(ellipse 70% 50% at 15% 0%, rgba(45, 81, 150, 0.22), transparent 62%),
-    linear-gradient(135deg, #1a3a6e 0%, #102945 60%, #0c1d33 100%);
+    linear-gradient(180deg, #172c5c 0%, #101f47 30%, #0a1230 60%, #05081a 100%);
 }
 
 /* Rouge de marque Zayado (#a01722 éclairci pour lisibilité sur navy) — tirets discrets */
@@ -209,9 +213,9 @@
 
 /* ── Page Radar : balayage + marquee éditorial ── */
 .radar-sweep {
-  background: conic-gradient(from 0deg, transparent 0deg, rgba(222, 194, 163, 0.30) 42deg, transparent 78deg);
+  background: conic-gradient(from 0deg, transparent 0deg, rgba(222,194,163, 0.30) 42deg, transparent 78deg);
   animation: radar-spin 7s linear infinite;
-  box-shadow: inset 0 0 60px rgba(222, 194, 163, 0.05);
+  box-shadow: inset 0 0 60px rgba(222,194,163, 0.05);
 }
 @keyframes radar-spin { to { transform: rotate(360deg); } }
 
@@ -240,13 +244,13 @@
 }
 .menu-island {
   width: 96px; min-height: 392px; padding: 30px 0 28px !important;
-  background: linear-gradient(180deg, #1a3a6e 0%, #102945 100%);
+  background: linear-gradient(180deg, #1e3a8a 0%, #0a1f4e 100%);
   border-radius: 0 30px 30px 0 !important; box-shadow: 0 16px 34px rgba(4,13,34,.28);
   position: relative; display: flex; align-items: center; justify-content: center;
 }
 .menu-island ul { min-height: 326px; justify-content: space-between; gap: 0 !important; }
-.menu-scoop-top { fill: #1a3a6e; }
-.menu-scoop-bottom { fill: #102945; }
+.menu-scoop-top { fill: #1e3a8a; }
+.menu-scoop-bottom { fill: #0a1f4e; }
 
 /* ── Thème clair (body.theme-clair) — activé par le bouton lune/soleil du
    header. Même logique que .theme-creme : on inverse les surfaces sans
@@ -254,7 +258,7 @@
    bien sur fond clair). */
 body.theme-clair {
     background:
-        radial-gradient(ellipse 70% 50% at 15% 0%, rgba(222, 194, 163, 0.20), transparent 62%),
+        radial-gradient(ellipse 70% 50% at 15% 0%, rgba(222,194,163, 0.20), transparent 62%),
         linear-gradient(135deg, #F7F2E9 0%, #F1EADB 60%, #EAE1D0 100%);
     color: #1F2A44;
 }

@@ -38,7 +38,7 @@ export function LanguageSwitcher({ variant = "pill", className = "" }) {
           title={l.label}
           className={`rounded-md px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider transition ${
             lang === l.code
-              ? "bg-[#DEC2A3] text-[#0B1F3A]"
+              ? "bg-[#DEC2A3] text-[#0f1b3a]"
               : "text-white/60 hover:text-white"
           }`}
         >

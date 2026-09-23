@@ -15,7 +15,7 @@ export const STICKY_PALETTE = {
   slate:  { bg: "#dde3ea", text: "#17222f", label: "#3f5468" },
   coral:  { bg: "#ffdfd3", text: "#4a1d0d", label: "#9c3d1b" },
   sky:    { bg: "#d4eefb", text: "#0b2b3a", label: "#1b6684" },
-  sand:   { bg: "#f1e2cc", text: "#3a2a14", label: "#8a6a35" },
+  sand:   { bg: "#F1E2CC", text: "#3a2a14", label: "#8a6a35" },
 };
 export const STICKY_KEYS = Object.keys(STICKY_PALETTE);
 export const stickyOf = (name) => STICKY_PALETTE[name] || STICKY_PALETTE.cream;

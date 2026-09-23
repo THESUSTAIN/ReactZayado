@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard, Compass, Lightbulb, CheckSquare, Heart, Users, Settings, CalendarCheck, Radar,
+  LayoutDashboard, Compass, Lightbulb, CheckSquare, Heart, Users, Settings, CalendarCheck, Radar, MessageCircle,
 } from "lucide-react";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { useI18n } from "@/i18n";
 import { fetchActualite } from "@/lib/kairosApi";
+import { openChat } from "./GlobalChat";
 
 // Forme "île" avec scoops (encoches en haut/bas) — portée depuis
 // cap-vivant-scoops-light, un projet précédent où elle existait déjà.
@@ -21,6 +22,8 @@ const ITEMS = [
   { key: "actions", name: "Actions", Icon: CheckSquare },
   { key: "wellbeing", name: "Bien-être", Icon: Heart },
   { key: "collab", name: "Collaborateur", Icon: Users },
+  // Comme dans final 13 : le chat s'ouvre depuis le rail, sur n'importe quelle page.
+  { key: "chat", name: "Collaborateur IA", Icon: MessageCircle, action: true },
 ];
 
 export function Sidebar() {
@@ -55,6 +58,7 @@ export function Sidebar() {
   if ((process.env.REACT_APP_FLAVOR || "saas") !== "saas") return null;
 
   const go = (key) => {
+    if (key === "chat") { openChat(); return; }
     setActive(key);
     if (key === "today") {
       localStorage.setItem("actualite_vue_le", new Date().toISOString().slice(0, 10));

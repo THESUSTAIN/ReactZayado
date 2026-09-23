@@ -22,7 +22,7 @@ const TABS = [
   { key: "actu", label: "Actualité", icon: Newspaper },
 ];
 
-function ChatBody({ onClose, estElargi, onToggleTaille }) {
+export function ChatBody({ onClose, estElargi, onToggleTaille }) {
   const { user } = useKairos();
   const [tab, setTab] = useState("chat");
   const [cloudSync, setCloudSync] = useState(null);
@@ -30,8 +30,10 @@ function ChatBody({ onClose, estElargi, onToggleTaille }) {
   // Un clic sur « Scoops » (rail gauche) bascule ce panneau sur l'onglet Actualité
   useEffect(() => {
     const ouvrir = () => setTab("actu");
+    const decisions = () => setTab("decisions");
     window.addEventListener("kairos:ouvrir-actu", ouvrir);
-    return () => window.removeEventListener("kairos:ouvrir-actu", ouvrir);
+    window.addEventListener("kairos:ouvrir-decisions", decisions);
+    return () => { window.removeEventListener("kairos:ouvrir-actu", ouvrir); window.removeEventListener("kairos:ouvrir-decisions", decisions); };
   }, []);
 
   useEffect(() => {
@@ -311,7 +313,7 @@ export function ChatPanel() {
   const [estElargi, setEstElargi] = useState(false);
   return (
     <div
-      className={`hidden xl:flex fixed right-0 top-0 z-20 h-screen flex-col border-l border-white/10 bg-[#0B1F3A]/95 backdrop-blur-2xl transition-[width] duration-200 ${estElargi ? "w-[640px]" : "w-[360px]"}`}
+      className={`hidden xl:flex fixed right-0 top-0 z-20 h-screen flex-col border-l border-white/10 bg-[#0f1b3a]/95 backdrop-blur-2xl transition-[width] duration-200 ${estElargi ? "w-[640px]" : "w-[360px]"}`}
       data-testid="chat-panel"
     >
       <ChatBody estElargi={estElargi} onToggleTaille={() => setEstElargi((v) => !v)} />
@@ -322,7 +324,7 @@ export function ChatPanel() {
 export function ChatBubble({ open, onClose }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[#0B1F3A]/72 backdrop-blur-2xl xl:hidden" data-testid="chat-bubble">
+    <div className="fixed inset-0 z-50 flex flex-col bg-[#0f1b3a]/72 backdrop-blur-2xl xl:hidden" data-testid="chat-bubble">
       <ChatBody onClose={onClose} />
     </div>
   );

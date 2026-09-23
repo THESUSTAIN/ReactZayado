@@ -54,7 +54,7 @@ export default function BreathingSession({ onClose, defaultCycle = "4-7-8", dura
   const ss = String(Math.floor((remaining % 60000) / 1000)).padStart(2, "0");
 
   return (
-    <div className="fixed inset-0 z-[90] flex flex-col items-center justify-between bg-gradient-to-b from-[#0B1F3A] via-[#1a2b4a] to-[#0B1F3A] px-6 py-8">
+    <div className="fixed inset-0 z-[90] flex flex-col items-center justify-between bg-gradient-to-b from-[#0f1b3a] via-[#16244a] to-[#0f1b3a] px-6 py-8">
       {/* Header */}
       <div className="flex w-full max-w-md items-center justify-between">
         <button onClick={onClose} className="rounded-lg p-2 text-white/60 hover:bg-white/5 hover:text-white"><X size={20} /></button>

@@ -552,7 +552,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
       case "kpi":
         return addItem({ type: "kpi", w: 260, h: 200, stickyColor: "green", label: "SANTÉ & ÉNERGIE", body: L("Sport 4x / semaine\nMéditation quotidienne\nAlimentation saine", "Sport 4x / week\nDaily meditation\nHealthy food"), progress: 65 });
       case "color":
-        return addItem({ type: "color", w: 320, title: L("Palette"), colors: ["#0B1F3A", "#4a6a9e", "#DEC2A3", "#F1E2CC"] });
+        return addItem({ type: "color", w: 320, title: L("Palette"), colors: ["#0f1b3a", "#4a6a9e", "#DEC2A3", "#F1E2CC"] });
       case "cockpit": {
         const vals = Object.values(rectsRef.current);
         const maxX = vals.length ? Math.max(...vals.map((r) => r.x + r.w)) : 0;
@@ -914,7 +914,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
       const maxX = Math.min(BOARD_W, Math.max(...box.map((r) => r.x + r.w)) + pad);
       const maxY = Math.min(BOARD_H, Math.max(...box.map((r) => r.y + r.h)) + pad);
       const { default: html2canvas } = await import("html2canvas");
-      const bg = getComputedStyle(rootRef.current).getPropertyValue("--sf-canvas").trim() || "#0f1a2b";
+      const bg = getComputedStyle(rootRef.current).getPropertyValue("--sf-canvas-solid").trim() || "#0a1230";
       const scale = Math.min(2, 8000 / Math.max(maxX - minX, maxY - minY));
       const full = await html2canvas(boardRef.current, { backgroundColor: bg, useCORS: true, scale, logging: false, width: maxX, height: maxY });
       const canvas = document.createElement("canvas");
@@ -1380,7 +1380,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
             <button key={it.id} onClick={it.action} className="sf-tool relative" data-active={it.active ? "true" : "false"} data-testid={`vision-rail-${it.id}`} title={it.label}>
               <span className="sf-tool-ico"><it.icon size={17} /></span>
               {it.label}
-              {it.badge > 0 && <span className="absolute right-1.5 top-1 rounded-full px-1.5 text-[10px] font-semibold" style={{ background: "var(--sf-accent)", color: "#0b1f3a" }}>{it.badge}</span>}
+              {it.badge > 0 && <span className="absolute right-1.5 top-1 rounded-full px-1.5 text-[10px] font-semibold" style={{ background: "var(--sf-accent)", color: "#0f1b3a" }}>{it.badge}</span>}
             </button>
           )))}
           <span className="my-1.5 h-px w-10" style={{ background: "var(--sf-line)" }} />
@@ -1508,7 +1508,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
               placeholder={isSmall ? "Décris ton projet…" : t("vision.promptPlaceholder")} data-testid="vision-prompt-input" className="sf-input min-w-0 flex-1 px-2 text-[14px]" />
             <VoiceCapture onTranscribed={handleVoice} compact />
             <button onClick={handleGenerateBoard} disabled={!prompt.trim() || generating} data-testid="vision-prompt-submit"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition disabled:opacity-40" style={{ background: "var(--sf-accent)", color: "#0b1f3a" }}>
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition disabled:opacity-40" style={{ background: "var(--sf-accent)", color: "#0f1b3a" }}>
               {generating ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
             </button>
           </div>
