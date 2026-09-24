@@ -112,7 +112,7 @@ function CompteDemo() {
       .then((d) => { setDonnees(d); setChoix(Object.fromEntries(d.tables.map((t) => [t.table, true]))); })
       .catch(() => setErreur("Accès refusé ou erreur serveur."));
   };
-  useEffect(charger, []);
+  useEffect(() => { charger(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const transferer = async () => {
     const tables = Object.keys(choix).filter((k) => choix[k]);
     if (!email.includes("@") || !tables.length) return;
@@ -198,7 +198,7 @@ function CommandesMollie() {
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const load = () => Promise.all([fetchAdminCommerceOrders(status), fetchAdminCommerceStats()]).then(([orders, summary]) => { setData(orders); setStats(summary); }).catch((e) => setError(e.message));
-  useEffect(load, [status]);
+  useEffect(() => { load(); }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
   const update = async (id, next) => { try { await changerStatutCommandeAdmin(id, next); load(); } catch (e) { setError(e.message); } };
   return <div className="space-y-4"><div className="grid grid-cols-3 gap-4"><Carte><p className="text-xs uppercase tracking-wide text-offwhite/50">Commandes</p><p className="mt-1 text-3xl font-bold">{stats?.total ?? "—"}</p></Carte><Carte><p className="text-xs uppercase tracking-wide text-offwhite/50">Payées</p><p className="mt-1 text-3xl font-bold text-gold">{stats?.paid ?? "—"}</p></Carte><Carte><p className="text-xs uppercase tracking-wide text-offwhite/50">Filtre</p><select value={status} onChange={(e) => setStatus(e.target.value)} className="mt-2 rounded-lg border border-white/15 bg-navy-800 px-2 py-1 text-sm"><option value="">Tous les statuts</option>{["pending", "paid", "failed", "canceled", "expired", "refunded"].map((s) => <option key={s}>{s}</option>)}</select></Carte></div>{error && <Carte><p className="text-sm text-red-400">{error}</p></Carte>}<Carte><div className="overflow-x-auto"><table className="w-full min-w-[760px] text-sm"><thead><tr className="border-b border-white/10 text-left text-offwhite/50"><th className="pb-2">Date</th><th className="pb-2">Client</th><th className="pb-2">Commande</th><th className="pb-2">Montant</th><th className="pb-2">Statut</th><th className="pb-2">Action</th></tr></thead><tbody>{data?.items?.map((o) => <tr key={o.id} className="border-b border-white/5"><td className="py-2.5 text-offwhite/55">{o.created_at ? new Date(o.created_at).toLocaleDateString("fr-FR") : "—"}</td><td className="py-2.5">{o.email}</td><td className="py-2.5"><span className="text-xs text-offwhite/50">{o.kind}</span><br />{o.title}</td><td className="py-2.5">{o.amount} {o.currency}</td><td className="py-2.5"><span className="rounded-full bg-white/10 px-2 py-1 text-xs">{o.status}</span></td><td className="py-2.5"><select value={o.status} onChange={(e) => update(o.id, e.target.value)} className="rounded-lg border border-white/15 bg-navy-800 px-2 py-1 text-xs">{["pending", "paid", "failed", "canceled", "expired", "refunded"].map((s) => <option key={s}>{s}</option>)}</select></td></tr>)}{data && !data.items.length && <tr><td colSpan={6} className="py-6 text-center text-offwhite/50">Aucune commande.</td></tr>}</tbody></table></div></Carte></div>;
 }
@@ -228,7 +228,7 @@ function Utilisateurs() {
     setChargement(true);
     fetchAdminUtilisateurs().then((d) => setItems(d.items)).catch(() => setErreur("Accès refusé ou erreur serveur.")).finally(() => setChargement(false));
   };
-  useEffect(charger, []);
+  useEffect(() => { charger(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const changerRole = async (id, role) => {
     try { await changerRoleUtilisateur(id, role); charger(); }
@@ -305,7 +305,7 @@ function ModerationVendeurs() {
     setChargement(true);
     fetchModerationAttente().then((d) => setItems(d.items)).catch(() => setErreur("Accès refusé ou erreur serveur.")).finally(() => setChargement(false));
   };
-  useEffect(charger, []);
+  useEffect(() => { charger(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const publier = async (pid) => { try { await publierProduitVendeur(pid); charger(); } catch { setErreur("Échec de la publication."); } };
   const refuser = async (pid) => {
@@ -381,7 +381,7 @@ function CodesPromo() {
   const [nouveauCode, setNouveauCode] = useState({ code: "", value: "", max_uses: "100" });
 
   const charger = () => { setChargement(true); fetchCodesPromo().then((d) => setItems(d.items)).finally(() => setChargement(false)); };
-  useEffect(charger, []);
+  useEffect(() => { charger(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const creer = async (e) => {
     e.preventDefault();

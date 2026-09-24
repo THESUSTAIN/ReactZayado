@@ -265,3 +265,29 @@ export const fetchTarifsFondateur = async () => {
   if (!r.ok) throw new Error("tarifs fondateur");
   return r.json();
 };
+
+// ── Paramètres : abonnement, commandes, export ──
+export const fetchAbonnement = () => jget("/abonnement");
+export const fetchCommandes = () => jget("/commerce/orders");
+/** Export RGPD : le lien direct n'envoyait pas le jeton (401). On télécharge avec l'en-tête. */
+export async function telechargerExport() {
+  const r = await fetch(`${API}/export`, { headers: _headers() });
+  if (!r.ok) throw new Error(`export ${r.status}`);
+  const blob = new Blob([JSON.stringify(await r.json(), null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `zayado-mes-donnees-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+// ── Collaborateur humain (depuis le chat IA ou la page Collaborateurs) ──
+export const envoyerDemandeCollaborateur = ({ message, objet = "", contact = "", important = false, channel = "collaborateur" }) =>
+  jsend("/growth/work-request", "POST", { message, objet, contact, important, channel });
+
+// ── Processus (sauvegardés côté serveur) ──
+export const fetchProcessus = () => jget("/processus");
+export const saveProcessus = (items) => jsend("/processus", "PUT", { items });
+export const completerCheckin = (vitals) => jsend("/checkins/aujourdhui", "PATCH", vitals);
+export const demarrerWhatsapp = () => jsend("/connections/whatsapp/start", "POST");
+export const connecterTelegram = (bot_token) => jsend("/connections/telegram/connect", "POST", { bot_token });

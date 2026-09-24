@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useKairos } from "@/context/KairosContext";
+import { EnergyCheckin } from "@/components/kairos/EnergyCheckin";
+import { fetchState, completerCheckin } from "@/lib/kairosApi";
 
 const GOLD = "#DEC2A3";
 const MOOD_FACES = ["😞", "🙁", "😐", "🙂", "😊"];
@@ -39,30 +41,48 @@ const AMBIENCES = [
 ];
 
 export default function BienEtre() {
-  const { user, trend, aCheckin } = useKairos();
-  // null = jamais mesuré — on affiche « — » plutôt qu'un faux 4/5 de démo.
+  const { user, trend, aCheckin, energy } = useKairos();
+  // Mesures réelles du jour (serveur). null = pas encore mesuré — « — », jamais un faux chiffre.
   const [vitals, setVitals] = useState(null);
   const [ambience, setAmbience] = useState("Vagues");
   const [checked, setChecked] = useState({});  // ritual id → true
   const [showCheckin, setShowCheckin] = useState(false);
+  const [energieOpen, setEnergieOpen] = useState(false);
   const [breathingOpen, setBreathingOpen] = useState(false);
 
   // Historique réel : les check-ins énergie du compte (14 derniers jours).
   const history = (trend || []).slice(-7).map((p) => p.value);
 
+  const chargerVitals = () => fetchState().then((d) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const v = d.energy?.vitals;
+    const duJour = v && v.date === today;
+    setVitals({
+      energy: d.energy?.a_checkin && duJour ? d.energy.score : null,
+      stress: duJour ? v.stress : null, sleep: duJour ? v.sommeil : null, load: duJour ? v.charge : null,
+    });
+  }).catch(() => setVitals({}));
+
   useEffect(() => {
+    chargerVitals();
     try {
-      const saved = localStorage.getItem("kairos_vitals");
-      if (saved) setVitals(JSON.parse(saved));
       const c = localStorage.getItem("kairos_rituals_done_" + new Date().toISOString().slice(0, 10));
       if (c) setChecked(JSON.parse(c));
+      localStorage.removeItem("kairos_vitals"); // anciennes mesures locales, remplacées par le serveur
     } catch {}
-  }, []);
+  }, [energy?.score]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const saveVital = (k, v) => {
-    const next = { ...vitals, [k]: v };
-    setVitals(next);
-    localStorage.setItem("kairos_vitals", JSON.stringify(next));
+  const ouvrirVital = (k) => {
+    if (k === "energy" || vitals?.energy == null) { setEnergieOpen(true); return; }
+    setShowCheckin(k);
+  };
+
+  const saveVital = async (k, v) => {
+    const champ = { stress: "stress", sleep: "sommeil", load: "charge" }[k];
+    if (!champ) return;
+    setVitals((x) => ({ ...x, [k]: v }));
+    try { await completerCheckin({ [champ]: v }); }
+    catch { toast.error("Fais d'abord ton check-in énergie du jour."); setEnergieOpen(true); chargerVitals(); }
   };
 
   const toggleRitual = (id) => {
@@ -95,7 +115,7 @@ export default function BienEtre() {
                   Écoute. Ajuste. Repose.
                 </p>
               </div>
-              <button onClick={() => setShowCheckin(true)}
+              <button onClick={() => (vitals?.energy == null ? setEnergieOpen(true) : setShowCheckin(true))}
                 className="hidden shrink-0 items-center gap-2 rounded-xl px-5 py-3 text-[13px] font-semibold text-navy-900 shadow-lg sm:flex"
                 style={{ background: GOLD }}>
                 <Plus size={14} /> Check-in maintenant
@@ -109,7 +129,7 @@ export default function BienEtre() {
               const val = vitals?.[key] ?? null;
               const good = val !== null && (v.reverse ? val <= 2 : val >= 4);
               return (
-                <button key={key} onClick={() => setShowCheckin(key)}
+                <button key={key} onClick={() => ouvrirVital(key)}
                   className="group relative overflow-hidden rounded-[18px] border border-white/10 bg-white/10 backdrop-blur-xl p-5 text-left shadow-[0_16px_36px_-24px_rgba(3,10,24,0.95)] transition duration-200 hover:-translate-y-0.5 hover:border-white/25 hover:bg-[#1b3a67]"
                   data-testid={`vital-${key}`}>
                   <div className="flex items-center justify-between">
@@ -200,7 +220,7 @@ export default function BienEtre() {
                   background: "radial-gradient(circle at 40% 35%, rgba(255,255,255,0.95), rgba(220,220,235,0.75) 55%, rgba(180,180,220,0.55))",
                   boxShadow: "0 0 50px rgba(147,197,253,0.5), inset 0 0 30px rgba(96,165,250,0.25)",
                 }}>
-                <span className="font-display text-[22px] font-bold text-navy-900 sm:text-[26px]">Begin</span>
+                <span className="font-display text-[22px] font-bold text-navy-900 sm:text-[26px]">Commencer</span>
               </button>
             </div>
           </section>
@@ -255,22 +275,7 @@ export default function BienEtre() {
               )}
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6">
-              <div className="mb-3 flex items-center gap-2">
-                <Sparkles size={15} style={{ color: GOLD }} />
-                <h3 className="font-display text-[15px] font-semibold">Insight du jour</h3>
-              </div>
-              <p className="font-serif-italic italic text-[16px] leading-snug text-white/90">
-                « Ton énergie est plus haute après tes marches du matin. »
-              </p>
-              <p className="mt-3 text-[13px] leading-relaxed text-white/60">
-                J'ai bloqué <b className="text-white">20 min lundi 7h30</b> pour toi. Tu peux annuler d'un clic si ça ne te dit pas.
-              </p>
-              <div className="mt-4 flex gap-2">
-                <button className="flex-1 rounded-lg py-2 text-[12px] font-semibold text-navy-900" style={{ background: GOLD }}>Accepter</button>
-                <button className="rounded-lg border border-white/20 px-3 py-2 text-[12px] text-white/70 hover:bg-white/5">Reporter</button>
-              </div>
-            </div>
+            <InsightDuJour history={history} vitals={vitals} onCheckin={() => setEnergieOpen(true)} onRespirer={() => setBreathingOpen(true)} />
           </div>
 
           {/* Ambience & séance */}
@@ -326,6 +331,46 @@ export default function BienEtre() {
           onClose={() => setShowCheckin(false)} />
       )}
       {breathingOpen && <BreathingSession onClose={() => setBreathingOpen(false)} />}
+      <EnergyCheckin open={energieOpen} onClose={() => { setEnergieOpen(false); setTimeout(chargerVitals, 800); }} />
+    </div>
+  );
+}
+
+/** Insight calculé sur tes vrais check-ins (avant : une phrase inventée, identique pour tout le monde). */
+function InsightDuJour({ history, vitals, onCheckin, onRespirer }) {
+  let titre, texte, action = null;
+  const n = history.length;
+  if (n < 3) {
+    titre = n === 0 ? "Pas encore assez de mesures" : `${n} check-in${n > 1 ? "s" : ""} sur 3`;
+    texte = "Dès 3 check-ins, Zayado repère ta tendance d'énergie et te propose le bon rythme pour la journée.";
+    action = { label: "Faire mon check-in", onClick: onCheckin };
+  } else {
+    const moy = history.reduce((a, b) => a + b, 0) / n;
+    const recents = history.slice(-3).reduce((a, b) => a + b, 0) / 3;
+    const avant = n > 3 ? history.slice(0, -3).reduce((a, b) => a + b, 0) / (n - 3) : recents;
+    const tendance = recents - avant >= 0.5 ? "en hausse" : avant - recents >= 0.5 ? "en baisse" : "stable";
+    titre = `Énergie moyenne ${moy.toFixed(1)}/5 · ${tendance}`;
+    if (recents <= 2.5 || (vitals?.stress && vitals.stress >= 4)) {
+      texte = "Tes derniers jours sont exigeants. Allège ta liste d'aujourd'hui à une seule priorité et offre-toi 5 minutes de respiration.";
+      action = { label: "Respirer 5 min", onClick: onRespirer };
+    } else if (tendance === "en baisse") {
+      texte = "Ton énergie baisse depuis quelques jours : garde tes tâches exigeantes pour le matin et protège une vraie pause.";
+      action = { label: "Faire une pause guidée", onClick: onRespirer };
+    } else {
+      texte = "Bonne dynamique : c'est le bon moment pour avancer sur ta priorité la plus importante.";
+    }
+  }
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6" data-testid="bienetre-insight">
+      <div className="mb-3 flex items-center gap-2">
+        <Sparkles size={15} style={{ color: GOLD }} />
+        <h3 className="font-display text-[15px] font-semibold">Insight du jour</h3>
+      </div>
+      <p className="font-serif-italic italic text-[16px] leading-snug text-white/90">{titre}</p>
+      <p className="mt-3 text-[13px] leading-relaxed text-white/60">{texte}</p>
+      {action && (
+        <button onClick={action.onClick} className="mt-4 w-full rounded-lg py-2 text-[12px] font-semibold text-navy-900" style={{ background: GOLD }}>{action.label}</button>
+      )}
     </div>
   );
 }
@@ -338,7 +383,7 @@ const PALIER_MOTS = {
 };
 
 function CheckinModal({ focus, vitals, onSave, onClose }) {
-  const [tab, setTab] = useState(focus || "energy");
+  const [tab, setTab] = useState(focus && focus !== "energy" ? focus : "stress");
   const v = VITALS_LABEL[tab];
   const [choix, setChoix] = useState(null);
   return (
@@ -355,7 +400,7 @@ function CheckinModal({ focus, vitals, onSave, onClose }) {
         </div>
         {!focus && (
           <div className="mb-4 flex gap-1 rounded-lg bg-white/5 p-1">
-            {Object.entries(VITALS_LABEL).map(([k, val]) => (
+            {Object.entries(VITALS_LABEL).filter(([k]) => k !== "energy").map(([k, val]) => (
               <button key={k} onClick={() => { setTab(k); setChoix(null); }}
                 className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-semibold transition ${tab === k ? "text-navy-900" : "text-white/70 hover:text-white"}`}
                 style={tab === k ? { background: val.color } : {}}>

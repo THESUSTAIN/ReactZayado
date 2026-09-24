@@ -237,7 +237,7 @@ export default function Radar() {
       .catch(() => toast.error("Radar indisponible"))
       .finally(() => setLoading(false));
   };
-  useEffect(() => load(), []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const opportunities = useMemo(() => data?.opportunities || [], [data]);
   const counts = useMemo(() => {

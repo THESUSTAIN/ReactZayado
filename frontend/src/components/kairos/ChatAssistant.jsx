@@ -2,13 +2,17 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   Sparkles, Send, Mic, Lightbulb, BatteryLow, Compass, X, Loader2,
   Sun, ListChecks, Newspaper, Check, Clock, XCircle, ExternalLink, RefreshCw, Mail, Bookmark,
-  Maximize2, Minimize2, CloudCheck,
+  Maximize2, Minimize2, CloudCheck, Users,
 } from "lucide-react";
+import CollaborateurModal from "./CollaborateurModal";
 import { useKairos } from "@/context/KairosContext";
 import {
   streamChat, fetchPointDuJour, fetchDecisions, suggererDecisions, patchDecision, fetchActualite, enregistrerArticle, validerDecisionEmail,
 } from "@/lib/kairosApi";
 import { toast } from "sonner";
+
+// Derniers échanges du chat, joints (si on le souhaite) au message pour un collaborateur.
+const contexteChat = { texte: "" };
 
 const SHORTCUTS = [
   { key: "capture", icon: Lightbulb, label: "Capturer une idée", prompt: "J'ai une idée à capturer, aide-moi à la clarifier en une phrase." },
@@ -26,6 +30,13 @@ export function ChatBody({ onClose, estElargi, onToggleTaille }) {
   const { user } = useKairos();
   const [tab, setTab] = useState("chat");
   const [cloudSync, setCloudSync] = useState(null);
+  // Bouton « Collaborateur » : message important à l'équipe humaine, avec le contexte du chat.
+  const [collab, setCollab] = useState(null); // null = fermé, sinon { contexte }
+  useEffect(() => {
+    const ouvrir = (e) => setCollab({ contexte: e?.detail?.contexte || "" });
+    window.addEventListener("zayado:ouvrir-collaborateur", ouvrir);
+    return () => window.removeEventListener("zayado:ouvrir-collaborateur", ouvrir);
+  }, []);
 
   // Un clic sur « Scoops » (rail gauche) bascule ce panneau sur l'onglet Actualité
   useEffect(() => {
@@ -43,7 +54,8 @@ export function ChatBody({ onClose, estElargi, onToggleTaille }) {
   }, []);
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="relative flex h-full flex-col">
+      <CollaborateurModal open={!!collab} contexte={collab?.contexte || ""} onClose={() => setCollab(null)} />
       <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gold/15 ring-1 ring-gold/30">
@@ -60,6 +72,11 @@ export function ChatBody({ onClose, estElargi, onToggleTaille }) {
               <CloudCheck className="h-3.5 w-3.5" /> Transmis
             </span>
           )}
+          <button onClick={() => setCollab({ contexte: contexteChat.texte })}
+            className="mr-1 inline-flex items-center gap-1.5 rounded-lg border border-gold/30 bg-gold/10 px-2.5 py-1.5 text-[11px] font-semibold text-gold hover:bg-gold/20"
+            title="Écrire à un collaborateur de l'équipe Zayado" data-testid="chat-collaborateur-btn">
+            <Users className="h-3.5 w-3.5" /> Collaborateur
+          </button>
           {onToggleTaille && (
             <button onClick={onToggleTaille} className="rounded-lg p-1.5 text-offwhite/50 hover:bg-white/5 hover:text-offwhite" data-testid="chat-toggle-taille-btn" title={estElargi ? "Réduire" : "Agrandir"}>
               {estElargi ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
@@ -104,6 +121,10 @@ function ChatTab({ firstName }) {
   const { mode } = useKairos();
   const accueil = `Bonjour${firstName ? ` ${firstName}` : ""}. Je suis le Copilote IA Zayado, là pour t'accompagner en douceur. Par quoi commence-t-on ?`;
   const [messages, setMessages] = useState([{ role: "assistant", content: accueil }]);
+  useEffect(() => {
+    contexteChat.texte = messages.slice(1).slice(-8)
+      .map((m) => `${m.role === "user" ? "Moi" : "Copilote"} : ${String(m.content || "").slice(0, 600)}`).join("\n");
+  }, [messages]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const scrollRef = useRef(null);
@@ -149,6 +170,11 @@ function ChatTab({ firstName }) {
       </div>
       <div className="border-t border-white/10 px-4 py-3">
         <div className="mb-3 flex flex-wrap gap-2">
+          <button onClick={() => window.dispatchEvent(new CustomEvent("zayado:ouvrir-collaborateur", { detail: { contexte: contexteChat.texte } }))}
+            data-testid="ai-shortcut-collaborateur"
+            className="inline-flex items-center gap-1.5 rounded-full border border-gold/30 bg-gold/10 px-3 py-1.5 text-xs font-medium text-gold transition-colors hover:bg-gold/20">
+            <Users className="h-3.5 w-3.5" /> Écrire à un collaborateur
+          </button>
           {SHORTCUTS.map((s) => (
             <button key={s.key} onClick={() => send(s.prompt)} disabled={streaming} data-testid={`ai-shortcut-${s.key}`}
               className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-offwhite/80 transition-colors hover:border-gold/40 hover:text-gold disabled:opacity-50">

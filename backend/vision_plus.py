@@ -271,6 +271,8 @@ def install_vision_plus(g: dict) -> None:
             for prof in profils:
                 if not prof.email or "@" not in prof.email or prof.user_id == DEMO_USER_ID:
                     continue
+                if (getattr(prof, "contexte_metier", None) or {}).get("notif_email_lundi") is False:
+                    continue  # coupé dans Paramètres › Notifications
                 deja = (await db.execute(select(VisionWeeklyMail).where(
                     VisionWeeklyMail.user_id == prof.user_id, VisionWeeklyMail.semaine == semaine))).scalar_one_or_none()
                 if deja:

@@ -2,10 +2,13 @@ import React, { useState, useEffect } from "react";
 import { planNom } from "@/lib/plans";
 import {
   User, Palette, Bell, Plug, ShieldCheck, CreditCard, Gift, Loader2, Save, Download, Cloud,
-  Search, X, Sun, Moon,
+  Search, X, Sun, Moon, Compass, Brain, Trash2, Mail, Plus, Receipt, Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
-import { fetchState, saveProfile, fetchConnections, fetchMesFilleuls, inviterParrainage, appliquerCodePromo, fetchMoi } from "@/lib/kairosApi";
+import {
+  fetchState, saveProfile, fetchConnections, fetchMesFilleuls, inviterParrainage, appliquerCodePromo, fetchMoi,
+  fetchAbonnement, fetchCommandes, telechargerExport, deleteData, fetchTarifsFondateur,
+} from "@/lib/kairosApi";
 import { useI18n } from "@/i18n";
 import { Link, useNavigate } from "react-router-dom";
 import IntegrationsSection from "@/components/kairos/IntegrationsSection";
@@ -14,18 +17,40 @@ import IntegrationsSection from "@/components/kairos/IntegrationsSection";
 // ReactZayado/SettingsModal.jsx (v13) : recherche + sections latérales.
 // Chaque section n'affiche que ce qui est réellement câblé côté serveur.
 const SECTIONS = [
-  { id: "profil", label: "Profil", Icon: User, mots: "prénom email identité heure point du jour" },
   { id: "general", label: "Général", Icon: Palette, mots: "langue français english thème clair sombre apparence" },
-  { id: "notifications", label: "Notifications", Icon: Bell, mots: "alerte rappel email" },
-  { id: "integrations", label: "Intégrations", Icon: Plug, mots: "whatsapp telegram qonto connexion" },
+  { id: "profil", label: "Profil & mémoire IA", Icon: User, mots: "prénom email identité heure point du jour mémoire ia pourquoi offre cible approche" },
+  { id: "vision", label: "Vision & valeurs", Icon: Compass, mots: "vision phrase valeurs inspiration cap" },
+  { id: "notifications", label: "Notifications", Icon: Bell, mots: "alerte rappel email lundi" },
+  { id: "integrations", label: "Intégrations", Icon: Plug, mots: "whatsapp telegram qonto connexion drive" },
   { id: "cloud-save", label: "Enregistrement cloud", Icon: Cloud, mots: "drive google onedrive sharepoint document automatique nuage" },
   { id: "parrainage", label: "Parrainage", Icon: Gift, mots: "inviter filleul crédit bonus" },
-  { id: "securite", label: "Sécurité & données", Icon: ShieldCheck, mots: "export rgpd données suppression" },
-  { id: "facturation", label: "Forfait & promo", Icon: CreditCard, mots: "plan abonnement prix code réduction" },
+  { id: "securite", label: "Sécurité & données", Icon: ShieldCheck, mots: "export rgpd données suppression connexion email" },
+  { id: "facturation", label: "Offre & factures", Icon: CreditCard, mots: "plan abonnement prix code réduction facture historique fondateur" },
 ];
 
+// Complétion du profil (comme final-main) : ce qui aide vraiment le Copilote.
+function useCompletion() {
+  const [pct, setPct] = useState(null);
+  const calculer = () => fetchState().then((d) => {
+    const p = d.profile || {}, v = d.vision || {}, cm = v.contexte_metier || {};
+    const items = [p.prenom, p.email, v.texte, v.pourquoi, cm.offre, cm.cible, cm.approche, (v.valeurs || []).length];
+    setPct(Math.round((items.filter(Boolean).length / items.length) * 100));
+  }).catch(() => {});
+  useEffect(() => {
+    calculer();
+    window.addEventListener("zayado:profil-maj", calculer);
+    return () => window.removeEventListener("zayado:profil-maj", calculer);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  return pct;
+}
+const signalerMaj = () => window.dispatchEvent(new Event("zayado:profil-maj"));
+
 export default function Parametres() {
-  const [active, setActive] = useState("profil");
+  const [active, setActive] = useState(() => {
+    const h = (window.location.hash || "").replace("#", "");
+    return SECTIONS.some((x) => x.id === h) ? h : "general";
+  });
+  const completion = useCompletion();
   const [recherche, setRecherche] = useState("");
   const navigate = useNavigate();
 
@@ -71,7 +96,20 @@ export default function Parametres() {
 
         <div className="flex min-h-0 flex-1">
           {/* Nav latérale */}
-          <nav className="w-16 shrink-0 space-y-1 overflow-y-auto border-r border-white/10 p-3 sm:w-52" data-testid="parametres-nav">
+          <nav className="w-16 shrink-0 space-y-1 overflow-y-auto border-r border-white/10 p-3 sm:w-56" data-testid="parametres-nav">
+            {completion !== null && (
+              <button onClick={() => setActive("profil")} className="mb-3 hidden w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-left sm:flex" data-testid="parametres-completion">
+                <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-gold"
+                  style={{ background: `conic-gradient(#DEC2A3 ${completion * 3.6}deg, rgba(255,255,255,0.1) 0deg)` }}>
+                  <span className="absolute inset-[4px] rounded-full bg-[#101a34]" />
+                  <span className="relative">{completion}%</span>
+                </span>
+                <span>
+                  <span className="block text-[12.5px] font-semibold text-offwhite">Profil complété</span>
+                  <span className="block text-[11px] text-offwhite/50">{completion < 100 ? "Plus il est complet, plus le Copilote est juste" : "Profil complet"}</span>
+                </span>
+              </button>
+            )}
             {visibles.map((s) => (
               <button
                 key={s.id}
@@ -95,6 +133,7 @@ export default function Parametres() {
             <div className="mx-auto max-w-xl">
               {active === "profil" && <SectionProfil />}
               {active === "general" && <SectionGeneral />}
+              {active === "vision" && <SectionVision />}
               {active === "notifications" && <SectionNotifications />}
               {active === "integrations" && <IntegrationsSection />}
               {active === "cloud-save" && <SectionCloudSave />}
@@ -124,46 +163,125 @@ const BTN_OR = "inline-flex items-center gap-2 rounded-xl bg-gold/15 px-4 py-2 t
 
 function SectionProfil() {
   const [profil, setProfil] = useState(null);
+  const [memoire, setMemoire] = useState(null);
+  const [cm, setCm] = useState({});
   const [sauvegarde, setSauvegarde] = useState(false);
 
   useEffect(() => {
     fetchState().then(async (d) => {
-      const p = d.profile;
+      const p = { ...(d.profile || {}) };
       // Préremplit l'email avec celui du compte si le profil ne l'a pas encore.
-      if (!p?.email) {
-        try {
-          const moi = await fetchMoi();
-          if (moi?.email) p.email = moi.email;
-        } catch { /* compte démo sans email */ }
+      if (!p.email) {
+        try { const moi = await fetchMoi(); if (moi?.email) p.email = moi.email; } catch { /* compte sans email */ }
       }
+      const c = d.vision?.contexte_metier || {};
+      setCm(c);
       setProfil(p);
-    });
+      setMemoire({ pourquoi: d.vision?.pourquoi || "", offre: c.offre || "", cible: c.cible || "", approche: c.approche || "" });
+    }).catch(() => toast.error("Impossible de charger ton profil."));
   }, []);
 
   const champ = (cle, valeur) => setProfil((p) => ({ ...p, [cle]: valeur }));
+  const mem = (cle, valeur) => setMemoire((m) => ({ ...m, [cle]: valeur }));
   const enregistrer = async () => {
     setSauvegarde(true);
-    try { await saveProfile(profil); toast.success("Profil enregistré."); }
+    try {
+      await saveProfile({
+        prenom: profil.prenom, email: profil.email, heure_checkin: profil.heure_checkin,
+        pourquoi: memoire.pourquoi,
+        contexte_metier: { ...cm, offre: memoire.offre, cible: memoire.cible, approche: memoire.approche },
+      });
+      toast.success("Profil enregistré. Le Copilote s'en sert dès maintenant.");
+      signalerMaj();
+    } catch { toast.error("Échec de l'enregistrement."); }
+    finally { setSauvegarde(false); }
+  };
+
+  if (!profil || !memoire) return <Carte><p className="text-sm text-offwhite/50">Chargement…</p></Carte>;
+  return (
+    <>
+      <Carte titre="Ton identité" desc="Ces informations personnalisent ton cockpit et ton Copilote.">
+        <label className="mb-1.5 block text-xs text-offwhite/50">Prénom</label>
+        <input value={profil.prenom || ""} onChange={(e) => champ("prenom", e.target.value)} className={`${INPUT} mb-4`} data-testid="parametres-prenom" />
+        <label className="mb-1.5 block text-xs text-offwhite/50">E-mail (point du jour, e-mail du lundi)</label>
+        <input type="email" value={profil.email || ""} onChange={(e) => champ("email", e.target.value)} className={`${INPUT} mb-4`} data-testid="parametres-email" />
+        <label className="mb-1.5 block text-xs text-offwhite/50">Heure du point du jour</label>
+        <input type="time" value={profil.heure_checkin || "08:30"} onChange={(e) => champ("heure_checkin", e.target.value)} className={INPUT} data-testid="parametres-heure" />
+      </Carte>
+      <Carte titre="Mémoire IA" desc="Le Copilote, le Radar et les documents IA s'appuient sur ces réponses. Quelques phrases suffisent.">
+        {[
+          ["pourquoi", "Pourquoi (ta raison d'être)", "Pourquoi fais-tu ce que tu fais ?"],
+          ["offre", "Quoi (ton offre)", "Que proposes-tu concrètement ?"],
+          ["cible", "Pour qui (ta cible)", "Qui aides-tu ?"],
+          ["approche", "Comment (ce qui te différencie)", "Qu'est-ce qui te rend différent ?"],
+        ].map(([k, label, ph]) => (
+          <div key={k} className="mb-3">
+            <label className="mb-1.5 flex items-center gap-1.5 text-xs text-offwhite/60"><Brain size={12} className="text-gold" />{label}</label>
+            <textarea rows={2} value={memoire[k]} onChange={(e) => mem(k, e.target.value)} placeholder={ph} className={`${INPUT} resize-y`} data-testid={`parametres-memoire-${k}`} />
+          </div>
+        ))}
+      </Carte>
+      <button onClick={enregistrer} disabled={sauvegarde} className={BTN_OR} data-testid="parametres-save-profil">
+        {sauvegarde ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Enregistrer
+      </button>
+    </>
+  );
+}
+
+function SectionVision() {
+  const [vision, setVision] = useState(null);
+  const [valeurs, setValeurs] = useState([]);
+  const [nouvelle, setNouvelle] = useState("");
+  const [sauvegarde, setSauvegarde] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchState().then((d) => { setVision(d.vision?.texte || ""); setValeurs(d.vision?.valeurs || []); })
+      .catch(() => toast.error("Impossible de charger ta vision."));
+  }, []);
+
+  const ajouter = (e) => {
+    e.preventDefault();
+    const v = nouvelle.trim();
+    if (!v || valeurs.includes(v) || valeurs.length >= 7) return;
+    setValeurs((l) => [...l, v]); setNouvelle("");
+  };
+  const enregistrer = async () => {
+    setSauvegarde(true);
+    try { await saveProfile({ texte_vision: vision, valeurs }); toast.success("Vision enregistrée."); signalerMaj(); }
     catch { toast.error("Échec de l'enregistrement."); }
     finally { setSauvegarde(false); }
   };
 
-  if (!profil) return <Carte><p className="text-sm text-offwhite/50">Chargement…</p></Carte>;
+  if (vision === null) return <Carte><p className="text-sm text-offwhite/50">Chargement…</p></Carte>;
   return (
-    <Carte titre="Ton identité" desc="Ces informations personnalisent ton cockpit et ton Copilote.">
-      <label className="mb-1.5 block text-xs text-offwhite/50">Prénom</label>
-      <input value={profil.prenom} onChange={(e) => champ("prenom", e.target.value)} className={`${INPUT} mb-4`} data-testid="parametres-prenom" />
-
-      <label className="mb-1.5 block text-xs text-offwhite/50">Email</label>
-      <input value={profil.email} onChange={(e) => champ("email", e.target.value)} className={`${INPUT} mb-4`} data-testid="parametres-email" />
-
-      <label className="mb-1.5 block text-xs text-offwhite/50">Heure du point du jour</label>
-      <input type="time" value={profil.heure_checkin} onChange={(e) => champ("heure_checkin", e.target.value)} className={`${INPUT} mb-4`} data-testid="parametres-heure" />
-
-      <button onClick={enregistrer} disabled={sauvegarde} className={BTN_OR} data-testid="parametres-save-profil">
-        {sauvegarde ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Enregistrer
-      </button>
-    </Carte>
+    <>
+      <Carte titre="Ma phrase de vision" desc="Elle s'affiche sur ton Vision Board et guide les priorités proposées par l'IA.">
+        <textarea rows={3} value={vision} onChange={(e) => setVision(e.target.value)} placeholder="Dans 3 ans, je…" className={`${INPUT} resize-y`} data-testid="parametres-vision-texte" />
+      </Carte>
+      <Carte titre="Mes valeurs" desc="Jusqu'à 7 valeurs : elles colorent le ton du Copilote et tes cartes Vision.">
+        <div className="mb-3 flex flex-wrap gap-2">
+          {valeurs.map((v) => (
+            <span key={v} className="inline-flex items-center gap-1.5 rounded-full bg-gold/15 px-3 py-1 text-xs text-gold">
+              {v}<button onClick={() => setValeurs((l) => l.filter((x) => x !== v))} aria-label={`Retirer ${v}`}><X size={12} /></button>
+            </span>
+          ))}
+          {!valeurs.length && <span className="text-xs text-offwhite/45">Aucune valeur pour l'instant.</span>}
+        </div>
+        <form onSubmit={ajouter} className="flex gap-2">
+          <input value={nouvelle} onChange={(e) => setNouvelle(e.target.value)} placeholder="Ex. Liberté" className={`${INPUT} flex-1`} data-testid="parametres-valeur-input" />
+          <button type="submit" className={BTN_OR}><Plus size={14} /> Ajouter</button>
+        </form>
+      </Carte>
+      <div className="flex flex-wrap gap-2">
+        <button onClick={enregistrer} disabled={sauvegarde} className={BTN_OR} data-testid="parametres-save-vision">
+          {sauvegarde ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Enregistrer
+        </button>
+        <button onClick={() => navigate("/app/vision")} className="inline-flex items-center gap-2 rounded-xl border border-white/15 px-4 py-2 text-sm hover:bg-white/5">
+          <Compass size={14} /> Ouvrir mon Vision Board
+        </button>
+      </div>
+    </>
   );
 }
 
@@ -202,42 +320,47 @@ function SectionGeneral() {
   );
 }
 
+function Interrupteur({ on, onClick, testid }) {
+  return (
+    <button onClick={onClick} role="switch" aria-checked={on} data-testid={testid}
+      className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${on ? "bg-gold" : "bg-white/15"}`}>
+      <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${on ? "translate-x-5" : "translate-x-0.5"}`} />
+    </button>
+  );
+}
+
 function SectionNotifications() {
   const [profil, setProfil] = useState(null);
-  useEffect(() => { fetchState().then((d) => setProfil(d.profile)); }, []);
+  const [cm, setCm] = useState({});
+  useEffect(() => {
+    fetchState().then((d) => { setProfil(d.profile); setCm(d.vision?.contexte_metier || {}); })
+      .catch(() => toast.error("Impossible de charger tes préférences."));
+  }, []);
   const toggler = async () => {
     const nouveau = !profil.notifications;
     setProfil((p) => ({ ...p, notifications: nouveau }));
     try { await saveProfile({ notifications: nouveau }); toast.success(nouveau ? "Notifications activées." : "Notifications coupées."); }
     catch { toast.error("Échec."); setProfil((p) => ({ ...p, notifications: !nouveau })); }
   };
+  const lundi = cm.notif_email_lundi !== false;
+  const togglerLundi = async () => {
+    const suivant = { ...cm, notif_email_lundi: !lundi };
+    setCm(suivant);
+    try { await saveProfile({ contexte_metier: suivant }); toast.success(!lundi ? "E-mail du lundi activé." : "E-mail du lundi coupé."); }
+    catch { toast.error("Échec."); setCm(cm); }
+  };
   if (!profil) return <Carte><p className="text-sm text-offwhite/50">Chargement…</p></Carte>;
   return (
-    <Carte titre="Rappels et alertes" desc="Point du jour, actualité, alertes importantes.">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-offwhite/80">{profil.notifications ? "Activées" : "Coupées"}</p>
-        <button onClick={toggler} data-testid="parametres-notif-toggle" className={`relative h-6 w-11 rounded-full transition-colors ${profil.notifications ? "bg-gold" : "bg-white/15"}`}>
-          <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${profil.notifications ? "translate-x-5" : "translate-x-0.5"}`} />
-        </button>
+    <Carte titre="Rappels et alertes" desc={profil.email ? `Envoyés à ${profil.email}.` : "Ajoute ton e-mail dans Profil pour recevoir les e-mails."}>
+      <div className="flex items-center justify-between gap-4 border-b border-white/5 pb-4">
+        <div><p className="text-sm font-medium text-offwhite">Toutes les notifications</p><p className="text-xs text-offwhite/50">Interrupteur général : coupe tous les envois.</p></div>
+        <Interrupteur on={!!profil.notifications} onClick={toggler} testid="parametres-notif-toggle" />
       </div>
-    </Carte>
-  );
-}
-
-function SectionIntegrations() {
-  const [connexions, setConnexions] = useState(null);
-  useEffect(() => { fetchConnections().then(setConnexions).catch(() => setConnexions([])); }, []);
-  const DISPONIBLES = ["google_drive", "microsoft_drive", "whatsapp", "telegram", "qonto"];
-  if (connexions === null) return <Carte><p className="text-sm text-offwhite/50">Chargement…</p></Carte>;
-  return (
-    <Carte titre="Tes connexions" desc="Google Drive et OneDrive/SharePoint peuvent recevoir automatiquement tes documents IA. Connecte-les dans la carte Intégrations.">
-      <p className="text-sm text-offwhite/70">Connexions actives : {connexions.length}</p>
-      {connexions.map((c) => (
-        <div key={c.provider} className="mt-2 flex items-center justify-between text-sm">
-          <span>{c.provider}</span>
-          <span className="rounded-full bg-gold/15 px-2 py-0.5 text-xs text-gold">Connecté</span>
-        </div>
-      ))}
+      <div className={`flex items-center justify-between gap-4 pt-4 ${profil.notifications ? "" : "pointer-events-none opacity-40"}`}>
+        <div><p className="text-sm font-medium text-offwhite">E-mail du lundi, 7 h</p><p className="text-xs text-offwhite/50">Ton pourquoi, ton score Vision, ton CA et tes 3 actions de la semaine.</p></div>
+        <Interrupteur on={lundi} onClick={togglerLundi} testid="parametres-notif-lundi" />
+      </div>
+      <p className="mt-4 text-xs text-offwhite/45">L'heure de ton point du jour se règle dans Profil. Les décisions à valider arrivent aussi dans la cloche, en haut de l'écran.</p>
     </Carte>
   );
 }
@@ -309,7 +432,7 @@ function SectionParrainage() {
   const [envoi, setEnvoi] = useState(false);
 
   const charger = () => fetchMesFilleuls().then((d) => setFilleuls(d.items));
-  useEffect(charger, []);
+  useEffect(() => { charger(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const inviter = async (e) => {
     e.preventDefault();
@@ -342,23 +465,66 @@ function SectionParrainage() {
 }
 
 function SectionSecurite() {
-  const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
+  const [moi, setMoi] = useState(null);
+  const [export_, setExport] = useState(false);
+  const [confirmation, setConfirmation] = useState("");
+  const [suppression, setSuppression] = useState(false);
+  const navigate = useNavigate();
+  useEffect(() => { fetchMoi().then(setMoi).catch(() => setMoi({})); }, []);
+
+  const exporter = async () => {
+    setExport(true);
+    try { await telechargerExport(); toast.success("Export téléchargé."); }
+    catch { toast.error("Export impossible pour le moment."); }
+    finally { setExport(false); }
+  };
+  const supprimer = async () => {
+    if (confirmation !== "SUPPRIMER") return;
+    setSuppression(true);
+    try { await deleteData(); toast.success("Tes données ont été supprimées."); navigate("/onboarding"); }
+    catch { toast.error("Suppression impossible pour le moment."); }
+    finally { setSuppression(false); }
+  };
+
   return (
-    <Carte titre="Tes données" desc="Tes données t'appartiennent — toujours exportables.">
-      <a href={`${BACKEND_URL}/api/export`} download className="inline-flex items-center gap-2 rounded-xl border border-white/15 px-4 py-2 text-sm hover:bg-white/5" data-testid="parametres-export">
-        <Download size={14} /> Exporter mes données (CSV)
-      </a>
-      <p className="mt-3 text-xs text-offwhite/45">Suppression de compte — pas encore de route serveur ici. Existe en référence chez ReactZayado ; à porter si tu confirmes le besoin.</p>
-    </Carte>
+    <>
+      <Carte titre="Connexion" desc="Pas de mot de passe à retenir : Google, Microsoft ou lien magique envoyé par e-mail.">
+        <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+          <Mail size={16} className="text-gold" />
+          <div><p className="text-xs text-offwhite/50">E-mail de connexion</p><p className="text-sm font-medium" data-testid="parametres-email-connexion">{moi === null ? "…" : (moi.email || "Compte de démonstration")}</p></div>
+        </div>
+      </Carte>
+      <Carte titre="Tes données" desc="Tes données t'appartiennent : elles sont hébergées en Europe et exportables à tout moment (RGPD).">
+        <button onClick={exporter} disabled={export_} className="inline-flex items-center gap-2 rounded-xl border border-white/15 px-4 py-2 text-sm hover:bg-white/5" data-testid="parametres-export">
+          {export_ ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} Exporter mes données (JSON)
+        </button>
+      </Carte>
+      <Carte titre="Supprimer mes données" desc="Efface ta vision, tes objectifs, tes actions, tes check-ins, tes boards et ton historique de chat. Irréversible.">
+        <label className="mb-1.5 block text-xs text-offwhite/50">Tape SUPPRIMER pour confirmer</label>
+        <div className="flex gap-2">
+          <input value={confirmation} onChange={(e) => setConfirmation(e.target.value)} placeholder="SUPPRIMER" className={`${INPUT} flex-1`} data-testid="parametres-suppr-confirm" />
+          <button onClick={supprimer} disabled={confirmation !== "SUPPRIMER" || suppression} className="inline-flex items-center gap-2 rounded-xl bg-red-500/15 px-4 py-2 text-sm font-semibold text-red-300 hover:bg-red-500/25 disabled:opacity-40" data-testid="parametres-suppr">
+            {suppression ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />} Supprimer
+          </button>
+        </div>
+        <p className="mt-3 text-xs text-offwhite/45">Pour fermer définitivement ton compte, écris à <a className="text-gold underline" href="mailto:contact@zayado.net?subject=Fermeture%20de%20compte">contact@zayado.net</a> : c'est traité sous 30 jours.</p>
+      </Carte>
+    </>
   );
 }
 
 function SectionFacturation() {
-  const [profil, setProfil] = useState(null);
+  const [abo, setAbo] = useState(null);
+  const [commandes, setCommandes] = useState(null);
+  const [fondateur, setFondateur] = useState(null);
   const [code, setCode] = useState("");
   const [envoi, setEnvoi] = useState(false);
 
-  useEffect(() => { fetchState().then((d) => setProfil(d.profile)); }, []);
+  useEffect(() => {
+    fetchAbonnement().then(setAbo).catch(() => fetchState().then((d) => setAbo({ plan: d.profile?.plan || "essentielle" })).catch(() => setAbo({ plan: "essentielle" })));
+    fetchCommandes().then((d) => setCommandes((d.items || []).filter((c) => c.kind === "saas" || c.kind === "service" || c.kind === "produit"))).catch(() => setCommandes([]));
+    fetchTarifsFondateur().then(setFondateur).catch(() => {});
+  }, []);
 
   const appliquer = async (e) => {
     e.preventDefault();
@@ -371,14 +537,38 @@ function SectionFacturation() {
     } catch { toast.error("Code invalide, inactif ou déjà utilisé."); }
     finally { setEnvoi(false); }
   };
+  const STATUT = { paid: ["Payée", "text-emerald-300"], pending: ["En attente", "text-amber-300"], open: ["En attente", "text-amber-300"], failed: ["Échouée", "text-red-300"], canceled: ["Annulée", "text-offwhite/50"], expired: ["Expirée", "text-offwhite/50"] };
 
   return (
     <>
-      <Carte titre="Ton forfait">
-        <p className="text-sm">Forfait actuel : <span className="font-semibold text-gold">{profil?.plan ? planNom(profil.plan) : "Découverte (gratuit)"}</span></p>
-        <Link to="/pricing" className="mt-3 inline-block rounded-xl bg-gold px-4 py-2 text-xs font-semibold text-navy-900">
-          Voir les forfaits & changer
-        </Link>
+      <Carte titre="Ton offre">
+        {abo === null ? <p className="text-sm text-offwhite/50">Chargement…</p> : (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-lg font-semibold text-gold" data-testid="parametres-plan">{planNom(abo.plan || "essentielle")}</p>
+              <p className="text-xs text-offwhite/55">
+                {abo.fondateur ? "Tarif fondateur garanti · " : ""}
+                {abo.fin ? `Accès jusqu'au ${new Date(abo.fin).toLocaleDateString("fr-FR")}` : (abo.plan && abo.plan !== "essentielle" ? "Offre active" : "Gratuit, sans limite de durée")}
+              </p>
+            </div>
+            <Link to="/pricing" className="inline-flex items-center gap-2 rounded-xl bg-gold px-4 py-2 text-xs font-semibold text-navy-900"><Sparkles size={13} /> Voir les offres</Link>
+          </div>
+        )}
+        {fondateur?.ouverte && !abo?.fondateur && (
+          <p className="mt-3 rounded-xl bg-gold/10 px-3 py-2 text-xs text-gold">Tarif fondateur ouvert{fondateur.places_restantes != null ? ` · ${fondateur.places_restantes} places restantes` : ""} : ton prix reste garanti tant que tu restes abonné·e.</p>
+        )}
+      </Carte>
+      <Carte titre="Historique & factures" desc="Tes paiements Mollie. Le reçu détaillé est envoyé par e-mail à chaque paiement.">
+        {commandes === null && <p className="text-sm text-offwhite/50">Chargement…</p>}
+        {commandes?.length === 0 && <p className="text-sm text-offwhite/50">Aucun paiement pour l'instant.</p>}
+        {commandes?.map((c) => (
+          <div key={c.id} className="flex items-center justify-between gap-3 border-b border-white/5 py-2 text-sm" data-testid={`parametres-commande-${c.id}`}>
+            <span className="flex min-w-0 items-center gap-2"><Receipt size={14} className="shrink-0 text-gold" /><span className="truncate">{c.title}</span></span>
+            <span className="shrink-0 text-xs text-offwhite/55">{c.created_at ? new Date(c.created_at).toLocaleDateString("fr-FR") : ""}</span>
+            <span className="shrink-0 font-medium">{Number(c.amount).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</span>
+            <span className={`shrink-0 text-xs ${(STATUT[c.status] || ["", ""])[1]}`}>{(STATUT[c.status] || [c.status])[0]}</span>
+          </div>
+        ))}
       </Carte>
       <Carte titre="Code de réduction">
         <form onSubmit={appliquer} className="flex gap-2">
@@ -389,3 +579,4 @@ function SectionFacturation() {
     </>
   );
 }
+

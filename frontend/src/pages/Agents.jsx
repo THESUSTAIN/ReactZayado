@@ -7,138 +7,69 @@ import {
   RefreshCw, X, Check, Circle, CheckCircle2, Zap,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { fetchConnections, demarrerWhatsapp, connecterTelegram } from "@/lib/kairosApi";
+import { openChat } from "@/components/kairos/GlobalChat";
 
 const GOLD = "#DEC2A3";
 
-const CHANNELS = [
-  {
-    id: "whatsapp",
-    name: "WhatsApp",
-    icon: MessageCircle,
-    color: "#25D366",
-    desc: "Valide tes décisions et échange avec le Copilote IA depuis ton WhatsApp perso.",
-    status: "not_connected", // not_connected | pending | connected
-    action: "Connecter WhatsApp",
-    ready: true,
-  },
-  {
-    id: "telegram",
-    name: "Telegram",
-    icon: Send,
-    color: "#2AABEE",
-    desc: "Reçois tes brouillons de décisions par Telegram, valide en un tap.",
-    status: "not_connected",
-    action: "Créer le bot",
-    ready: true,
-  },
-  {
-    id: "email",
-    name: "Email",
-    icon: Mail,
-    color: GOLD,
-    desc: "Reçois ton point du jour et tes décisions à valider par e-mail.",
-    status: "connected",
-    action: "Configurer",
-    ready: true,
-  },
-];
 
+// Chaque « agent » est une fonction réelle de Zayado : on dit où elle se trouve
+// et dans quelle offre (avant : interrupteurs sans effet, modèles et offres inventés).
 const AI_AGENTS = [
-  {
-    id: "organisateur",
-    name: "L'Organisateur",
-    icon: Sparkles,
-    role: "Trie, range et organise ton cockpit chaque jour",
-    model: "Claude Sonnet · Anthropic",
-    tone: "Efficace, discret, apaisé",
-    default: true,
-    active: true,
-  },
-  {
-    id: "copilot",
-    name: "Copilote IA Zayado",
-    icon: Bot,
-    role: "Ton co-pilote conversationnel principal",
-    model: "Claude Sonnet · Anthropic",
-    tone: "Doux, humain, structuré",
-    default: true,
-    active: true,
-  },
-  {
-    id: "prospection",
-    name: "Agent Prospection",
-    icon: Search,
-    role: "Prépare tes emails et messages de prospection",
-    model: "Claude + Mammouth",
-    tone: "Professionnel, chaleureux",
-    active: false,
-  },
-  {
-    id: "redacteur",
-    name: "Agent Rédacteur",
-    icon: PenTool,
-    role: "Écrit tes posts, articles, offres et contrats",
-    model: "Claude Sonnet",
-    tone: "Adapté à ta voix",
-    active: false,
-  },
-  {
-    id: "croissance",
-    name: "Agent Croissance",
-    icon: TrendingUp,
-    role: "Analyse tes KPI et propose des actions",
-    model: "Claude + GPT-5",
-    tone: "Stratégique, factuel",
-    active: false,
-    plan: "GROW",
-  },
-  {
-    id: "veille",
-    name: "Agent Veille",
-    icon: Briefcase,
-    role: "Digest éco personnalisé chaque matin",
-    model: "Claude + RSS",
-    tone: "Concis, filtré par énergie",
-    active: false,
-  },
-  {
-    id: "collab",
-    name: "Agent Collaborateur",
-    icon: Users,
-    role: "Coordonne avec le réseau humain Zayado",
-    model: "Claude + humain",
-    tone: "Facilitateur, transparent",
-    active: false,
-    plan: "SERENITY",
-  },
+  { id: "copilot", name: "Copilote IA", icon: Bot, role: "Ton co-pilote : questions, décisions à valider, actualité du jour.", offre: "Toutes les offres", ouvrir: "chat", cta: "Ouvrir le chat" },
+  { id: "organisateur", name: "L'Organisateur", icon: Sparkles, role: "Tes 3 priorités du jour, adaptées à ton énergie.", offre: "Toutes les offres", route: "/app/actions", cta: "Mes actions" },
+  { id: "prospection", name: "Agent Prospection", icon: Search, role: "3 opportunités par jour, avec un message prêt à envoyer.", offre: "Solo et plus", route: "/app/radar", cta: "Ouvrir le Radar" },
+  { id: "croissance", name: "Agent Croissance", icon: TrendingUp, role: "Lit ton CA, tes factures et ta trésorerie, et propose des actions.", offre: "Solo et plus", route: "/app", cta: "Pouls business" },
+  { id: "redacteur", name: "Agent Rédacteur", icon: PenTool, role: "Brief, plan 30 jours, positionnement, SWOT : des documents à partir de ton projet.", offre: "Pro", route: "/app/vision?view=canvas", cta: "Créer un document" },
+  { id: "veille", name: "Agent Veille", icon: Briefcase, role: "Le digest de l'actualité utile à ton activité, chaque matin.", offre: "Toutes les offres", ouvrir: "actu", cta: "Lire l'actualité" },
+  { id: "collab", name: "Collaborateur humain", icon: Users, role: "Une personne de l'équipe Zayado pour t'aider sur un sujet important.", offre: "Toutes les offres", route: "/app/collaborateurs", cta: "Écrire à l'équipe" },
 ];
 
 export default function Agents() {
+  const navigate = useNavigate();
   const [tab, setTab] = useState("agents"); // agents | canaux
-  const [channels, setChannels] = useState(CHANNELS);
-  const [agents, setAgents] = useState(AI_AGENTS);
-  const [qrOpen, setQrOpen] = useState(false);
+  const [statuts, setStatuts] = useState({});
+  const [qr, setQr] = useState(null);
+  const [waBusy, setWaBusy] = useState(false);
+  const [tgToken, setTgToken] = useState("");
+  const [tgBusy, setTgBusy] = useState(false);
 
-  const connect = async (id) => {
-    if (id === "whatsapp") {
-      setQrOpen(true);
-      // Simulate connection after 3s
-      setTimeout(() => {
-        setChannels((p) => p.map((c) => c.id === id ? { ...c, status: "connected" } : c));
-        setQrOpen(false);
-        toast.success("WhatsApp connecté (démo). Le vrai QR arrivera quand le service Railway sera déployé.");
-      }, 3000);
-    } else if (id === "telegram") {
-      toast.info("Redirection vers le bot Zayado… (à activer côté Railway)");
-    } else {
-      toast.success("Email déjà configuré : noreply@zayado.net");
-    }
+  const chargerStatuts = () => fetchConnections().then((items) => {
+    const m = {};
+    (items || []).forEach((c) => { m[c.provider] = c; });
+    setStatuts(m);
+  }).catch(() => {});
+  useEffect(() => { chargerStatuts(); }, []);
+
+  const connecterWhatsapp = async () => {
+    setWaBusy(true);
+    try {
+      const d = await demarrerWhatsapp();
+      if (d.qr) setQr(d.qr);
+      else if (d.status === "ready" || d.status === "connected") { toast.success("WhatsApp est connecté."); chargerStatuts(); }
+      else toast.info(d.message || "Session WhatsApp en préparation, réessaie dans quelques secondes.");
+    } catch { toast.error("Le service WhatsApp n'est pas encore disponible. Réessaie plus tard."); }
+    finally { setWaBusy(false); }
   };
-
-  const toggleAgent = (id) => {
-    setAgents((p) => p.map((a) => a.id === id ? { ...a, active: !a.active } : a));
-    const a = agents.find((x) => x.id === id);
-    toast.success(a?.active ? `${a.name} mis en pause` : `${a.name} activé`);
+  const connecterTg = async (e) => {
+    e.preventDefault();
+    if (!tgToken.trim()) return;
+    setTgBusy(true);
+    try { await connecterTelegram(tgToken.trim()); toast.success("Bot Telegram connecté."); setTgToken(""); chargerStatuts(); }
+    catch { toast.error("Connexion Telegram impossible : vérifie le token donné par @BotFather."); }
+    finally { setTgBusy(false); }
+  };
+  const ouvrirAgent = (a) => {
+    if (a.ouvrir === "chat") openChat();
+    else if (a.ouvrir === "actu") openChat("actu");
+    else navigate(a.route);
+  };
+  const etat = (p) => {
+    const c = statuts[p];
+    if (!c) return ["Non connecté", "text-white/50"];
+    if (c.status === "ready" || c.status === "connected") return [`Connecté${c.label ? ` · ${c.label}` : ""}`, "text-emerald-300"];
+    return ["En attente", "text-amber-300"];
   };
 
   return (
@@ -172,7 +103,7 @@ export default function Agents() {
               Des <span className="font-serif-italic italic" style={{ color: GOLD }}>agents IA</span>, un ton doux, des canaux <span className="font-serif-italic italic" style={{ color: GOLD }}>humains.</span>
             </h1>
             <p className="mt-3 max-w-2xl text-[14px] leading-relaxed text-white/60">
-              Zayado n'est pas un seul robot. C'est un <b className="text-white">Copilote IA</b> et jusqu'à <b className="text-white">5 agents spécialisés</b> que tu actives à la carte, plus 3 canaux (WhatsApp, Telegram, Email) pour rester joignable partout.
+              Zayado n'est pas un seul robot : le <b className="text-white">Copilote IA</b> et des agents spécialisés travaillent chacun dans leur espace de l'app, et tu valides depuis tes canaux (WhatsApp, Telegram, Email) pour rester joignable partout.
             </p>
           </div>
 
@@ -190,132 +121,83 @@ export default function Agents() {
             </button>
           </div>
 
-          {/* Agents grid */}
+          {/* Agents */}
           {tab === "agents" && (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {agents.map((a) => (
-                <div key={a.id} className={`relative rounded-2xl border p-5 transition ${a.active ? "border-[color:var(--g)] bg-[color:var(--g)]/[0.06]" : "border-white/10 bg-white/[0.04] hover:border-white/25"}`}
-                  style={{ "--g": GOLD }}>
-                  {a.default && (
-                    <span className="absolute -top-2 right-4 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-navy-900" style={{ background: GOLD }}>
-                      Par défaut
-                    </span>
-                  )}
-                  {a.plan && (
-                    <span className="absolute -top-2 right-4 rounded-full border border-white/20 bg-navy-800 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest" style={{ color: GOLD }}>
-                      Plan {a.plan}
-                    </span>
-                  )}
+              {AI_AGENTS.map((a) => (
+                <div key={a.id} className="relative flex flex-col rounded-2xl border border-white/10 bg-white/[0.04] p-5 transition hover:border-white/20" data-testid={`agent-${a.id}`}>
                   <div className="flex items-start gap-3">
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl" style={{ background: `${GOLD}22` }}>
                       <a.icon size={20} style={{ color: GOLD }} />
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0 flex-1">
                       <h3 className="font-display text-[15.5px] font-semibold text-white">{a.name}</h3>
                       <p className="mt-0.5 text-[12.5px] text-white/60">{a.role}</p>
                     </div>
                   </div>
-                  <div className="mt-4 space-y-1.5 text-[11.5px] text-white/50">
-                    <div><b className="text-white/70">Modèle :</b> {a.model}</div>
-                    <div><b className="text-white/70">Ton :</b> {a.tone}</div>
-                  </div>
-                  <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3">
-                    <div className="flex items-center gap-1.5 text-[11.5px]">
-                      {a.active ? (
-                        <><CheckCircle2 size={14} className="text-emerald-400" /> <span className="text-emerald-300">Actif</span></>
-                      ) : (
-                        <><Circle size={14} className="text-white/30" /> <span className="text-white/50">En veille</span></>
-                      )}
-                    </div>
-                    <button onClick={() => toggleAgent(a.id)} disabled={a.default}
-                      className={`rounded-lg px-3 py-1.5 text-[11.5px] font-semibold transition disabled:opacity-40 ${
-                        a.active ? "border border-white/20 text-white/80 hover:bg-white/5" : "text-navy-900"
-                      }`}
-                      style={a.active ? {} : { background: GOLD }}>
-                      {a.default ? "Toujours actif" : a.active ? "Mettre en pause" : "Activer"}
+                  <div className="mt-auto flex items-center justify-between border-t border-white/10 pt-3" style={{ marginTop: 18 }}>
+                    <span className="text-[11px] text-white/50">{a.offre}</span>
+                    <button onClick={() => ouvrirAgent(a)} className="rounded-lg px-3 py-1.5 text-[11.5px] font-semibold text-navy-900" style={{ background: GOLD }} data-testid={`agent-ouvrir-${a.id}`}>
+                      {a.cta}
                     </button>
                   </div>
                 </div>
               ))}
-              <button className="flex min-h-[220px] items-center justify-center rounded-2xl border-2 border-dashed border-white/15 bg-white/[0.02] text-white/50 transition hover:border-[color:var(--g)]/40 hover:text-white"
-                style={{ "--g": GOLD }}>
-                <div className="flex flex-col items-center gap-2">
-                  <Plus size={22} />
-                  <span className="text-[13px] font-medium">Créer un agent custom</span>
-                  <span className="text-[10.5px] text-white/40">Plan SERENITY</span>
-                </div>
-              </button>
             </div>
           )}
 
-          {/* Canaux */}
+          {/* Canaux : connexions réelles */}
           {tab === "canaux" && (
             <div className="space-y-3">
-              {channels.map((c) => {
-                const connected = c.status === "connected";
-                return (
-                  <div key={c.id} className={`flex items-center gap-4 rounded-2xl border p-5 transition ${connected ? "border-emerald-500/30 bg-emerald-500/[0.04]" : "border-white/10 bg-white/[0.04]"}`}>
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl" style={{ background: `${c.color}22` }}>
-                      <c.icon size={22} style={{ color: c.color }} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-display text-[16px] font-semibold text-white">{c.name}</h3>
-                        {connected ? (
-                          <span className="flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-emerald-300">
-                            <CheckCircle2 size={10} /> Connecté
-                          </span>
-                        ) : (
-                          <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-white/50">
-                            Non connecté
-                          </span>
-                        )}
-                      </div>
-                      <p className="mt-1 text-[13px] text-white/60">{c.desc}</p>
-                    </div>
-                    <button onClick={() => connect(c.id)}
-                      className={`rounded-xl px-4 py-2.5 text-[12.5px] font-semibold transition ${
-                        connected ? "border border-white/20 text-white/80 hover:bg-white/5" : "text-navy-900"
-                      }`}
-                      style={connected ? {} : { background: GOLD }}>
-                      {connected ? "Reconfigurer" : c.action}
-                    </button>
-                  </div>
-                );
-              })}
-
-              <div className="mt-6 rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] p-5">
-                <div className="flex items-start gap-3">
-                  <Shield size={18} className="mt-0.5 shrink-0 text-amber-300" />
-                  <div>
-                    <h4 className="font-display text-[14px] font-semibold text-amber-100">Notes production</h4>
-                    <ul className="mt-2 space-y-1 text-[12.5px] text-amber-100/75">
-                      <li>• <b>WhatsApp</b> : le service Node.js est présent dans <code className="text-amber-200">/app/WhatsApp-service</code> — à déployer sur Railway avec {"{WA_SERVICE_URL, WA_SERVICE_SECRET}"} pour activer le QR réel.</li>
-                      <li>• <b>Telegram</b> : bot à créer via @BotFather, ajouter TELEGRAM_BOT_TOKEN au backend.</li>
-                      <li>• <b>Email</b> : Brevo actif ✓ (test envoi confirmé).</li>
-                    </ul>
+              <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl" style={{ background: "#25D36622" }}><MessageCircle size={22} style={{ color: "#25D366" }} /></div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-display text-[16px] font-semibold text-white">WhatsApp</h3>
+                  <p className="mt-1 text-[13px] text-white/60">Échange avec le Copilote et valide tes décisions depuis ton WhatsApp.</p>
+                  <p className={`mt-1 text-[12px] ${etat("whatsapp")[1]}`}>{etat("whatsapp")[0]}</p>
+                </div>
+                <button onClick={connecterWhatsapp} disabled={waBusy} className="rounded-xl px-4 py-2.5 text-[12.5px] font-semibold text-navy-900 disabled:opacity-50" style={{ background: GOLD }} data-testid="canal-whatsapp">
+                  {waBusy ? <Loader2 size={14} className="animate-spin" /> : "Connecter WhatsApp"}
+                </button>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl" style={{ background: "#2AABEE22" }}><Send size={22} style={{ color: "#2AABEE" }} /></div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-display text-[16px] font-semibold text-white">Telegram</h3>
+                    <p className="mt-1 text-[13px] text-white/60">Crée ton bot avec @BotFather sur Telegram, puis colle son token ici.</p>
+                    <p className={`mt-1 text-[12px] ${etat("telegram")[1]}`}>{etat("telegram")[0]}</p>
                   </div>
                 </div>
+                <form onSubmit={connecterTg} className="mt-4 flex gap-2">
+                  <input value={tgToken} onChange={(e) => setTgToken(e.target.value)} placeholder="123456789:AA…" className="flex-1 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-gold/50" data-testid="canal-telegram-token" />
+                  <button type="submit" disabled={tgBusy || !tgToken.trim()} className="rounded-xl px-4 py-2 text-[12.5px] font-semibold text-navy-900 disabled:opacity-50" style={{ background: GOLD }}>
+                    {tgBusy ? <Loader2 size={14} className="animate-spin" /> : "Connecter"}
+                  </button>
+                </form>
+              </div>
+              <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl" style={{ background: `${GOLD}22` }}><Mail size={22} style={{ color: GOLD }} /></div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-display text-[16px] font-semibold text-white">E-mail</h3>
+                  <p className="mt-1 text-[13px] text-white/60">Point du jour, e-mail du lundi et décisions à valider, à l'adresse de ton profil.</p>
+                </div>
+                <button onClick={() => navigate("/parametres#notifications")} className="rounded-xl border border-white/20 px-4 py-2.5 text-[12.5px] font-semibold text-white/80 hover:bg-white/5">Régler</button>
               </div>
             </div>
           )}
         </main>
       </div>
 
-      {/* QR modal */}
-      {qrOpen && (
-        <div onClick={() => setQrOpen(false)} className="fixed inset-0 z-[80] flex items-center justify-center bg-[#060a18]/70 backdrop-blur-sm p-4 backdrop-blur-sm">
-          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm rounded-2xl border border-white/15 p-6 text-center" style={{ background: "#101a34" }}>
-            <button onClick={() => setQrOpen(false)} className="absolute right-4 top-4 text-white/60 hover:text-white"><X size={16} /></button>
+      {qr && (
+        <div onClick={() => { setQr(null); chargerStatuts(); }} className="fixed inset-0 z-[80] flex items-center justify-center bg-[#060a18]/70 p-4 backdrop-blur-sm">
+          <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-sm rounded-2xl border border-white/15 p-6 text-center" style={{ background: "#101a34" }}>
+            <button onClick={() => { setQr(null); chargerStatuts(); }} className="absolute right-4 top-4 text-white/60 hover:text-white"><X size={16} /></button>
             <MessageCircle size={28} className="mx-auto" style={{ color: "#25D366" }} />
             <h3 className="mt-3 font-display text-[18px] font-semibold text-white">Scanne le QR avec WhatsApp</h3>
             <p className="mt-1 text-[12.5px] text-white/55">WhatsApp → Paramètres → Appareils liés</p>
-            <div className="mx-auto mt-5 grid h-48 w-48 place-items-center rounded-xl bg-white">
-              <QrCode size={140} className="text-black" />
-            </div>
-            <div className="mt-4 flex items-center justify-center gap-2 text-[12px] text-white/60">
-              <Loader2 size={13} className="animate-spin" /> En attente du scan…
-            </div>
+            <img src={qr} alt="QR code WhatsApp" className="mx-auto mt-5 h-48 w-48 rounded-xl bg-white p-2" />
+            <p className="mt-4 text-[12px] text-white/60">Une fois scanné, ferme cette fenêtre.</p>
           </div>
         </div>
       )}

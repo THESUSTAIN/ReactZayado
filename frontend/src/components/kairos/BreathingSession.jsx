@@ -112,7 +112,7 @@ export default function BreathingSession({ onClose, defaultCycle = "4-7-8", dura
               transform: `scale(${running ? step.scale : 1})`,
               transitionDuration: running ? `${step.dur}ms` : "600ms",
             }}>
-            {!running && <div className="font-display text-[26px] font-bold text-navy-900">Begin</div>}
+            {!running && <div className="font-display text-[26px] font-bold text-navy-900">Commencer</div>}
             {running && (
               <div className="text-center">
                 <div className="font-display text-[36px] font-bold text-navy-900">{step.label}</div>

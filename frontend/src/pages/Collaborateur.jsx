@@ -3,6 +3,7 @@ import { Sidebar } from "@/components/kairos/Sidebar";
 import { Users, ArrowRight, Map, ShieldCheck, Send, Loader2, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { envoyerDemandeCollaborateur } from "@/lib/kairosApi";
 
 const NIVEAUX = [
   { value: "avec", label: "Faire avec moi", desc: "On avance ensemble sur ta demande" },
@@ -23,12 +24,8 @@ export default function Collaborateur() {
     if (!message.trim()) return;
     setSending(true);
     try {
-      const BACKEND = process.env.REACT_APP_BACKEND_URL || "";
-      const r = await fetch(`${BACKEND}/api/growth/work-request`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: `[${NIVEAUX.find((n) => n.value === niveau)?.label}] ${message.trim()}`, contact, channel: "collaborateur" }),
-      });
-      if (!r.ok) throw new Error(String(r.status));
+      // Avec le jeton de session (avant : fetch sans en-tête → demande rattachée au compte démo).
+      await envoyerDemandeCollaborateur({ message: `[${NIVEAUX.find((n) => n.value === niveau)?.label}] ${message.trim()}`, contact, channel: "collaborateur" });
       setSent(true);
       toast.success("Demande envoyée à l'équipe Zayado.");
     } catch {

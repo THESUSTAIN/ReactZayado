@@ -5,14 +5,15 @@ import {
   Home as HomeIcon, LayoutGrid, MoreHorizontal, Briefcase, Compass, Leaf,
 } from "lucide-react";
 import { useKairos } from "@/context/KairosContext";
+import { toast } from "sonner";
+import { fetchBoards, createBoard, fetchObjectifs } from "@/lib/kairosApi";
 
 const GOLD = "#DEC2A3";
 
-const DEFAULT_BOARDS = [
-  { key: "perso",    emoji: "🌱", name: "Ma vie rêvée",    items: 12, image: "https://images.unsplash.com/photo-1505843513577-22bb7d21e455?w=600&q=80" },
-  { key: "pro",      emoji: "💼", name: "Mon business",    items: 8,  image: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=600&q=80" },
-  { key: "voyage",   emoji: "✈️", name: "Mes voyages",      items: 10, image: "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=600&q=80" },
-  { key: "famille",  emoji: "❤️", name: "Ma famille",       items: 7,  image: "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=600&q=80" },
+// Couleurs d'aperçu des boards (plus de fausses photos ni de faux compteurs).
+const TEINTES = [
+  "linear-gradient(160deg,#2b4a7e,#0f1b3a)", "linear-gradient(160deg,#6b5236,#0f1b3a)",
+  "linear-gradient(160deg,#2f5d55,#0f1b3a)", "linear-gradient(160deg,#5b3d6b,#0f1b3a)",
 ];
 
 const QUOTES = [
@@ -34,22 +35,32 @@ const QUOTES = [
 export default function VisionBoardMobileHome({ onOpenBoard }) {
   const navigate = useNavigate();
   const { user } = useKairos();
-  const [boards, setBoards] = useState(DEFAULT_BOARDS);
+  const [boards, setBoards] = useState(null);
   const [quoteIndex, setQuoteIndex] = useState(0);
-  const [stats, setStats] = useState({ active: 12, done: 5, progress: 68 });
-  const firstName = user?.firstName || "Thomas";
+  const [stats, setStats] = useState(null);
+  const firstName = user?.firstName || "";
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("kairos_boards_gallery");
-      if (saved) setBoards(JSON.parse(saved));
-    } catch {}
+    fetchBoards().then((d) => setBoards(d.boards || [])).catch(() => setBoards([]));
+    fetchObjectifs().then((d) => {
+      const list = Array.isArray(d) ? d : (d?.items || []);
+      const actifs = list.filter((o) => o.statut !== "termine");
+      const faits = list.filter((o) => o.statut === "termine" || (o.progression || 0) >= 100);
+      const moy = list.length ? Math.round(list.reduce((a, o) => a + Math.min(100, o.progression || 0), 0) / list.length) : null;
+      setStats({ active: actifs.length, done: faits.length, progress: moy });
+    }).catch(() => setStats({ active: 0, done: 0, progress: null }));
   }, []);
 
   const openBoard = (b) => {
     localStorage.setItem("kairos_board_key", b.key);
     if (onOpenBoard) onOpenBoard(b);
     else navigate(`/app/vision?view=canvas&board=${b.key}`);
+  };
+  const nouveauBoard = async () => {
+    const nom = window.prompt("Nom du nouveau board ?", "Ma vision");
+    if (!nom || nom.trim().length < 2) return;
+    try { const r = await createBoard({ nom: nom.trim().slice(0, 60), emoji: "🧭" }); openBoard({ key: r.key || r.board?.key || "perso" }); }
+    catch { toast.error("Création impossible (12 boards maximum)."); }
   };
 
   const nextQuote = () => setQuoteIndex((i) => (i + 1) % QUOTES.length);
@@ -61,17 +72,14 @@ export default function VisionBoardMobileHome({ onOpenBoard }) {
     }}>
       {/* Top bar */}
       <header className="sticky top-0 z-30 flex items-center justify-between px-5 pt-4 pb-3 backdrop-blur-xl" style={{ background: "rgba(15,27,58,0.72)" }}>
-        <button className="rounded-lg p-2 hover:bg-white/5"><Menu size={22} /></button>
+        <button onClick={() => navigate("/app")} className="rounded-lg p-2 hover:bg-white/5" aria-label="Retour au cockpit"><HomeIcon size={20} /></button>
         <div className="text-center">
           <div className="text-[10px] uppercase tracking-[0.22em]" style={{ color: GOLD }}>Zayado</div>
-          <div className="font-display text-[15px] font-semibold">Welcome back, {firstName} <span className="ml-1">👋</span></div>
+          <div className="font-display text-[15px] font-semibold">{firstName ? `Bon retour, ${firstName}` : "Bon retour"} <span className="ml-1">👋</span></div>
         </div>
-        <button className="relative rounded-lg p-2 hover:bg-white/5">
-          <Bell size={20} />
-          <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-400" />
-        </button>
+        <button onClick={() => navigate("/parametres")} className="rounded-lg p-2 hover:bg-white/5" aria-label="Paramètres"><User size={20} /></button>
       </header>
-      <p className="text-center text-[12px] text-white/55 pb-4">Keep focusing on your goals!</p>
+      <p className="text-center text-[12px] text-white/55 pb-4">Garde le cap sur ce qui compte.</p>
 
       <main className="px-5 pb-28 space-y-6">
         {/* Hero card */}
@@ -81,9 +89,9 @@ export default function VisionBoardMobileHome({ onOpenBoard }) {
             <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl" style={{ background: `linear-gradient(135deg, ${GOLD}, #b89566)` }}>
               <Sparkles size={20} className="text-white" />
             </div>
-            <h2 className="font-display text-[22px] font-semibold leading-tight">Create Your Vision</h2>
+            <h2 className="font-display text-[22px] font-semibold leading-tight">Crée ta vision</h2>
             <p className="mt-1 text-[12.5px] text-navy-900/65">Transforme tes rêves en une histoire visuelle.</p>
-            <button onClick={() => openBoard({ key: `new_${Date.now()}` })}
+            <button onClick={nouveauBoard}
               className="mt-4 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-[13px] font-bold text-white"
               style={{ background: `linear-gradient(135deg, ${GOLD}, #a97e42)`, boxShadow: `0 8px 20px -6px ${GOLD}80` }}>
               <Plus size={15} /> Nouveau board
@@ -108,25 +116,20 @@ export default function VisionBoardMobileHome({ onOpenBoard }) {
         <section>
           <div className="mb-3 flex items-center justify-between">
             <h3 className="font-display text-[17px] font-semibold">Mes Vision Boards</h3>
-            <button className="text-[12px] font-semibold" style={{ color: GOLD }}>Tout voir</button>
+            <button onClick={() => openBoard({ key: localStorage.getItem("kairos_board_key") || "perso" })} className="text-[12px] font-semibold" style={{ color: GOLD }}>Ouvrir le canvas</button>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            {boards.map((b) => (
+            {boards === null && [0, 1].map((i) => <div key={i} className="aspect-[4/5] animate-pulse rounded-2xl bg-white/5" />)}
+            {boards?.map((b, i) => (
               <button key={b.key} onClick={() => openBoard(b)}
-                className="group relative aspect-[4/5] overflow-hidden rounded-2xl border border-white/10 text-left transition active:scale-[0.98]">
-                <img src={b.image} alt={b.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0f1b3a] via-[#0f1b3a]/40 to-transparent" />
+                className="group relative aspect-[4/5] overflow-hidden rounded-2xl border border-white/10 text-left transition active:scale-[0.98]"
+                style={{ background: TEINTES[i % TEINTES.length] }} data-testid={`mobile-board-${b.key}`}>
+                <span className="absolute left-3 top-3 text-[30px]">{b.emoji}</span>
                 <div className="absolute inset-x-3 bottom-3">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[16px]">{b.emoji}</span>
-                    <h4 className="font-display text-[15px] font-semibold text-white">{b.name}</h4>
-                  </div>
+                  <h4 className="font-display text-[15px] font-semibold text-white">{b.nom}</h4>
                   <div className="mt-0.5 flex items-center gap-1 text-[10.5px] text-white/70">
-                    <LayoutGrid size={10} /> {b.items} éléments
+                    <LayoutGrid size={10} /> {b.count ? `${b.count} élément${b.count > 1 ? "s" : ""}` : "Vide pour l'instant"}
                   </div>
-                </div>
-                <div className="absolute right-2 top-2 rounded-md bg-black/40 p-1 backdrop-blur-sm">
-                  <MoreHorizontal size={13} className="text-white/80" />
                 </div>
               </button>
             ))}
@@ -148,9 +151,6 @@ export default function VisionBoardMobileHome({ onOpenBoard }) {
             <Sparkles size={14} style={{ color: GOLD }} />
             <p className="mt-2 font-serif-italic italic text-[18px] leading-tight text-white">« {q.text} »</p>
             <p className="mt-2 text-[12px] text-white/70">— {q.author}</p>
-            <button className="absolute right-4 top-4 rounded-full bg-black/30 p-1.5 backdrop-blur-sm">
-              <Heart size={13} className="text-white/70" />
-            </button>
           </div>
         </section>
 
@@ -158,9 +158,9 @@ export default function VisionBoardMobileHome({ onOpenBoard }) {
         <section>
           <h3 className="mb-3 font-display text-[17px] font-semibold">Aperçu progression</h3>
           <div className="grid grid-cols-3 gap-2">
-            <StatCard icon={Target} label="Objectifs" value={stats.active} sub="Actifs" bg="rgba(96,165,250,0.15)" fg="#60a5fa" />
-            <StatCard icon={Trophy} label="Complétés" value={stats.done} sub="Ce mois" bg="rgba(244,114,182,0.15)" fg="#f472b6" />
-            <StatCard icon={TrendingUp} label="Progression" value={`${stats.progress}%`} sub="Continue !" bg="rgba(222,194,163,0.15)" fg={GOLD} />
+            <StatCard icon={Target} label="Objectifs" value={stats ? stats.active : "…"} sub="En cours" bg="rgba(96,165,250,0.15)" fg="#60a5fa" />
+            <StatCard icon={Trophy} label="Atteints" value={stats ? stats.done : "…"} sub="Au total" bg="rgba(244,114,182,0.15)" fg="#f472b6" />
+            <StatCard icon={TrendingUp} label="Avancement" value={stats?.progress != null ? `${stats.progress}%` : "—"} sub={stats?.progress != null ? "Moyenne" : "Fixe un objectif"} bg="rgba(222,194,163,0.15)" fg={GOLD} />
           </div>
         </section>
       </main>
@@ -173,7 +173,7 @@ export default function VisionBoardMobileHome({ onOpenBoard }) {
           <div className="w-14" />
           <TabItem icon={Target} label="Idées" onClick={() => navigate("/app/ideas")} />
           <TabItem icon={User} label="Profil" onClick={() => navigate("/parametres")} />
-          <button onClick={() => openBoard({ key: `new_${Date.now()}` })}
+          <button onClick={nouveauBoard} aria-label="Nouveau board"
             className="absolute left-1/2 -top-5 flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full text-white shadow-lg"
             style={{ background: `linear-gradient(135deg, ${GOLD}, #b89566)`, boxShadow: `0 10px 24px -6px ${GOLD}` }}>
             <Plus size={26} strokeWidth={2.5} />

@@ -26,7 +26,7 @@ export default function Actions() {
       .catch(() => toast.error("Actions indisponibles"))
       .finally(() => setChargement(false));
   };
-  useEffect(charger, []);
+  useEffect(() => { charger(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const ajouter = async (e) => {
     e.preventDefault();
