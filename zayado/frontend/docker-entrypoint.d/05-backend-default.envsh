@@ -1,0 +1,22 @@
+#!/bin/sh
+# Fichier *.envsh : SOURCÉ par l'entrypoint nginx (les exports restent visibles
+# pour l'étape envsubst). L'ancien *.sh était exécuté dans un sous-shell :
+# ses exports étaient perdus.
+
+# Railway peut injecter une variable vide si la référence privée est invalide.
+if [ -z "${BACKEND_URL:-}" ]; then
+  echo "WARN: BACKEND_URL est absente — repli sur http://127.0.0.1:8001" >&2
+  export BACKEND_URL="http://127.0.0.1:8001"
+fi
+# Refuse une URL sans port (ex. référence ${{Backend.PORT}} vide → "http://x:")
+case "$BACKEND_URL" in
+  *:) echo "ERREUR: BACKEND_URL se termine par ':' (port vide) — définir PORT=8001 sur le service backend." >&2 ;;
+esac
+echo "INFO: BACKEND_URL=$BACKEND_URL" >&2
+
+# Serveur DNS du conteneur (réseau privé Railway), pour le 'resolver' nginx.
+ns="$(awk '/^nameserver/{print $2; exit}' /etc/resolv.conf 2>/dev/null)"
+[ -z "$ns" ] && ns="127.0.0.11"
+case "$ns" in *:*) ns="[$ns]" ;; esac
+export NGINX_RESOLVER="$ns"
+echo "INFO: resolver nginx = $NGINX_RESOLVER" >&2

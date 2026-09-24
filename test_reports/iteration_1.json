@@ -1,32 +1,71 @@
 {
-  "summary": "Validated Kairos by Zayado bug fixes and multi-role flows. Backend (8/8 pytest passing): POST /api/auth/register creates a client with blank profile (prenom='', onboarded=false, empty priorities/goal) — 'Camille' hardcoded bug is fixed and data isolation confirmed via Bearer token. GET /api/admin/vue-ensemble correctly returns 403 without token and for client (Sara) tokens, and returns {utilisateurs_total, par_role{client,vendeur,admin}} for admin. Login works for sara/admin/vendeur seeds. Frontend: onboarding flow completed with data-testids end-to-end — final step shows 'Offre choisie : Essentielle' and NO 'undefined' (Onboarding.jsx PLANS default fix confirmed). Marketplace correctly gates client (toast 'Réservé aux comptes vendeur' + fallback 'Connecte-toi' message — known non-blocking) and shows full Espace Vendeur UI for test.radar@ (menu 'Mes produits' / 'Profil vendeur', product 'Test produit radar' in Brouillon).",
-  "backend_issues": { "critical": [], "minor": [] },
-  "frontend_issues": {
-    "ui_bugs": [],
-    "integration_issues": [],
-    "design_issues": [
-      {"screen": "/app/marketplace (client)", "issues": ["Message 'Connecte-toi avec un compte (lien magique, Google ou Microsoft) pour ouvrir ton espace vendeur.' displayed under the refus toast alongside the 'Espace Vendeur' header — known non-blocking state per E1's note, kept as LOW."]},
-    {"screen": "/app cockpit (Sara)", "issues": ["Greeting line regex-captured as 'Bonjour . Je suis Kairos...' — the token 'Sara' is present elsewhere in the page body (so greeting check passes) but the visible salutation may render with an empty prenom in some viewport. Non-blocking; suggest E1 verifies the greeting template uses profile.prenom fallback."]}
-    ]
-  },
-  "test_report_links": [
-    "/app/backend/tests/test_kairos_auth_admin.py",
-    "/app/test_reports/pytest/pytest_results.xml"
-  ],
-  "action_items": [
-    "(LOW) Investigate /app cockpit greeting: ensure 'Bonjour {prenom}' correctly renders 'Bonjour Sara' — currently the salutation phrase captured shows an empty prenom slot even though Sara is onboarded."
-  ],
-  "critical_code_review_comments": [
-    "server.py is 3269 lines — should be split into modules (auth, admin, vendeur, state) for maintainability.",
-    "PATCH /admin/utilisateurs/{user_id}/role accepts nouveau_role as query param (not Pydantic body) — consider request body validation for stronger input validation.",
-    "Onboarding.jsx: PLANS default is now 'essentielle' (fix confirmed). Consider guarding UI with `PLANS.find(...)?.name || plan` to be defensive against future key renames."
-  ],
-  "updated_files": ["/app/backend/tests/test_kairos_auth_admin.py"],
-  "success_rate": { "backend": "100%", "frontend": "100%" },
-  "test_credentials": "sara@zayado.fr/SaraTest2026!, admin.test@zayado.fr/AdminTest2026!, test.radar@zayado.fr/TestRadar2026! (all validated). Register works with any new unique email + 8+ char password.",
-  "seed_data_creation": "Created one throwaway account per run via /api/auth/register (marie.test.<uuid>@zayado.fr) — no cleanup implemented; email is unique so no collisions.",
+  "iteration": 1,
+  "app_under_test": "/app/zayado (frontend :3001, backend :8002)",
+  "passed": 8,
+  "failed": 0,
   "retest_needed": false,
-  "main_agent_can_self_test": true,
-  "context_for_next_testing_agent": "Backend port 8001 via REACT_APP_BACKEND_URL (https://radar-ui.preview.emergentagent.com). Frontend stores JWT in localStorage under 'kairos_access_token'. Without token, API falls back to DEMO_USER_ID shared account — always pass Bearer token for isolation tests. Admin console is a separate build flavor (REACT_APP_FLAVOR=console) not routed here — only its API is testable in this preview. Pytest file already covers register/state isolation, duplicate register 409, admin security 401/403/200, and seed logins.",
-  "rca of the issue": "Both original bugs were resolved before this iteration: (1) POST /auth/register no longer injects 'Camille' — new VisionProfile is created with prenom='' (server.py L830-831). (2) Onboarding.jsx L32 now defaults `plan` state to 'essentielle' (a valid PLANS key), so `PLANS.find(p => p.key === plan)?.name` resolves to 'Essentielle' at step 8 instead of undefined. Both fixes verified end-to-end (backend pytest + Playwright UI walk-through)."
+  "bugs": [],
+  "action_items": [],
+  "checks": [
+    {
+      "criterion": "401 responses carry CORS headers (fix 1, the reported bug)",
+      "name": "test_tscheck_cors_401_and_200.py::test_401_response_has_cors_header",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /api/state with Origin: http://localhost:3001 (no auth) -> 401 {\"detail\":\"Connexion requise.\"}, access-control-allow-origin: http://localhost:3001 present."
+    },
+    {
+      "criterion": "Successful responses still carry CORS headers (no regression from the middleware reorder)",
+      "name": "test_tscheck_cors_401_and_200.py::test_200_response_still_has_cors_header",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /api/auth/login (test.analyse@zayado.local) -> 200, access_token obtained; GET /api/state with Bearer token and Origin header -> 200, access-control-allow-origin: http://localhost:3001 present."
+    },
+    {
+      "criterion": "No CORS error appears in the browser console during a real session (fix 1 + fix 2 end to end)",
+      "name": "no-cors-errors-during-login-session",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Full login flow (password tab -> /app cockpit) monitored via console + requestfailed listeners: zero messages matching /CORS|Access-Control-Allow-Origin/, zero net::ERR_FAILED entries. Only benign pre-auth 401s logged (expected probe before token is set)."
+    },
+    {
+      "criterion": "Dev proxy serves the API same-origin (fix 2)",
+      "name": "test_tscheck_dev_proxy_same_origin.py::test_dev_proxy_serves_connexion_options_same_origin",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET http://localhost:3001/api/connexion/options -> 200 {\"nom_appli\":\"Zayado\", ...}."
+    },
+    {
+      "criterion": "Real UI login through the password tab works",
+      "name": "login-password-tab-reaches-authenticated-route",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Clicked 'Mot de passe' tab, filled seeded email/password, clicked data-testid=login-mdp-submit; page.waitForURL matched /(onboarding|app)/; final URL left /login."
+    },
+    {
+      "criterion": "Authenticated cockpit renders its real content",
+      "name": "cockpit-renders-authenticated-content",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Navigated to /app post-login; body text matched /Énergie|Ton point du jour|Copilote IA/; URL stayed on /app (no redirect to /login). Screenshot: cockpit-renders-authenticated-content-cockpit.png"
+    },
+    {
+      "criterion": "Radar module renders",
+      "name": "radar-module-renders-hero-and-controls",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Navigated to /app/radar post-login; body text contained 'RADAR', 'Relancer le scan', 'Affiner ma Vision'; no error-overlay element present. Screenshot: radar-module-renders-hero-and-controls-radar.png"
+    },
+    {
+      "criterion": "Private routes still gate anonymous visitors (auth not weakened by the reorder)",
+      "name": "private-routes-redirect-anonymous-to-login",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "With localStorage cleared, /app, /espace-vendeur and /mon-espace each redirected to /login (page.waitForURL(/\\/login/) succeeded for all three)."
+    }
+  ],
+  "notes": [
+    "Console 401 messages seen during checks are expected: the frontend probes /api/state before a token exists / during logout flows; these carry correct CORS headers per the backend tests above and are not the CORS bug.",
+    "spec_deviations from briefing (OAuth false locally, HEYGEN missing, Copilote IA local fallback) were observed as expected and not reported as bugs."
+  ]
 }

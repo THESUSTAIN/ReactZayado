@@ -1,0 +1,272 @@
+{
+  "project_name": "Cockpit IA Zayado",
+  "app_type": "dashboard",
+  "language": "fr",
+  "theme": "dark",
+  "description": "Cockpit IA pour indépendants et entrepreneurs - Dashboard sombre haut de gamme inspiré de Revo Framer, cartes de verre fumé (smoked glass), typographie Sora et JetBrains Mono, accent Navy profond et bleu cyan électrique, contenant les 10 modules opérationnels avec données pré-remplies en français et persistance localStorage.",
+  "archetype": "THE PERFORMANCE PRO / SWISS HIGH-CONTRAST TECH",
+  "typography": {
+    "fonts": {
+      "heading": "Sora Variable",
+      "body": "Plus Jakarta Sans Variable",
+      "mono": "JetBrains Mono Variable"
+    },
+    "font_imports": [
+      "@import \"@fontsource-variable/sora\";",
+      "@import \"@fontsource-variable/plus-jakarta-sans\";",
+      "@import \"@fontsource-variable/jetbrains-mono\";"
+    ],
+    "scale_px": {
+      "display": 48,
+      "h1": 36,
+      "h2": 28,
+      "h3": 20,
+      "body": 16,
+      "caption": 14
+    },
+    "rules": {
+      "h1": "font-heading font-semibold text-2xl sm:text-3xl lg:text-4xl tracking-tight text-white",
+      "h2": "font-heading font-medium text-xl sm:text-2xl tracking-tight text-slate-100",
+      "h3": "font-heading font-medium text-lg sm:text-xl text-slate-200",
+      "body": "font-sans text-sm sm:text-base text-slate-300 leading-relaxed",
+      "caption": "font-sans text-xs sm:text-sm text-slate-400 font-normal",
+      "mono_label": "font-mono text-xs uppercase tracking-wider text-slate-400 font-medium"
+    }
+  },
+  "colors": {
+    "surfaces": [
+      {
+        "name": "page",
+        "kind": "solid",
+        "bg": "#07090E",
+        "on_bg": "#F8FAFC",
+        "on_bg_muted": "#94A3B8",
+        "roles": {
+          "border": "#1E293B",
+          "link": "#60A5FA",
+          "error": "#F87171",
+          "success": "#34D399",
+          "warning": "#FBBF24"
+        }
+      },
+      {
+        "name": "sidebar",
+        "kind": "solid",
+        "bg": "#0B0F19",
+        "on_bg": "#F1F5F9",
+        "on_bg_muted": "#94A3B8",
+        "roles": {
+          "border": "#1E293B",
+          "active_bg": "#1E293B",
+          "active_text": "#60A5FA"
+        }
+      },
+      {
+        "name": "glass_card",
+        "kind": "glass",
+        "contrast_against": "#0B0F19",
+        "guarantee": "background: rgba(15, 23, 42, 0.65) with backdrop-filter: blur(16px) and border: 1px solid rgba(255, 255, 255, 0.08)",
+        "on_bg": "#F8FAFC",
+        "on_bg_muted": "#94A3B8",
+        "roles": {
+          "highlight": "#38BDF8",
+          "chip_bg": "#1E293B",
+          "chip_text": "#E2E8F0"
+        }
+      },
+      {
+        "name": "navy_accent_card",
+        "kind": "solid",
+        "bg": "#0F172A",
+        "on_bg": "#FFFFFF",
+        "on_bg_muted": "#CBD5E1",
+        "roles": {
+          "border": "#1E3A8A",
+          "badge_bg": "#1E3A8A",
+          "badge_text": "#BFDBFE"
+        }
+      },
+      {
+        "name": "metric_pill",
+        "kind": "solid",
+        "bg": "#111827",
+        "on_bg": "#F9FAFB",
+        "on_bg_muted": "#9CA3AF"
+      }
+    ],
+    "accent": "#1E40AF",
+    "on_accent": "#FFFFFF",
+    "accent_glow": "rgba(30, 64, 175, 0.35)",
+    "highlight_cyan": "#0EA5E9",
+    "status": {
+      "success": "#10B981",
+      "warning": "#F59E0B",
+      "danger": "#EF4444",
+      "info": "#3B82F6"
+    }
+  },
+  "entry_surfaces": {
+    "/": "dark cockpit layout — fixed dark navy sidebar left with 10 module tabs, sticky status header with energy score top, responsive glass cards dashboard grid right"
+  },
+  "visual_enhancers": {
+    "revo_aesthetic_elements": [
+      "Subtle deep-navy radial gradients in background corners: radial-gradient(circle at 10% 20%, rgba(30, 58, 138, 0.15) 0%, transparent 40%)",
+      "Glassmorphism borders: 1px solid rgba(255, 255, 255, 0.08) with inner glow hover: border-slate-700/80 hover:border-blue-500/50 transition-colors",
+      "Data tags in JetBrains Mono with micro uppercase tracking (e.g., 'SCORE 94/100', 'CANAL : LINKEDIN', 'TEMPS : 25 MIN')",
+      "Revo-inspired status chips: small rounded-full badges with pulsing dot indicator for active AI status",
+      "Permanent banner/badge: 'L'IA prépare. Vous décidez. Rien n'est envoyé sans votre validation.'"
+    ]
+  },
+  "modules_specification": [
+    {
+      "id": "aujourdhui",
+      "number": 1,
+      "title": "Aujourd'hui",
+      "icon": "Sun",
+      "description": "Priorité numéro 1 du jour & Check-in d'énergie et rythme mental",
+      "components": [
+        "TopPriorityCard: Carte héroïque mise en avant avec la tâche maîtresse du jour, objectif financier rattaché, temps estimé et bouton de validation",
+        "EnergyCheckIn: Curseur d'énergie interactif (1 à 10) avec sélection de mode (Focus maximal / Mode récupération / Rythme de croisière)",
+        "DailyOverviewGrid: Résumé des 3 actions clés et statut du Radar IA"
+      ]
+    },
+    {
+      "id": "vision",
+      "number": 2,
+      "title": "Vision",
+      "icon": "Compass",
+      "description": "Cap stratégique & Objectifs trimestriels / annuels",
+      "components": [
+        "NorthStarCard: Déclaration de mission et cap des 12 prochains mois",
+        "QuarterlyObjectives: 3 piliers stratégiques (Chiffre d'Affaires, Notoriété/Offre, Temps libre & Équilibre) avec barres de progression interactives",
+        "AntiGoalsList: Les 'Ce que je refuse de faire' pour garder le cap"
+      ]
+    },
+    {
+      "id": "radar",
+      "number": 3,
+      "title": "Radar Prospection",
+      "icon": "Radar",
+      "description": "3 opportunités quotidiennes sélectionnées par l'IA avec messages prêts à l'envoi",
+      "components": [
+        "ScanHeader: Compteur de scans restants (ex: 3/5 aujourd'hui) et bouton 'Lancer un re-scan IA'",
+        "OpportunityCards: 3 opportunités qualifiées avec Score IA /100, Canal (Email / LinkedIn / WhatsApp / Appel), Objectif servi, et le Message rédigé en vouvoiement formel",
+        "CopyAction: Bouton 'Copier le message' avec feedback Toast Sonner, 'Marquer comme traité' et 'Personnaliser'"
+      ]
+    },
+    {
+      "id": "agent",
+      "number": 4,
+      "title": "Agent Business",
+      "icon": "Bot",
+      "description": "Configuration de l'assistant de marque & Chat de simulation avec règles strictes",
+      "components": [
+        "AgentConfigForm: Nom de l'agent, Ton de voix (Expert bienveillant, Direct & Chiffré, etc.), Message d'accueil, Base de connaissances (Offres, Tarifs, FAQ)",
+        "StrictRulesToggle: 'Règles infranchissables' (ex: Ne jamais promettre de rabais > 10%, Toujours proposer un call si budget > 3000€)",
+        "SimulatedChatSimulator: Interface de test de l'agent en direct avec simulation de prospects et bouton 'Handoff Humain (Reprendre la main)'"
+      ]
+    },
+    {
+      "id": "actions",
+      "number": 5,
+      "title": "Actions",
+      "icon": "CheckSquare",
+      "description": "Gestion des tâches prioritaires avec estimation de temps",
+      "components": [
+        "ActionsFilter: Vue 'Aujourd'hui', 'Cette semaine', 'Délégué / En attente'",
+        "ActionItemCard: Checkbox, Titre, Tag de projet, Temps estimé (ex: 25 min), Niveau d'énergie requis (Faible/Moyen/Haut)",
+        "AddActionModal: Formulaire rapide pour ajouter une nouvelle tâche"
+      ]
+    },
+    {
+      "id": "idees",
+      "number": 6,
+      "title": "Boîte à Idées",
+      "icon": "Lightbulb",
+      "description": "Capture rapide et maturation des concepts business & contenu",
+      "components": [
+        "IdeaCaptureInput: Champ de saisie rapide 'Capturer une idée avant qu'elle ne s'envole'",
+        "IdeaKanbanOrList: Catégories 'Offre', 'Marketing/Contenu', 'Optimisation interne', 'À creuser plus tard'",
+        "AIEnhanceButton: Bouton 'Affiner avec l'IA' qui structure l'idée en proposition de valeur"
+      ]
+    },
+    {
+      "id": "copilote",
+      "number": 7,
+      "title": "Copilote IA",
+      "icon": "Sparkles",
+      "description": "Générateur de documents stratégiques simulé (Brief, Plan 30 jours, SWOT)",
+      "components": [
+        "DocTypeSelector: Choix parmi Brief Commercial, Plan d'Action 30 Jours, Analyse SWOT, Proposition d'Offre",
+        "GenerationPromptForm: Paramètres d'entrée (Cible, Objectif, Contraintes)",
+        "SimulatedDocViewer: Rendu soigné du document généré en Markdown avec export presse-papier et téléchargement texte"
+      ]
+    },
+    {
+      "id": "pouls",
+      "number": 8,
+      "title": "Pouls Business",
+      "icon": "TrendingUp",
+      "description": "Santé financière : CA mensuel, objectif, factures en attente, trésorerie",
+      "components": [
+        "FinancialMetricsKpi: 4 cartes KPI (CA du mois vs Objectif, Factures en attente, Trésorerie disponible, Runway estimé)",
+        "RevenueProgressChart: Graphique Recharts de l'évolution du CA sur 6 mois avec courbe prévisionnelle",
+        "InvoiceTrackerTable: Liste des 4 dernières factures (Client, Montant, Échéance, Statut: Payée / Relance / En attente)"
+      ]
+    },
+    {
+      "id": "revue",
+      "number": 9,
+      "title": "Revue Hebdo",
+      "icon": "CalendarCheck",
+      "description": "Bilan de fin de semaine, apprentissages et priorité de la semaine suivante",
+      "components": [
+        "WeeklyWinsCard: Les 3 victoires majeures de la semaine",
+        "LearningsFrictions: Ce qui a bloqué & solutions trouvées",
+        "NextWeekFocus: Définition de la priorité stratégique de la semaine prochaine",
+        "AIAssessmentSummary: Synthèse automatique générée du niveau d'avancement"
+      ]
+    },
+    {
+      "id": "bienetre",
+      "number": 10,
+      "title": "Bien-être & Énergie",
+      "icon": "HeartPulse",
+      "description": "Suivi d'énergie et de rythme de travail (non médical)",
+      "components": [
+        "EnergyTrendChart: Graphique de l'énergie moyenne sur les 7 derniers jours",
+        "RhythmIndicators: Heures de focus profond, Pauses respectées, Charge mentale perçue (Calme / Soutenue / Surcharge)",
+        "WorkLifeBalanceTips: Recommandations sur-mesure (ex: 'Vous avez 3 jours d'affilée à haute intensité. Prévoyez un après-midi allégé jeudi.')"
+      ]
+    }
+  ],
+  "layout": {
+    "structure": "Sidebar + Header + Main Scrollable Area",
+    "sidebar_width": "w-64 lg:w-72",
+    "header_height": "h-16",
+    "main_padding": "p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-8",
+    "grid_classes": "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+  },
+  "motion": {
+    "page_transitions": "AnimatePresence with opacity 0 -> 1 and translateY 6px -> 0px over 0.2s ease-out",
+    "card_hover": "hover:-translate-y-0.5 transition-transform duration-200",
+    "pulse_indicator": "animate-pulse for AI active badges and status lights"
+  },
+  "accessibility": {
+    "wcag_level": "WCAG AA compliant",
+    "text_contrast": "All text tokens meet minimum 4.5:1 against dark slate/navy glass backgrounds",
+    "focus_states": "focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none",
+    "test_attributes": "All clickable buttons, inputs, tabs and cards MUST have unique data-testid attributes (e.g. data-testid='tab-aujourdhui', data-testid='btn-scan-radar', data-testid='btn-copy-message-1')"
+  },
+  "instructions_to_main_agent": [
+    "1. Remplacer le thème par défaut par le thème sombre Revo avec palette Navy (#07090E bg, #0B0F19 sidebar, #0F172A/rgba(15,23,42,0.65) glass cards, #1E40AF/#38BDF8 accents) dans `frontend/src/index.css`.",
+    "2. Activer le mode sombre par défaut en modifiant `frontend/index.html` pour avoir `<html class=\"dark\">`.",
+    "3. Importer les polices `@fontsource-variable/sora`, `@fontsource-variable/plus-jakarta-sans`, et `@fontsource-variable/jetbrains-mono` dans `index.css`.",
+    "4. Créer un store ou hook personnalisé avec persistance localStorage (`useCockpitStore`) pour stocker l'état des 10 modules (énergie du jour, opportunités traitées, tâches cochées, idées capturées, configuration de l'agent, simulations copilote).",
+    "5. Fournir des données réalistes, riches et soignées en français pour chacun des 10 modules au premier chargement si le localStorage est vide.",
+    "6. Toujours afficher la devise de validation : 'L'IA prépare. Vous décidez. Rien n'est envoyé sans votre validation.' dans le header ou le panneau du haut.",
+    "7. Utiliser `recharts` pour le graphique de chiffre d'affaires (Pouls Business) et le graphique d'énergie (Bien-être).",
+    "8. Utiliser `sonner` pour notifier les actions de copie, sauvegarde et re-scan IA.",
+    "9. Veiller à ce que TOUS les éléments interactifs comportent un `data-testid` explicite."
+  ]
+}

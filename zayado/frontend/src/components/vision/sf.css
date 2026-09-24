@@ -1,0 +1,255 @@
+/* ─────────────────────────────────────────────────────────────
+   Canvas Vision — style « Storyflow » (thème plat, couleurs Zayado)
+   Mesuré sur Storyflow à 100 % : fond #1F1F1F, mur #242424 r32,
+   carte #292929 r22 ; titre de mur 24/600 ; titre de carte 16/600 ;
+   texte 16/400 interligne 1.75 ; étiquettes 14/500 texte foncé sur
+   pastel r8 ; tableau en-têtes 17 gris / cellules 15.
+   Ici : même échelle et mêmes écarts de luminosité, teinte marine.
+   ───────────────────────────────────────────────────────────── */
+
+.sf {
+  /* Couleurs de final 13 : le ciel navy de l'app reste visible derrière le
+     canvas, murs et cartes en verre blanc translucide, or #DEC2A3. */
+  --sf-canvas: transparent;
+  --sf-canvas-solid: #0a1230;
+  --sf-dot: rgba(255, 255, 255, 0.14);
+  --sf-wall: rgba(255, 255, 255, 0.06);
+  --sf-wall-border: rgba(255, 255, 255, 0.10);
+  --sf-card: rgba(255, 255, 255, 0.10);
+  --sf-card-border: rgba(255, 255, 255, 0.14);
+  --sf-card-2: rgba(255, 255, 255, 0.14);
+  --sf-chip: rgba(255, 255, 255, 0.12);
+  --sf-text: #ffffff;
+  --sf-text-2: rgba(255, 255, 255, 0.80);
+  --sf-muted: rgba(255, 255, 255, 0.62);
+  --sf-line: rgba(255, 255, 255, 0.10);
+  --sf-chrome: rgba(16, 26, 52, 0.92);
+  --sf-chrome-border: rgba(255, 255, 255, 0.14);
+  --sf-accent: #DEC2A3;
+
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  color: var(--sf-text);
+  background: var(--sf-canvas);
+}
+
+/* Thèmes clairs de l'app */
+.theme-creme .sf,
+body.theme-clair .sf {
+  --sf-canvas: #f3f1ec;
+  --sf-canvas-solid: #f3f1ec;
+  --sf-wall-border: rgba(27, 36, 54, 0.08);
+  --sf-card-border: rgba(27, 36, 54, 0.08);
+  --sf-dot: rgba(31, 42, 68, 0.10);
+  --sf-wall: #e9e5dc;
+  --sf-card: #ffffff;
+  --sf-card-2: #f7f5f0;
+  --sf-chip: #ece8df;
+  --sf-text: #1b2436;
+  --sf-text-2: rgba(27, 36, 54, 0.78);
+  --sf-muted: #6b7486;
+  --sf-line: rgba(27, 36, 54, 0.09);
+  --sf-chrome: #ffffff;
+  --sf-chrome-border: rgba(27, 36, 54, 0.10);
+}
+
+.sf h1, .sf h2, .sf h3, .sf h4 { font-family: inherit; }
+
+.sf-surface {
+  background-color: var(--sf-canvas);
+  background-image: radial-gradient(var(--sf-dot) 1.4px, transparent 1.4px);
+  background-size: 20px 20px;
+}
+
+/* ── Chrome (barres d'outils) ── */
+.sf-chrome {
+  background: var(--sf-chrome);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--sf-chrome-border);
+  box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+}
+.sf-ui { font-size: 13px; font-weight: 500; line-height: 1.4; }
+.sf-tool {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  width: 64px; padding: 8px 0; border-radius: 12px;
+  color: var(--sf-text-2); font-size: 11.5px; font-weight: 500; line-height: 1;
+  transition: background .15s ease, color .15s ease;
+}
+.sf-tool:hover { background: rgba(255, 255, 255, 0.06); color: var(--sf-text); }
+.sf-tool[data-active="true"] { background: rgba(222,194,163, 0.14); color: var(--sf-accent); }
+.sf-tool-ico {
+  display: flex; align-items: center; justify-content: center;
+  width: 34px; height: 30px; border-radius: 8px; background: var(--sf-card);
+}
+.sf-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 32px; min-width: 32px; padding: 0 8px; border-radius: 8px;
+  color: var(--sf-text-2); font-size: 13px; font-weight: 500;
+  transition: background .15s ease, color .15s ease;
+}
+.sf-btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.07); color: var(--sf-text); }
+.sf-btn:disabled { opacity: .35; }
+.sf-btn[data-active="true"] { background: rgba(222,194,163, 0.16); color: var(--sf-accent); }
+.sf-btn-outline { border: 1px solid var(--sf-chrome-border); padding: 0 12px; color: var(--sf-text); }
+.sf-btn-primary { background: var(--sf-accent); color: #0f1b3a; padding: 0 14px; font-weight: 600; }
+.sf-btn-primary:hover:not(:disabled) { background: #F1E2CC; color: #0f1b3a; }
+.sf-menu {
+  background: var(--sf-chrome); border: 1px solid var(--sf-chrome-border);
+  backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+  border-radius: 14px; box-shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.6);
+}
+.sf-menu-item {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 8px 10px; border-radius: 9px; text-align: left;
+  font-size: 13px; font-weight: 500; color: var(--sf-text);
+}
+.sf-menu-item:hover { background: rgba(255, 255, 255, 0.06); }
+.sf-menu-item .sf-mi-ico {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 8px; background: var(--sf-card); color: var(--sf-accent);
+}
+.sf-menu-title { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--sf-muted); padding: 6px 10px 4px; }
+
+/* ── Mur ── */
+.sf-wall {
+  background: var(--sf-wall);
+  border: 1px solid var(--sf-wall-border);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  border-radius: 32px;
+  padding: 22px 16px 16px;
+}
+.sf-wall-title {
+  font-size: 24px; font-weight: 600; line-height: 1.25; letter-spacing: -0.01em;
+  color: var(--sf-text);
+}
+.sf-wall-bar { width: 4px; height: 26px; border-radius: 4px; flex-shrink: 0; }
+.sf-wall-drop { outline: 2px dashed var(--sf-accent); outline-offset: 4px; }
+.sf-drop-marker { height: 4px; border-radius: 4px; background: var(--sf-accent); }
+
+/* ── Carte ── */
+.sf-card {
+  background: var(--sf-card);
+  border: 1px solid var(--sf-card-border);
+  border-radius: 22px;
+  padding: 22px 24px;
+  color: var(--sf-text);
+}
+.sf-card-sel { box-shadow: 0 0 0 2px var(--sf-accent); }
+.sf-title { font-size: 16px; font-weight: 600; line-height: 1.3; color: var(--sf-text); }
+.sf-text  { font-size: 16px; font-weight: 400; line-height: 1.75; color: var(--sf-text); }
+.sf-text strong { font-weight: 600; }
+.sf-small { font-size: 14px; font-weight: 400; line-height: 1.5; color: var(--sf-muted); }
+.sf-num { font-variant-numeric: tabular-nums; }
+.sf-heading { font-size: 28px; font-weight: 600; line-height: 1.2; letter-spacing: -0.015em; color: var(--sf-text); }
+
+.sf-label {
+  display: inline-flex; align-items: center; gap: 5px;
+  border-radius: 8px; padding: 1px 9px;
+  font-size: 14px; font-weight: 500; line-height: 1.6; white-space: nowrap;
+}
+.sf-date {
+  display: inline-flex; align-items: center; gap: 6px;
+  border-radius: 7px; padding: 3px 8px; background: var(--sf-chip);
+  font-size: 14px; font-weight: 400; line-height: 1.2; color: var(--sf-text);
+}
+.sf-check {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 18px; height: 18px; margin-top: 5px; border-radius: 5px;
+  border: 1.5px solid var(--sf-muted); color: #062016; transition: all .15s ease;
+}
+.sf-check[data-on="true"] { background: #34d399; border-color: #34d399; }
+.sf-track { background: rgba(255, 255, 255, 0.09); border-radius: 999px; overflow: hidden; }
+.theme-creme .sf-track, body.theme-clair .sf-track { background: rgba(27, 36, 54, 0.08); }
+
+.sf-table-wrap { border-radius: 22px; overflow: hidden; background: var(--sf-card); border: 1px solid var(--sf-card-border); }
+.sf-table { width: 100%; border-collapse: collapse; }
+.sf-table th {
+  text-align: left; font-size: 17px; font-weight: 400; color: #a3a3a3; color: var(--sf-muted);
+  padding: 10px 16px; border-bottom: 1px solid var(--sf-line); border-right: 1px solid var(--sf-line);
+}
+.sf-table td {
+  font-size: 15px; line-height: 1.35; color: var(--sf-text);
+  padding: 9px 16px; border-bottom: 1px solid var(--sf-line); border-right: 1px solid var(--sf-line);
+}
+.sf-table th:last-child, .sf-table td:last-child { border-right: 0; }
+.sf-table tr:last-child td { border-bottom: 0; }
+.sf-table input { width: 100%; background: transparent; outline: none; color: inherit; font: inherit; }
+
+.sf-input {
+  width: 100%; background: transparent; outline: none; color: var(--sf-text); font: inherit; resize: none;
+}
+.sf-input::placeholder { color: var(--sf-muted); }
+.sf-field {
+  width: 100%; background: var(--sf-card-2); border: 1px solid var(--sf-line); border-radius: 10px;
+  padding: 6px 10px; outline: none; color: var(--sf-text); font-size: 14px;
+}
+.sf-field:focus { border-color: var(--sf-accent); }
+
+.sf-live {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 500; color: var(--sf-muted);
+}
+.sf-live::before {
+  content: ""; width: 7px; height: 7px; border-radius: 999px; background: #34d399;
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.18);
+}
+
+.sf-handle {
+  display: none; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 999px;
+  background: var(--sf-chrome); border: 1px solid var(--sf-chrome-border);
+  color: var(--sf-text-2); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+.sf-handle:hover { color: var(--sf-text); }
+.sf-item:hover > .sf-handles .sf-handle,
+.sf-item[data-selected="true"] > .sf-handles .sf-handle { display: flex; }
+
+.sf-scroll { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.14) transparent; }
+
+.sf-present .sf-hide-present { display: none !important; }
+/* Présentation / pages isolées : le ciel de final 13 en fond opaque */
+.sf-present, .sf-standalone {
+  background:
+    radial-gradient(ellipse at 20% 10%, rgba(45, 81, 150, 0.45) 0%, transparent 50%),
+    linear-gradient(180deg, #172c5c 0%, #101f47 30%, #0a1230 60%, #05081a 100%);
+}
+
+/* ── Cartes LIVE : distinctes des notes (liseré + bandeau source) ── */
+.sf-live-card { box-shadow: inset 0 0 0 1px rgba(52, 211, 153, 0.28); }
+.sf-live-band {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin: -6px 0 12px; padding-bottom: 10px; border-bottom: 1px solid var(--sf-line);
+}
+.sf-live-band .sf-live { font-size: 12.5px; letter-spacing: .01em; }
+.sf-pin { color: var(--sf-accent); }
+
+/* Cartes épinglées sur le Cockpit : un cran plus compactes */
+.sf-pinned .sf-card, .sf-pinned .sf-table-wrap { border-radius: 18px; }
+.sf-pinned .sf-card { padding: 18px 20px; }
+.sf-pinned .sf-text { font-size: 14.5px; line-height: 1.65; }
+.sf-pinned .sf-title { font-size: 15px; }
+.sf-pinned .sf-label, .sf-pinned .sf-date { font-size: 13px; }
+
+/* Mobile : un cran plus compact (un mur = un écran) */
+@media (max-width: 767px) {
+  .sf .sf-wall { border-radius: 24px; padding: 18px 12px 12px; }
+  .sf .sf-wall-title { font-size: 21px; }
+  .sf .sf-card { padding: 18px 18px; border-radius: 18px; }
+  .sf .sf-text { font-size: 15px; line-height: 1.65; }
+  .sf .sf-title { font-size: 15.5px; }
+}
+
+/* Pendant un export (html2canvas) : pas d'ombres intérieures ni de flou,
+   que html2canvas transforme en aplat vert/gris sur les cartes. */
+.sf-exporting .sf-live-card { box-shadow: none !important; border-color: rgba(52, 211, 153, 0.35) !important; }
+.sf-exporting .sf-card, .sf-exporting .sf-wall, .sf-exporting .sf-chrome { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+body:not(.theme-clair) .sf-exporting .sf-card { background: #17264f !important; }
+body:not(.theme-clair) .sf-exporting .sf-wall { background: #111d40 !important; }
+
+/* Carte posée librement sur le canvas (hors mur) : fond quasi opaque, sinon
+   le verre laisse voir les murs dessous et le texte devient illisible. */
+.sf .sf-free .sf-card, .sf .sf-free .sf-table-wrap { background: rgba(20, 32, 68, 0.95); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35); }
+.theme-creme .sf .sf-free .sf-card, body.theme-clair .sf .sf-free .sf-card, .theme-creme .sf .sf-free .sf-table-wrap, body.theme-clair .sf .sf-free .sf-table-wrap { background: #ffffff; }
