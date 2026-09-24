@@ -11,7 +11,8 @@ import { Sidebar } from "@/components/kairos/Sidebar";
 import { TabBar } from "@/components/kairos/TabBar";
 import { Header } from "@/components/kairos/Header";
 import { GlassCard } from "@/components/kairos/GlassCard";
-import { fetchRadar, genererSwot } from "@/lib/kairosApi";
+import AiFallbackBanner from "@/components/kairos/AiFallbackBanner";
+import { fetchRadar, genererSwot, majProspect } from "@/lib/kairosApi";
 
 const CANAL_META = {
   email: { icon: Send, color: "#DEC2A3", label: "Email" },
@@ -143,6 +144,41 @@ function blipPosition(op, i) {
   return { x: 50 + Math.cos(angle) * 41 * rf, y: 50 + Math.sin(angle) * 41 * rf };
 }
 
+// Vrai prospect (Apollo) : identité, liens directs et suivi du contact.
+function FicheProspect({ p, message }) {
+  const [statut, setStatut] = useState(p.statut || "nouveau");
+  const changer = async (v) => {
+    setStatut(v);
+    try { await majProspect(p.id, v); toast.success(v === "contacte" ? "Noté comme contacté" : v === "ecarte" ? "Prospect écarté" : "Statut mis à jour"); }
+    catch { toast.error("Mise à jour impossible"); }
+  };
+  const nom = [p.prenom, p.nom].filter(Boolean).join(" ");
+  const sujet = encodeURIComponent("Prise de contact");
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-white/15 bg-white/[0.06] px-4 py-3" data-testid="radar-prospect">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#F1E2CC] to-[#DEC2A3] font-display text-sm font-bold text-navy-900">
+        {(p.prenom || "?").slice(0, 1)}{(p.nom || "").slice(0, 1)}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[14.5px] font-semibold text-offwhite">{nom || "Contact"}</p>
+        <p className="truncate text-[12.5px] text-offwhite/60">{[p.titre, p.entreprise, p.ville].filter(Boolean).join(" · ")}</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {p.linkedin && <a href={p.linkedin} target="_blank" rel="noopener noreferrer" className="rounded-full border border-white/20 px-3 py-1.5 text-[12px] font-medium text-offwhite hover:bg-white/10">LinkedIn</a>}
+        {p.email && <a href={`mailto:${p.email}?subject=${sujet}&body=${encodeURIComponent(message || "")}`} className="rounded-full border border-white/20 px-3 py-1.5 text-[12px] font-medium text-offwhite hover:bg-white/10">E-mail</a>}
+        {p.domaine && <a href={p.domaine.startsWith("http") ? p.domaine : `https://${p.domaine}`} target="_blank" rel="noopener noreferrer" className="rounded-full border border-white/20 px-3 py-1.5 text-[12px] font-medium text-offwhite hover:bg-white/10">Site</a>}
+        <select value={statut} onChange={(e) => changer(e.target.value)} className="rounded-full border border-white/20 bg-transparent px-2.5 py-1.5 text-[12px] text-offwhite" data-testid="radar-prospect-statut">
+          <option value="nouveau" className="bg-navy-800">À contacter</option>
+          <option value="contacte" className="bg-navy-800">Contacté</option>
+          <option value="en_discussion" className="bg-navy-800">En discussion</option>
+          <option value="signe" className="bg-navy-800">Signé</option>
+          <option value="ecarte" className="bg-navy-800">Écarté</option>
+        </select>
+      </div>
+    </div>
+  );
+}
+
 function RadarVisual({ opportunities, onSelect }) {
   return (
     <div className="relative aspect-square w-full max-w-[440px]" data-testid="radar-visual">
@@ -264,6 +300,11 @@ export default function Radar() {
       <Sidebar />
       <div className="lg:pl-[92px]">
         <Header />
+
+        {/* Bandeau d'alerte si l'IA tourne en repli */}
+        <div className="mx-auto max-w-6xl px-4 pt-6 sm:px-8 lg:px-14">
+          <AiFallbackBanner />
+        </div>
 
         {/* ── HERO ── */}
         <section ref={heroRef} className="relative overflow-hidden px-4 pb-14 pt-10 sm:px-8 lg:px-14 lg:pt-14">
@@ -438,6 +479,7 @@ export default function Radar() {
                                 {meta.label} · relié à « {op.objectif} »
                               </p>
                               <h3 className="mt-1.5 font-display text-xl font-bold text-offwhite sm:text-2xl">{op.titre}</h3>
+                              {op.prospect && <FicheProspect p={op.prospect} message={op.message} />}
                               <p className="mt-3 max-w-2xl border-l-2 border-gold/30 pl-4 font-serif-italic text-[15px] leading-relaxed text-offwhite/70">
                                 {op.message}
                               </p>

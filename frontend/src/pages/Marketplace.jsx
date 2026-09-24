@@ -5,6 +5,7 @@ import { Loader2, Store, Plus, Send, Trash2, Pencil, ShieldCheck, Check, X, Pack
 import { GlassCard } from "@/components/kairos/GlassCard";
 import { SideMenuPro } from "@/components/pro/SideMenuPro";
 import { call } from "@/lib/part2Api";
+import { PhotosProduit } from "@/components/pro/PhotosProduit";
 
 const CHAMP = "w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-offwhite outline-none focus:border-gold/50";
 const BTN = "rounded-xl px-3 py-2 text-xs font-semibold transition disabled:opacity-60";
@@ -14,7 +15,8 @@ const STATUT = {
   publie: ["Publié", "bg-emerald-400/15 text-emerald-300"],
   refuse: ["Refusé", "bg-rose-400/15 text-rose-300"],
 };
-const VIDE = { titre: "", description: "", prix: "", stock: "", sku: "", categorie: "", images: "" };
+const VIDE = { titre: "", description: "", prix: "", stock: "", sku: "", categorie: "", images: [] };
+const RAYONS = ["Corps", "Âme", "Rituel", "Organisation", "Pack"];
 
 function Statut({ s }) {
   const [label, cls] = STATUT[s] || STATUT.brouillon;
@@ -28,10 +30,10 @@ function montrerErreur(e) {
 // Défini hors du composant : sinon il serait recréé à chaque rendu et les champs perdraient le focus à chaque frappe.
 function Shell({ children, menu }) {
   return (
-  <div className="min-h-screen">
+  <div className="min-h-screen bg-navy-900 text-offwhite">
     {menu}
-    <div className="theme-creme lg:pl-[248px]">
-      <header className="entete-navy sticky top-0 z-20 flex items-center gap-3 border-b border-white/10 px-4 py-3 backdrop-blur-2xl sm:px-6" style={{ background: "rgba(15,27,58,0.86)" }}>
+    <div className="lg:pl-[248px]">
+      <header className="entete-navy sticky top-0 z-20 hidden items-center gap-3 lg:flex border-b border-white/10 px-4 py-3 backdrop-blur-2xl sm:px-6" style={{ background: "rgba(15,27,58,0.86)" }}>
         <Store size={18} className="text-gold" />
         <h1 className="font-display text-lg font-bold text-offwhite sm:text-xl">Espace Vendeur</h1>
       </header>
@@ -74,14 +76,14 @@ export default function Marketplace() {
     const corps = {
       titre: form.titre, description: form.description, prix: String(form.prix || "0"),
       stock: form.stock === "" ? null : Number(form.stock), sku: form.sku || null, categorie: form.categorie || null,
-      images: String(form.images || "").split("\n").map((u) => u.trim()).filter(Boolean),
+      images: form.images || [],
     };
     if (form.id) await call(`/vendeur/produits/${form.id}`, "PUT", corps);
     else await call("/vendeur/produits", "POST", corps);
     setForm(null);
   }, "Produit enregistré");
 
-  const modifier = (p) => setForm({ ...p, stock: p.stock ?? "", sku: p.sku || "", categorie: p.categorie || "", images: (p.images || []).join("\n") });
+  const modifier = (p) => setForm({ ...p, stock: p.stock ?? "", sku: p.sku || "", categorie: p.categorie || "", images: [...(p.images || [])] });
 
   const refuser = (p) => {
     const motif = window.prompt("Motif du refus (obligatoire, visible par le vendeur) :");
@@ -157,12 +159,17 @@ export default function Marketplace() {
                   <input className={CHAMP} value={form.titre} onChange={(e) => setForm({ ...form, titre: e.target.value })} /></div>
                 <div className="sm:col-span-2"><label className="mb-1 block text-[11px] text-offwhite/70">Description * (30 caractères min.)</label>
                   <textarea rows={4} className={CHAMP} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
-                {[["prix", "Prix (€) *"], ["stock", "Stock"], ["sku", "Référence (SKU)"], ["categorie", "Catégorie"]].map(([k, l]) => (
+                {[["prix", "Prix TTC (€) *"], ["stock", "Stock"], ["sku", "Référence (SKU)"]].map(([k, l]) => (
                   <div key={k}><label className="mb-1 block text-[11px] text-offwhite/70">{l}</label>
-                    <input className={CHAMP} value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} /></div>
+                    <input className={CHAMP} inputMode={k === "sku" ? "text" : "decimal"} value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} /></div>
                 ))}
-                <div className="sm:col-span-2"><label className="mb-1 block text-[11px] text-offwhite/70">Images * (une adresse https:// par ligne, 6 max)</label>
-                  <textarea rows={3} className={CHAMP} value={form.images} onChange={(e) => setForm({ ...form, images: e.target.value })} /></div>
+                <div><label className="mb-1 block text-[11px] text-offwhite/70">Rayon de la boutique</label>
+                  <select className={CHAMP} value={form.categorie} onChange={(e) => setForm({ ...form, categorie: e.target.value })} data-testid="market-rayon">
+                    <option value="" className="bg-navy-800">Choisir…</option>
+                    {(etat.rayons || RAYONS).map((r) => <option key={r} value={r} className="bg-navy-800">{r}</option>)}
+                  </select></div>
+                <div className="sm:col-span-2"><label className="mb-1 block text-[11px] text-offwhite/70">Photos * (au moins une)</label>
+                  <PhotosProduit images={form.images || []} onChange={(images) => setForm((f) => ({ ...f, images }))} max={etat.limites?.images_max || 6} /></div>
               </div>
               <div className="flex gap-2">
                 <button disabled={busy} onClick={enregistrerProduit} className={`${BTN} bg-gold text-navy-900`}>Enregistrer</button>
@@ -175,6 +182,9 @@ export default function Marketplace() {
           {produits.map((p) => (
             <GlassCard key={p.id} className="space-y-2" data-testid="market-produit">
               <div className="flex flex-wrap items-center gap-2">
+                {p.images?.[0]
+                  ? <img src={p.images[0]} alt="" className="h-12 w-12 rounded-lg bg-white object-cover" />
+                  : <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-white/5 text-offwhite/40"><Package size={16} /></span>}
                 <p className="font-semibold text-offwhite">{p.titre}</p><Statut s={p.statut} />
                 <span className="ml-auto text-sm text-gold">{p.prix} €</span>
               </div>
@@ -195,7 +205,7 @@ export default function Marketplace() {
 
       {onglet === "moderation" && etat.admin && (
         <>
-          <p className="flex items-center gap-1.5 text-xs text-offwhite/60"><ShieldCheck size={14} className="text-gold" /> Publier crée la fiche dans Shopify (en brouillon) avant de la marquer publiée.</p>
+          <p className="flex items-center gap-1.5 text-xs text-offwhite/60"><ShieldCheck size={14} className="text-gold" /> Publier crée la fiche dans la boutique Shopify zayado.net (avec photos, rayon et SEO) et la met en vitrine.</p>
           {attente.length === 0 && <p className="text-sm text-offwhite/55">Rien en attente.</p>}
           {attente.map((p) => (
             <GlassCard key={p.id} className="space-y-2" data-testid="market-moderation-item">

@@ -1,13 +1,19 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Sparkles } from "lucide-react";
 import { call, imageIaUrl } from "@/lib/part2Api";
+import { fetchIaStatut } from "@/lib/kairosApi";
 
 // Ligne « générer avec l'IA » pour l'éditeur d'image d'une carte du Vision Board.
 // onPick(url) reçoit l'adresse de l'image générée (à passer à editImage).
 export function AiImageRow({ onPick }) {
   const [prompt, setPrompt] = useState("");
   const [busy, setBusy] = useState(false);
+  const [dispo, setDispo] = useState(true);
+
+  useEffect(() => {
+    fetchIaStatut().then((d) => { if (d && d.images_ia === false) setDispo(false); }).catch(() => {});
+  }, []);
 
   const generer = async () => {
     if (busy || prompt.trim().length < 3) return;
@@ -22,6 +28,14 @@ export function AiImageRow({ onPick }) {
       setBusy(false);
     }
   };
+
+  if (!dispo) {
+    return (
+      <p className="rounded-md border border-white/10 bg-white/5 px-2 py-1.5 text-[10.5px] text-white/60" data-testid="vision-ai-image-off">
+        Images IA bientôt disponibles — ajoute ta propre photo en attendant.
+      </p>
+    );
+  }
 
   return (
     <div className="flex items-center gap-1">

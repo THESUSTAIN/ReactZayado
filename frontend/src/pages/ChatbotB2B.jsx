@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Sidebar } from "@/components/kairos/Sidebar";
 import { Header } from "@/components/kairos/Header";
+import AiFallbackBanner from "@/components/kairos/AiFallbackBanner";
 import {
   MessageCircle, Check, ArrowRight, Palette, Bot, ShieldCheck, Settings, TrendingUp,
   Play, Loader2, Save, Upload, UserRound, BookOpen, RotateCcw, Send,
@@ -114,6 +115,11 @@ export default function ChatbotB2B() {
             <button onClick={() => window.location.assign("/app/agents")} className="rounded-full px-4 py-2 text-[12.5px] font-semibold text-white/70 hover:text-white" data-testid="subnav-agents-ia">
               Agents IA
             </button>
+          </div>
+
+          {/* Bandeau d'alerte si l'IA tourne en repli */}
+          <div className="mb-5">
+            <AiFallbackBanner />
           </div>
 
           {/* Présentation */}

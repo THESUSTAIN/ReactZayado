@@ -52,7 +52,12 @@ export default function Onboarding() {
   const [saveError, setSaveError] = useState("");
   // Nouveau wizard 3 étapes : Identité / Activité / Cap financier
   const [identite, setIdentite] = useState({ prenom: user.firstName || "", entreprise: "", role: "" });
-  const [activite, setActivite] = useState({ type: "", cible: "", offre: "", marche: "france" });
+  // L'activité saisie sur la page d'accueil préremplit « ton offre ».
+  const [activite, setActivite] = useState(() => {
+    let offre = "";
+    try { offre = localStorage.getItem("zayado_idee_landing") || ""; } catch { /* stockage indisponible */ }
+    return { type: "", cible: "", offre, marche: "france" };
+  });
   const [capFin, setCapFin]     = useState({ ca_objectif: 0, ca_mensuel: 0, tresorerie: 0 });
 
   const next = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
@@ -82,6 +87,7 @@ export default function Onboarding() {
           entreprise: identite.entreprise, role: identite.role,
           activite_type: activite.type, cible: activite.cible, offre: activite.offre,
           marche: activite.marche,
+          plan_souhaite: plan,
         },
         onboarded: true,
       });
@@ -426,7 +432,7 @@ export default function Onboarding() {
       </GlassCard>
       {saving && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0a1230]/90 p-5 backdrop-blur-md" data-testid="onboarding-processing">
-          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#101a34] p-7 text-center shadow-2xl">
+          <div className="w-full max-w-md rounded-3xl fenetre p-7 text-center">
             <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gold/15 ring-1 ring-gold/30">
               <Sparkles className="h-8 w-8 animate-pulse text-gold" />
             </div>

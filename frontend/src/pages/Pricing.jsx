@@ -48,6 +48,7 @@ export default function Pricing() {
   useSeo({
     title: "Tarifs Zayado — gratuit, Solo et Pro, tarif fondateur, sans engagement",
     description: "Zayado Découverte gratuit, Solo pour piloter seul, Pro avec Agent Business à ta marque. Tarif fondateur pour les 100 premiers clients, garanti tant que tu restes abonné. Sans engagement.",
+    path: "/pricing",
   });
 
   return (

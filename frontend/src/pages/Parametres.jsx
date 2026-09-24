@@ -12,6 +12,8 @@ import {
 import { useI18n } from "@/i18n";
 import { Link, useNavigate } from "react-router-dom";
 import IntegrationsSection from "@/components/kairos/IntegrationsSection";
+import { Sidebar } from "@/components/kairos/Sidebar";
+import { Header } from "@/components/kairos/Header";
 
 // Paramètres en grande fenêtre modale — structure inspirée de
 // ReactZayado/SettingsModal.jsx (v13) : recherche + sections latérales.
@@ -52,7 +54,6 @@ export default function Parametres() {
   });
   const completion = useCompletion();
   const [recherche, setRecherche] = useState("");
-  const navigate = useNavigate();
 
   const visibles = SECTIONS.filter((s) => {
     if (!recherche.trim()) return true;
@@ -65,72 +66,69 @@ export default function Parametres() {
     if (visibles.length > 0 && !visibles.some((s) => s.id === active)) setActive(visibles[0].id);
   }, [recherche]);  // eslint-disable-line react-hooks/exhaustive-deps
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-900/60 p-3 backdrop-blur-md sm:p-6" data-testid="parametres-overlay">
-      <div className="glass-strong flex h-full max-h-[860px] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border-white/10 text-offwhite" data-testid="parametres-modal">
-        {/* Barre haute : titre + recherche + fermer */}
-        <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
-          <div className="min-w-0">
-            <h1 className="font-display text-lg font-bold">Paramètres</h1>
-            <p className="text-[11px] text-offwhite/50">Un seul endroit pour tout régler.</p>
-          </div>
-          <div className="relative ml-auto w-40 sm:w-64">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-offwhite/40" />
-            <input
-              value={recherche}
-              onChange={(e) => setRecherche(e.target.value)}
-              placeholder="Rechercher un réglage…"
-              data-testid="parametres-recherche"
-              className="w-full rounded-xl border border-white/10 bg-white/5 py-2 pl-8 pr-3 text-xs text-offwhite placeholder:text-offwhite/40 focus:border-gold/40 focus:outline-none"
-            />
-          </div>
-          <button
-            onClick={() => navigate(-1)}
-            aria-label="Fermer les paramètres"
-            data-testid="parametres-fermer"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-offwhite/70 transition-colors hover:bg-white/10 hover:text-offwhite"
-          >
-            <X size={17} />
+  const nav = (
+    <>
+      {/* Desktop : colonne latérale (comme final-main) */}
+      <nav className="hidden flex-col gap-0.5 px-2.5 pb-4 md:flex" data-testid="parametres-nav">
+        {visibles.map((s) => (
+          <button key={s.id} onClick={() => setActive(s.id)} data-testid={`parametres-nav-${s.id}`}
+            className={`flex items-center gap-2.5 rounded-[10px] px-3 py-[9px] text-left text-[13.5px] font-medium transition ${
+              active === s.id ? "bg-gold/[0.14] text-gold" : "text-offwhite/60 hover:bg-white/[0.06] hover:text-offwhite"}`}>
+            <s.Icon size={16} className="shrink-0" /><span className="min-w-0 truncate">{s.label}</span>
           </button>
-        </div>
+        ))}
+        {visibles.length === 0 && (
+          <p className="px-3 py-2 text-[12px] text-offwhite/45" data-testid="parametres-recherche-vide">Aucun résultat.</p>
+        )}
+      </nav>
+      {/* Mobile : barre d'onglets défilante */}
+      <nav className="-mx-4 flex gap-1.5 overflow-x-auto border-b border-white/[0.14] px-4 py-3 [scrollbar-width:none] md:hidden" data-testid="parametres-nav-mobile">
+        {visibles.map((s) => (
+          <button key={s.id} onClick={() => setActive(s.id)} data-testid={`parametres-navm-${s.id}`}
+            className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 py-[7px] text-[12.5px] font-medium transition ${
+              active === s.id ? "border-gold bg-gold text-navy-900" : "border-white/[0.14] bg-white/[0.06] text-offwhite/65"}`}>
+            <s.Icon size={15} />{s.label}
+          </button>
+        ))}
+      </nav>
+    </>
+  );
 
-        <div className="flex min-h-0 flex-1">
-          {/* Nav latérale */}
-          <nav className="w-16 shrink-0 space-y-1 overflow-y-auto border-r border-white/10 p-3 sm:w-56" data-testid="parametres-nav">
-            {completion !== null && (
-              <button onClick={() => setActive("profil")} className="mb-3 hidden w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-left sm:flex" data-testid="parametres-completion">
-                <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-gold"
-                  style={{ background: `conic-gradient(#DEC2A3 ${completion * 3.6}deg, rgba(255,255,255,0.1) 0deg)` }}>
-                  <span className="absolute inset-[4px] rounded-full bg-[#101a34]" />
-                  <span className="relative">{completion}%</span>
-                </span>
-                <span>
-                  <span className="block text-[12.5px] font-semibold text-offwhite">Profil complété</span>
-                  <span className="block text-[11px] text-offwhite/50">{completion < 100 ? "Plus il est complet, plus le Copilote est juste" : "Profil complet"}</span>
-                </span>
-              </button>
-            )}
-            {visibles.map((s) => (
-              <button
-                key={s.id}
-                onClick={() => setActive(s.id)}
-                data-testid={`parametres-nav-${s.id}`}
-                title={s.label}
-                className={`flex w-full items-center justify-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm transition-colors sm:justify-start ${
-                  active === s.id ? "bg-gold/15 font-semibold text-gold" : "text-offwhite/60 hover:bg-white/5 hover:text-offwhite"
-                }`}
-              >
-                <s.Icon size={16} className="shrink-0" /> <span className="hidden sm:inline">{s.label}</span>
-              </button>
-            ))}
-            {visibles.length === 0 && (
-              <p className="px-2 py-4 text-center text-[11px] text-offwhite/45" data-testid="parametres-recherche-vide">Aucun réglage ne correspond à « {recherche} ».</p>
-            )}
-          </nav>
+  return (
+    <div className="min-h-screen">
+      <Sidebar />
+      <div className="lg:pl-[92px]">
+        <Header title="Paramètres" subtitle="Un seul endroit pour tout régler." />
+        <main className="mx-auto max-w-[980px] px-4 py-5 sm:px-6 sm:py-8" data-testid="parametres-page">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-offwhite/60">Réglages</p>
+          <h1 className="mb-5 mt-1 font-display text-3xl font-bold sm:mb-6 sm:text-4xl">Paramètres</h1>
+          <div className="flex flex-col md:min-h-[70vh] md:flex-row md:overflow-hidden md:rounded-[22px] md:border md:border-white/[0.14] md:bg-white/[0.10] md:shadow-[0_10px_30px_rgba(0,0,0,0.18)] md:backdrop-blur-xl" data-testid="parametres-modal">
+            {/* Colonne gauche : recherche + complétion + navigation */}
+            <div className="flex w-full shrink-0 flex-col md:w-[210px] md:border-r md:border-white/[0.14]">
+              <div className="mb-2 flex items-center gap-2 rounded-[10px] md:mx-3 md:mt-3 border border-white/[0.14] bg-white/[0.06] px-2.5 py-[7px]">
+                <Search size={14} className="shrink-0 text-offwhite/50" />
+                <input value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="Rechercher un réglage…"
+                  data-testid="parametres-recherche" className="w-full bg-transparent text-[13px] text-offwhite outline-none placeholder:text-offwhite/45" />
+              </div>
+              {completion !== null && (
+                <button onClick={() => setActive("profil")} data-testid="parametres-completion"
+                  className="mb-3 flex items-center gap-2.5 rounded-[10px] border border-gold/20 md:mx-3 bg-gold/[0.06] p-2.5 text-left transition hover:bg-gold/[0.12]">
+                  <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                    style={{ background: `conic-gradient(#DEC2A3 ${completion * 3.6}deg, rgba(255,255,255,0.14) 0deg)` }}>
+                    <span className="absolute inset-[3px] rounded-full bg-[#1b2a4d]" />
+                    <span className="relative text-[10px] font-bold text-gold">{completion}%</span>
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-[12.5px] font-semibold text-offwhite">Profil complété</span>
+                    <span className="block text-[11px] text-offwhite/55">{completion < 100 ? "Complète ton profil" : "Profil complet !"}</span>
+                  </span>
+                </button>
+              )}
+              {nav}
+            </div>
 
-          {/* Contenu */}
-          <div className="min-w-0 flex-1 overflow-y-auto p-5 sm:p-6">
-            <div className="mx-auto max-w-xl">
+            {/* Panneau */}
+            <div className="min-w-0 flex-1 pt-4 md:p-6" data-testid={`parametres-panel-${active}`}>
               {active === "profil" && <SectionProfil />}
               {active === "general" && <SectionGeneral />}
               {active === "vision" && <SectionVision />}
@@ -142,24 +140,25 @@ export default function Parametres() {
               {active === "facturation" && <SectionFacturation />}
             </div>
           </div>
-        </div>
+        </main>
       </div>
     </div>
   );
 }
 
+// Carte « verre » de final-main : blanc translucide, libellé en petites capitales.
 function Carte({ children, titre, desc }) {
   return (
-    <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-      {titre && <p className="mb-1 text-sm font-semibold text-offwhite">{titre}</p>}
-      {desc && <p className="mb-3 text-xs leading-relaxed text-offwhite/55">{desc}</p>}
+    <div className="relative mb-4 min-w-0 overflow-hidden rounded-[20px] border border-white/[0.14] bg-white/[0.10] px-4 py-4 backdrop-blur-xl sm:px-5 sm:py-[18px]">
+      {titre && <p className="mb-2 text-[12px] font-medium uppercase tracking-[0.05em] text-offwhite/65">{titre}</p>}
+      {desc && <p className="mb-3 text-[13px] leading-relaxed text-offwhite/60">{desc}</p>}
       {children}
     </div>
   );
 }
 
-const INPUT = "w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-offwhite outline-none focus:border-gold/50";
-const BTN_OR = "inline-flex items-center gap-2 rounded-xl bg-gold/15 px-4 py-2 text-sm font-semibold text-gold hover:bg-gold/25 disabled:opacity-60";
+const INPUT = "h-11 w-full rounded-xl border border-white/[0.14] bg-white/[0.08] px-3.5 text-sm text-offwhite outline-none transition placeholder:text-offwhite/45 focus:border-gold/60 focus:bg-white/[0.12]";
+const BTN_OR = "inline-flex h-10 items-center gap-2 rounded-2xl bg-gradient-to-br from-[#DEC2A3] to-[#F1E2CC] px-4 text-sm font-semibold text-navy-900 transition hover:brightness-105 disabled:opacity-60";
 
 function SectionProfil() {
   const [profil, setProfil] = useState(null);
@@ -217,7 +216,7 @@ function SectionProfil() {
         ].map(([k, label, ph]) => (
           <div key={k} className="mb-3">
             <label className="mb-1.5 flex items-center gap-1.5 text-xs text-offwhite/60"><Brain size={12} className="text-gold" />{label}</label>
-            <textarea rows={2} value={memoire[k]} onChange={(e) => mem(k, e.target.value)} placeholder={ph} className={`${INPUT} resize-y`} data-testid={`parametres-memoire-${k}`} />
+            <textarea rows={2} value={memoire[k]} onChange={(e) => mem(k, e.target.value)} placeholder={ph} className={`${INPUT} h-auto resize-y py-3 leading-relaxed`} data-testid={`parametres-memoire-${k}`} />
           </div>
         ))}
       </Carte>
@@ -257,7 +256,7 @@ function SectionVision() {
   return (
     <>
       <Carte titre="Ma phrase de vision" desc="Elle s'affiche sur ton Vision Board et guide les priorités proposées par l'IA.">
-        <textarea rows={3} value={vision} onChange={(e) => setVision(e.target.value)} placeholder="Dans 3 ans, je…" className={`${INPUT} resize-y`} data-testid="parametres-vision-texte" />
+        <textarea rows={3} value={vision} onChange={(e) => setVision(e.target.value)} placeholder="Dans 3 ans, je…" className={`${INPUT} h-auto resize-y py-3 leading-relaxed`} data-testid="parametres-vision-texte" />
       </Carte>
       <Carte titre="Mes valeurs" desc="Jusqu'à 7 valeurs : elles colorent le ton du Copilote et tes cartes Vision.">
         <div className="mb-3 flex flex-wrap gap-2">
@@ -537,6 +536,21 @@ function SectionFacturation() {
     } catch { toast.error("Code invalide, inactif ou déjà utilisé."); }
     finally { setEnvoi(false); }
   };
+  const [paiement, setPaiement] = useState(false);
+  const finaliser = async () => {
+    if (!abo?.plan_en_attente) return;
+    setPaiement(true);
+    try {
+      const r = await fetch(`${process.env.REACT_APP_BACKEND_URL || ""}/api/checkout`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: abo.plan_en_attente, cycle: abo.cycle || "mensuel" }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && j.checkoutUrl) { window.location.href = j.checkoutUrl; return; }
+      toast.error(j.detail || "Le paiement n'a pas pu démarrer. Réessaie depuis la page Tarifs.");
+    } catch { toast.error("Paiement indisponible pour le moment."); }
+    setPaiement(false);
+  };
   const STATUT = { paid: ["Payée", "text-emerald-300"], pending: ["En attente", "text-amber-300"], open: ["En attente", "text-amber-300"], failed: ["Échouée", "text-red-300"], canceled: ["Annulée", "text-offwhite/50"], expired: ["Expirée", "text-offwhite/50"] };
 
   return (
@@ -552,6 +566,14 @@ function SectionFacturation() {
               </p>
             </div>
             <Link to="/pricing" className="inline-flex items-center gap-2 rounded-xl bg-gold px-4 py-2 text-xs font-semibold text-navy-900"><Sparkles size={13} /> Voir les offres</Link>
+          </div>
+        )}
+        {abo?.plan_en_attente && (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300/30 bg-amber-300/10 px-3 py-2.5" data-testid="parametres-plan-attente">
+            <p className="text-xs text-amber-100">Tu as choisi <b>{planNom(abo.plan_en_attente)}</b> : l'offre s'active dès que le paiement est validé.</p>
+            <button onClick={finaliser} disabled={paiement} className="rounded-lg bg-gold px-3 py-1.5 text-xs font-semibold text-navy-900 disabled:opacity-60" data-testid="parametres-finaliser-paiement">
+              {paiement ? "Redirection…" : "Finaliser le paiement"}
+            </button>
           </div>
         )}
         {fondateur?.ouverte && !abo?.fondateur && (

@@ -1,15 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
-  Sparkles, LayoutTemplate, PenLine, PieChart, CalendarRange,
+  LayoutTemplate, PieChart, CalendarRange,
   Compass, Palette, Network, LayoutGrid, ArrowRight, Lock, Target,
 } from "lucide-react";
 import { fetchObjectifs } from "@/lib/kairosApi";
+import { BoardsGallery } from "@/components/vision/BoardsGallery";
 
-const CREATE = [
-  { id: "canvas", icon: Sparkles, title: "Générer avec l'IA", desc: "Décris ton projet, Zayado construit un board vision + piliers + actions.", accent: true },
-  { id: "canvas", icon: PenLine, title: "Tableau vierge", desc: "Pars d'une page blanche et compose ton board librement.", blank: true },
-];
 
 const MODELS = [
   { id: "wheel", icon: PieChart, title: "Roue de l'équilibre", desc: "Tes piliers de vie, branchés sur tes données Bien-être.", live: true },
@@ -67,7 +64,7 @@ function Card({ item, onOpen, delay }) {
   );
 }
 
-export function VisionHub({ onOpen }) {
+export function VisionHub({ onOpen, onOpenBoard }) {
   // Corrigé : cette page n'affichait jamais les objectifs réellement saisis
   // à l'onboarding — l'utilisateur arrivait sur une galerie de modèles à
   // choisir, sans jamais voir ce qu'il venait de créer.
@@ -82,9 +79,11 @@ export function VisionHub({ onOpen }) {
           De ta vision à l'action
         </h2>
         <p className="mt-2 max-w-xl font-ui text-[14px] leading-relaxed text-offwhite/70">
-          Choisis un point de départ : laisse l'IA composer ton board, pars d'une page blanche, ou ouvre un modèle prêt à l'emploi.
+          Tes boards, tes objectifs et des modèles prêts à l'emploi. Ouvre un board, crée-en un, ou laisse l'IA le composer.
         </p>
       </div>
+
+      <BoardsGallery onOpenBoard={onOpenBoard} onGenerate={() => onOpen("canvas", { ia: true })} />
 
       {objectifs && objectifs.length > 0 && (
         <section className="mb-9" data-testid="vision-mes-objectifs">
@@ -105,14 +104,6 @@ export function VisionHub({ onOpen }) {
         </section>
       )}
 
-      <section className="mb-9">
-        <h3 className="mb-3 flex items-center gap-2 font-ui text-[13px] font-semibold text-offwhite/85">
-          <Sparkles size={15} className="text-gold" /> Créer
-        </h3>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {CREATE.map((item, i) => <Card key={item.title} item={item} onOpen={onOpen} delay={i * 0.06} />)}
-        </div>
-      </section>
 
       <section>
         <h3 className="mb-3 flex items-center gap-2 font-ui text-[13px] font-semibold text-offwhite/85">

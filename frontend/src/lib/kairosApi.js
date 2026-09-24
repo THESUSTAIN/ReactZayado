@@ -219,6 +219,8 @@ export const lancerIdee = (id) => jsend(`/idees/${id}/lancer`, "POST", {});
 export const fetchPouls = () => jget("/cockpit/pouls");
 export const savePouls = (data) => jsend("/cockpit/pouls", "PUT", data);
 export const fetchRadar = (refresh = false) => jget(refresh ? "/cockpit/radar?refresh=true" : "/cockpit/radar");
+export const fetchProspects = () => jget("/radar/prospects");
+export const majProspect = (id, statut) => jsend(`/radar/prospects/${id}`, "PATCH", { statut });
 export const genererSwot = () => jsend("/radar/swot", "POST");
 export const fetchImpact = () => jget("/cockpit/impact");
 export const saveGeneratedDocument = (title, content, provider) => jsend("/documents/auto-save", "POST", { title, content, provider });
@@ -291,3 +293,9 @@ export const saveProcessus = (items) => jsend("/processus", "PUT", { items });
 export const completerCheckin = (vitals) => jsend("/checkins/aujourdhui", "PATCH", vitals);
 export const demarrerWhatsapp = () => jsend("/connections/whatsapp/start", "POST");
 export const connecterTelegram = (bot_token) => jsend("/connections/telegram/connect", "POST", { bot_token });
+
+// ── Statut de l'IA texte (bandeau de repli du cockpit) ──
+// Sans clé Mammouth, le Copilote / Radar / Agent Business répondent un
+// texte générique sans rien signaler à l'écran : ce statut alimente le
+// bandeau d'alerte pour que le repli ne passe plus inaperçu.
+export const fetchIaStatut = () => jget("/ia/statut");

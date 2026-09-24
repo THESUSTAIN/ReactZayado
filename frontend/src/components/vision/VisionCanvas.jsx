@@ -619,10 +619,10 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
         return addItem({ type: "table", w: 460, title: "Suivi mensuel", columns: ["Mois", "Revenu"], rows: [["Juillet", ""], ["Août", ""], ["Objectif", ""]] }, { edit: true });
       case "video":
         return addItem({ type: "video", w: 460, url: "" }, { edit: true });
-      case "polaroid": {
-        const seed = Math.floor(Math.random() * 1000);
-        return addItem({ type: "polaroid", w: 280, h: 280, rotate: (Math.random() - 0.5) * 8, image: `https://picsum.photos/seed/${seed}/600/500`, caption: "Liberté" });
-      }
+      case "polaroid":
+        // Plus de photo aléatoire (picsum pouvait tirer n'importe quoi, animaux compris) :
+        // cadre vide, l'utilisateur ajoute SA photo.
+        return addItem({ type: "polaroid", w: 280, h: 280, rotate: (Math.random() - 0.5) * 8, image: "", caption: "Liberté" }, { edit: true });
       case "sticky": {
         const colors = ["cream", "pink", "green", "orange", "blue", "purple"];
         return addItem({ type: "sticky", w: 240, h: 220, rotate: (Math.random() - 0.5) * 8, stickyColor: colors[Math.floor(Math.random() * colors.length)], label: "MA NOTE", body: L("Écris ton idée ici…", "Write your idea here…") }, { edit: true });
@@ -1174,7 +1174,19 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
         return (
           <div className="polaroid-frame relative" style={{ height: inWall ? undefined : card.h, background: frame, borderRadius: inWall ? 18 : undefined }}>
             {!inWall && <span className="push-pin red" />}
-            <img src={card.image} alt={card.caption || ""} draggable={false} className="w-full rounded-sm object-cover" style={{ height: inWall ? 260 : (card.h || 240) - (card.caption ? 54 : 26) }} />
+            {card.image ? (
+              <img src={card.image} alt={card.caption || ""} draggable={false} className="w-full rounded-sm object-cover" style={{ height: inWall ? 260 : (card.h || 240) - (card.caption ? 54 : 26) }} />
+            ) : (
+              <div className="flex w-full flex-col items-center justify-center gap-2 rounded-sm bg-[#eef1f6] px-3 text-center text-[13px] text-slate-500" style={{ height: inWall ? 260 : (card.h || 240) - (card.caption ? 54 : 26) }}
+                onPointerDown={isEditing ? (e) => e.stopPropagation() : undefined}>
+                <ImageIcon size={22} />
+                {isEditing ? (
+                  <input autoFocus placeholder="Colle l'adresse de ta photo (https://…)" onKeyDown={(e) => e.key === "Enter" && patch({ image: e.target.value.trim() })}
+                    onBlur={(e) => e.target.value.trim() && patch({ image: e.target.value.trim() })}
+                    className="w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-[12px] text-slate-700 outline-none" />
+                ) : "Double-clic pour ajouter ta photo"}
+              </div>
+            )}
             {card.caption ? (
               <div className="pt-2 text-center">
                 {isEditing ? (
@@ -1706,6 +1718,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition" style={{ background: "rgba(222,194,163,0.18)", color: "var(--sf-accent)" }}><Plus size={17} /></button>
             <input value={prompt} onChange={(e) => setPrompt(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleGenerateBoard(); } }}
+              autoFocus={typeof window !== "undefined" && new URLSearchParams(window.location.search).get("ia") === "1"}
               placeholder={isSmall ? "Décris ton projet…" : t("vision.promptPlaceholder")} data-testid="vision-prompt-input" className="sf-input min-w-0 flex-1 px-2 text-[14px]" />
             <VoiceCapture onTranscribed={handleVoice} compact />
             <button onClick={handleGenerateBoard} disabled={!prompt.trim() || generating} data-testid="vision-prompt-submit"

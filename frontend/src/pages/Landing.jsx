@@ -1,270 +1,220 @@
-import React from "react";
-import { Link } from "react-router-dom";
-import { Compass, Radar, Heart, Bot, ArrowRight, Check, X, Smartphone, ShieldCheck, Download, Users } from "lucide-react";
-import { MarketingLayout } from "@/components/marketing/MarketingLayout";
+import React, { useEffect, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  Search, Sparkles, Menu, X, ShieldCheck, ChevronDown, Server, Lock, RefreshCw, Compass, Radar, Heart, ArrowRight, Check,
+} from "lucide-react";
+import { PLANS, prixMois } from "@/lib/plans";
 import { useSeo } from "@/lib/useSeo";
 
-const PILIERS = [
+// Page d'accueil publique (modèle validé : barre de saisie en verre, grand
+// titre serif, bouton beige, visuel de l'appli, lignes dépliables en verre
+// blanc). Palette Zayado : navy + beige #DEC2A3 / #F1E2CC.
+// Aucun avis ni note inventés : la ligne de confiance ne cite que des faits.
+
+const START = "/login?next=%2Fonboarding";
+
+const LIGNES = [
   {
-    to: "/fonctionnalites/vision-objectifs", icon: Compass, img: "/screenshots/vision.png",
-    titre: "Vision & Objectifs",
-    texte: "Pose ton cap une fois. Chaque journée s'aligne dessus — objectifs 3 ans, 90 jours, aujourd'hui.",
-    testid: "landing-pilier-vision",
+    id: "lancer", titre: "Lancer", icon: Compass,
+    texte: "Pose ta vision en cinq minutes : ton activité, ta cible, ton cap financier. Zayado compose ton Vision Board et tes objectifs à 3 ans, 90 jours et aujourd'hui.",
   },
   {
-    to: "/fonctionnalites/prospection-croissance", icon: Radar, img: "/screenshots/radar-demo.gif",
-    titre: "Prospection & Croissance",
-    texte: "Le Radar du jour : 3 opportunités reliées à ta vision, message pré-rédigé. Tu valides, c'est envoyé.",
-    testid: "landing-pilier-prospection",
+    id: "croissance", titre: "Croissance", icon: Radar,
+    texte: "Chaque matin, le Radar te propose 3 opportunités reliées à ta vision, avec un message déjà rédigé. Dès l'offre Pro, ton propre chatbot répond à tes clients.",
   },
   {
-    to: "/fonctionnalites/bien-etre-dirigeant", icon: Heart, img: "/screenshots/bien-etre.png",
-    titre: "Bien-être du dirigeant",
-    texte: "Ton énergie d'abord. Check-in quotidien, charge mentale surveillée, semaine adaptée à ton état réel.",
-    testid: "landing-pilier-bienetre",
-  },
-  {
-    // TODO : remplacer par une vraie capture du widget chatbot une fois
-    // disponible — cockpit.png réutilisé en attendant plutôt qu'une image
-    // inventée.
-    to: "/pricing", icon: Bot, img: "/screenshots/cockpit.png",
-    titre: "Agent Business (chatbot IA)",
-    texte: "Dès le palier Pro : ton propre chatbot marque blanche pour TES clients, inclus dans le même outil.",
-    testid: "landing-pilier-agent",
+    id: "gerer", titre: "Gérer", icon: Heart,
+    texte: "3 priorités adaptées à ton énergie du jour, ton pouls business (CA, trésorerie) et une revue de semaine. Tu avances sans t'épuiser.",
   },
 ];
 
 const ETAPES = [
-  { num: "01", titre: "Tu poses ta vision", texte: "Cinq minutes d'onboarding guidé : ton activité, ta cible, ton cap financier. L'IA compose ton board." },
-  { num: "02", titre: "Chaque matin, l'essentiel", texte: "3 priorités adaptées à ton énergie du jour, ton point business (CA, trésorerie) et 3 opportunités de croissance." },
-  { num: "03", titre: "Tu avances, sereinement", texte: "Tu valides, tu coches, tu respires. Zayado se souvient de tout et ajuste demain." },
+  { num: "01", titre: "Tu poses ta vision", texte: "Onboarding guidé de cinq minutes. L'IA retient ton projet pour la suite." },
+  { num: "02", titre: "Chaque matin, l'essentiel", texte: "Tes priorités, ton énergie, tes chiffres et tes opportunités sur un seul écran." },
+  { num: "03", titre: "Tu avances, sereinement", texte: "Tu valides, tu coches, tu respires. Zayado ajuste demain." },
 ];
 
-const PERSONAS = [
-  { titre: "Coachs & consultants", texte: "Qui vendent leur expertise et veulent des clients sans passer leurs soirées sur LinkedIn." },
-  { titre: "Freelances & indépendants", texte: "Qui jonglent entre production et prospection, et veulent un seul endroit pour tout suivre." },
-  { titre: "Entrepreneurs sensibles", texte: "Qui veulent réussir sans sacrifier leur énergie — et en ont assez des outils qui crient." },
-];
-
-const AVANT_APRES = [
-  { avant: "5 outils qui ne se parlent pas", apres: "Un seul cockpit qui connaît ton contexte" },
-  { avant: "Des listes de 27 tâches anxiogènes", apres: "3 priorités adaptées à ton énergie du jour" },
-  { avant: "La prospection repoussée au lendemain", apres: "3 opportunités qualifiées chaque matin" },
-  { avant: "Le burn-out découvert trop tard", apres: "La charge mentale surveillée en continu" },
-];
-
-const FAQ = [
-  { q: "Que remplace concrètement le Cockpit IA Zayado ?", r: "Ton tableau de tâches, ta note d'objectifs, ton suivi de chiffre d'affaires et ta liste de prospection. Un seul endroit, une seule connexion — et une IA qui connaît ton contexte." },
-  { q: "Est-ce adapté si je débute mon activité ?", r: "Oui. L'offre Découverte est gratuite : cockpit quotidien, vision board et check-in d'énergie. La prospection IA arrive quand tu es prêt, avec l'offre Sérénité." },
-  { q: "Mes données sont-elles à moi ?", r: "Oui. Chaque compte est isolé, tu peux exporter toutes tes données en un clic depuis les paramètres, et demander leur suppression complète à tout moment." },
-  { q: "En combien de temps suis-je opérationnel ?", r: "Dix minutes : l'onboarding te pose 5 questions, pré-remplit ta vision et ton suivi business, et ton premier point du jour est généré dans la foulée." },
-];
-
-const REASSURANCE = [
-  { icon: Check, label: "Sans engagement" },
-  { icon: ShieldCheck, label: "Données hébergées en UE" },
-  { icon: Download, label: "Export en 1 clic" },
-  { icon: Users, label: "Support humain" },
-];
+function Ligne({ l, ouvert, onToggle }) {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-xl transition hover:bg-white/[0.11]" data-testid={`landing-ligne-${l.id}`}>
+      <button onClick={onToggle} className="flex w-full items-center gap-3 px-5 py-4 text-left" aria-expanded={ouvert}>
+        <Sparkles size={17} className="shrink-0 text-gold" />
+        <span className="flex-1 text-[15.5px] font-medium text-offwhite">{l.titre}</span>
+        <ChevronDown size={17} className={`text-offwhite/60 transition ${ouvert ? "rotate-180" : ""}`} />
+      </button>
+      {ouvert && (
+        <div className="flex gap-3 px-5 pb-5 pl-[52px] text-[14px] leading-relaxed text-offwhite/75">
+          <p>{l.texte}</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Landing() {
+  const navigate = useNavigate();
+  const [idee, setIdee] = useState("");
+  const [menu, setMenu] = useState(false);
+  const [ouverte, setOuverte] = useState(null);
+  const menuRef = useRef(null);
+
   useSeo({
-    title: "Cockpit IA pour entrepreneurs et indépendants | Zayado",
-    description: "Le Cockpit IA Zayado aligne votre vision, vos priorités, votre prospection et votre équilibre de vie professionnelle et personnelle.",
+    title: "Zayado — le cockpit IA des entrepreneurs",
+    description: "Ta vision, tes priorités, ton énergie et tes chiffres au même endroit, avec une IA qui connaît ton projet. Offre Découverte gratuite, sans engagement.",
+    path: "/",
   });
 
+  useEffect(() => {
+    if (!menu) return undefined;
+    const fermer = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenu(false); };
+    document.addEventListener("mousedown", fermer);
+    return () => document.removeEventListener("mousedown", fermer);
+  }, [menu]);
+
+  const commencer = (e) => {
+    e.preventDefault();
+    // L'idée saisie est gardée pour préremplir l'onboarding après la connexion.
+    try { if (idee.trim()) localStorage.setItem("zayado_idee_landing", idee.trim().slice(0, 300)); } catch { /* stockage indisponible */ }
+    navigate(START);
+  };
+
   return (
-    <MarketingLayout>
-      {/* ── Hero ── */}
-      <section className="mx-auto max-w-6xl px-5 pb-16 pt-14 text-center sm:pt-20">
-        <div className="tiret-rouge mx-auto" data-testid="landing-tiret" />
-        <p className="mt-5 inline-block rounded-full border border-gold/30 bg-gold/10 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.24em] text-gold" data-testid="landing-eyebrow">
-          Le Cockpit IA pour entrepreneurs qui veulent garder leur équilibre
-        </p>
-        <h1 className="mx-auto mt-6 max-w-3xl font-display text-4xl font-extrabold leading-[1.08] sm:text-5xl lg:text-6xl" data-testid="landing-h1">
-          Fais avancer ton entreprise <span className="font-serif-italic font-normal text-gradient-gold">sans te griller.</span>
-        </h1>
-        <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-offwhite/70 sm:text-lg">
-          Zayado réunit ta vision, tes 3 priorités du jour et ta prospection dans un seul cockpit apaisé —
-          avec une IA qui regarde ton énergie avant de te proposer quoi que ce soit.
-        </p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Link to="/login" data-testid="landing-cta-essai" className="btn-gold !px-7 !py-3.5 text-base">Créer mon cockpit — gratuit</Link>
-          <Link to="/pricing" data-testid="landing-cta-tarifs" className="btn-ghost !px-7 !py-3.5 text-base">Voir les tarifs</Link>
-        </div>
-        <p className="mt-4 text-xs text-offwhite/45">Sans carte bancaire · Opérationnel en 10 minutes</p>
+    <div className="relative min-h-screen overflow-x-hidden text-offwhite" style={{ background: "#0b1733" }} data-testid="landing">
+      {/* Halo bleu du modèle */}
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[1400px]"
+        style={{ background: "radial-gradient(ellipse 55% 38% at 50% 58%, rgba(52,98,190,0.55), transparent 70%), radial-gradient(ellipse 80% 40% at 50% 0%, rgba(30,58,120,0.45), transparent 70%)" }} />
 
-        <div className="relative mx-auto mt-14 max-w-5xl">
-          <div className="pointer-events-none absolute -inset-10 rounded-[40px] bg-gold/[0.07] blur-3xl" />
-          <img
-            src="/screenshots/cockpit.png"
-            alt="Le Cockpit IA Zayado : énergie du jour, point business et radar d'opportunités réunis"
-            data-testid="landing-hero-img"
-            className="relative w-full rounded-2xl border border-white/15 shadow-[0_40px_80px_-30px_rgba(0,0,0,0.7)]"
-            loading="eager"
-          />
-        </div>
-      </section>
-
-      {/* ── Réassurance ── */}
-      <section className="border-y border-white/8 bg-white/[0.02]">
-        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-center gap-x-10 gap-y-3 px-5 py-5">
-          {REASSURANCE.map((r) => (
-            <span key={r.label} className="inline-flex items-center gap-2 text-xs font-medium text-offwhite/60" data-testid={`landing-reassurance-${r.label.toLowerCase().replace(/[^a-z]/g, "-")}`}>
-              <r.icon size={13} className="text-gold" /> {r.label}
-            </span>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Le problème ── */}
-      <section className="border-b border-white/8 bg-white/[0.02]">
-        <div className="mx-auto max-w-4xl px-5 py-16 text-center">
-          <h2 className="font-display text-2xl font-bold sm:text-3xl">Trello pour les tâches. Notion pour les notes.<br className="hidden sm:block" /> Un tableur pour le CA. <span className="text-gradient-gold font-serif-italic font-normal">Et ta tête, dans tout ça ?</span></h2>
-          <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-offwhite/65 sm:text-base">
-            L'indépendant moyen jongle entre 5 outils qui ne se parlent pas — et aucun ne lui demande comment il va.
-            Zayado part du principe inverse : ton énergie et ta vision d'abord, les outils ensuite.
-          </p>
-        </div>
-      </section>
-
-      {/* ── Comment ça marche ── */}
-      <section className="mx-auto max-w-6xl px-5 py-20">
-        <p className="text-center text-[11px] font-semibold uppercase tracking-[0.26em] text-gold">Comment ça marche</p>
-        <h2 className="mt-3 text-center font-display text-2xl font-bold sm:text-3xl">Trois temps. Zéro surcharge.</h2>
-        <div className="mt-12 grid gap-5 md:grid-cols-3">
-          {ETAPES.map((e) => (
-            <div key={e.num} className="glass rounded-2xl p-7" data-testid={`landing-etape-${e.num}`}>
-              <span className="font-display text-4xl font-extrabold text-gold/25">{e.num}</span>
-              <h3 className="mt-3 font-display text-lg font-bold">{e.titre}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-offwhite/65">{e.texte}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Les 3 piliers (maillage vers sous-pages) ── */}
-      <section className="mx-auto max-w-6xl px-5 pb-20">
-        <p className="text-center text-[11px] font-semibold uppercase tracking-[0.26em] text-gold">Un seul outil</p>
-        <h2 className="mt-3 text-center font-display text-2xl font-bold sm:text-3xl">Un seul cockpit, quatre forces.</h2>
-        <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-          {PILIERS.map((p) => (
-            <Link key={p.to} to={p.to} data-testid={p.testid} className="glass group block overflow-hidden rounded-2xl transition-all duration-300 hover:border-gold/40">
-              <div className="aspect-[16/9] overflow-hidden border-b border-white/10">
-                <img src={p.img} alt={`Aperçu ${p.titre} dans le Cockpit IA Zayado`} loading="lazy" className="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.03]" />
-              </div>
-              <div className="p-6">
-                <div className="flex items-center gap-2.5">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold/15 text-gold"><p.icon size={15} /></span>
-                  <h3 className="font-display text-base font-bold">{p.titre}</h3>
-                </div>
-                <p className="mt-2.5 text-sm leading-relaxed text-offwhite/60">{p.texte}</p>
-                <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-gold">Découvrir <ArrowRight size={12} className="transition-transform group-hover:translate-x-1" /></p>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Mobile : ton cockpit dans ta poche ── */}
-      <section className="border-y border-white/8 bg-white/[0.02]">
-        <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 py-20 lg:grid-cols-2">
-          <div className="flex justify-center">
-            <div className="w-[240px] rounded-[2.8rem] border-[6px] border-[#22335c] bg-[#0c1d33] p-2 shadow-[0_35px_70px_-25px_rgba(0,0,0,0.8)]" data-testid="landing-phone-mockup">
-              <div className="relative overflow-hidden rounded-[2.2rem]">
-                <div className="absolute left-1/2 top-2 z-10 h-4 w-20 -translate-x-1/2 rounded-full bg-black/85" />
-                <img src="/screenshots/radar.png" alt="Le Radar Zayado sur mobile : les opportunités du jour dans la poche" loading="lazy" className="h-[430px] w-full object-cover object-top" />
-              </div>
-            </div>
-          </div>
-          <div>
-            <div className="tiret-rouge" />
-            <p className="mt-4 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.26em] text-gold"><Smartphone size={13} /> Dans ta poche</p>
-            <h2 className="mt-3 font-display text-2xl font-bold sm:text-3xl">Ton business te suit, sans t'envahir.</h2>
-            <p className="mt-4 max-w-md text-sm leading-relaxed text-offwhite/65 sm:text-base">
-              Depuis ton mobile, ton copilote reste joignable où tu es déjà : un « oui » sur Telegram ou WhatsApp
-              suffit pour valider une opportunité, créer une tâche ou clôturer une action.
-            </p>
-            <ul className="mt-6 space-y-2.5">
-              {["Validation Telegram & WhatsApp en un message", "Point du jour consultable partout", "Micro-actions de 5 minutes pour les trajets"].map((t) => (
-                <li key={t} className="flex items-start gap-2.5 text-sm text-offwhite/70"><Check size={14} className="mt-0.5 shrink-0 text-gold" />{t}</li>
+      {/* Barre du haut */}
+      <header className="relative z-20 mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
+        <Link to="/" className="flex items-center gap-2" data-testid="landing-logo">
+          <img src="/logo.png" alt="Zayado" className="h-9 w-9 object-contain" />
+          <span className="hidden font-display text-lg font-bold sm:inline">Zayado</span>
+        </Link>
+        <div className="flex items-center gap-3" ref={menuRef}>
+          <Link to={START} className="inline-flex items-center gap-2 rounded-full border border-white/60 px-4 py-2 text-[14px] font-medium text-offwhite transition hover:bg-white/10" data-testid="landing-agent">
+            <Sparkles size={16} /> Copilote IA
+          </Link>
+          <button onClick={() => setMenu((v) => !v)} aria-label="Menu" className="rounded-lg p-2 text-offwhite hover:bg-white/10" data-testid="landing-menu">
+            {menu ? <X size={24} /> : <Menu size={24} />}
+          </button>
+          {menu && (
+            <nav className="fenetre absolute right-5 top-[68px] w-60 rounded-2xl p-2 sm:right-8" data-testid="landing-menu-liste">
+              {[["/pricing", "Tarifs"], [START, "Créer mon cockpit"], ["/login", "Se connecter"]].map(([to, label]) => (
+                <Link key={label} to={to} onClick={() => setMenu(false)} className="block rounded-xl px-4 py-2.5 text-[14px] text-offwhite/85 hover:bg-white/10">{label}</Link>
               ))}
-            </ul>
+            </nav>
+          )}
+        </div>
+      </header>
+
+      <main className="relative z-10">
+        {/* Héros */}
+        <section className="mx-auto max-w-3xl px-5 pt-4 text-center sm:pt-8">
+          <form onSubmit={commencer} className="mx-auto flex max-w-2xl items-center gap-2 rounded-full border border-white/25 bg-white/[0.10] p-1.5 pl-5 shadow-[0_10px_40px_rgba(0,0,0,0.25)] backdrop-blur-xl" data-testid="landing-saisie">
+            <Search size={20} className="shrink-0 text-offwhite/60" />
+            <input value={idee} onChange={(e) => setIdee(e.target.value)} placeholder="Décris ton activité en une phrase…"
+              className="min-w-0 flex-1 bg-transparent py-2.5 text-[15px] text-offwhite outline-none placeholder:text-offwhite/55" data-testid="landing-saisie-input" />
+            <button type="submit" className="shrink-0 rounded-full bg-gradient-to-b from-[#F1E2CC] to-[#DEC2A3] px-5 py-2.5 text-[15px] font-semibold text-navy-900 transition hover:brightness-105 sm:px-7" data-testid="landing-saisie-btn">
+              Commencer
+            </button>
+          </form>
+          <p className="mt-3 text-[13px] text-offwhite/80">
+            <b className="font-semibold text-offwhite">Offre Découverte gratuite</b>, sans carte bancaire · <Link to="/pricing" className="underline underline-offset-2 hover:text-gold">voir les offres</Link>
+          </p>
+
+          <h1 className="mt-14 font-display text-[40px] font-bold leading-[1.08] tracking-tight sm:mt-20 sm:text-[64px]" data-testid="landing-titre">
+            Donne un cap clair<br className="hidden sm:block" /> à ton entreprise
+          </h1>
+          <p className="mx-auto mt-5 max-w-xl text-[16px] leading-relaxed text-offwhite/65 sm:text-[18px]">
+            Le cockpit IA des entrepreneurs : ta vision, tes priorités, ton énergie et tes chiffres au même endroit.
+          </p>
+          <Link to={START} className="mt-8 inline-flex items-center rounded-full bg-gradient-to-b from-[#F1E2CC] to-[#DEC2A3] px-8 py-3.5 text-[16px] font-semibold text-navy-900 shadow-[0_10px_30px_rgba(222,194,163,0.25)] transition hover:brightness-105" data-testid="landing-cta">
+            Je me lance
+          </Link>
+          <p className="mt-5 flex items-center justify-center gap-2 text-[13.5px] text-offwhite/80">
+            <ShieldCheck size={16} className="text-offwhite/80" /> Sans engagement, résiliable en 1 clic
+          </p>
+        </section>
+
+        {/* Visuel de l'appli */}
+        <section className="mx-auto mt-12 max-w-3xl px-5">
+          <div className="rounded-[22px] border-2 border-[#DEC2A3]/80 bg-[#0b1733] p-1.5 shadow-[0_30px_80px_rgba(0,0,0,0.5),0_0_0_6px_rgba(255,255,255,0.04)]">
+            <img src="/screenshots/cockpit-accueil.png" alt="Le cockpit Zayado : énergie, équilibre, objectif et point du jour"
+              className="block w-full rounded-[16px]" loading="eager" data-testid="landing-visuel"
+              onError={(e) => { e.currentTarget.src = "/screenshots/cockpit.png"; }} />
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ── Pour qui ── */}
-      <section className="mx-auto max-w-6xl px-5 py-20">
-        <div className="tiret-rouge mx-auto" />
-        <h2 className="mt-4 text-center font-display text-2xl font-bold sm:text-3xl">Pensé pour celles et ceux qui portent tout, seuls.</h2>
-        <div className="mt-12 grid gap-5 md:grid-cols-3">
-          {PERSONAS.map((p) => (
-            <div key={p.titre} className="glass rounded-2xl p-7" data-testid={`landing-persona-${p.titre.toLowerCase().replace(/[^a-z]/g, "-")}`}>
-              <h3 className="font-display text-lg font-bold">{p.titre}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-offwhite/65">{p.texte}</p>
-            </div>
+        {/* Lignes dépliables */}
+        <section className="mx-auto mt-6 max-w-3xl space-y-2.5 px-5" data-testid="landing-lignes">
+          {LIGNES.map((l) => (
+            <Ligne key={l.id} l={l} ouvert={ouverte === l.id} onToggle={() => setOuverte((o) => (o === l.id ? null : l.id))} />
           ))}
-        </div>
-      </section>
+        </section>
 
-      {/* ── Avant / Avec Zayado ── */}
-      <section className="mx-auto max-w-4xl px-5 pb-20">
-        <div className="tiret-rouge mx-auto" />
-        <h2 className="mt-4 text-center font-display text-2xl font-bold sm:text-3xl">Avant / Avec Zayado</h2>
-        <div className="mt-10 space-y-3">
-          {AVANT_APRES.map((l, i) => (
-            <div key={i} className="glass grid items-center gap-3 rounded-2xl px-6 py-4 sm:grid-cols-2" data-testid={`landing-avant-apres-${i}`}>
-              <p className="flex items-center gap-2.5 text-sm text-offwhite/50"><X size={14} className="shrink-0 text-[#C1272D]" />{l.avant}</p>
-              <p className="flex items-center gap-2.5 text-sm font-medium text-offwhite"><Check size={14} className="shrink-0 text-gold" />{l.apres}</p>
-            </div>
+        {/* Confiance (faits vérifiables uniquement) */}
+        <section className="mx-auto mt-10 flex max-w-3xl flex-wrap items-center justify-center gap-x-6 gap-y-2 px-5 text-[13px] text-offwhite/75" data-testid="landing-confiance">
+          {[[Server, "Hébergé en Europe · RGPD"], [Lock, "Paiement sécurisé Mollie"], [RefreshCw, "Mises à jour incluses"]].map(([Icon, t]) => (
+            <span key={t} className="inline-flex items-center gap-1.5"><Icon size={15} className="text-gold" />{t}</span>
           ))}
-        </div>
-      </section>
+        </section>
 
-      {/* ── Offre ── */}
-      <section className="border-y border-white/8 bg-white/[0.02]">
-        <div className="mx-auto max-w-6xl px-5 py-16">
-          <div className="grid gap-5 md:grid-cols-3">
-            {[
-              { nom: "Découverte", prix: "0 €", points: ["Cockpit du jour & priorité du matin", "1 Vision Board", "Check-in énergie"] },
-              { nom: "Solo", prix: "24 € HT/mois", points: ["Copilote IA sans limite (usage équitable)", "Radar : 3 opportunités par jour", "Pouls business & revue hebdo"], star: true },
-              { nom: "Pro", prix: "69 € HT/mois", points: ["Ton chatbot client, à ta marque", "Documents IA : brief, plan 30 j, SWOT", "Alertes WhatsApp & Telegram"] },
-            ].map((o) => (
-              <div key={o.nom} className={`glass rounded-2xl p-7 ${o.star ? "border-gold/40" : ""}`} data-testid={`landing-offre-${o.nom.toLowerCase().replace(/[^a-z]/g, "-")}`}>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">{o.nom}</p>
-                <p className="mt-2 font-display text-3xl font-extrabold">{o.prix}</p>
-                <ul className="mt-4 space-y-2">
-                  {o.points.map((pt) => (
-                    <li key={pt} className="flex items-start gap-2 text-sm text-offwhite/70"><Check size={14} className="mt-0.5 shrink-0 text-gold" />{pt}</li>
-                  ))}
+        {/* 3 étapes */}
+        <section className="mx-auto mt-24 max-w-5xl px-5">
+          <p className="text-center text-[11px] font-semibold uppercase tracking-[0.22em] text-gold">Comment ça marche</p>
+          <h2 className="mt-3 text-center font-display text-3xl font-bold sm:text-4xl">Trois étapes, zéro prise de tête</h2>
+          <div className="mt-10 grid gap-4 md:grid-cols-3">
+            {ETAPES.map((e) => (
+              <div key={e.num} className="glass rounded-[20px] p-6">
+                <p className="font-display text-3xl font-bold text-gold">{e.num}</p>
+                <p className="mt-3 text-[16px] font-semibold">{e.titre}</p>
+                <p className="mt-2 text-[14px] leading-relaxed text-offwhite/65">{e.texte}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Offres */}
+        <section className="mx-auto mt-24 max-w-5xl px-5">
+          <p className="text-center text-[11px] font-semibold uppercase tracking-[0.22em] text-gold">Offres</p>
+          <h2 className="mt-3 text-center font-display text-3xl font-bold sm:text-4xl">Commence gratuitement</h2>
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {PLANS.map((p) => (
+              <div key={p.key} className={`glass flex flex-col rounded-[20px] p-5 ${p.star ? "ring-1 ring-gold/50" : ""}`} data-testid={`landing-offre-${p.key}`}>
+                <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-gold">{p.nom}</p>
+                <p className="mt-1 text-[12.5px] text-offwhite/60">{p.pourQui}</p>
+                <p className="mt-3 font-display text-3xl font-bold">{prixMois(p, "mensuel")} €<span className="ml-1 text-xs font-normal text-offwhite/50">HT / mois</span></p>
+                <ul className="mt-4 flex-1 space-y-1.5 text-[13px] text-offwhite/70">
+                  {p.points.slice(0, 3).map((pt) => <li key={pt} className="flex gap-2"><Check size={14} className="mt-0.5 shrink-0 text-gold" />{pt}</li>)}
                 </ul>
               </div>
             ))}
           </div>
-          <p className="mt-8 text-center"><Link to="/pricing" className="text-sm font-semibold text-gold underline-offset-4 hover:underline" data-testid="landing-lien-tarifs">Voir le détail des tarifs →</Link></p>
-        </div>
-      </section>
+          <div className="mt-8 text-center">
+            <Link to="/pricing" className="inline-flex items-center gap-2 rounded-full border border-white/40 px-6 py-3 text-[14px] font-medium hover:bg-white/10" data-testid="landing-tarifs">
+              Comparer les offres <ArrowRight size={15} />
+            </Link>
+          </div>
+        </section>
 
-      {/* ── FAQ SEO ── */}
-      <section className="mx-auto max-w-3xl px-5 py-20">
-        <h2 className="text-center font-display text-2xl font-bold sm:text-3xl">Questions fréquentes</h2>
-        <div className="mt-10 space-y-3">
-          {FAQ.map((f, i) => (
-            <details key={i} className="glass rounded-2xl px-6 py-4" data-testid={`landing-faq-${i}`}>
-              <summary className="cursor-pointer text-sm font-semibold text-offwhite">{f.q}</summary>
-              <p className="mt-2.5 text-sm leading-relaxed text-offwhite/65">{f.r}</p>
-            </details>
-          ))}
-        </div>
-      </section>
+        {/* Dernier appel */}
+        <section className="mx-auto mt-24 max-w-3xl px-5 pb-20 text-center">
+          <h2 className="font-display text-3xl font-bold sm:text-4xl">Prêt à piloter autrement ?</h2>
+          <p className="mx-auto mt-3 max-w-md text-[15px] text-offwhite/65">Cinq minutes pour poser ta vision. Ton premier point du jour arrive demain matin.</p>
+          <Link to={START} className="mt-7 inline-flex items-center rounded-full bg-gradient-to-b from-[#F1E2CC] to-[#DEC2A3] px-8 py-3.5 text-[16px] font-semibold text-navy-900 transition hover:brightness-105">
+            Je me lance
+          </Link>
+        </section>
+      </main>
 
-      {/* ── CTA final ── */}
-      <section className="mx-auto max-w-4xl px-5 pb-24 text-center">
-        <div className="tiret-rouge mx-auto" />
-        <h2 className="mt-5 font-display text-3xl font-extrabold sm:text-4xl">Ton entreprise mérite un cockpit.<br /><span className="font-serif-italic font-normal text-gradient-gold">Toi aussi.</span></h2>
-        <Link to="/login" data-testid="landing-cta-final" className="btn-gold mt-8 inline-flex !px-8 !py-4 text-base">Commencer gratuitement</Link>
-      </section>
-    </MarketingLayout>
+      <footer className="relative z-10 border-t border-white/10 px-5 py-8 text-center text-[12.5px] text-offwhite/45">
+        <div className="mb-3 flex flex-wrap justify-center gap-5">
+          <Link to="/pricing" className="hover:text-gold">Tarifs</Link>
+          <Link to="/login" className="hover:text-gold">Se connecter</Link>
+          <a href="mailto:contact@zayado.net" className="hover:text-gold">Contact</a>
+        </div>
+        © {new Date().getFullYear()} Zayado — SAS TheSustain
+      </footer>
+    </div>
   );
 }

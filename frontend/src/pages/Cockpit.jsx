@@ -13,6 +13,7 @@ import { TrendChart } from "@/components/kairos/TrendChart";
 import { useKairos } from "@/context/KairosContext";
 import { GoalCountdown } from "@/components/kairos/GoalCountdown";
 import PoulsBusinessWidget from "@/components/kairos/PoulsBusinessWidget";
+import AiFallbackBanner from "@/components/kairos/AiFallbackBanner";
 import RadarWidget from "@/components/kairos/RadarWidget";
 import ImpactBanner from "@/components/kairos/ImpactBanner";
 import { useI18n } from "@/i18n";
@@ -131,6 +132,11 @@ export default function Cockpit() {
               <div className="mb-5 grid gap-4 sm:grid-cols-2 animate-fade-up" style={{ animationDelay: "140ms" }}>
                 <PoulsBusinessWidget />
                 <RadarWidget />
+              </div>
+
+              {/* Bandeau d'alerte si l'IA tourne en repli */}
+              <div className="mb-5 animate-fade-up" style={{ animationDelay: "150ms" }}>
+                <AiFallbackBanner />
               </div>
 
               {/* Bandeau d'impact 7 jours */}

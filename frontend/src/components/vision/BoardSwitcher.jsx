@@ -96,7 +96,7 @@ export function BoardSwitcher({ current, onSwitch, onBoardsLoaded }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-[70] mt-2 w-[250px] rounded-xl border border-white/12 bg-navy-800/98 p-2 shadow-2xl backdrop-blur" data-testid="vision-board-menu">
+        <div className="absolute right-0 top-full z-[70] mt-2 w-[250px] rounded-xl fenetre p-2" data-testid="vision-board-menu">
           <p className="px-1.5 pb-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-gold">
             {t("vision.boards.title")}
           </p>

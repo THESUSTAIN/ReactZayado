@@ -43,7 +43,7 @@ export default function Admin() {
   const menuItems = ONGLETS.map((o) => ({ key: o.key, label: o.label, icon: ICONS[o.key] }));
 
   return (
-    <div className="theme-creme min-h-screen text-offwhite">
+    <div className="min-h-screen bg-navy-900 text-offwhite">
       <SideMenuPro
         titre="Console Admin"
         sousTitre="Zayado — pilotage plateforme"
@@ -52,7 +52,7 @@ export default function Admin() {
         onChange={setOnglet}
         retour={null}
       />
-      <div style={{ marginLeft: "248px", padding: "32px 40px" }}>
+      <div className="min-w-0 px-4 py-5 sm:px-6 lg:ml-[248px] lg:px-10 lg:py-8">
       <h1 className="font-serif text-2xl font-bold">{ONGLETS.find((o) => o.key === onglet)?.label || "Admin"}</h1>
       <p className="text-offwhite/55 text-sm mt-1">Réservé aux comptes avec le rôle admin — vérifié côté serveur.</p>
 
@@ -184,7 +184,7 @@ function VueEnsemble() {
   if (erreur) return <Carte><p className="text-red-400 text-sm">{erreur}</p></Carte>;
   if (!donnees) return <Carte><p className="text-offwhite/50 text-sm">Chargement…</p></Carte>;
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
       <Carte><p className="text-offwhite/50 text-xs uppercase tracking-wide">Utilisateurs</p><p className="text-3xl font-bold mt-1">{donnees.utilisateurs_total}</p></Carte>
       <Carte><p className="text-offwhite/50 text-xs uppercase tracking-wide">Clients</p><p className="text-3xl font-bold mt-1">{donnees.par_role.client}</p></Carte>
       <Carte><p className="text-offwhite/50 text-xs uppercase tracking-wide">Vendeurs</p><p className="text-3xl font-bold mt-1">{donnees.par_role.vendeur}</p></Carte>
@@ -200,7 +200,7 @@ function CommandesMollie() {
   const load = () => Promise.all([fetchAdminCommerceOrders(status), fetchAdminCommerceStats()]).then(([orders, summary]) => { setData(orders); setStats(summary); }).catch((e) => setError(e.message));
   useEffect(() => { load(); }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
   const update = async (id, next) => { try { await changerStatutCommandeAdmin(id, next); load(); } catch (e) { setError(e.message); } };
-  return <div className="space-y-4"><div className="grid grid-cols-3 gap-4"><Carte><p className="text-xs uppercase tracking-wide text-offwhite/50">Commandes</p><p className="mt-1 text-3xl font-bold">{stats?.total ?? "—"}</p></Carte><Carte><p className="text-xs uppercase tracking-wide text-offwhite/50">Payées</p><p className="mt-1 text-3xl font-bold text-gold">{stats?.paid ?? "—"}</p></Carte><Carte><p className="text-xs uppercase tracking-wide text-offwhite/50">Filtre</p><select value={status} onChange={(e) => setStatus(e.target.value)} className="mt-2 rounded-lg border border-white/15 bg-navy-800 px-2 py-1 text-sm"><option value="">Tous les statuts</option>{["pending", "paid", "failed", "canceled", "expired", "refunded"].map((s) => <option key={s}>{s}</option>)}</select></Carte></div>{error && <Carte><p className="text-sm text-red-400">{error}</p></Carte>}<Carte><div className="overflow-x-auto"><table className="w-full min-w-[760px] text-sm"><thead><tr className="border-b border-white/10 text-left text-offwhite/50"><th className="pb-2">Date</th><th className="pb-2">Client</th><th className="pb-2">Commande</th><th className="pb-2">Montant</th><th className="pb-2">Statut</th><th className="pb-2">Action</th></tr></thead><tbody>{data?.items?.map((o) => <tr key={o.id} className="border-b border-white/5"><td className="py-2.5 text-offwhite/55">{o.created_at ? new Date(o.created_at).toLocaleDateString("fr-FR") : "—"}</td><td className="py-2.5">{o.email}</td><td className="py-2.5"><span className="text-xs text-offwhite/50">{o.kind}</span><br />{o.title}</td><td className="py-2.5">{o.amount} {o.currency}</td><td className="py-2.5"><span className="rounded-full bg-white/10 px-2 py-1 text-xs">{o.status}</span></td><td className="py-2.5"><select value={o.status} onChange={(e) => update(o.id, e.target.value)} className="rounded-lg border border-white/15 bg-navy-800 px-2 py-1 text-xs">{["pending", "paid", "failed", "canceled", "expired", "refunded"].map((s) => <option key={s}>{s}</option>)}</select></td></tr>)}{data && !data.items.length && <tr><td colSpan={6} className="py-6 text-center text-offwhite/50">Aucune commande.</td></tr>}</tbody></table></div></Carte></div>;
+  return <div className="space-y-4"><div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4"><Carte><p className="text-xs uppercase tracking-wide text-offwhite/50">Commandes</p><p className="mt-1 text-3xl font-bold">{stats?.total ?? "—"}</p></Carte><Carte><p className="text-xs uppercase tracking-wide text-offwhite/50">Payées</p><p className="mt-1 text-3xl font-bold text-gold">{stats?.paid ?? "—"}</p></Carte><Carte><p className="text-xs uppercase tracking-wide text-offwhite/50">Filtre</p><select value={status} onChange={(e) => setStatus(e.target.value)} className="mt-2 rounded-lg border border-white/15 bg-navy-800 px-2 py-1 text-sm"><option value="">Tous les statuts</option>{["pending", "paid", "failed", "canceled", "expired", "refunded"].map((s) => <option key={s}>{s}</option>)}</select></Carte></div>{error && <Carte><p className="text-sm text-red-400">{error}</p></Carte>}<Carte><div className="overflow-x-auto"><table className="w-full min-w-[760px] text-sm"><thead><tr className="border-b border-white/10 text-left text-offwhite/50"><th className="pb-2">Date</th><th className="pb-2">Client</th><th className="pb-2">Commande</th><th className="pb-2">Montant</th><th className="pb-2">Statut</th><th className="pb-2">Action</th></tr></thead><tbody>{data?.items?.map((o) => <tr key={o.id} className="border-b border-white/5"><td className="py-2.5 text-offwhite/55">{o.created_at ? new Date(o.created_at).toLocaleDateString("fr-FR") : "—"}</td><td className="py-2.5">{o.email}</td><td className="py-2.5"><span className="text-xs text-offwhite/50">{o.kind}</span><br />{o.title}</td><td className="py-2.5">{o.amount} {o.currency}</td><td className="py-2.5"><span className="rounded-full bg-white/10 px-2 py-1 text-xs">{o.status}</span></td><td className="py-2.5"><select value={o.status} onChange={(e) => update(o.id, e.target.value)} className="rounded-lg border border-white/15 bg-navy-800 px-2 py-1 text-xs">{["pending", "paid", "failed", "canceled", "expired", "refunded"].map((s) => <option key={s}>{s}</option>)}</select></td></tr>)}{data && !data.items.length && <tr><td colSpan={6} className="py-6 text-center text-offwhite/50">Aucune commande.</td></tr>}</tbody></table></div></Carte></div>;
 }
 
 function CatalogueAdmin() {
@@ -216,7 +216,7 @@ function ComptesVendeurs() {
   useEffect(() => { fetchAdminCommerceVendors().then((d) => setItems(d.items)).catch((e) => setError(e.message)); }, []);
   if (error) return <Carte><p className="text-sm text-red-400">{error}</p></Carte>;
   if (!items) return <Carte><p className="text-sm text-offwhite/50">Chargement…</p></Carte>;
-  return <Carte><table className="w-full text-sm"><thead><tr className="border-b border-white/10 text-left text-offwhite/50"><th className="pb-2">Email</th><th className="pb-2">Boutique</th><th className="pb-2">Rôle</th><th className="pb-2">Produits</th></tr></thead><tbody>{items.map((v) => <tr key={v.id} className="border-b border-white/5"><td className="py-2.5">{v.email}</td><td className="py-2.5">{v.shop || "—"}</td><td className="py-2.5"><span className="rounded-full bg-white/10 px-2 py-1 text-xs">{v.role}</span></td><td className="py-2.5">{v.products}</td></tr>)}</tbody></table></Carte>;
+  return <Carte><div className="overflow-x-auto"><table className="w-full min-w-[560px] text-sm"><thead><tr className="border-b border-white/10 text-left text-offwhite/50"><th className="pb-2">Email</th><th className="pb-2">Boutique</th><th className="pb-2">Rôle</th><th className="pb-2">Produits</th></tr></thead><tbody>{items.map((v) => <tr key={v.id} className="border-b border-white/5"><td className="py-2.5">{v.email}</td><td className="py-2.5">{v.shop || "—"}</td><td className="py-2.5"><span className="rounded-full bg-white/10 px-2 py-1 text-xs">{v.role}</span></td><td className="py-2.5">{v.products}</td></tr>)}</tbody></table></div></Carte>;
 }
 
 function Utilisateurs() {
@@ -253,7 +253,7 @@ function Utilisateurs() {
 
   return (
     <Carte>
-      <table className="w-full text-sm">
+      <div className="overflow-x-auto"><table className="w-full min-w-[560px] text-sm">
         <thead>
           <tr className="text-left text-offwhite/50 border-b border-white/10">
             <th className="pb-2">Email</th><th className="pb-2">Rôle</th><th className="pb-2">Offre</th><th className="pb-2">Inscrit le</th><th className="pb-2">Action</th>
@@ -291,7 +291,7 @@ function Utilisateurs() {
             </tr>
           ))}
         </tbody>
-      </table>
+      </table></div>
     </Carte>
   );
 }
@@ -353,7 +353,7 @@ function Parrainage() {
         <Carte><p className="text-offwhite/50 text-xs uppercase tracking-wide">Actifs (bonus versé)</p><p className="text-3xl font-bold mt-1">{donnees.actifs}</p></Carte>
       </div>
       <Carte>
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto"><table className="w-full min-w-[560px] text-sm">
           <thead>
             <tr className="text-left text-offwhite/50 border-b border-white/10">
               <th className="pb-2">Filleul</th><th className="pb-2">Statut</th><th className="pb-2">Bonus</th><th className="pb-2">Depuis</th>
@@ -369,7 +369,7 @@ function Parrainage() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </Carte>
     </div>
   );
@@ -406,7 +406,7 @@ function CodesPromo() {
       </Carte>
       {chargement ? <Carte><p className="text-offwhite/50 text-sm">Chargement…</p></Carte> : (
         <Carte>
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto"><table className="w-full min-w-[560px] text-sm">
             <thead><tr className="text-left text-offwhite/50 border-b border-white/10"><th className="pb-2">Code</th><th className="pb-2">Valeur</th><th className="pb-2">Usages</th><th className="pb-2">Statut</th><th className="pb-2">Action</th></tr></thead>
             <tbody>
               {items.map((p) => (
@@ -423,7 +423,7 @@ function CodesPromo() {
               ))}
               {!items.length && <tr><td colSpan={5} className="py-3 text-offwhite/50">Aucun code promo créé.</td></tr>}
             </tbody>
-          </table>
+          </table></div>
         </Carte>
       )}
     </>
