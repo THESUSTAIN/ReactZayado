@@ -38,7 +38,7 @@ export default function GlobalChat() {
         aria-hidden="true"
       />
       <aside
-        className={`fixed right-0 top-0 z-[56] flex h-[100dvh] w-full flex-col border-l border-white/10 bg-[#101a34]/[0.97] shadow-2xl backdrop-blur-2xl transition-transform duration-300 sm:w-[400px] ${open ? "translate-x-0" : "translate-x-full"}`}
+        className={`fixed right-0 top-0 z-[56] flex h-[100dvh] w-full flex-col fenetre !border-y-0 !border-r-0 transition-transform duration-300 sm:w-[400px] ${open ? "translate-x-0" : "translate-x-full"}`}
         aria-hidden={!open}
         data-testid="global-chat"
       >

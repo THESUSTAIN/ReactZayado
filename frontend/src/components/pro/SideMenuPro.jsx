@@ -10,6 +10,37 @@ export function SideMenuPro({ titre, sousTitre, items, actif, onChange, retour }
   const connecte = !!getToken();
 
   return (
+    <>
+    {/* Mobile / tablette : le rail latéral est masqué sous 1024 px — avant, il
+        n'y avait alors AUCUNE navigation. Bandeau d'onglets défilant à la place. */}
+    <div className="border-b border-white/10 lg:hidden" style={{ background: "linear-gradient(180deg, #1e3a8a 0%, #0f2560 100%)" }} data-testid="side-menu-pro-mobile">
+      <div className="flex items-center gap-2.5 px-4 pb-2 pt-3">
+        {retour && (
+          <button onClick={() => navigate(retour.to)} aria-label={retour.label} className="rounded-lg p-1.5 text-white/70 hover:bg-white/10"><ArrowLeft size={18} /></button>
+        )}
+        <img src="/logo.png" alt="Zayado" className="h-8 w-8 object-contain" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-display text-[14px] font-bold text-white">{titre}</p>
+          <p className="truncate text-[10px] leading-tight text-white/45">{sousTitre}</p>
+        </div>
+        {connecte && (
+          <button onClick={() => { setToken(null); navigate("/login"); }} aria-label="Se déconnecter" className="rounded-lg p-1.5 text-white/60 hover:bg-white/10"><LogOut size={17} /></button>
+        )}
+      </div>
+      <nav className="flex gap-1.5 overflow-x-auto px-4 pb-3 [scrollbar-width:none]">
+        {items.map((it) => {
+          const isActive = actif === it.key;
+          return (
+            <button key={it.key} onClick={() => onChange(it.key)} data-testid={`pro-menu-m-${it.key}`}
+              className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-[12.5px] transition ${
+                isActive ? "bg-gradient-to-r from-[#F1E2CC] to-[#DEC2A3] font-semibold text-[#0f1b3a]" : "bg-white/8 text-white/70"}`}>
+              <span className="flex h-4 w-4 items-center justify-center">{it.icon}</span>{it.label}
+              {it.badge != null && it.badge > 0 && <span className="rounded-full bg-[#C1272D] px-1.5 text-[10px] font-bold text-white">{it.badge}</span>}
+            </button>
+          );
+        })}
+      </nav>
+    </div>
     <aside className="fixed left-0 top-0 z-30 hidden h-screen w-[248px] flex-col px-5 py-6 lg:flex" style={{ background: "linear-gradient(180deg, #1e3a8a 0%, #0f2560 55%, #0a1f4e 100%)" }} data-testid="side-menu-pro">
       <div className="flex items-center gap-3 px-1">
         <img src="/logo.png" alt="Zayado" className="h-10 w-10 object-contain" />
@@ -64,5 +95,6 @@ export function SideMenuPro({ titre, sousTitre, items, actif, onChange, retour }
         </p>
       </div>
     </aside>
+    </>
   );
 }

@@ -17,6 +17,7 @@ export function SettingsModal({ open, onClose }) {
   const [email, setEmail] = useState("");
   const [heure, setHeure] = useState("08:30");
   const [plan, setPlan] = useState("serenite");
+  const [planAttente, setPlanAttente] = useState(null);
   const [notif, setNotif] = useState(true);
   const [marche, setMarche] = useState("france");
   const [saving, setSaving] = useState(false);
@@ -26,7 +27,7 @@ export function SettingsModal({ open, onClose }) {
     if (!open) return;
     fetchState().then((s) => {
       setPrenom(s.profile?.prenom || ""); setEmail(s.profile?.email || "");
-      setHeure(s.profile?.heure_checkin || "08:30"); setPlan(s.profile?.plan || "essentielle");
+      setHeure(s.profile?.heure_checkin || "08:30"); setPlan(s.profile?.plan || "essentielle"); setPlanAttente(s.profile?.plan_en_attente || null);
       setNotif(s.profile?.notifications ?? true);
       setMarche(s.profile?.contexte_metier?.marche || "france");
     }).catch(() => {});
@@ -89,6 +90,7 @@ export function SettingsModal({ open, onClose }) {
               <div>
                 <p className="text-[11px] uppercase tracking-widest text-offwhite/50">Offre actuelle</p>
                 <p className="font-display text-lg font-bold">{planNom(plan)}</p>
+                {planAttente && <p className="text-[11px] text-amber-200" data-testid="settings-plan-attente">{planNom(planAttente)} choisi · en attente de paiement</p>}
               </div>
               <button onClick={() => { onClose(); navigate("/pricing"); }} className="rounded-xl border border-gold/40 px-4 py-2 text-xs font-semibold text-gold" data-testid="settings-changer-offre">
                 {plan === "essentielle" ? "Voir les offres" : "Changer d'offre"}

@@ -178,7 +178,7 @@ export default function IntegrationsSection({ onOnboardingChange }) {
 
   return (
     <>
-      <GlassCard className="mb-4" data-testid="params-integrations">
+      <GlassCard className="mb-4 !p-4 sm:!p-6" data-testid="params-integrations">
         <div className="mb-4 flex items-center gap-2">
           <Plug className="h-4 w-4 text-gold" />
           <h2 className="font-display text-lg font-bold text-offwhite">Intégrations</h2>
@@ -199,13 +199,13 @@ export default function IntegrationsSection({ onOnboardingChange }) {
                 <Meta.icon className="h-3.5 w-3.5 text-gold" />
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-offwhite/60">{Meta.label}</p>
               </div>
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid grid-cols-[minmax(0,1fr)] gap-2 sm:grid-cols-2">
                 {list.map((it) => (
-                  <div key={it.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5">
+                  <div key={it.id} className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.03] p-3.5">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-offwhite">{it.name}</p>
-                        <div className="mt-1 flex items-center gap-1.5">
+                        <p className="text-sm font-semibold leading-snug text-offwhite">{it.name}</p>
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
                           {it.configured ? (
                             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
                               <CheckCircle2 className="h-3 w-3" /> Configuré
@@ -254,7 +254,7 @@ export default function IntegrationsSection({ onOnboardingChange }) {
       {/* Modal config */}
       {openConfig && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#060a18]/70 backdrop-blur-sm p-4 backdrop-blur-sm" role="dialog">
-          <div className="w-full max-w-lg rounded-2xl border border-white/15 bg-navy-900/95 p-6">
+          <div className="w-full max-w-lg rounded-2xl fenetre p-6">
             <div className="mb-4 flex items-start justify-between">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-gold">Intégration</p>

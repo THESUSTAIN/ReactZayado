@@ -85,7 +85,7 @@ export function Header() {
     return () => window.removeEventListener("keydown", k);
   }, []);
   const listeResultats = (
-    <div className="absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-xl border border-white/15 bg-[#101a34] py-1 shadow-2xl" data-testid="header-search-results">
+    <div className="absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-xl fenetre py-1" data-testid="header-search-results">
       {resultats.length === 0 && <p className="px-3 py-3 text-xs text-offwhite/60">Aucune page ne correspond.</p>}
       {resultats.map((p, idx) => (
         <button key={p.label} onMouseDown={(e) => { e.preventDefault(); lancer(p); }} onMouseEnter={() => setSel(idx)}
@@ -297,7 +297,7 @@ export function Header() {
       </div>
     </header>
     {rechercheMobile && (
-      <div className="relative border-b border-white/10 bg-[#101a34]/95 px-4 py-2 backdrop-blur-xl md:hidden">
+      <div className="relative border-b border-white/10 bg-white/[0.06] px-4 py-2 backdrop-blur-xl md:hidden">
         <input ref={champMobileRef} value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onToucheRecherche}
           placeholder="Rechercher une page…" aria-label="Rechercher une page" data-testid="header-search-mobile-input"
           className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-offwhite placeholder:text-offwhite/40 focus:border-gold/40 focus:outline-none" />

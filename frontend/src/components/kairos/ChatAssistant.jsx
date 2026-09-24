@@ -339,7 +339,7 @@ export function ChatPanel() {
   const [estElargi, setEstElargi] = useState(false);
   return (
     <div
-      className={`hidden xl:flex fixed right-0 top-0 z-20 h-screen flex-col border-l border-white/10 bg-[#0f1b3a]/95 backdrop-blur-2xl transition-[width] duration-200 ${estElargi ? "w-[640px]" : "w-[360px]"}`}
+      className={`hidden xl:flex fixed right-0 top-0 z-20 h-screen flex-col fenetre !rounded-none !border-y-0 !border-r-0 transition-[width] duration-200 ${estElargi ? "w-[640px]" : "w-[360px]"}`}
       data-testid="chat-panel"
     >
       <ChatBody estElargi={estElargi} onToggleTaille={() => setEstElargi((v) => !v)} />
@@ -350,7 +350,7 @@ export function ChatPanel() {
 export function ChatBubble({ open, onClose }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[#0f1b3a]/72 backdrop-blur-2xl xl:hidden" data-testid="chat-bubble">
+    <div className="fixed inset-0 z-50 flex flex-col fenetre !rounded-none !border-0 xl:hidden" data-testid="chat-bubble">
       <ChatBody onClose={onClose} />
     </div>
   );

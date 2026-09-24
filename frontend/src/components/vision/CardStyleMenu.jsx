@@ -65,7 +65,7 @@ export function CardStyleMenu({ card, onChange, onClose }) {
       data-testid={`vision-card-style-${card.id}`}
       onPointerDown={(e) => e.stopPropagation()}
       onDoubleClick={(e) => e.stopPropagation()}
-      className="absolute left-0 top-full z-[60] mt-2 w-[228px] rounded-xl border border-white/12 bg-navy-800/98 p-3 shadow-2xl backdrop-blur"
+      className="absolute left-0 top-full z-[60] mt-2 w-[228px] rounded-xl fenetre p-3"
       style={{ transform: `rotate(${-(card.rotate || 0)}deg)`, transformOrigin: "top left" }}
     >
       <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-gold">
@@ -185,7 +185,7 @@ export function TagFilterBar({ value, onChange, counts = {} }) {
     { id: "none", label: t("vision.tags.none") },
   ];
   return (
-    <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-navy-800/90 p-1 shadow-lg backdrop-blur" data-testid="vision-tag-filter">
+    <div className="flex items-center gap-1 rounded-xl fenetre p-1" data-testid="vision-tag-filter">
       {opts.map((o) => {
         const active = value === o.id;
         const n = counts[o.id];
