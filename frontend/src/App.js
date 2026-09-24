@@ -31,6 +31,7 @@ import Parametres from "@/pages/Parametres";
 import Admin from "@/pages/Admin";
 import ConsoleLogin from "@/pages/console/ConsoleLogin";
 import PublicVision from "@/pages/PublicVision";
+import TarifsEmbed from "@/pages/TarifsEmbed";
 import { getToken } from "@/lib/kairosApi";
 
 // Deux apps séparées issues du même code — la saveur est choisie AU BUILD :
@@ -60,6 +61,19 @@ function App() {
           </Routes>
         </BrowserRouter>
       </div>
+    );
+  }
+
+  // Pages intégrées en iframe (Shopify / Instant) : rendu minimal, sans session,
+  // sans chat ni visite guidée — rien qui puisse rediriger ou gêner la page hôte.
+  if (window.location.pathname.startsWith("/embed/")) {
+    return (
+      <BrowserRouter>
+        <Routes>
+          <Route path="/embed/tarifs" element={<TarifsEmbed />} />
+          <Route path="*" element={<TarifsEmbed />} />
+        </Routes>
+      </BrowserRouter>
     );
   }
 

@@ -9,7 +9,7 @@ import uuid
 import httpx
 from fastapi import Depends, HTTPException, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import DateTime, JSON, String, Text, func, select
+from sqlalchemy import Boolean, DateTime, JSON, String, Text, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -42,6 +42,72 @@ def install_commerce(g: dict) -> None:
         metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
         created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
         updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    class Abonnement(Base):
+        """Offre SaaS payée d'un utilisateur (1 ligne par utilisateur).
+        fondateur=True : le tarif fondateur lui reste acquis à chaque renouvellement."""
+        __tablename__ = "abonnements"
+        user_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+        plan: Mapped[str] = mapped_column(String(20), default="essentielle")
+        cycle: Mapped[str] = mapped_column(String(10), default="mensuel")
+        fondateur: Mapped[bool] = mapped_column(Boolean, default=False)
+        fin: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+        updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    # ── Tarif fondateur (réglable sur Railway, sans toucher au code) ──
+    # FONDATEUR_ACTIF=0 pour couper l'offre · FONDATEUR_FIN=AAAA-MM-JJ · FONDATEUR_PLACES=100
+    PRIX_FONDATEUR = {"serenite": {"mensuel": 19.0, "annuel": 180.0}, "pro": {"mensuel": 49.0, "annuel": 468.0}}
+
+    def _fondateur_fin() -> str:
+        return os.environ.get("FONDATEUR_FIN", "2026-12-31").strip()
+
+    def _fondateur_places() -> int:
+        try:
+            return max(0, int(os.environ.get("FONDATEUR_PLACES", "100")))
+        except ValueError:
+            return 100
+
+    async def _fondateurs_inscrits(db) -> int:
+        return (await db.execute(select(func.count()).select_from(Abonnement).where(Abonnement.fondateur.is_(True)))).scalar_one()
+
+    async def _offre_fondateur_ouverte(db) -> bool:
+        if os.environ.get("FONDATEUR_ACTIF", "1").strip() in ("0", "false", "non"):
+            return False
+        try:
+            if datetime.now(timezone.utc).date().isoformat() > _fondateur_fin():
+                return False
+        except Exception:  # noqa: BLE001
+            pass
+        return await _fondateurs_inscrits(db) < _fondateur_places()
+
+    @api.get("/tarifs/fondateur")
+    async def tarifs_fondateur(db: AsyncSession = Depends(get_db)):
+        """Public : état de l'offre fondateur pour la page Tarifs."""
+        ouverte = await _offre_fondateur_ouverte(db)
+        return {"ouverte": ouverte, "fin": _fondateur_fin(), "places": _fondateur_places(),
+                "places_restantes": max(0, _fondateur_places() - await _fondateurs_inscrits(db)),
+                "prix": PRIX_FONDATEUR}
+
+    @api.get("/abonnement")
+    async def mon_abonnement(db: AsyncSession = Depends(get_db)):
+        a = await db.get(Abonnement, _uid())
+        if not a:
+            return {"plan": "essentielle", "fondateur": False, "fin": None}
+        return {"plan": a.plan, "cycle": a.cycle, "fondateur": bool(a.fondateur),
+                "fin": a.fin.isoformat() if a.fin else None}
+
+    async def _verifier_expiration(db, uid: str, profil) -> None:
+        """Abonnement échu → retour à l'offre gratuite (appelé au chargement de l'appli)."""
+        a = await db.get(Abonnement, uid)
+        if not a or not a.fin:
+            return
+        fin = a.fin if a.fin.tzinfo else a.fin.replace(tzinfo=timezone.utc)
+        if fin < datetime.now(timezone.utc) and profil.plan == a.plan and a.plan != "essentielle":
+            profil.plan = "essentielle"
+            await db.commit()
+
+    g["Abonnement"] = Abonnement
+    g["_verifier_expiration"] = _verifier_expiration
 
     class CheckoutIn(BaseModel):
         kind: str = Field(pattern="^(produit|service|saas)$")
@@ -132,6 +198,14 @@ def install_commerce(g: dict) -> None:
         amount_ht = float(plan[body.cycle])
         if amount_ht <= 0:
             raise HTTPException(400, "Ce forfait est gratuit : aucun paiement requis.")
+        # Tarif fondateur : acquis à vie pour qui l'a déjà, sinon tant que l'offre est ouverte.
+        cle_plan = body.plan.lower()
+        fondateur = False
+        if cle_plan in PRIX_FONDATEUR:
+            deja = await db.get(Abonnement, _uid())
+            if (deja and deja.fondateur) or await _offre_fondateur_ouverte(db):
+                amount_ht = PRIX_FONDATEUR[cle_plan][body.cycle]
+                fondateur = True
         # Les tarifs affichés sont HT : on encaisse le TTC (TVA 20 % par défaut,
         # réglable avec TVA_TAUX, ex. 0 pour une franchise en base de TVA).
         try:
@@ -144,8 +218,8 @@ def install_commerce(g: dict) -> None:
         if not user:
             raise HTTPException(401, "Connecte-toi avant de souscrire.")
         order = CommerceOrder(user_id=uid, email=(body.email or user.email).strip().lower(), kind="saas",
-                              title=f"Zayado {plan['label']} · {body.cycle} · TTC", amount=f"{amount:.2f}",
-                              access_url=f"{_frontend_url()}/app", metadata_json={"plan": body.plan.lower(), "cycle": body.cycle, "montant_ht": f"{amount_ht:.2f}", "tva_taux": tva})
+                              title=f"Zayado {plan['label']}{' (tarif fondateur)' if fondateur else ''} · {body.cycle} · TTC", amount=f"{amount:.2f}",
+                              access_url=f"{_frontend_url()}/app", metadata_json={"plan": body.plan.lower(), "cycle": body.cycle, "montant_ht": f"{amount_ht:.2f}", "tva_taux": tva, "fondateur": fondateur})
         db.add(order)
         await db.flush()
         payment = await _mollie_create(order)
@@ -267,8 +341,31 @@ def install_commerce(g: dict) -> None:
         status = payment.get("status", "")
         mapping = {"paid": "paid", "authorized": "authorized", "pending": "pending", "open": "pending",
                    "failed": "failed", "canceled": "canceled", "expired": "expired"}
+        deja_payee = row.status == "paid"
         row.status = mapping.get(status, "pending")
         row.updated_at = utcnow()
+        # Corrigé : le paiement était marqué « payé » mais l'offre n'était jamais
+        # activée — un client qui payait Pro restait sur l'offre gratuite.
+        if row.kind == "saas" and row.status == "paid" and not deja_payee and row.user_id:
+            meta = row.metadata_json or {}
+            cle_plan = str(meta.get("plan") or "")
+            if cle_plan in pricing:
+                from datetime import timedelta
+                a = await db.get(Abonnement, row.user_id)
+                if not a:
+                    a = Abonnement(user_id=row.user_id)
+                    db.add(a)
+                maintenant = datetime.now(timezone.utc)
+                base = a.fin if (a.fin and a.plan == cle_plan) else None
+                if base is not None and base.tzinfo is None:
+                    base = base.replace(tzinfo=timezone.utc)
+                depart = base if (base and base > maintenant) else maintenant
+                a.fin = depart + timedelta(days=366 if meta.get("cycle") == "annuel" else 31)
+                a.plan, a.cycle = cle_plan, str(meta.get("cycle") or "mensuel")
+                a.fondateur = bool(a.fondateur or meta.get("fondateur"))
+                a.updated_at = utcnow()
+                profil = await g["_profil"](db, row.user_id)
+                profil.plan = cle_plan
         await db.commit()
         return {"ok": True}
 

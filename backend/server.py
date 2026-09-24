@@ -142,6 +142,7 @@ _ROUTES_PUBLIQUES_EXACTES = {
     "/api/commerce/health",
     "/api/codes-promo/appliquer",      # simple vérification d'un code
     "/api/subscribe",                  # inscription newsletter (e-mail de bienvenue)
+    "/api/tarifs/fondateur",           # état de l'offre fondateur (page Tarifs)
 }
 _ROUTES_PUBLIQUES_PREFIXES = (
     "/api/connexion/",                 # options, lien magique, OAuth (démo bloquée à part)
@@ -677,10 +678,12 @@ async def _contexte(db: AsyncSession, uid: str) -> str:
 
 
 def _client_llm(session_id: str, systeme: str):
-    if not EMERGENT_LLM_KEY:
+    """Client IA texte : Mammouth AI (clé MAMMOTH_API_KEY). None si la clé manque."""
+    from llm_mammouth import MammouthChat, cle_mammouth
+    cle = cle_mammouth()
+    if not cle:
         return None
-    from emergentintegrations.llm.chat import LlmChat
-    return LlmChat(api_key=EMERGENT_LLM_KEY, session_id=session_id, system_message=systeme).with_model(*MODELE)
+    return MammouthChat(api_key=cle, system_message=systeme)
 
 
 def _repli(message: str) -> str:
@@ -804,7 +807,38 @@ def exiger_role(*roles_autorises: str):
 @api.get("/admin/utilisateurs")
 async def lister_utilisateurs(db: AsyncSession = Depends(get_db), _role=Depends(exiger_role("admin"))):
     rows = list((await db.execute(select(User).order_by(User.created_at.desc()))).scalars())
-    return {"items": [{"id": u.id, "email": u.email, "role": u.role, "inscrit_le": u.created_at.isoformat()} for u in rows]}
+    plans = {p.user_id: p.plan for p in (await db.execute(select(VisionProfile))).scalars()}
+    return {"items": [{"id": u.id, "email": u.email, "role": u.role, "plan": plans.get(u.id, "essentielle"),
+                       "inscrit_le": u.created_at.isoformat()} for u in rows]}
+
+
+class AdminPlanIn(BaseModel):
+    plan: str
+    jours: int = 31          # durée d'accès accordée
+    fondateur: bool = False  # garantit le tarif fondateur aux renouvellements
+
+
+@api.patch("/admin/utilisateurs/{user_id}/plan")
+async def admin_changer_plan(user_id: str, body: AdminPlanIn, db: AsyncSession = Depends(get_db),
+                             _role=Depends(exiger_role("admin"))):
+    """Change l'offre d'un client à la main (paiement par virement, geste commercial…)."""
+    if body.plan not in PRICING:
+        raise HTTPException(422, "Offre inconnue.")
+    if not await db.get(User, user_id):
+        raise HTTPException(404, "Utilisateur introuvable.")
+    profil = await _profil(db, user_id)
+    profil.plan = body.plan
+    Abo = globals()["Abonnement"]
+    a = await db.get(Abo, user_id)
+    if not a:
+        a = Abo(user_id=user_id)
+        db.add(a)
+    from datetime import timedelta
+    a.plan = body.plan
+    a.fin = None if body.plan == "essentielle" else datetime.now(timezone.utc) + timedelta(days=max(1, min(body.jours, 3660)))
+    a.fondateur = bool(a.fondateur or body.fondateur)
+    await db.commit()
+    return {"ok": True, "plan": profil.plan, "fin": a.fin.isoformat() if a.fin else None, "fondateur": a.fondateur}
 
 
 @api.get("/admin/vue-ensemble")
@@ -987,6 +1021,9 @@ async def get_state(db: AsyncSession = Depends(get_db)):
     obj_principal = next((o for o in objectifs if o.statut != "termine"), None)
     victoire = victoires[0] if victoires else None
 
+    verif = globals().get("_verifier_expiration")
+    if verif:
+        await verif(db, uid, profil)
     return {
         "onboarded": bool(profil.onboarded),
         "profile": {"prenom": profil.prenom or "", "heure_checkin": profil.heure_checkin, "plan": profil.plan, "notifications": bool(profil.notifications), "fuseau": profil.fuseau, "email": profil.email or ""},
@@ -1027,7 +1064,9 @@ async def maj_profil(body: ProfilIn, db: AsyncSession = Depends(get_db)):
     uid = _uid()
     profil = await _profil(db, uid)
     data = body.model_dump(exclude_unset=True)
-    for champ in ("prenom", "texte_vision", "pourquoi", "valeurs", "heure_checkin", "plan", "notifications", "fuseau", "email", "onboarded"):
+    # « plan » n'est plus modifiable ici : seul un paiement validé (webhook Mollie)
+    # ou un admin change l'offre. Avant, n'importe qui pouvait se mettre en Pro.
+    for champ in ("prenom", "texte_vision", "pourquoi", "valeurs", "heure_checkin", "notifications", "fuseau", "email", "onboarded"):
         if champ in data and data[champ] is not None:
             setattr(profil, champ, data[champ])
     if data.get("contexte_metier"):
@@ -1086,8 +1125,8 @@ async def chat(body: ChatIn, db: AsyncSession = Depends(get_db)):
         try:
             client = _client_llm(f"copilote-{uid}", systeme)
             if client is None:
-                raise RuntimeError("EMERGENT_LLM_KEY absente")
-            from emergentintegrations.llm.chat import StreamDone, TextDelta, UserMessage
+                raise RuntimeError("MAMMOTH_API_KEY absente")
+            from llm_mammouth import StreamDone, TextDelta, UserMessage
             async for ev in client.stream_message(UserMessage(text=body.message)):
                 if isinstance(ev, TextDelta):
                     morceaux.append(ev.content)
@@ -1135,8 +1174,8 @@ async def point_du_jour(db: AsyncSession = Depends(get_db)):
     try:
         client = _client_llm(f"point-{uid}-{datetime.now(timezone.utc):%Y%m%d}", f"{SYSTEM_PROMPT}\n\n--- Contexte ---\n{contexte}")
         if client is None:
-            raise RuntimeError("EMERGENT_LLM_KEY absente")
-        from emergentintegrations.llm.chat import UserMessage
+            raise RuntimeError("MAMMOTH_API_KEY absente")
+        from llm_mammouth import UserMessage
         texte = await asyncio.wait_for(client.send_message(UserMessage(text=consigne)), timeout=45)
         return {"texte": str(texte).strip(), "source": "ia"}
     except Exception as e:  # noqa: BLE001
@@ -1880,8 +1919,8 @@ async def vision_ai_doc(body: AiDocIn, db: AsyncSession = Depends(get_db)):
     try:
         client = _client_llm(f"visiondoc-{_uid()}", systeme)
         if client is None:
-            raise RuntimeError("EMERGENT_LLM_KEY absente")
-        from emergentintegrations.llm.chat import UserMessage
+            raise RuntimeError("MAMMOTH_API_KEY absente")
+        from llm_mammouth import UserMessage
         texte = await asyncio.wait_for(client.send_message(UserMessage(text=prompt)), timeout=45)
         contenu = str(texte).strip()
         titre = body.prompt.strip()[:60]
@@ -1920,7 +1959,7 @@ async def vision_generate_board(body: GenBoardIn, db: AsyncSession = Depends(get
     try:
         client = _client_llm(f"visiongen-{_uid()}", systeme)
         if client is not None:
-            from emergentintegrations.llm.chat import UserMessage
+            from llm_mammouth import UserMessage
             texte = await asyncio.wait_for(client.send_message(UserMessage(text=body.prompt.strip())), timeout=45)
             raw = str(texte).strip()
             m = re.search(r"\{.*\}", raw, re.S)
@@ -1957,7 +1996,7 @@ async def vision_inspire():
         client = _client_llm(f"inspire-{_uid()}", systeme)
         if client is None:
             raise RuntimeError("no key")
-        from emergentintegrations.llm.chat import UserMessage
+        from llm_mammouth import UserMessage
         texte = await asyncio.wait_for(client.send_message(UserMessage(text="Donne-moi une citation inspirante, format: citation — auteur")), timeout=30)
         raw = str(texte).strip().strip('"')
         if "—" in raw:
@@ -2250,7 +2289,7 @@ async def revue_synthese(body: RevueIn, db: AsyncSession = Depends(get_db)):
     try:
         client = _client_llm(f"revue-{_uid()}-{semaine}", systeme)
         if client is not None:
-            from emergentintegrations.llm.chat import UserMessage
+            from llm_mammouth import UserMessage
             texte = await asyncio.wait_for(client.send_message(UserMessage(text=bloc)), timeout=45)
             synthese = str(texte).strip()
     except Exception as e:  # noqa: BLE001
@@ -2581,11 +2620,35 @@ async def cockpit_pouls_set(body: PoulsIn, db: AsyncSession = Depends(get_db)):
     return _pouls_json(p)
 
 
+# Radar : résultat IA mémorisé par utilisateur et par jour. Avant, chaque
+# ouverture du Cockpit ou du Radar relançait l'IA (jusqu'à 45 s d'attente et un
+# coût à chaque visite). « Relancer le scan » force un nouveau calcul, 5 fois/jour max.
+_RADAR_CACHE: dict = {}          # uid -> (date, réponse)
+_RADAR_RELANCES: dict = {}       # (uid, date) -> nombre de relances
+_RADAR_RELANCES_MAX = 5
+
+
 @api.get("/cockpit/radar")
-async def cockpit_radar(db: AsyncSession = Depends(get_db)):
+async def cockpit_radar(refresh: bool = False, db: AsyncSession = Depends(get_db)):
     """Radar du jour : 3 opportunités qualifiées, reliées à la Vision.
     Utilise Emergent LLM si la clé est configurée, sinon repli local basé sur les objectifs."""
     uid = _uid()
+    aujourdhui = datetime.now(timezone.utc).date().isoformat()
+    en_cache = _RADAR_CACHE.get(uid)
+    if refresh:
+        cle = (uid, aujourdhui)
+        if _RADAR_RELANCES.get(cle, 0) >= _RADAR_RELANCES_MAX and en_cache and en_cache[0] == aujourdhui:
+            return {**en_cache[1], "limite_relances": True}
+        _RADAR_RELANCES[cle] = _RADAR_RELANCES.get(cle, 0) + 1
+    elif en_cache and en_cache[0] == aujourdhui:
+        return en_cache[1]
+    resultat = await _calculer_radar(db, uid, graine=_RADAR_RELANCES.get((uid, aujourdhui), 0))
+    if resultat.get("source") == "ia":
+        _RADAR_CACHE[uid] = (aujourdhui, resultat)
+    return resultat
+
+
+async def _calculer_radar(db: AsyncSession, uid: str, graine: int = 0) -> dict:
     objectifs = list((await db.execute(select(VisionObjectif).where(VisionObjectif.user_id == uid))).scalars())
     if not objectifs:
         return {"opportunities": [], "phrase_ia": "Ajoute des objectifs sur ta Vision pour activer le radar."}
@@ -2594,14 +2657,18 @@ async def cockpit_radar(db: AsyncSession = Depends(get_db)):
 
     # Repli local (rapide, déterministe) — évite d'attendre le LLM au chargement du Cockpit
     fallback = [
-        {"titre": f"Rappeler 3 prospects tièdes autour de « {titres[0]} »", "canal": "email",
-         "message": f"Bonjour, je te rappelle rapidement au sujet de {titres[0]}. Es-tu disponible pour un point de 15 min cette semaine ?",
+        {"titre": f"Relancer 3 prospects intéressés par « {titres[0]} »", "canal": "email",
+         "message": ("Bonjour, je reviens vers vous suite à notre dernier échange. Avez-vous 15 minutes "
+                     "cette semaine pour faire le point ensemble sur votre besoin ? Je m'adapte à vos disponibilités."),
          "score": 82, "objectif": titres[0]},
-        {"titre": "Publier un post LinkedIn sur ta transformation", "canal": "linkedin",
-         "message": "Il y a 6 mois, je …. Aujourd'hui, je …. Ce qui a changé : trois principes que je partage plus bas.",
+        {"titre": "Partager une réussite client sur LinkedIn", "canal": "linkedin",
+         "message": ("Ce mois-ci, j'ai accompagné un client sur un vrai défi. Ce qui a fait la différence : "
+                     "écouter avant de proposer, avancer par petites étapes, et mesurer le résultat. "
+                     "Et vous, quelle est la question que vous vous posez en ce moment sur votre activité ?"),
          "score": 74, "objectif": titres[0]},
-        {"titre": f"Envoyer un devis express à un lead qualifié", "canal": "email",
-         "message": "Suite à notre échange, voici mon offre engageante pour aller plus vite : …",
+        {"titre": "Proposer un rendez-vous à un contact recommandé", "canal": "email",
+         "message": ("Bonjour, on m'a recommandé de prendre contact avec vous. J'aide des professionnels comme vous "
+                     "à gagner du temps et de la sérénité dans leur activité. Seriez-vous ouvert à un échange de 20 minutes ?"),
          "score": 68, "objectif": (titres[1] if len(titres) > 1 else titres[0])},
     ]
 
@@ -2613,14 +2680,15 @@ async def cockpit_radar(db: AsyncSession = Depends(get_db)):
         "concrètes et actionnables aujourd'hui, reliées aux objectifs. Tu réponds UNIQUEMENT en JSON valide : "
         '{"opportunities":[{"titre":"...","canal":"email|linkedin|appel|whatsapp","message":"...","score":0-100,"objectif":"..."}],'
         '"phrase_ia":"une phrase courte qui résume pourquoi ces 3-là"}. Le message doit être prêt à envoyer, '
-        "en français, ton chaleureux et professionnel."
+        "en français, ton chaleureux et professionnel, en VOUVOYANT le destinataire (c'est un prospect ou un client). "
+        "Le message doit être complet : aucun trou, aucun « … », aucun crochet à remplir."
     )
     try:
         contexte = await _contexte(db, uid)
-        client = _client_llm(f"radar-{uid}-{datetime.now(timezone.utc).date()}", systeme)
+        client = _client_llm(f"radar-{uid}-{datetime.now(timezone.utc).date()}-{graine}", systeme)
         if client is None:
-            raise RuntimeError("EMERGENT_LLM_KEY absente")
-        from emergentintegrations.llm.chat import UserMessage
+            raise RuntimeError("MAMMOTH_API_KEY absente")
+        from llm_mammouth import UserMessage
         texte = await asyncio.wait_for(client.send_message(UserMessage(text=contexte)), timeout=45)
         import json as _json, re as _re
         brut = str(texte).strip()
@@ -2664,8 +2732,8 @@ async def radar_swot(db: AsyncSession = Depends(get_db)):
     try:
         client = _client_llm(f"swot-{uid}", systeme)
         if client is None:
-            raise RuntimeError("EMERGENT_LLM_KEY absente")
-        from emergentintegrations.llm.chat import UserMessage
+            raise RuntimeError("MAMMOTH_API_KEY absente")
+        from llm_mammouth import UserMessage
         texte = await asyncio.wait_for(client.send_message(UserMessage(text=contexte)), timeout=45)
         import json as _json, re as _re
         brut = str(texte).strip()
@@ -2708,32 +2776,31 @@ async def cockpit_impact(db: AsyncSession = Depends(get_db)):
 
 @api.post("/transcrire")
 async def transcrire(audio: UploadFile = File(...)):
-    if not EMERGENT_LLM_KEY:
-        raise HTTPException(status_code=502, detail="Transcription indisponible (clé absente).")
+    """Transcription vocale via Mammouth AI (whisper-1, API compatible OpenAI)."""
+    from llm_mammouth import MAMMOTH_BASE_URL, cle_mammouth
+    cle = cle_mammouth()
+    if not cle:
+        raise HTTPException(status_code=502, detail="Transcription indisponible (clé MAMMOTH_API_KEY absente).")
     data = await audio.read()
     if not data:
         raise HTTPException(status_code=400, detail="Audio vide.")
     if len(data) > 25 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="Audio trop long (max 25 Mo).")
-    import tempfile
-    from emergentintegrations.llm.openai import OpenAISpeechToText
-    suffix = os.path.splitext(audio.filename or "")[1] or ".webm"
-    tmp_path = None
+    nom = audio.filename or "audio.webm"
+    if "." not in nom:
+        nom += ".webm"
     try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            tmp.write(data)
-            tmp_path = tmp.name
-        stt = OpenAISpeechToText(api_key=EMERGENT_LLM_KEY)
-        with open(tmp_path, "rb") as fh:
-            res = await stt.transcribe(file=fh, model="whisper-1", response_format="json", language="fr")
-        texte = getattr(res, "text", "") or ""
-        return {"texte": texte.strip()}
+        async with httpx.AsyncClient(timeout=httpx.Timeout(90.0, connect=10.0)) as http:
+            r = await http.post(f"{MAMMOTH_BASE_URL}/audio/transcriptions",
+                                headers={"Authorization": f"Bearer {cle}"},
+                                files={"file": (nom, data, audio.content_type or "audio/webm")},
+                                data={"model": "whisper-1", "language": "fr", "response_format": "json"})
+        if r.status_code != 200:
+            raise RuntimeError(f"{r.status_code} {r.text[:200]}")
+        return {"texte": (r.json().get("text") or "").strip()}
     except Exception as e:  # noqa: BLE001
         logger.warning("Transcription échouée : %s", e)
         raise HTTPException(status_code=502, detail="Transcription indisponible pour l'instant.")
-    finally:
-        if tmp_path and os.path.exists(tmp_path):
-            os.remove(tmp_path)
 
 
 # ─────────────── Sources & synchronisation (classement IA + validation) ───────────────
@@ -2776,7 +2843,7 @@ async def sources_analyser(body: SourceIn):
     try:
         client = _client_llm(f"sources-{_uid()}", systeme)
         if client is not None:
-            from emergentintegrations.llm.chat import UserMessage
+            from llm_mammouth import UserMessage
             texte = await asyncio.wait_for(client.send_message(UserMessage(text=contenu[:6000])), timeout=45)
             m = re.search(r"\{.*\}", str(texte), re.S)
             if m:
@@ -2988,8 +3055,8 @@ async def whatsapp_web_message(request: Request, db: AsyncSession = Depends(get_
     try:
         client = _client_llm(f"whatsapp-{uid}", systeme)
         if client is None:
-            raise RuntimeError("EMERGENT_LLM_KEY absente")
-        from emergentintegrations.llm.chat import UserMessage
+            raise RuntimeError("MAMMOTH_API_KEY absente")
+        from llm_mammouth import UserMessage
         texte = await asyncio.wait_for(client.send_message(UserMessage(text=message)), timeout=45)
         reply = str(texte).strip()
     except Exception as e:  # noqa: BLE001
@@ -3215,8 +3282,8 @@ async def telegram_webhook(uid: str, request: Request, db: AsyncSession = Depend
     try:
         client = _client_llm(f"telegram-{uid}", systeme)
         if client is None:
-            raise RuntimeError("EMERGENT_LLM_KEY absente")
-        from emergentintegrations.llm.chat import UserMessage
+            raise RuntimeError("MAMMOTH_API_KEY absente")
+        from llm_mammouth import UserMessage
         texte = await asyncio.wait_for(client.send_message(UserMessage(text=text)), timeout=45)
         reply = str(texte).strip()
     except Exception as e:  # noqa: BLE001
@@ -3447,7 +3514,7 @@ async def unsplash_search(q: str, count: int = 9):
 # ─────────── Intégrations : statut agrégé + tokens custom ───────────
 INTEGRATIONS_CATALOG = [
     {"id": "emergent_llm", "name": "Emergent LLM (Claude, GPT, Gemini)", "cat": "IA", "env": ["EMERGENT_LLM_KEY"], "onboardable": True},
-    {"id": "mammouth",     "name": "Mammouth AI",           "cat": "IA",         "env": ["MAMMOUTH_API_KEY"], "onboardable": False},
+    {"id": "mammouth",     "name": "Mammouth AI (IA texte de Zayado)", "cat": "IA", "env": ["MAMMOTH_API_KEY"], "onboardable": True},
     {"id": "unsplash",     "name": "Unsplash (images)",     "cat": "IA",         "env": ["UNSPLASH_ACCESS_KEY"], "onboardable": False},
     {"id": "google",       "name": "Google (Auth + Drive)", "cat": "Stockage",   "env": ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"], "onboardable": True, "oauth": True},
     {"id": "microsoft",    "name": "Microsoft (Auth + SharePoint / OneDrive)", "cat": "Stockage", "env": ["MICROSOFT_CLIENT_ID", "MICROSOFT_CLIENT_SECRET"], "onboardable": True, "oauth": True},
@@ -3750,6 +3817,160 @@ async def admin_transferer_compte_demo(body: TransfertDemoIn, db: AsyncSession =
     await db.commit()
     logger.info("Transfert compte démo → %s : %s", cible.id, transferts)
     return {"ok": True, "vers": {"id": cible.id, "email": cible.email}, "transferes": transferts, "ignores": ignorees}
+
+
+# ─────────────── Agent Business (chatbot client à la marque de l'utilisateur) ───────────────
+# Configuration + test réel de conversation par l'IA, dans l'application.
+# (Le widget à coller sur un site externe viendra à la mise en ligne publique.)
+
+AGENTS_PAR_PLAN = {"pro": 1, "business": 3, "entreprise": -1}  # -1 = illimité
+
+
+class AgentBusiness(Base):
+    __tablename__ = "agents_business"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
+    user_id: Mapped[str] = mapped_column(String(36), index=True)
+    nom_marque: Mapped[str] = mapped_column(String(120), default="")
+    couleur: Mapped[str] = mapped_column(String(9), default="#DEC2A3")
+    message_accueil: Mapped[str] = mapped_column(String(500), default="Bonjour ! Comment puis-je vous aider ?")
+    ton: Mapped[str] = mapped_column(String(30), default="chaleureux")  # chaleureux / professionnel / direct
+    connaissances: Mapped[str] = mapped_column(Text, default="")
+    contact_humain: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class AgentBusinessIn(BaseModel):
+    nom_marque: str = ""
+    couleur: str = "#DEC2A3"
+    message_accueil: str = "Bonjour ! Comment puis-je vous aider ?"
+    ton: str = "chaleureux"
+    connaissances: str = ""
+    contact_humain: str = ""
+
+
+class AgentTestIn(BaseModel):
+    message: str
+    historique: list[dict] = Field(default_factory=list)  # [{"role": "client"|"agent", "texte": "..."}]
+
+
+def _agent_dict(a: AgentBusiness) -> dict:
+    return {"id": a.id, "nom_marque": a.nom_marque, "couleur": a.couleur, "message_accueil": a.message_accueil,
+            "ton": a.ton, "connaissances": a.connaissances, "contact_humain": a.contact_humain,
+            "updated_at": a.updated_at.isoformat() if a.updated_at else None}
+
+
+async def _quota_agents(db: AsyncSession, uid: str) -> int:
+    if _role_courant() == "admin":
+        return -1
+    profil = await _profil(db, uid)
+    return AGENTS_PAR_PLAN.get((profil.plan or "essentielle"), 0)
+
+
+def _nettoyer_agent(body: AgentBusinessIn) -> dict:
+    couleur = body.couleur if re.fullmatch(r"#[0-9A-Fa-f]{6}", body.couleur or "") else "#DEC2A3"
+    ton = body.ton if body.ton in ("chaleureux", "professionnel", "direct") else "chaleureux"
+    return {"nom_marque": (body.nom_marque or "").strip()[:120], "couleur": couleur,
+            "message_accueil": (body.message_accueil or "").strip()[:500] or "Bonjour ! Comment puis-je vous aider ?",
+            "ton": ton, "connaissances": (body.connaissances or "")[:30000],
+            "contact_humain": (body.contact_humain or "").strip()[:255]}
+
+
+async def _agent_du_proprietaire(db: AsyncSession, agent_id: str) -> AgentBusiness:
+    a = await db.get(AgentBusiness, agent_id)
+    if not a or a.user_id != _uid():
+        raise HTTPException(404, "Agent introuvable.")
+    return a
+
+
+@api.get("/agent-business")
+async def lister_agents_business(db: AsyncSession = Depends(get_db)):
+    uid = _uid()
+    rows = (await db.execute(select(AgentBusiness).where(AgentBusiness.user_id == uid)
+                             .order_by(AgentBusiness.created_at))).scalars().all()
+    return {"agents": [_agent_dict(a) for a in rows], "quota": await _quota_agents(db, uid)}
+
+
+@api.post("/agent-business")
+async def creer_agent_business(body: AgentBusinessIn, db: AsyncSession = Depends(get_db)):
+    uid = _uid()
+    quota = await _quota_agents(db, uid)
+    nb = (await db.execute(select(func.count()).select_from(AgentBusiness).where(AgentBusiness.user_id == uid))).scalar_one()
+    if quota != -1 and nb >= quota:
+        raise HTTPException(403, "Ton offre ne permet pas d'agent supplémentaire. L'Agent Business est inclus dès l'offre Pro.")
+    a = AgentBusiness(user_id=uid, **_nettoyer_agent(body))
+    db.add(a)
+    await db.commit()
+    return _agent_dict(a)
+
+
+@api.put("/agent-business/{agent_id}")
+async def modifier_agent_business(agent_id: str, body: AgentBusinessIn, db: AsyncSession = Depends(get_db)):
+    a = await _agent_du_proprietaire(db, agent_id)
+    for k, v in _nettoyer_agent(body).items():
+        setattr(a, k, v)
+    a.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+    return _agent_dict(a)
+
+
+@api.delete("/agent-business/{agent_id}")
+async def supprimer_agent_business(agent_id: str, db: AsyncSession = Depends(get_db)):
+    a = await _agent_du_proprietaire(db, agent_id)
+    await db.delete(a)
+    await db.commit()
+    return {"ok": True}
+
+
+_TONS_AGENT = {
+    "chaleureux": "chaleureux et bienveillant, en vouvoyant le client",
+    "professionnel": "professionnel et précis, en vouvoyant le client",
+    "direct": "direct et concis, en vouvoyant le client",
+}
+
+
+def _consigne_agent(a: AgentBusiness) -> str:
+    marque = a.nom_marque or "l'entreprise"
+    contact = a.contact_humain or "l'équipe"
+    base = a.connaissances.strip() or "(Aucune information fournie pour l'instant.)"
+    return (
+        f"Tu es l'assistant virtuel de {marque}. Tu réponds aux clients et prospects sur son site.\n"
+        f"Ton : {_TONS_AGENT.get(a.ton, _TONS_AGENT['chaleureux'])}.\n"
+        "Règles impératives :\n"
+        "1. Réponds UNIQUEMENT à partir des INFORMATIONS DE L'ENTREPRISE ci-dessous.\n"
+        "2. Si l'information n'y figure pas, dis-le simplement et propose de transmettre la demande "
+        f"à {contact} (demande au client son nom et le meilleur moyen de le recontacter).\n"
+        "3. N'invente jamais de prix, de délai, de disponibilité ou de promesse.\n"
+        "4. Réponds dans la langue du client, en 2 à 5 phrases, sans jargon.\n"
+        "5. Ne dis jamais que tu es Claude ou un autre modèle : tu es l'assistant de "
+        f"{marque}.\n\n"
+        f"INFORMATIONS DE L'ENTREPRISE :\n{base}"
+    )
+
+
+@api.post("/agent-business/{agent_id}/tester")
+async def tester_agent_business(agent_id: str, body: AgentTestIn, db: AsyncSession = Depends(get_db)):
+    a = await _agent_du_proprietaire(db, agent_id)
+    question = (body.message or "").strip()[:2000]
+    if not question:
+        raise HTTPException(422, "Message vide.")
+    historique = []
+    for h in (body.historique or [])[-10:]:
+        role = "Client" if h.get("role") == "client" else "Assistant"
+        historique.append(f"{role} : {str(h.get('texte', ''))[:1500]}")
+    consigne = ((("Conversation jusqu'ici :\n" + "\n".join(historique) + "\n\n") if historique else "")
+                + f"Nouveau message du client : {question}")
+    client = _client_llm(f"agent-{a.id}-{uuid.uuid4().hex[:8]}", _consigne_agent(a))
+    if client is None:
+        return {"reponse": "Merci pour votre message ! Je le transmets à l'équipe, qui vous répondra rapidement.",
+                "ia": False}
+    try:
+        from llm_mammouth import UserMessage
+        texte = await asyncio.wait_for(client.send_message(UserMessage(text=consigne)), timeout=45)
+        return {"reponse": (texte or "").strip(), "ia": True}
+    except Exception:  # noqa: BLE001
+        logger.exception("Agent Business : échec de l'appel IA")
+        raise HTTPException(502, "L'IA n'a pas répondu, réessaie dans un instant.")
 
 
 app.include_router(api)
