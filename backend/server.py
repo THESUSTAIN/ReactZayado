@@ -99,6 +99,21 @@ if not JWT_SECRET:
 JWT_ALGO = "HS256"
 JWT_EXPIRE_DAYS = 30
 
+# Alerte au démarrage sur la clé IA texte — ajoutée après l'audit
+# d'installation. Sans MAMMOTH_API_KEY, l'application ne tombe PAS en
+# erreur : le Copilote IA, le Radar et l'Agent Business basculent
+# silencieusement sur un repli local. Concrètement, le chatbot répond
+# « Merci pour votre message ! Je le transmets à l'équipe » à chaque
+# prospect, tarifs compris — et rien dans les logs ne le signalait.
+# HEYGEN_API_KEY avertit déjà de la même façon (heygen_routes.py).
+if not (os.environ.get("MAMMOTH_API_KEY") or os.environ.get("MAMMOUTH_API_KEY")):
+    logger.warning(
+        "⚠️ MAMMOTH_API_KEY n'est pas défini — le Copilote IA, le Radar et "
+        "l'Agent Business répondront en repli local (texte générique) au "
+        "lieu d'utiliser l'IA. Vérifier cette variable d'env avant la mise "
+        "en production."
+    )
+
 _current_uid: "contextvars.ContextVar[str]" = contextvars.ContextVar("current_uid", default=DEMO_USER_ID)
 _current_role: "contextvars.ContextVar[str]" = contextvars.ContextVar("current_role", default="client")
 
@@ -149,6 +164,7 @@ _ROUTES_PUBLIQUES_PREFIXES = (
     "/api/webhooks/",                  # Telegram / WhatsApp (secret propre)
     "/api/public/",                    # Vision Board partagé en lecture seule
     "/api/vision/images/",             # images chargées par <img>, sans en-tête
+    "/api/vendeur/images/",            # photos produit : lues par <img> et par Shopify (import)
     "/api/commerce/offers/",           # fiche d'offre publique
 )
 
@@ -734,14 +750,21 @@ async def register(body: AuthIn, db: AsyncSession = Depends(get_db)):
     # Activation du parrainage : si quelqu'un avait déjà invité cet email,
     # le filleul devient actif et le parrain reçoit son bonus maintenant —
     # pas besoin d'action manuelle admin pour le cas normal.
-    invitation = (await db.execute(select(Referral).where(Referral.referred_email == email, Referral.statut == "en_attente"))).scalar_one_or_none()
-    if invitation:
-        invitation.statut = "actif"
-        invitation.referred_id = user.id
-        parrain = (await db.execute(select(User).where(User.id == invitation.referrer_id))).scalar_one_or_none()
-        if parrain:
-            parrain.credits = (parrain.credits or 0) + invitation.bonus_credits
-        await db.commit()
+    # Le compte est déjà créé : un souci sur le parrainage ne doit JAMAIS
+    # faire échouer l'inscription (avant : 500 affiché alors que le compte
+    # existait, puis « compte déjà existant » au 2e essai).
+    try:
+        invitation = (await db.execute(select(Referral).where(Referral.referred_email == email, Referral.statut == "en_attente"))).scalar_one_or_none()
+        if invitation:
+            invitation.statut = "actif"
+            invitation.referred_id = user.id
+            parrain = (await db.execute(select(User).where(User.id == invitation.referrer_id))).scalar_one_or_none()
+            if parrain:
+                parrain.credits = (parrain.credits or 0) + invitation.bonus_credits
+            await db.commit()
+    except Exception as e:  # noqa: BLE001
+        await db.rollback()
+        logger.error("Parrainage non activé pour %s : %s", email, e)
     return {"access_token": _creer_token(user.id, user.role), "email": user.email, "role": user.role}
 
 
@@ -1004,6 +1027,14 @@ async def _profil(db: AsyncSession, uid: Optional[str] = None) -> VisionProfile:
     if not row:
         # Nouveau compte : profil vierge (jamais de prénom fictif injecté)
         row = VisionProfile(user_id=uid, prenom="")
+        # L'e-mail du compte est repris dans le profil dès sa création
+        # (avant : le profil restait sans e-mail tant que l'utilisateur ne le retapait pas).
+        try:
+            compte = await db.get(User, uid)
+            if compte and getattr(compte, "email", None):
+                row.email = compte.email
+        except Exception:  # noqa: BLE001
+            pass
         db.add(row)
         await db.commit()
         await db.refresh(row)
@@ -1027,9 +1058,21 @@ async def get_state(db: AsyncSession = Depends(get_db)):
     verif = globals().get("_verifier_expiration")
     if verif:
         await verif(db, uid, profil)
+    if not profil.email:
+        try:
+            compte = await db.get(User, uid)
+            if compte and getattr(compte, "email", None):
+                profil.email = compte.email
+                await db.commit()
+        except Exception:  # noqa: BLE001
+            await db.rollback()
+    cm_etat = getattr(profil, "contexte_metier", None) or {}
+    plan_attente = cm_etat.get("plan_souhaite") if isinstance(cm_etat, dict) else None
+    if plan_attente in (None, "", "essentielle") or plan_attente == profil.plan:
+        plan_attente = None
     return {
         "onboarded": bool(profil.onboarded),
-        "profile": {"prenom": profil.prenom or "", "heure_checkin": profil.heure_checkin, "plan": profil.plan, "notifications": bool(profil.notifications), "fuseau": profil.fuseau, "email": profil.email or ""},
+        "profile": {"prenom": profil.prenom or "", "heure_checkin": profil.heure_checkin, "plan": profil.plan, "notifications": bool(profil.notifications), "fuseau": profil.fuseau, "email": profil.email or "", "plan_en_attente": plan_attente},
         "vision": {"texte": profil.texte_vision or "", "pourquoi": profil.pourquoi or "", "valeurs": profil.valeurs or [], "contexte_metier": getattr(profil, "contexte_metier", None) or {}},
         "energy": {"score": energie, "mood": (dernier.mood if dernier else "aligné"), "mode": mode_energie(energie), "recuperation": est_recup(energie), "a_checkin": dernier is not None,
                    "vitals": ({"date": dernier.date, "stress": dernier.stress or None, "sommeil": dernier.sommeil or None, "charge": dernier.charge or None} if dernier else None)},
@@ -2081,11 +2124,51 @@ async def _board_courant(db: AsyncSession, uid: str, cle: Optional[str]) -> Opti
     return rows[0]
 
 
+def _apercu_board(cards: list) -> list:
+    """Miniature du board (façon Storyflow) : positions et types des éléments de
+    premier niveau, pour dessiner un vrai aperçu au lieu d'une image décorative."""
+    enfants: dict = {}
+    for c in cards or []:
+        if isinstance(c, dict) and c.get("parent"):
+            enfants.setdefault(c["parent"], []).append(c)
+    sortie = []
+    for c in cards or []:
+        if not isinstance(c, dict) or c.get("parent") or c.get("type") in ("line", "draw"):
+            continue
+        try:
+            x, y = float(c.get("x", 0)), float(c.get("y", 0))
+        except (TypeError, ValueError):
+            continue
+        t = c.get("type") or "note"
+        w = float(c.get("w") or (500 if t == "wall" else 420))
+        if t == "wall":
+            h = 90 + 170 * max(1, len(enfants.get(c.get("id"), [])))
+        elif t == "heading":
+            h = 60
+        else:
+            h = float(c.get("h") or 220)
+        el = {"x": round(x), "y": round(y), "w": round(w), "h": round(h), "t": t}
+        if c.get("color"):
+            el["c"] = str(c["color"])[:20]
+        img = c.get("image") if t in ("image", "polaroid") else None
+        if not img and t == "wall":
+            img = next((e.get("image") for e in enfants.get(c.get("id"), []) if e.get("image")), None)
+        if isinstance(img, str) and img.startswith(("http://", "https://", "/api/")):
+            el["img"] = img[:500]
+        if t == "wall" and c.get("title"):
+            el["titre"] = str(c.get("title"))[:40]
+        sortie.append(el)
+        if len(sortie) >= 40:
+            break
+    return sortie
+
+
 def _board_json(b: "VisionBoardSpace") -> dict:
     return {
         "key": b.cle, "nom": b.nom, "emoji": b.emoji or "🧭",
         "count": len(b.cards or []), "ordre": b.ordre,
         "updated_at": b.updated_at.isoformat() if b.updated_at else None,
+        "apercu": _apercu_board(b.cards or []),
     }
 
 
@@ -2683,10 +2766,38 @@ async def cockpit_radar(refresh: bool = False, db: AsyncSession = Depends(get_db
     return resultat
 
 
+def _opportunites_prospects(prospects: list, objectif: str) -> list:
+    ops = []
+    for i, p in enumerate(prospects[:3]):
+        nom = " ".join(x for x in (p.get("prenom"), p.get("nom")) if x).strip() or "Un contact"
+        role = p.get("titre") or "dirigeant"
+        ops.append({
+            "titre": f"Contacter {nom}, {role}{' chez ' + p['entreprise'] if p.get('entreprise') else ''}",
+            "canal": "linkedin" if p.get("linkedin") else "email",
+            "message": p.get("message") or "", "score": 92 - i * 4, "objectif": objectif,
+            "prospect": p,
+        })
+    return ops
+
+
 async def _calculer_radar(db: AsyncSession, uid: str, graine: int = 0) -> dict:
+    # Vrais prospects Apollo d'abord (si la clé plateforme est configurée et
+    # que l'offre a du quota) ; l'IA complète jusqu'à 3 opportunités.
+    apollo = {"etat": "non_configure", "prospects": []}
+    f_apollo = globals().get("_prospects_apollo")
+    if f_apollo:
+        try:
+            apollo = await f_apollo(db, uid)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Radar : Apollo ignoré (%s)", e)
     objectifs = list((await db.execute(select(VisionObjectif).where(VisionObjectif.user_id == uid))).scalars())
+    reels = _opportunites_prospects(apollo.get("prospects") or [], objectifs[0].titre if objectifs else "Trouver de nouveaux clients")
+    infos_apollo = {k: apollo.get(k) for k in ("etat", "quota", "utilises", "plan") if k in apollo}
+    if len(reels) >= 3 or (reels and not objectifs):
+        return {"opportunities": reels[:3], "phrase_ia": "3 vraies personnes à contacter aujourd'hui, choisies selon ta cible.",
+                "generated_at": datetime.now(timezone.utc).isoformat(), "source": "ia", "apollo": infos_apollo}
     if not objectifs:
-        return {"opportunities": [], "phrase_ia": "Ajoute des objectifs sur ta Vision pour activer le radar."}
+        return {"opportunities": [], "phrase_ia": "Ajoute des objectifs sur ta Vision pour activer le radar.", "apollo": infos_apollo}
 
     titres = [o.titre for o in objectifs][:3]
 
@@ -2732,7 +2843,8 @@ async def _calculer_radar(db: AsyncSession, uid: str, graine: int = 0) -> dict:
         opps = [o for o in data.get("opportunities", []) if o.get("titre")][:3]
         if opps:
             return {
-                "opportunities": opps,
+                "opportunities": (reels + opps)[:3],
+                "apollo": infos_apollo,
                 "phrase_ia": data.get("phrase_ia") or "3 mouvements alignés à ta Vision, prêts en un tap.",
                 "generated_at": datetime.now(timezone.utc).isoformat(),
                 "objectifs_utilises": titres,
@@ -2742,7 +2854,8 @@ async def _calculer_radar(db: AsyncSession, uid: str, graine: int = 0) -> dict:
         logger.warning("Radar IA indisponible, repli local (%s)", e)
 
     return {
-        "opportunities": fallback,
+        "opportunities": (reels + fallback)[:3],
+        "apollo": infos_apollo,
         "phrase_ia": "3 mouvements alignés à ta Vision, prêts en un tap.",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "objectifs_utilises": titres,
@@ -3573,12 +3686,25 @@ class IntegrationTokenIn(BaseModel):
     values: dict
 
 
+
+# Certaines variables ont deux orthographes acceptées (MAMMOTH_* = nom anglais
+# du service, MAMMOUTH_* = orthographe française souvent saisie sur Railway).
+_ALIAS_ENV = {"MAMMOTH_API_KEY": ("MAMMOUTH_API_KEY",), "MAMMOUTH_API_KEY": ("MAMMOTH_API_KEY",)}
+
+
+def _env_integration(nom: str) -> str:
+    for k in (nom, *_ALIAS_ENV.get(nom, ())):
+        v = os.environ.get(k)
+        if v:
+            return v
+    return ""
+
 @api.get("/integrations/status")
 async def integrations_status():
     """Retourne la liste des intégrations + un flag `configured` selon les .env."""
     items = []
     for spec in INTEGRATIONS_CATALOG:
-        configured = all(os.environ.get(k) for k in spec.get("env", []))
+        configured = all(_env_integration(k) for k in spec.get("env", []))
         items.append({
             "id": spec["id"], "name": spec["name"], "category": spec["cat"],
             "configured": configured, "onboardable": spec.get("onboardable", False),
@@ -3598,7 +3724,7 @@ async def integrations_save(body: IntegrationTokenIn):
     for k, v in body.values.items():
         if k in spec["env"] and isinstance(v, str) and v.strip():
             os.environ[k] = v.strip()
-    return {"ok": True, "provider": body.provider, "configured": all(os.environ.get(k) for k in spec["env"])}
+    return {"ok": True, "provider": body.provider, "configured": all(_env_integration(k) for k in spec["env"])}
 
 
 class DocumentAutoSaveIn(BaseModel):
@@ -3734,6 +3860,10 @@ install_commerce(globals())
 # ── Vision+ : victoires, partage public en lecture seule, e-mail du lundi ──
 from vision_plus import install_vision_plus  # noqa: E402
 install_vision_plus(globals())
+
+# Apollo.io → vrais prospects dans le Radar (clé plateforme APOLLO_API_KEY)
+from apollo_ext import install_apollo  # noqa: E402
+install_apollo(globals())
 
 # ─────────────── Processus (page /app/processus) ───────────────
 # Avant : stockés dans le navigateur uniquement, avec 4 processus de démonstration
@@ -4054,8 +4184,97 @@ async def tester_agent_business(agent_id: str, body: AgentTestIn, db: AsyncSessi
         raise HTTPException(502, "L'IA n'a pas répondu, réessaie dans un instant.")
 
 
+@api.get("/ia/statut")
+async def ia_statut():
+    """L'IA texte est-elle réellement active ? (tout utilisateur connecté)
+
+    Ajouté pour le bandeau de repli du cockpit : sans clé Mammouth, le
+    Copilote, le Radar et l'Agent Business répondaient un texte générique
+    sans que rien ne le signale à l'écran. Ne renvoie aucun secret —
+    seulement un booléen et le nom du modèle.
+    """
+    from llm_mammouth import MAMMOTH_MODEL, cle_mammouth
+
+    active = bool(cle_mammouth())
+    f_img = globals().get("images_disponibles")
+    return {
+        "ia_active": active,
+        "images_ia": bool(f_img()) if callable(f_img) else bool(EMERGENT_LLM_KEY),
+        "modele": MAMMOTH_MODEL if active else None,
+        "message": None
+        if active
+        else (
+            "L'IA est en mode repli : le Copilote, le Radar et l'Agent Business "
+            "répondent un texte générique. Configurez MAMMOTH_API_KEY pour "
+            "réactiver les réponses personnalisées."
+        ),
+    }
+
+
+@api.get("/admin/diagnostics")
+async def admin_diagnostics():
+    """État de configuration des clés d'intégration — réservé aux admins.
+
+    Ajouté après l'audit d'installation : impossible de vérifier depuis
+    l'extérieur si une clé posée dans Railway est bien lue par le backend
+    (les routes HeyGen sont admin-only et renvoient 401 à un anonyme, et
+    l'absence de clé Mammouth ne se voyait nulle part — l'app répondait
+    simplement à côté).
+
+    Ne renvoie QUE des booléens et des valeurs non secrètes : jamais une
+    clé, même tronquée.
+    """
+    if _role_courant() != "admin":
+        raise HTTPException(403, "Réservé aux administrateurs")
+
+    from llm_mammouth import MAMMOTH_BASE_URL, MAMMOTH_MODEL, cle_mammouth
+
+    ia_texte_ok = bool(cle_mammouth())
+    fernet_ok = bool(os.environ.get("FERNET_KEY"))
+    jwt_perso = JWT_SECRET != "kairos-dev-secret-a-changer"
+
+    cles = {
+        # Sans elle : le Copilote IA, le Radar et l'Agent Business
+        # répondent en repli local (texte générique) sans rien signaler.
+        "ia_texte_mammouth": ia_texte_ok,
+        # Sans elle : génération de vidéos IA indisponible.
+        "video_heygen": bool(os.environ.get("HEYGEN_API_KEY")),
+        # Sans elle : les clés d'intégration sont stockées EN CLAIR en base.
+        "chiffrement_fernet": fernet_ok,
+        # Un JWT_SECRET par défaut ou changeant déconnecte tous les comptes.
+        "jwt_secret_personnalise": jwt_perso,
+        "whatsapp": bool(os.environ.get("WA_SERVICE_SECRET")),
+        "telegram": bool(os.environ.get("TELEGRAM_BOT_TOKEN")),
+    }
+    manquantes = sorted(k for k, v in cles.items() if not v)
+    return {
+        "cles": cles,
+        "manquantes": manquantes,
+        "pret_pour_production": not manquantes,
+        "ia_texte": {
+            "configuree": ia_texte_ok,
+            "modele": MAMMOTH_MODEL,
+            "base_url": MAMMOTH_BASE_URL,
+            # Ce que verra réellement un prospect si la clé manque :
+            "consequence_si_absente": (
+                "Agent Business, Radar et Copilote répondent en repli local "
+                "(message générique), sans erreur visible."
+            ),
+        },
+        "require_auth": os.environ.get("REQUIRE_AUTH") == "1",
+    }
+
+
 app.include_router(api)
 app.include_router(heygen_router, prefix="/api")
+# Ordre corrigé : Starlette place le dernier middleware ajouté à
+# l'EXTÉRIEUR de la pile. _AuthMiddleware doit donc être enregistré
+# AVANT CORSMiddleware, sinon son 401 précoce court-circuite la pile et
+# repart sans en-tête Access-Control-Allow-Origin : le navigateur affiche
+# alors une erreur CORS opaque au lieu du 401 lisible « Connexion
+# requise. ». CORS enregistré en dernier = CORS le plus externe = tous
+# les statuts (200, 401, 422, 500) portent les bons en-têtes.
+app.add_middleware(_AuthMiddleware)
 app.add_middleware(
     CORSMiddleware, allow_credentials=True,
     # Corrigé : "*" combiné à allow_credentials=True est une faille — un
@@ -4065,13 +4284,102 @@ app.add_middleware(
     allow_origins=os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(","),
     allow_methods=["*"], allow_headers=["*"],
 )
-app.add_middleware(_AuthMiddleware)
+
+
+def _reparer_schema_sync(conn) -> None:
+    """Aligne les tables EXISTANTES sur les modèles (appelé au démarrage).
+
+    create_all() crée les tables absentes mais ne touche jamais une table qui
+    existe déjà. En production, plusieurs tables (ex. referrals,
+    user_connections) existaient avec un ancien schéma : chaque requête sur une
+    colonne récente échouait en 500 (inscription, parrainage, connexions).
+      1. ajoute toute colonne du modèle absente de la table (nullable) ;
+      2. rend NULL-able les anciennes colonnes NOT NULL sans défaut que le code
+         actuel ne renseigne plus (sinon chaque INSERT échoue).
+    Désactivable avec AUTO_MIGRATION=0. Ne supprime jamais rien.
+    """
+    from sqlalchemy import inspect as _sa_inspect, text as _sa_text
+    insp = _sa_inspect(conn)
+    dialecte = conn.dialect
+    existantes = set(insp.get_table_names())
+    for table in Base.metadata.sorted_tables:
+        if table.name not in existantes:
+            continue
+        cols_db = {c["name"]: c for c in insp.get_columns(table.name)}
+        # Clé primaire incompatible (ex. ancien id INT auto-incrémenté alors que
+        # le code écrit des identifiants texte) : impossible à réparer en place.
+        # On met l'ancienne table de côté (renommée, rien n'est supprimé) et on
+        # recrée une table neuve au bon format.
+        incompatible = False
+        for col in table.primary_key.columns:
+            ancien = cols_db.get(col.name)
+            if ancien is None:
+                incompatible = True
+                break
+            try:
+                py_modele = col.type.python_type
+                py_db = ancien["type"].python_type
+            except Exception:  # noqa: BLE001
+                continue
+            if py_modele is not py_db:
+                incompatible = True
+                break
+        if incompatible:
+            import time as _t
+            archive = f"{table.name}_ancien_{int(_t.time())}"
+            try:
+                conn.execute(_sa_text(f"ALTER TABLE {table.name} RENAME TO {archive}"))
+                table.create(conn)
+                logger.warning("Schéma réparé : ancienne table %s archivée en %s puis recréée", table.name, archive)
+            except Exception as e:  # noqa: BLE001
+                logger.error("Impossible de recréer %s : %s", table.name, e)
+            continue
+        for col in table.columns:
+            if col.name in cols_db or col.primary_key:
+                continue
+            type_sql = col.type.compile(dialect=dialecte)
+            try:
+                conn.execute(_sa_text(f"ALTER TABLE {table.name} ADD COLUMN {col.name} {type_sql} NULL"))
+                logger.warning("Schéma réparé : colonne %s.%s ajoutée", table.name, col.name)
+            except Exception as e:  # noqa: BLE001
+                logger.error("Impossible d'ajouter %s.%s : %s", table.name, col.name, e)
+        if dialecte.name in ("mysql", "mariadb"):
+            # Colonnes binaires créées en BLOB (64 Ko) : trop petit pour une photo.
+            from sqlalchemy import LargeBinary as _LB
+            for col in table.columns:
+                info = cols_db.get(col.name)
+                if info is not None and isinstance(col.type, _LB) and getattr(col.type, "length", None) \
+                        and type(info["type"]).__name__.upper() in ("BLOB", "TINYBLOB"):
+                    try:
+                        conn.execute(_sa_text(f"ALTER TABLE {table.name} MODIFY COLUMN {col.name} MEDIUMBLOB"))
+                        logger.warning("Schéma réparé : %s.%s agrandie en MEDIUMBLOB", table.name, col.name)
+                    except Exception as e:  # noqa: BLE001
+                        logger.error("Impossible d'agrandir %s.%s : %s", table.name, col.name, e)
+            modele = {c.name for c in table.columns}
+            for nom, info in cols_db.items():
+                if nom in modele or info.get("nullable", True) or info.get("default") is not None or info.get("autoincrement"):
+                    continue
+                pk = insp.get_pk_constraint(table.name).get("constrained_columns") or []
+                if nom in pk:
+                    continue
+                try:
+                    type_sql = info["type"].compile(dialect=dialecte)
+                    conn.execute(_sa_text(f"ALTER TABLE {table.name} MODIFY COLUMN {nom} {type_sql} NULL"))
+                    logger.warning("Schéma réparé : ancienne colonne %s.%s rendue facultative", table.name, nom)
+                except Exception as e:  # noqa: BLE001
+                    logger.error("Impossible d'assouplir %s.%s : %s", table.name, nom, e)
 
 
 @app.on_event("startup")
 async def _startup():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    if os.environ.get("AUTO_MIGRATION", "1") != "0":
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(_reparer_schema_sync)
+        except Exception as e:  # noqa: BLE001
+            logger.error("Réparation du schéma interrompue : %s", e)
     await _migrer_colonnes()
     await _seed()
 

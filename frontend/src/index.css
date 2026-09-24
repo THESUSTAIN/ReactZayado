@@ -68,12 +68,18 @@
         -webkit-backdrop-filter: blur(18px);
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
     }
-    .glass-strong {
-        background: rgba(16, 26, 52, 0.96);
-        border: 1px solid rgba(255, 255, 255, 0.16);
-        backdrop-filter: blur(22px);
-        -webkit-backdrop-filter: blur(22px);
-        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+    /* Fenêtres (modales, menus, tiroirs, chat) : verre BLANC translucide,
+       comme les cartes — plus de navy opaque « d'un autre bleu ». Une fine
+       base bleutée garde le texte lisible même au-dessus d'un contenu chargé. */
+    .glass-strong, .fenetre {
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.17) 0%, rgba(255, 255, 255, 0.09) 100%),
+          rgba(20, 38, 82, 0.62);
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        backdrop-filter: blur(28px) saturate(150%);
+        -webkit-backdrop-filter: blur(28px) saturate(150%);
+        box-shadow: 0 24px 60px rgba(3, 8, 24, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        color: #F5F1EA;
     }
     .glass-gold {
         border-color: rgba(201, 169, 106, 0.40);

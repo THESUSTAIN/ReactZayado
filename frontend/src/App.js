@@ -32,6 +32,7 @@ import Admin from "@/pages/Admin";
 import ConsoleLogin from "@/pages/console/ConsoleLogin";
 import PublicVision from "@/pages/PublicVision";
 import TarifsEmbed from "@/pages/TarifsEmbed";
+import Landing from "@/pages/Landing";
 import { getToken } from "@/lib/kairosApi";
 
 // Deux apps séparées issues du même code — la saveur est choisie AU BUILD :
@@ -87,7 +88,8 @@ function App() {
           <GlobalChat />
           <GuidedTour />
           <Routes>
-            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/" element={getToken() ? <Navigate to="/app" replace /> : <Landing />} />
+            <Route path="/accueil" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             {/* Lien public en lecture seule d'un Vision Board (sans compte) */}
             <Route path="/v/:token" element={<PublicVision />} />
