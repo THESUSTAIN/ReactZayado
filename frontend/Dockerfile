@@ -17,6 +17,13 @@ COPY package.json ./
 RUN yarn install
 
 COPY . .
+# Filet de sécurité : un modèle TypeScript/Vite (« farm-ts ») a été copié par
+# erreur dans le dépôt. Ses fichiers font échouer react-scripts (tsconfig.json +
+# jsconfig.json). On les retire avant le build : l'application est en JavaScript.
+RUN rm -f tsconfig.json tsconfig.*.json vite.config.ts vite.config.js index.html .oxlintrc.json \
+      src/App.tsx src/main.tsx src/vite-env.d.ts \
+ && find src -name "*.tsx" -delete \
+ && find src -name "*.ts" ! -name "*.d.ts" -delete
 RUN yarn build
 
 FROM nginx:alpine
