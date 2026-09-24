@@ -90,11 +90,23 @@ def install_commerce(g: dict) -> None:
 
     @api.get("/abonnement")
     async def mon_abonnement(db: AsyncSession = Depends(get_db)):
-        a = await db.get(Abonnement, _uid())
+        uid = _uid()
+        a = await db.get(Abonnement, uid)
+        # Offre choisie à l'onboarding mais pas encore payée : on l'indique
+        # (avant, le profil affichait « Découverte » sans explication).
+        attente = None
+        VP = g.get("VisionProfile")
+        if VP is not None:
+            p = (await db.execute(select(VP).where(VP.user_id == uid))).scalar_one_or_none()
+            cm = (getattr(p, "contexte_metier", None) or {}) if p else {}
+            attente = cm.get("plan_souhaite") if isinstance(cm, dict) else None
+        plan = a.plan if a else "essentielle"
+        if attente in (None, "", "essentielle") or attente == plan:
+            attente = None
         if not a:
-            return {"plan": "essentielle", "fondateur": False, "fin": None}
+            return {"plan": "essentielle", "fondateur": False, "fin": None, "plan_en_attente": attente}
         return {"plan": a.plan, "cycle": a.cycle, "fondateur": bool(a.fondateur),
-                "fin": a.fin.isoformat() if a.fin else None}
+                "fin": a.fin.isoformat() if a.fin else None, "plan_en_attente": attente}
 
     async def _verifier_expiration(db, uid: str, profil) -> None:
         """Abonnement échu → retour à l'offre gratuite (appelé au chargement de l'appli)."""

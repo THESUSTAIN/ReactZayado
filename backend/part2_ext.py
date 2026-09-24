@@ -20,6 +20,7 @@ import json
 import logging
 import os
 import re
+import unicodedata
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -200,7 +201,7 @@ def install_part2(g: dict) -> None:
         user_id: Mapped[str] = mapped_column(String(36), index=True)
         prompt: Mapped[str] = mapped_column(Text)
         mime: Mapped[str] = mapped_column(String(40), default="image/png")
-        data: Mapped[bytes] = mapped_column(LargeBinary)
+        data: Mapped[bytes] = mapped_column(LargeBinary(length=16 * 1024 * 1024))  # MEDIUMBLOB sous MySQL (BLOB = 64 Ko)
         created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     IMAGE_LIMITE_JOUR = int(os.environ.get("IMAGE_DAILY_LIMIT", "10"))
@@ -208,11 +209,51 @@ def install_part2(g: dict) -> None:
     class ImageIn(BaseModel):
         prompt: str = Field(min_length=3, max_length=500)
 
+    def _fournisseur_image_openai():
+        """API d'images compatible OpenAI : IMAGE_API_KEY/IMAGE_BASE_URL, sinon OPENAI_API_KEY."""
+        cle = os.environ.get("IMAGE_API_KEY") or os.environ.get("OPENAI_API_KEY")
+        if not cle:
+            return None
+        base = (os.environ.get("IMAGE_BASE_URL") or "https://api.openai.com/v1").rstrip("/")
+        return cle, base, os.environ.get("IMAGE_MODEL", "gpt-image-1")
+
+    def images_disponibles() -> bool:
+        return bool(g.get("EMERGENT_LLM_KEY") or _fournisseur_image_openai())
+
+    g["images_disponibles"] = images_disponibles
+
+    async def _generer_image_openai(prompt: str):
+        cle, base, modele = _fournisseur_image_openai()
+        consigne = f"Vision board image, inspiring, cohesive, no text or letters in the image. Subject: {prompt}"
+        async with httpx.AsyncClient(timeout=90) as http:
+            r = await http.post(f"{base}/images/generations",
+                                headers={"Authorization": f"Bearer {cle}"},
+                                json={"model": modele, "prompt": consigne, "size": "1024x1024", "n": 1})
+        if r.status_code >= 400:
+            log.warning("Images IA (%s) : HTTP %s %s", base, r.status_code, r.text[:200])
+            raise HTTPException(502, "Le service d'images a refusé la demande. Réessaie dans un instant.")
+        item = (r.json().get("data") or [{}])[0]
+        if item.get("b64_json"):
+            return base64.b64decode(item["b64_json"]), "image/png"
+        if item.get("url"):
+            async with httpx.AsyncClient(timeout=60) as http:
+                img = await http.get(item["url"])
+            return img.content, img.headers.get("content-type", "image/png")
+        raise HTTPException(502, "Le modèle n'a renvoyé aucune image. Reformule ta description.")
+
     async def _generer_image(prompt: str):
         key = g.get("EMERGENT_LLM_KEY")
         if not key:
-            raise HTTPException(503, "Génération d'image indisponible : EMERGENT_LLM_KEY absente côté serveur.")
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
+            if _fournisseur_image_openai():
+                return await _generer_image_openai(prompt)
+            raise HTTPException(503, "Les images IA ne sont pas encore activées sur ce serveur. "
+                                     "Tu peux ajouter tes propres photos en attendant.")
+        try:
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
+        except ImportError:
+            if _fournisseur_image_openai():
+                return await _generer_image_openai(prompt)
+            raise HTTPException(503, "Les images IA ne sont pas disponibles sur ce serveur (module manquant).")
         chat = LlmChat(api_key=key, session_id=uuid.uuid4().hex,
                        system_message="You are a helpful AI image generation assistant.")
         chat = chat.with_model("gemini", os.environ.get("EMERGENT_IMAGE_MODEL", "gemini-3.1-flash-image-preview"))
@@ -359,7 +400,8 @@ def install_part2(g: dict) -> None:
         return {"connecte": True, "admin": admin, "vendeur": vendeur, "profil": profil, "compteurs": compteurs,
                 "profil_complet": bool(profil["nom_boutique"] and profil["email_contact"] and profil["conditions_acceptees"]),
                 "shopify": {"configure": _shopify_pret(), "boutique": _shopify_boutique() or None},
-                "limites": {"images_max": MAX_IMAGES}}
+                "limites": {"images_max": MAX_IMAGES},
+                "rayons": ["Corps", "Âme", "Rituel", "Organisation", "Pack"]}
 
     @api.put("/vendeur/profil")
     async def vendeur_profil_maj(patch: dict, db: AsyncSession = Depends(get_db)):
@@ -455,6 +497,66 @@ def install_part2(g: dict) -> None:
         await db.refresh(p)
         return _pj(p)
 
+    # ── Photos produit (envoyées depuis l'espace vendeur) ──
+    # Avant, le vendeur devait coller des adresses d'images hébergées ailleurs.
+    # Les photos sont stockées en base et servies publiquement par une URL non
+    # devinable : Shopify les télécharge lui-même au moment de la publication.
+
+    class VendorImage(Base):
+        __tablename__ = "vendor_images"
+        id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
+        user_id: Mapped[str] = mapped_column(String(36), index=True)
+        mime: Mapped[str] = mapped_column(String(40), default="image/jpeg")
+        data: Mapped[bytes] = mapped_column(LargeBinary(length=16 * 1024 * 1024))  # MEDIUMBLOB sous MySQL (BLOB = 64 Ko)
+        created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    PHOTO_MAX_OCTETS = 5 * 1024 * 1024
+    PHOTO_TYPES = {"image/jpeg": b"\xff\xd8", "image/png": b"\x89PNG", "image/webp": b"RIFF"}
+
+    class PhotoIn(BaseModel):
+        data: str = Field(min_length=20)  # data:image/…;base64,… ou base64 brut
+        mime: Optional[str] = None
+
+    def _url_publique_app() -> str:
+        return os.environ.get("PUBLIC_FRONTEND_URL", "https://app.zayado.net").rstrip("/")
+
+    @api.post("/vendeur/images")
+    async def vendeur_image_envoyer(body: PhotoIn, db: AsyncSession = Depends(get_db)):
+        await _exiger_vendeur(db)
+        brut, mime = body.data, (body.mime or "").lower()
+        if brut.startswith("data:"):
+            entete, _, brut = brut.partition(",")
+            mime = entete[5:].split(";")[0].lower() or mime
+        try:
+            octets = base64.b64decode(brut, validate=False)
+        except Exception:  # noqa: BLE001
+            raise HTTPException(400, "Image illisible.")
+        if len(octets) > PHOTO_MAX_OCTETS:
+            raise HTTPException(413, "Photo trop lourde (5 Mo maximum).")
+        signature = PHOTO_TYPES.get(mime)
+        if not signature or not octets.startswith(signature):
+            raise HTTPException(415, "Format accepté : JPG, PNG ou WebP.")
+        img = VendorImage(user_id=_uid(), mime=mime, data=octets)
+        db.add(img)
+        await db.commit()
+        return {"id": img.id, "url": f"{_url_publique_app()}/api/vendeur/images/{img.id}"}
+
+    @api.get("/vendeur/images/{image_id}")
+    async def vendeur_image_lire(image_id: str, db: AsyncSession = Depends(get_db)):
+        img = (await db.execute(select(VendorImage).where(VendorImage.id == image_id))).scalar_one_or_none()
+        if not img:
+            raise HTTPException(404, "Image introuvable.")
+        return Response(content=img.data, media_type=img.mime,
+                        headers={"Cache-Control": "public, max-age=31536000, immutable"})
+
+    # Rayons de la boutique zayado.net : les collections Shopify sont
+    # automatiques par tag, le rayon choisi par le vendeur devient donc un tag.
+    RAYONS = {"corps": "corps", "âme": "ame", "ame": "ame", "rituel": "rituel",
+              "organisation": "organisation", "pack": "pack", "packs": "pack"}
+
+    def _tag_rayon(categorie: str) -> Optional[str]:
+        return RAYONS.get((categorie or "").strip().lower())
+
     # ── Modération Zayado ──
 
     MUTATION_PRODUIT = """
@@ -476,15 +578,21 @@ def install_part2(g: dict) -> None:
         entree = {
             "title": p.titre, "descriptionHtml": description, "vendor": vendeur,
             "productType": p.categorie or "",
-            "tags": ["zayado-vendeur", f"vendeur-{re.sub(r'[^a-z0-9-]', '-', vendeur.lower())[:40]}"],
-            "status": "DRAFT",  # la fiche arrive dans Shopify sans être en vitrine : Zayado garde la main
+            "tags": ["zayado-vendeur", "marketplace", f"vendeur-{re.sub(r'-+', '-', re.sub(r'[^a-z0-9-]', '-', unicodedata.normalize('NFKD', vendeur.lower()).encode('ascii', 'ignore').decode())).strip('-')[:40]}"]
+                    + ([_tag_rayon(p.categorie)] if _tag_rayon(p.categorie) else []),
+            # La modération Zayado a déjà validé la fiche : elle part en ligne
+            # (SHOPIFY_PRODUCT_STATUS=DRAFT pour la garder en brouillon).
+            "status": (os.environ.get("SHOPIFY_PRODUCT_STATUS", "ACTIVE").upper()
+                       if os.environ.get("SHOPIFY_PRODUCT_STATUS", "ACTIVE").upper() in ("ACTIVE", "DRAFT") else "ACTIVE"),
+            "seo": {"title": f"{p.titre} — {vendeur} | Zayado"[:70],
+                    "description": re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", p.description or "")).strip()[:320]},
             "productOptions": [{"name": "Titre", "values": [{"name": "Default Title"}]}],
             "variants": [{"price": prix, "optionValues": [{"optionName": "Titre", "name": "Default Title"}],
                           **({"sku": p.sku} if p.sku else {})}],
             "metafields": [{"namespace": "zayado", "key": "produit_id", "type": "single_line_text_field", "value": p.id}],
         }
         if p.images:
-            entree["files"] = [{"originalSource": u, "contentType": "IMAGE"} for u in p.images[:MAX_IMAGES]]
+            entree["files"] = [{"originalSource": u, "contentType": "IMAGE", "alt": p.titre[:120]} for u in p.images[:MAX_IMAGES]]
         return entree
 
     async def _appel_shopify(variables: dict) -> dict:
@@ -509,6 +617,45 @@ def install_part2(g: dict) -> None:
         if data.get("errors"):
             raise HTTPException(502, "Shopify a rejeté la requête : " + "; ".join(e.get("message", "") for e in data["errors"])[:400])
         return data.get("data") or {}
+
+    REQ_PUBLICATIONS = "query { publications(first: 20) { nodes { id name } } }"
+    MUTATION_PUBLIER = """
+    mutation publier($id: ID!, $input: [PublicationInput!]!) {
+      publishablePublish(id: $id, input: $input) { userErrors { field message } }
+    }
+    """
+
+    async def _graphql(query: str, variables: Optional[dict] = None) -> dict:
+        url = f"https://{_shopify_boutique()}/admin/api/{SHOPIFY_VERSION}/graphql.json"
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            r = await client.post(url, headers={"X-Shopify-Access-Token": os.environ["SHOPIFY_ADMIN_TOKEN"],
+                                                "Content-Type": "application/json"},
+                                  json={"query": query, "variables": variables or {}})
+        r.raise_for_status()
+        return r.json()
+
+    async def _publier_en_vitrine(produit_id: str) -> None:
+        """Rend le produit visible sur la boutique en ligne (canal « Online Store »).
+        Un produit ACTIVE créé par l'API n'apparaît pas en vitrine tant qu'il n'est
+        pas publié sur ce canal. Échec non bloquant : la fiche existe dans Shopify
+        et peut être publiée à la main (droits read/write_publications requis)."""
+        if os.environ.get("SHOPIFY_PRODUCT_STATUS", "ACTIVE").upper() == "DRAFT":
+            return
+        try:
+            pub_id = os.environ.get("SHOPIFY_PUBLICATION_ID", "").strip()
+            if not pub_id:
+                noeuds = (((await _graphql(REQ_PUBLICATIONS)).get("data") or {}).get("publications") or {}).get("nodes") or []
+                vitrine = next((n for n in noeuds if (n.get("name") or "").lower() in ("online store", "boutique en ligne")), None)
+                pub_id = vitrine["id"] if vitrine else ""
+            if not pub_id:
+                log.warning("Canal « Online Store » introuvable : produit %s créé mais non publié en vitrine.", produit_id)
+                return
+            rep = await _graphql(MUTATION_PUBLIER, {"id": produit_id, "input": [{"publicationId": pub_id}]})
+            fautes = ((rep.get("data") or {}).get("publishablePublish") or {}).get("userErrors") or rep.get("errors") or []
+            if fautes:
+                log.warning("Publication vitrine refusée pour %s : %s", produit_id, fautes)
+        except Exception as e:  # noqa: BLE001
+            log.warning("Publication vitrine impossible pour %s : %s", produit_id, e)
 
     @api.get("/vendeur/moderation/attente")
     async def moderation_attente(db: AsyncSession = Depends(get_db)):
@@ -540,6 +687,7 @@ def install_part2(g: dict) -> None:
         cree = resultat.get("product") or {}
         if not cree.get("id"):
             raise HTTPException(502, "Shopify n'a pas renvoyé d'identifiant produit. Rien n'a été marqué publié.")
+        await _publier_en_vitrine(cree["id"])
         p.statut, p.shopify_id, p.shopify_handle = "publie", cree["id"], cree.get("handle")
         p.publie_le, p.motif_refus, p.maj_le = utcnow(), "", utcnow()
         await db.commit()

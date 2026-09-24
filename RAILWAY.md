@@ -78,3 +78,15 @@ curl -i https://app.zayado.net/api/state
 La première commande doit renvoyer `200` avec du JSON. La seconde peut renvoyer `401` sans jeton, ce qui confirme que la requête atteint FastAPI. Une réponse `502` signifie que Nginx ne peut pas joindre `zayado-backend`.
 
 Le domaine public Shopify ne doit pas être utilisé comme URL API privée. Pour les callbacks OAuth de l’espace privé, utiliser les URLs sous `app.zayado.net/api/...`.
+
+## Nouvelles variables (v9) — service backend
+
+| Variable | Rôle | Exemple |
+|---|---|---|
+| `APOLLO_API_KEY` | Clé Apollo **de Zayado** (clé « master » ou avec le droit `api_search`). Active les vrais prospects dans le Radar. | `xxxxxxxx` |
+| `APOLLO_QUOTA_SERENITE` / `_PRO` / `_BUSINESS` / `_ESSENTIELLE` | Prospects par mois et par offre (défaut 30 / 90 / 150 / 0). | `30` |
+| `SHOPIFY_SHOP_DOMAIN` | Boutique qui reçoit les produits vendeurs. | `ad2ax0-u1.myshopify.com` |
+| `SHOPIFY_ADMIN_TOKEN` | Jeton Admin API de l'app personnalisée Shopify (droits `write_products`, `read_products`, `write_publications`, `read_publications`). | `shpat_…` |
+| `SHOPIFY_PRODUCT_STATUS` | `ACTIVE` (défaut : en vitrine après modération) ou `DRAFT`. | `ACTIVE` |
+| `SHOPIFY_PUBLICATION_ID` | Facultatif : canal de vente (sinon « Online Store » est trouvé tout seul). | |
+| `PUBLIC_FRONTEND_URL` | Adresse publique de l'appli (pour les photos produit importées par Shopify). | `https://app.zayado.net` |
