@@ -16,16 +16,15 @@ const STEPS = [
   { title: "Bienvenue dans ton cockpit", text: "En une minute, on fait le tour des zones clés de Zayado. Tu peux passer la visite à tout moment et la relancer depuis ton profil." },
   { sel: "[data-testid=nav-today]", title: "Aujourd'hui", text: "Ton point de départ : énergie, équilibre pro/perso, priorités et pouls business du jour." },
   { sel: "[data-testid=nav-vision]", title: "Vision Board", text: "Ton tableau façon Storyflow : murs, cartes et cartes Live reliées à tes objectifs, tes actions et tes finances." },
-  { sel: "[data-testid=nav-radar]", title: "Radar", text: "Les signaux de ton marché et les opportunités repérées pour toi." },
+  { sel: "[data-testid=nav-radar]", title: "Radar", text: "Chaque matin : de vraies personnes à contacter (ou des partenaires qui recommandent), ce qu'on cherche sur Google près de chez toi et une pub prête à lancer." },
   { sel: "[data-testid=nav-review]", title: "Revue hebdo", text: "Cinq minutes par semaine pour regarder en arrière sans te juger, puis choisir la suite." },
   { sel: "[data-testid=nav-ideas]", title: "Idées", text: "Capture une idée en deux secondes ; l'IA t'aide à la trier et à la transformer en action." },
-  { sel: "[data-testid=nav-actions]", title: "Actions", text: "Tes tâches, reliées à tes objectifs : chaque action fait avancer ta vision." },
-  { sel: "[data-testid=nav-wellbeing]", title: "Bien-être", text: "Respiration, check-ins et rituels pour tenir le rythme sans t'épuiser." },
+  { sel: "[data-testid=nav-actions]", title: "Plan d'action", text: "Tes objectifs, les actions qui les font avancer et tes processus, au même endroit. L'avancement de chaque objectif se calcule tout seul." },
+  { sel: "[data-testid=nav-wellbeing]", title: "Bien-être & Mindset", text: "Check-ins, respiration, une carte du jour et des parcours de 7 jours pour oser vendre, dire non ou rebondir. Tes réponses restent dans ton carnet privé." },
   { sel: "[data-testid=nav-collab]", title: "Collaborateurs", text: "Demande de l'aide à un expert humain : faire avec toi, préparer ou exécuter après ta validation." },
-  { sel: "[data-testid=nav-chat]", title: "Collaborateur IA", text: "Ton copilote IA, disponible sur toutes les pages : pose une question, valide ses décisions, lis l'actualité du jour." },
   { sel: "[data-testid=mobile-nav]", title: "Navigation", text: "Toutes les sections de Zayado, à portée de pouce." },
   { sel: "[data-testid=header-search]", title: "Recherche rapide", text: "Tape le nom d'une page puis Entrée. Raccourci : Ctrl + K (⌘ + K sur Mac)." },
-  { sel: "[data-testid=header-chat]", title: "Chat", text: "Ouvre le Collaborateur IA sans quitter la page." },
+  { sel: "[data-testid=header-chat]", title: "Collaborateur IA", text: "Ton copilote IA, sur toutes les pages : pose une question, valide ses décisions, lis l'actualité du jour." },
   { sel: "[data-testid=header-bell]", title: "Notifications", text: "Actualité du jour et décisions qui attendent ton feu vert." },
   { sel: "[data-testid=open-checkin-btn]", title: "Check-in énergie", text: "Chaque jour, note ton énergie : Zayado adapte le rythme et les conseils." },
   { sel: "[data-testid=header-profile]", title: "Ton profil", text: "Paramètres, Mon espace, déconnexion… et cette visite, à relancer quand tu veux." },
@@ -44,12 +43,13 @@ export default function GuidedTour() {
   const [steps, setSteps] = useState(null);
   const [i, setI] = useState(0);
   const [rect, setRect] = useState(null);
+  const [invite, setInvite] = useState(false);
 
-  const begin = useCallback(() => {
+  const begin = useCallback((depart = 0) => {
     if (location.pathname !== "/app") navigate("/app");
     setTimeout(() => {
       const ok = STEPS.filter((s) => !s.sel || visible(document.querySelector(s.sel)));
-      setSteps(ok); setI(0);
+      setSteps(ok); setI(Math.min(typeof depart === "number" ? depart : 0, ok.length - 1));
     }, location.pathname !== "/app" ? 900 : 50);
   }, [location.pathname, navigate]);
 
@@ -65,7 +65,9 @@ export default function GuidedTour() {
     let fait = true;
     try { fait = localStorage.getItem(DONE_KEY) === "1"; } catch { /* stockage indisponible */ }
     if (fait) return;
-    const t = setTimeout(begin, 1600);
+    // Plus de voile plein écran d'office sur le cockpit (il masquait le centre
+    // à la 1re connexion) : une petite invitation discrète, en bas, qu'on accepte ou non.
+    const t = setTimeout(() => setInvite(true), 1600);
     return () => clearTimeout(t);
   }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -105,6 +107,19 @@ export default function GuidedTour() {
     return () => window.removeEventListener("keydown", k);
   }, [steps, next, close]);
 
+  if (invite && !steps) {
+    const refuser = () => { try { localStorage.setItem(DONE_KEY, "1"); } catch { /* */ } setInvite(false); };
+    return (
+      <div className="fenetre fixed bottom-24 left-4 z-[70] w-[min(340px,calc(100vw-32px))] rounded-2xl p-4 lg:bottom-6 lg:left-[112px]" data-testid="tour-invite" role="dialog" aria-label="Visite guidée">
+        <p className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-gold"><Sparkles className="h-3.5 w-3.5" /> Bienvenue</p>
+        <p className="mt-1.5 text-[13.5px] leading-relaxed text-offwhite/85">On fait le tour des zones clés de ton cockpit en une minute ?</p>
+        <div className="mt-3 flex items-center justify-end gap-2">
+          <button onClick={refuser} className="rounded-xl px-3 py-1.5 text-xs text-offwhite/65 hover:bg-white/10" data-testid="tour-invite-non">Plus tard</button>
+          <button onClick={() => { setInvite(false); begin(1); }} className="inline-flex items-center gap-1 rounded-xl bg-gold px-3.5 py-1.5 text-xs font-semibold text-navy-900" data-testid="tour-invite-oui">Découvrir <ArrowRight className="h-3.5 w-3.5" /></button>
+        </div>
+      </div>
+    );
+  }
   if (!steps || !step) return null;
 
   // Position de la bulle : à droite de la cible si la place le permet, sinon dessous / dessus.
@@ -128,7 +143,7 @@ export default function GuidedTour() {
       )}
       <div className="absolute inset-0" onClick={(e) => e.stopPropagation()} />
       <div
-        className="absolute rounded-2xl border border-white/15 bg-[#101a34]/[0.97] p-5 text-offwhite shadow-[0_20px_50px_rgba(0,0,0,.45)] backdrop-blur-xl transition-all duration-300"
+        className="fenetre absolute rounded-2xl p-5 text-offwhite transition-all duration-300"
         style={{ width: W, ...pos }}
         data-testid="tour-bubble"
       >

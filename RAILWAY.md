@@ -90,3 +90,46 @@ Le domaine public Shopify ne doit pas être utilisé comme URL API privée. Pour
 | `SHOPIFY_PRODUCT_STATUS` | `ACTIVE` (défaut : en vitrine après modération) ou `DRAFT`. | `ACTIVE` |
 | `SHOPIFY_PUBLICATION_ID` | Facultatif : canal de vente (sinon « Online Store » est trouvé tout seul). | |
 | `PUBLIC_FRONTEND_URL` | Adresse publique de l'appli (pour les photos produit importées par Shopify). | `https://app.zayado.net` |
+
+## Nouvelles variables (v10) — service backend
+
+| Variable | Rôle |
+|---|---|
+| `DATAFORSEO_LOGIN` / `DATAFORSEO_PASSWORD` | Volumes de recherche Google réels (Radar, clientèle de particuliers). ~0,09 $ par scan, 1 scan par client et par semaine. |
+| `MAMMOTH_IMAGE_MODEL` | Facultatif : modèle d'images Mammouth (défaut `google/gemini-2.5-flash-image`). Les images IA du Vision Board utilisent la clé Mammouth déjà en place. |
+| `DVF_API_URL` / `GEO_API_URL` | Facultatifs : sources publiques des ventes immobilières (Cerema) et des communes (geo.api.gouv.fr). |
+
+## Tests backend
+
+`cd backend && pytest` — suite autonome (aucun serveur, aucun réseau, aucun compte de démo).
+Les anciens tests dépendant d'un serveur distant sont dans `backend/tests/archive_serveur_distant/`.
+
+## Nouvelles variables (v11) — modèle tarifaire sans offre gratuite
+
+| Variable | Rôle | Défaut |
+|---|---|---|
+| `ESSAI_ACTIF` | `0` pour couper l'essai à 1 € | `1` |
+| `ESSAI_PRIX` | Prix TTC de l'essai (payé une fois) | `1` |
+| `ESSAI_JOURS` | Durée de l'essai | `60` |
+| `ESSAI_PLAN` | Offre concernée par l'essai | `serenite` (Solo) |
+
+Rappel : `FONDATEUR_ACTIF`, `FONDATEUR_FIN` (AAAA-MM-JJ), `FONDATEUR_PLACES` règlent le tarif fondateur,
+qui est réservé dès l'essai s'il est encore ouvert. Un compte sans offre active (et sans rôle admin/vendeur)
+est redirigé vers /activer ; ses données sont conservées.
+
+## Mini-exercices à intégrer dans le Journal Shopify
+
+Adresse : `https://app.zayado.net/embed/exercice/<parcours>` avec `oser-vendre`, `revenus-irreguliers`,
+`dire-non` ou `rebondir`. Code à coller dans l'article (bloc HTML personnalisé) :
+
+```html
+<iframe id="zayado-exercice" src="https://app.zayado.net/embed/exercice/oser-vendre"
+  style="width:100%;border:0;border-radius:22px;min-height:560px" loading="lazy" title="Exercice Zayado"></iframe>
+<script>
+  window.addEventListener("message", function (e) {
+    if (e.origin === "https://app.zayado.net" && e.data && e.data.type === "zayado-exercice-hauteur") {
+      document.getElementById("zayado-exercice").style.height = e.data.hauteur + "px";
+    }
+  });
+</script>
+```

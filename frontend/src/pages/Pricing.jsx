@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronDown, ShieldCheck, Server, Lock, FileText } from "lucide-react";
-import { PLANS, COMPARATIF } from "@/lib/plans";
+import { PLANS_GRILLE, COMPARATIF } from "@/lib/plans";
 import GrilleTarifs from "@/components/pricing/GrilleTarifs";
 import { toast } from "sonner";
 import { MarketingLayout } from "@/components/marketing/MarketingLayout";
@@ -46,8 +46,8 @@ export default function Pricing() {
   const [comparer, setComparer] = useState(false);
 
   useSeo({
-    title: "Tarifs Zayado — gratuit, Solo et Pro, tarif fondateur, sans engagement",
-    description: "Zayado Découverte gratuit, Solo pour piloter seul, Pro avec Agent Business à ta marque. Tarif fondateur pour les 100 premiers clients, garanti tant que tu restes abonné. Sans engagement.",
+    title: "Tarifs Zayado — essai 2 mois pour 1 €, Solo et Pro, tarif fondateur, sans engagement",
+    description: "Essaie Zayado Solo 2 mois pour 1 €, puis le tarif fondateur garanti tant que tu restes abonné. Pro avec Agent Business à ta marque. Sans engagement ni renouvellement automatique.",
     path: "/pricing",
   });
 
@@ -61,7 +61,7 @@ export default function Pricing() {
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-offwhite/65 sm:text-base">
             Vision, priorités, énergie et chiffres de ton activité au même endroit, avec une IA qui connaît ton projet.
-            Prix hors taxes, sans engagement.
+            Essai Solo : 2 mois pour 1 €. Ensuite, prix hors taxes, sans engagement.
           </p>
 
         </div>
@@ -86,7 +86,7 @@ export default function Pricing() {
                 <thead>
                   <tr className="text-offwhite/60">
                     <th className="px-4 py-3 text-left font-medium">Fonctionnalité</th>
-                    {PLANS.map((p) => <th key={p.key} className={`px-3 py-3 text-center font-semibold ${p.star ? "text-gold" : "text-offwhite"}`}>{p.nom}</th>)}
+                    {PLANS_GRILLE.map((p) => <th key={p.key} className={`px-3 py-3 text-center font-semibold ${p.star ? "text-gold" : "text-offwhite"}`}>{p.nom}</th>)}
                   </tr>
                 </thead>
                 <tbody>
@@ -110,11 +110,13 @@ export default function Pricing() {
           <h2 className="mb-6 text-center font-display text-2xl font-bold">Questions sur les tarifs</h2>
           {[
             { q: "Qu'est-ce que la « maintenance incluse » ?", r: "Les mises à jour, l'amélioration continue et la sécurité — sans rien payer en plus, jamais. Tu utilises, on entretient." },
-            { q: "Les prix sont-ils HT ou TTC ?", r: "Tous les prix affichés sont hors taxes. La TVA française (20 %) s'ajoute sur ta facture, que tu peux récupérer si ton entreprise y est assujettie." },
+            { q: "Comment marche l'essai à 1 € ?", r: "Tu paies 1 € TTC une seule fois et tu as l'offre Solo complète pendant 2 mois. Rien ne se renouvelle tout seul : à la fin, tu choisis de continuer (au tarif fondateur réservé pendant ton essai, s'il est encore ouvert) ou d'arrêter. Un essai par compte." },
+            { q: "Pourquoi pas d'offre gratuite ?", r: "Parce que Zayado utilise de vraies sources (IA, prospects, données Google) qui ont un coût. L'essai à 1 € te laisse tout tester pendant 2 mois, sans engagement." },
+            { q: "Les prix sont-ils HT ou TTC ?", r: "Les prix des offres sont hors taxes : la TVA française (20 %) s'ajoute sur ta facture, que tu peux récupérer si ton entreprise y est assujettie. L'essai est à 1 € TTC." },
             { q: "Quelle différence entre Solo et Pro ?", r: "Solo, c'est ton cockpit complet pour piloter seul. Pro ajoute ce qui sert face à tes clients : ton propre chatbot à ta marque, les documents IA et les alertes WhatsApp / Telegram." },
             { q: "Qu'est-ce que le tarif fondateur ?", r: "Une offre de lancement réservée aux 100 premiers clients, jusqu'à la date indiquée. Ton tarif fondateur t'est garanti tant que tu restes abonné, même quand les prix normaux s'appliquent aux nouveaux clients." },
             { q: "Puis-je changer de palier en cours de route ?", r: "Oui : choisis l'offre supérieure sur cette page. La nouvelle offre démarre dès le paiement validé." },
-            { q: "Et si j'arrête ?", r: "Il n'y a pas de renouvellement automatique : tu gardes l'accès jusqu'à la fin de la période payée, puis tu retombes sur l'offre gratuite. Tes données restent exportables à tout moment." },
+            { q: "Et si j'arrête ?", r: "Il n'y a pas de renouvellement automatique : tu gardes l'accès jusqu'à la fin de la période payée, puis ton espace se met en pause. Tes données sont conservées et restent exportables : tu les retrouves en reprenant une offre." },
           ].map((f, i) => (
             <details key={i} className="glass rounded-2xl px-6 py-4" data-testid={`pricing-faq-${i}`}>
               <summary className="cursor-pointer text-sm font-semibold">{f.q}</summary>

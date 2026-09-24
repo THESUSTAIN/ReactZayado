@@ -217,8 +217,47 @@ def install_part2(g: dict) -> None:
         base = (os.environ.get("IMAGE_BASE_URL") or "https://api.openai.com/v1").rstrip("/")
         return cle, base, os.environ.get("IMAGE_MODEL", "gpt-image-1")
 
+    def _cle_mammouth() -> str:
+        return (os.environ.get("MAMMOTH_API_KEY") or os.environ.get("MAMMOUTH_API_KEY") or "").strip()
+
     def images_disponibles() -> bool:
-        return bool(g.get("EMERGENT_LLM_KEY") or _fournisseur_image_openai())
+        return bool(_cle_mammouth() or g.get("EMERGENT_LLM_KEY") or _fournisseur_image_openai())
+
+    MAMMOUTH_MODELES_IMAGE = [m for m in (os.environ.get("MAMMOTH_IMAGE_MODEL", "").strip(),
+                                          "google/gemini-2.5-flash-image", "gemini-2.5-flash-image",
+                                          "gemini-3.1-flash-image-preview") if m]
+
+    async def _generer_image_mammouth(prompt: str):
+        """Images via Mammouth (la clé IA déjà en production) : modèle image Gemini
+        appelé par /chat/completions, l'image revient dans
+        choices[0].message.images[0].image_url.url (data:image/png;base64,…)."""
+        base = os.environ.get("MAMMOTH_BASE_URL", "https://api.mammouth.ai/v1").rstrip("/")
+        consigne = (f"Generate one image for a vision board: inspiring, cohesive, photographic, "
+                    f"no text or letters in the image. Subject: {prompt}")
+        derniere = None
+        for modele in dict.fromkeys(MAMMOUTH_MODELES_IMAGE):
+            async with httpx.AsyncClient(timeout=120) as http:
+                r = await http.post(f"{base}/chat/completions", headers={"Authorization": f"Bearer {_cle_mammouth()}"},
+                                    json={"model": modele, "modalities": ["image", "text"],
+                                          "messages": [{"role": "user", "content": consigne}]})
+            if r.status_code >= 400:
+                derniere = f"{modele} : HTTP {r.status_code} {r.text[:160]}"
+                if r.status_code in (400, 404, 422):
+                    continue  # modèle inconnu chez Mammouth → essai du suivant
+                break
+            msg = ((r.json().get("choices") or [{}])[0].get("message") or {})
+            for im in msg.get("images") or []:
+                url = ((im or {}).get("image_url") or {}).get("url") or ""
+                if url.startswith("data:"):
+                    entete, _, donnees = url.partition(",")
+                    return base64.b64decode(donnees), (entete[5:].split(";")[0] or "image/png")
+                if url.startswith("http"):
+                    async with httpx.AsyncClient(timeout=60) as http:
+                        img = await http.get(url)
+                    return img.content, img.headers.get("content-type", "image/png")
+            derniere = f"{modele} : aucune image dans la réponse"
+        log.warning("Images IA Mammouth indisponibles (%s)", derniere)
+        raise RuntimeError(derniere or "Mammouth : aucune image")
 
     g["images_disponibles"] = images_disponibles
 
@@ -243,6 +282,12 @@ def install_part2(g: dict) -> None:
 
     async def _generer_image(prompt: str):
         key = g.get("EMERGENT_LLM_KEY")
+        if _cle_mammouth():
+            try:
+                return await _generer_image_mammouth(prompt)
+            except Exception as e:  # noqa: BLE001 — on tente les autres fournisseurs
+                if not key and not _fournisseur_image_openai():
+                    raise HTTPException(502, "La génération d'image a échoué chez le fournisseur IA. Réessaie dans un instant.") from e
         if not key:
             if _fournisseur_image_openai():
                 return await _generer_image_openai(prompt)

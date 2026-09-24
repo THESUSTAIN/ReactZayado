@@ -1,4 +1,8 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import MindsetAujourdhui from "@/components/mindset/MindsetAujourdhui";
+import MindsetParcours from "@/components/mindset/MindsetParcours";
+import MindsetCarnet from "@/components/mindset/MindsetCarnet";
 import { Sidebar } from "@/components/kairos/Sidebar";
 import { Header } from "@/components/kairos/Header";
 import BreathingSession from "@/components/kairos/BreathingSession";
@@ -49,6 +53,11 @@ export default function BienEtre() {
   const [showCheckin, setShowCheckin] = useState(false);
   const [energieOpen, setEnergieOpen] = useState(false);
   const [breathingOpen, setBreathingOpen] = useState(false);
+  // Onglets (dans l'URL : ?tab=parcours&p=oser-vendre — utilisable depuis le Radar ou le cockpit)
+  const [params, setParams] = useSearchParams();
+  const onglet = ["aujourdhui", "parcours", "carnet"].includes(params.get("tab")) ? params.get("tab") : "aujourdhui";
+  const parcoursOuvert = params.get("p") || null;
+  const allerA = (tab, p = null) => { setParams(p ? { tab, p } : { tab }); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
   // Historique réel : les check-ins énergie du compte (14 derniers jours).
   const history = (trend || []).slice(-7).map((p) => p.value);
@@ -100,17 +109,32 @@ export default function BienEtre() {
     <div className="min-h-screen">
       <Sidebar />
       <div className="lg:pl-[92px]">
-        <Header title="Bien-être" subtitle="Prends soin de toi, doucement." />
+        <Header title="Bien-être & Mindset" subtitle="Prendre soin de toi, et de ton état d'esprit d'entrepreneur." />
 
         <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-offwhite/60">Bien-être & Mindset</p>
+          <h1 className="mt-1 font-display text-3xl font-bold sm:text-4xl">Prendre soin de toi</h1>
+          <nav className="-mx-4 mb-7 mt-5 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0" data-testid="bienetre-onglets">
+            {[["aujourdhui", "Aujourd'hui"], ["parcours", "Parcours"], ["carnet", "Mon carnet"]].map(([k, l]) => (
+              <button key={k} onClick={() => allerA(k)} data-testid={`bienetre-onglet-${k}`}
+                className={`shrink-0 rounded-full px-5 py-2.5 text-[13.5px] font-semibold transition ${onglet === k ? "bg-gradient-to-b from-[#F1E2CC] to-[#DEC2A3] text-navy-900" : "border border-white/20 bg-white/[0.05] text-offwhite/75 hover:bg-white/10"}`}>
+                {l}
+              </button>
+            ))}
+          </nav>
+
+          {onglet === "parcours" && <MindsetParcours ouvert={parcoursOuvert} onOuvrir={(id) => allerA("parcours", id)} />}
+          {onglet === "carnet" && <MindsetCarnet />}
+          {onglet === "aujourdhui" && (<>
+          <MindsetAujourdhui onOuvrirParcours={(id) => allerA("parcours", id)} onOuvrirCarnet={() => allerA("carnet")} />
           {/* Hero citation */}
           <div className="mb-6 rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-6 sm:p-8">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
                 <p className="text-[10.5px] font-semibold uppercase tracking-[0.24em]" style={{ color: GOLD }}>Aujourd'hui · Vitals</p>
-                <h1 className="mt-2 font-display text-[26px] font-semibold leading-[1.12] sm:text-[34px]">
+                <h2 className="mt-2 font-display text-[26px] font-semibold leading-[1.12] sm:text-[34px]">
                   Tes 4 indicateurs, en <span className="font-serif-italic italic" style={{ color: GOLD }}>lecture douce</span>
-                </h1>
+                </h2>
                 <p className="mt-2 font-hand text-[22px] leading-tight text-white/85 sm:text-[26px]">
                   Écoute. Ajuste. Repose.
                 </p>
@@ -189,7 +213,6 @@ export default function BienEtre() {
                         </div>
                         <p className="mt-1 text-[11.5px] text-white/55">{r.desc}</p>
                       </div>
-                      <button className="text-white/40 hover:text-white transition opacity-0 group-hover:opacity-100"><Play size={13} /></button>
                     </div>
                   );
                 })}
@@ -297,7 +320,7 @@ export default function BienEtre() {
                 );
               })}
             </div>
-            <button className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-[13px] font-semibold text-navy-900" style={{ background: GOLD }}>
+            <button onClick={() => setBreathingOpen(true)} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-[13px] font-semibold text-navy-900" style={{ background: GOLD }}>
               <Play size={14} fill="currentColor" /> Lancer la séance · {ambience} · 8 min
             </button>
           </section>
@@ -321,6 +344,7 @@ export default function BienEtre() {
               ))}
             </div>
           </section>
+          </>)}
         </main>
       </div>
 
@@ -388,7 +412,7 @@ function CheckinModal({ focus, vitals, onSave, onClose }) {
   const [choix, setChoix] = useState(null);
   return (
     <div className="fixed inset-0 z-[80] flex items-end justify-center bg-[#060a18]/70 backdrop-blur-sm p-4 backdrop-blur-sm sm:items-center" onClick={onClose}>
-      <div className="w-full max-w-md rounded-t-2xl border border-white/15 p-6 sm:rounded-2xl" style={{ background: "#101a34" }} onClick={(e) => e.stopPropagation()}>
+      <div className="fenetre w-full max-w-md rounded-t-2xl p-6 sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-5 flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl" style={{ background: `${v.color}22` }}>
             <v.icon size={20} style={{ color: v.color }} />

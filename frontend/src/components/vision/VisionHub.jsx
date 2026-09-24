@@ -89,6 +89,7 @@ export function VisionHub({ onOpen, onOpenBoard }) {
         <section className="mb-9" data-testid="vision-mes-objectifs">
           <h3 className="mb-3 flex items-center gap-2 font-ui text-[13px] font-semibold text-offwhite/85">
             <Target size={15} className="text-gold" /> Tes objectifs 90 jours
+            <a href="/app/actions?tab=objectifs" className="ml-auto text-[12px] font-semibold text-gold hover:underline" data-testid="vision-gerer-objectifs">Gérer dans le Plan d'action →</a>
           </h3>
           <div className="grid gap-3 sm:grid-cols-3">
             {objectifs.map((o) => (

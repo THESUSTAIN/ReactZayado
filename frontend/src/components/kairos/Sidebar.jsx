@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard, Compass, Lightbulb, CheckSquare, Heart, Users, Settings, CalendarCheck, Radar, MessageCircle,
+  LayoutDashboard, Compass, Lightbulb, CheckSquare, Heart, Users, Settings, CalendarCheck, Radar,
 } from "lucide-react";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { useI18n } from "@/i18n";
 import { fetchActualite } from "@/lib/kairosApi";
-import { openChat } from "./GlobalChat";
 
 // Forme "île" avec scoops (encoches en haut/bas) — portée depuis
 // cap-vivant-scoops-light, un projet précédent où elle existait déjà.
@@ -19,11 +18,11 @@ const ITEMS = [
   { key: "radar", name: "Radar", Icon: Radar },
   { key: "review", name: "Revue hebdo", Icon: CalendarCheck },
   { key: "ideas", name: "Idées", Icon: Lightbulb },
-  { key: "actions", name: "Actions", Icon: CheckSquare },
-  { key: "wellbeing", name: "Bien-être", Icon: Heart },
+  { key: "actions", name: "Plan d'action", Icon: CheckSquare },
+  { key: "wellbeing", name: "Bien-être & Mindset", Icon: Heart },
   { key: "collab", name: "Collaborateur", Icon: Users },
-  // Comme dans final 13 : le chat s'ouvre depuis le rail, sur n'importe quelle page.
-  { key: "chat", name: "Collaborateur IA", Icon: MessageCircle, action: true },
+  // Le chat « Collaborateur IA » s'ouvre depuis le bouton de l'en-tête (présent
+  // sur toutes les pages) : l'entrée en double dans ce rail a été retirée.
 ];
 
 export function Sidebar() {
@@ -44,7 +43,7 @@ export function Sidebar() {
     if (location.pathname.startsWith("/app/revue")) return "review";
     if (location.pathname.startsWith("/app/vision")) return "vision";
     if (location.pathname.startsWith("/app/bien-etre")) return "wellbeing";
-    if (location.pathname.startsWith("/app/actions")) return "actions";
+    if (location.pathname.startsWith("/app/actions") || location.pathname.startsWith("/app/processus")) return "actions";
     if (location.pathname.startsWith("/app/collaborateurs")) return "collab";
     if (location.pathname.startsWith("/app/ideas") || location.pathname.startsWith("/app/sources")) return "ideas";
     if (location.pathname === "/parametres") return "settings";
@@ -58,7 +57,6 @@ export function Sidebar() {
   if ((process.env.REACT_APP_FLAVOR || "saas") !== "saas") return null;
 
   const go = (key) => {
-    if (key === "chat") { openChat(); return; }
     setActive(key);
     if (key === "today") {
       localStorage.setItem("actualite_vue_le", new Date().toISOString().slice(0, 10));

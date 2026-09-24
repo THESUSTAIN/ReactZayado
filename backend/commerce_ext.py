@@ -52,7 +52,22 @@ def install_commerce(g: dict) -> None:
         cycle: Mapped[str] = mapped_column(String(10), default="mensuel")
         fondateur: Mapped[bool] = mapped_column(Boolean, default=False)
         fin: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+        essai_le: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)  # essai 1 € déjà utilisé
         updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    # ── Essai « 2 mois pour 1 € » (modèle Shopify) — plus d'offre gratuite ──
+    # ESSAI_ACTIF=0 pour couper · ESSAI_PRIX (TTC, défaut 1) · ESSAI_JOURS (défaut 60) · ESSAI_PLAN (défaut serenite)
+    def _essai_conf() -> dict:
+        try:
+            prix = float(os.environ.get("ESSAI_PRIX", "1"))
+        except ValueError:
+            prix = 1.0
+        try:
+            jours = int(os.environ.get("ESSAI_JOURS", "60"))
+        except ValueError:
+            jours = 60
+        return {"actif": os.environ.get("ESSAI_ACTIF", "1").strip() not in ("0", "false", "non"),
+                "prix": prix, "jours": jours, "plan": os.environ.get("ESSAI_PLAN", "serenite").strip() or "serenite"}
 
     # ── Tarif fondateur (réglable sur Railway, sans toucher au code) ──
     # FONDATEUR_ACTIF=0 pour couper l'offre · FONDATEUR_FIN=AAAA-MM-JJ · FONDATEUR_PLACES=100
@@ -103,10 +118,22 @@ def install_commerce(g: dict) -> None:
         plan = a.plan if a else "essentielle"
         if attente in (None, "", "essentielle") or attente == plan:
             attente = None
+        conf = _essai_conf()
+        maintenant = datetime.now(timezone.utc)
+        fin = (a.fin if a.fin.tzinfo else a.fin.replace(tzinfo=timezone.utc)) if (a and a.fin) else None
+        actif = bool(a and a.plan != "essentielle" and fin and fin > maintenant)
+        # Rôles internes (admin, vendeur) : accès sans abonnement.
+        u = await db.get(User, uid)
+        role_interne = bool(u and u.role in ("admin", "vendeur"))
+        essai = {"disponible": conf["actif"] and not (a and (a.essai_le or (a.plan != "essentielle" and a.fin))),
+                 "prix": conf["prix"], "jours": conf["jours"], "plan": conf["plan"]}
+        base = {"plan_en_attente": attente, "essai": essai,
+                "acces": "actif" if (actif or role_interne) else "aucun",
+                "en_essai": bool(actif and a.cycle == "essai")}
         if not a:
-            return {"plan": "essentielle", "fondateur": False, "fin": None, "plan_en_attente": attente}
+            return {"plan": "essentielle", "fondateur": False, "fin": None, **base}
         return {"plan": a.plan, "cycle": a.cycle, "fondateur": bool(a.fondateur),
-                "fin": a.fin.isoformat() if a.fin else None, "plan_en_attente": attente}
+                "fin": fin.isoformat() if fin else None, **base}
 
     async def _verifier_expiration(db, uid: str, profil) -> None:
         """Abonnement échu → retour à l'offre gratuite (appelé au chargement de l'appli)."""
@@ -133,8 +160,9 @@ def install_commerce(g: dict) -> None:
 
     class SaasCheckoutIn(BaseModel):
         plan: str
-        cycle: str = Field(pattern="^(mensuel|annuel)$")
+        cycle: str = Field(default="mensuel", pattern="^(mensuel|annuel|essai)$")
         email: str | None = None
+        essai: bool = False
 
     def _frontend_url() -> str:
         return os.environ.get("PUBLIC_FRONTEND_URL", "https://app.zayado.net").rstrip("/")
@@ -204,6 +232,8 @@ def install_commerce(g: dict) -> None:
 
     @api.post("/checkout")
     async def saas_checkout(body: SaasCheckoutIn, db: AsyncSession = Depends(get_db)):
+        if body.essai or body.cycle == "essai":
+            return await _checkout_essai(body, db)
         plan = pricing.get(body.plan.lower())
         if not plan or plan.get(body.cycle) is None:
             raise HTTPException(400, "Cette offre est sur devis ou n'existe pas.")
@@ -232,6 +262,36 @@ def install_commerce(g: dict) -> None:
         order = CommerceOrder(user_id=uid, email=(body.email or user.email).strip().lower(), kind="saas",
                               title=f"Zayado {plan['label']}{' (tarif fondateur)' if fondateur else ''} · {body.cycle} · TTC", amount=f"{amount:.2f}",
                               access_url=f"{_frontend_url()}/app", metadata_json={"plan": body.plan.lower(), "cycle": body.cycle, "montant_ht": f"{amount_ht:.2f}", "tva_taux": tva, "fondateur": fondateur})
+        db.add(order)
+        await db.flush()
+        payment = await _mollie_create(order)
+        order.mollie_payment_id = payment["id"]
+        await db.commit()
+        return {"ok": True, "checkoutUrl": payment["checkout_url"], "paymentId": payment["id"], "order": _serialise(order)}
+
+    async def _checkout_essai(body: SaasCheckoutIn, db: AsyncSession) -> dict:
+        """Essai payant : un seul par compte, prix TTC fixe, sur l'offre d'entrée.
+        Le tarif fondateur est réservé dès l'essai (s'il est ouvert) pour la suite."""
+        conf = _essai_conf()
+        if not conf["actif"]:
+            raise HTTPException(400, "L'offre d'essai n'est plus disponible.")
+        if body.plan.lower() != conf["plan"]:
+            raise HTTPException(400, "L'essai à 1 € concerne uniquement l'offre Solo.")
+        uid = _uid()
+        user = None if uid == DEMO_USER_ID else await db.get(User, uid)
+        if not user:
+            raise HTTPException(401, "Connecte-toi avant de commencer ton essai.")
+        a = await db.get(Abonnement, uid)
+        if a and (a.essai_le or (a.plan != "essentielle" and a.fin)):
+            raise HTTPException(409, "Tu as déjà profité de l'essai : choisis ta formule pour continuer.")
+        fondateur = bool(conf["plan"] in PRIX_FONDATEUR and await _offre_fondateur_ouverte(db))
+        prix = round(conf["prix"], 2)
+        label = pricing.get(conf["plan"], {}).get("label", "Solo")
+        order = CommerceOrder(user_id=uid, email=(body.email or user.email).strip().lower(), kind="saas",
+                              title=f"Zayado {label} · essai {conf['jours'] // 30} mois · TTC", amount=f"{prix:.2f}",
+                              access_url=f"{_frontend_url()}/app",
+                              metadata_json={"plan": conf["plan"], "cycle": "essai", "essai": True, "jours": conf["jours"],
+                                             "montant_ttc": f"{prix:.2f}", "fondateur": fondateur})
         db.add(order)
         await db.flush()
         payment = await _mollie_create(order)
@@ -372,8 +432,12 @@ def install_commerce(g: dict) -> None:
                 if base is not None and base.tzinfo is None:
                     base = base.replace(tzinfo=timezone.utc)
                 depart = base if (base and base > maintenant) else maintenant
-                a.fin = depart + timedelta(days=366 if meta.get("cycle") == "annuel" else 31)
-                a.plan, a.cycle = cle_plan, str(meta.get("cycle") or "mensuel")
+                if meta.get("essai"):
+                    a.fin = maintenant + timedelta(days=int(meta.get("jours") or 60))
+                    a.essai_le = maintenant
+                else:
+                    a.fin = depart + timedelta(days=366 if meta.get("cycle") == "annuel" else 31)
+                a.plan, a.cycle = cle_plan, str(meta.get("cycle") or "mensuel")[:10]
                 a.fondateur = bool(a.fondateur or meta.get("fondateur"))
                 a.updated_at = utcnow()
                 profil = await g["_profil"](db, row.user_id)

@@ -268,7 +268,7 @@ function Utilisateurs() {
                 <select value={u.plan || "essentielle"} onChange={(e) => changerPlan(u, e.target.value)}
                   data-testid={`admin-plan-select-${u.id}`}
                   className="bg-navy-800 border border-white/15 rounded-lg text-xs px-2 py-1">
-                  <option value="essentielle">Découverte</option>
+                  <option value="essentielle">Aucune offre</option>
                   <option value="serenite">Solo</option>
                   <option value="pro">Pro</option>
                   <option value="business">Équipe</option>

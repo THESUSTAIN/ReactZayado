@@ -2,8 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sidebar } from "@/components/kairos/Sidebar";
 import { Header } from "@/components/kairos/Header";
-import { TabBar } from "@/components/kairos/TabBar";
-import { ChatPanel, ChatBubble } from "@/components/kairos/ChatAssistant";
+import { ChatPanel } from "@/components/kairos/ChatAssistant";
 import { EnergyCheckin } from "@/components/kairos/EnergyCheckin";
 import { GlassCard } from "@/components/kairos/GlassCard";
 import { RingProgress } from "@/components/kairos/RingProgress";
@@ -14,6 +13,8 @@ import { useKairos } from "@/context/KairosContext";
 import { GoalCountdown } from "@/components/kairos/GoalCountdown";
 import PoulsBusinessWidget from "@/components/kairos/PoulsBusinessWidget";
 import AiFallbackBanner from "@/components/kairos/AiFallbackBanner";
+import PlanEnAttenteBanner from "@/components/kairos/PlanEnAttenteBanner";
+import PratiqueDuJour from "@/components/mindset/PratiqueDuJour";
 import RadarWidget from "@/components/kairos/RadarWidget";
 import ImpactBanner from "@/components/kairos/ImpactBanner";
 import { useI18n } from "@/i18n";
@@ -28,7 +29,6 @@ export default function Cockpit() {
   const { user, energy, balance, priorities, goal, victory, trend, mode, modeInfo, isRecovery, aCheckin } = useKairos();
   const { t } = useI18n();
   const [checkinOpen, setCheckinOpen] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
   const navigate = useNavigate();
 
   const energyPercent = (energy.score / 5) * 100;
@@ -56,6 +56,8 @@ export default function Cockpit() {
               <BatteryMedium className="h-4 w-4 text-gold" /> {t("cockpit.checkin")}
             </button>
           </div>
+
+          <PlanEnAttenteBanner />
 
           {isRecovery ? (
             <RecoveryLayout modeInfo={modeInfo} priority={focusPriority} energyPercent={energyPercent} energyScore={energy.score} />
@@ -121,6 +123,9 @@ export default function Cockpit() {
                   </span>
                 </button>
               </div>
+
+              {/* Bien-être & Mindset : la carte du jour ou la suggestion du moment */}
+              <PratiqueDuJour />
 
               {/* Cartes Live épinglées depuis le Vision Board */}
               <PinnedVisionCards />
@@ -197,7 +202,7 @@ export default function Cockpit() {
                     <div className="flex flex-col items-center py-3 text-center" data-testid="goal-empty">
                       <p className="text-sm font-medium text-offwhite">Pas encore d'objectif à 90 jours</p>
                       <p className="mt-1 max-w-[250px] text-xs text-offwhite/55">C'est la boussole de tes priorités quotidiennes — définis-le sur ta Vision.</p>
-                      <button onClick={() => navigate("/app/vision")} className="btn-gold mt-3 !px-5 !py-2 text-xs" data-testid="goal-define">Définir mon objectif</button>
+                      <button onClick={() => navigate("/app/actions?tab=objectifs")} className="btn-gold mt-3 !px-5 !py-2 text-xs" data-testid="goal-define">Définir mon objectif</button>
                     </div>
                   )}
                 </GlassCard>
@@ -248,17 +253,6 @@ export default function Cockpit() {
         </main>
       </div>
 
-      <TabBar
-        active="today"
-        onSelect={(key) => {
-          if (key === "today") navigate("/app");
-          else if (key === "vision") navigate("/app/vision");
-          else if (key === "ideas") navigate("/app/ideas");
-          else if (key === "wellbeing") navigate("/app/bien-etre");
-        }}
-        onOpenChat={() => setChatOpen(true)}
-      />
-      <ChatBubble open={chatOpen} onClose={() => setChatOpen(false)} />
       <EnergyCheckin open={checkinOpen} onClose={() => setCheckinOpen(false)} />
     </div>
   );

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { planNom } from "@/lib/plans";
+import { lancerPaiement } from "@/lib/checkout";
 import {
   User, Palette, Bell, Plug, ShieldCheck, CreditCard, Gift, Loader2, Save, Download, Cloud,
   Search, X, Sun, Moon, Compass, Brain, Trash2, Mail, Plus, Receipt, Sparkles,
@@ -540,16 +541,8 @@ function SectionFacturation() {
   const finaliser = async () => {
     if (!abo?.plan_en_attente) return;
     setPaiement(true);
-    try {
-      const r = await fetch(`${process.env.REACT_APP_BACKEND_URL || ""}/api/checkout`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: abo.plan_en_attente, cycle: abo.cycle || "mensuel" }),
-      });
-      const j = await r.json().catch(() => ({}));
-      if (r.ok && j.checkoutUrl) { window.location.href = j.checkoutUrl; return; }
-      toast.error(j.detail || "Le paiement n'a pas pu démarrer. Réessaie depuis la page Tarifs.");
-    } catch { toast.error("Paiement indisponible pour le moment."); }
-    setPaiement(false);
+    const ok = await lancerPaiement(abo.plan_en_attente, { essai: !!abo.essai?.disponible && abo.plan_en_attente === abo.essai?.plan });
+    if (!ok) setPaiement(false);
   };
   const STATUT = { paid: ["Payée", "text-emerald-300"], pending: ["En attente", "text-amber-300"], open: ["En attente", "text-amber-300"], failed: ["Échouée", "text-red-300"], canceled: ["Annulée", "text-offwhite/50"], expired: ["Expirée", "text-offwhite/50"] };
 
@@ -562,10 +555,15 @@ function SectionFacturation() {
               <p className="text-lg font-semibold text-gold" data-testid="parametres-plan">{planNom(abo.plan || "essentielle")}</p>
               <p className="text-xs text-offwhite/55">
                 {abo.fondateur ? "Tarif fondateur garanti · " : ""}
-                {abo.fin ? `Accès jusqu'au ${new Date(abo.fin).toLocaleDateString("fr-FR")}` : (abo.plan && abo.plan !== "essentielle" ? "Offre active" : "Gratuit, sans limite de durée")}
+                {abo.en_essai ? `Essai 2 mois · jusqu'au ${new Date(abo.fin).toLocaleDateString("fr-FR")}` : abo.acces === "actif" && abo.fin ? `Accès jusqu'au ${new Date(abo.fin).toLocaleDateString("fr-FR")}` : abo.acces === "actif" ? "Offre active" : "Ton espace est en pause : tes données sont conservées"}
               </p>
             </div>
-            <Link to="/pricing" className="inline-flex items-center gap-2 rounded-xl bg-gold px-4 py-2 text-xs font-semibold text-navy-900"><Sparkles size={13} /> Voir les offres</Link>
+            {abo.acces !== "actif" && abo.essai?.disponible ? (
+              <button onClick={() => { setPaiement(true); lancerPaiement("serenite", { essai: true }).then((ok) => !ok && setPaiement(false)); }} disabled={paiement}
+                className="inline-flex items-center gap-2 rounded-xl bg-gold px-4 py-2 text-xs font-semibold text-navy-900 disabled:opacity-60" data-testid="parametres-essai"><Sparkles size={13} /> Essayer 2 mois pour 1 €</button>
+            ) : (
+              <Link to="/pricing" className="inline-flex items-center gap-2 rounded-xl bg-gold px-4 py-2 text-xs font-semibold text-navy-900"><Sparkles size={13} /> {abo.acces === "actif" ? "Voir les offres" : "Reprendre une offre"}</Link>
+            )}
           </div>
         )}
         {abo?.plan_en_attente && (

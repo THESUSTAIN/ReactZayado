@@ -15,7 +15,7 @@ export const fr = {
 
   nav: {
     today: "Aujourd'hui", vision: "Vision", roadmap: "Roadmap", ideas: "Idées",
-    actions: "Actions", wellbeing: "Bien-être", collab: "Collaborateurs", chat: "Collaborateur IA",
+    actions: "Plan d'action", wellbeing: "Bien-être & Mindset", collab: "Collaborateurs", chat: "Collaborateur IA",
     crm: "CRM", signals: "Signaux", settings: "Paramètres", review: "Revue hebdo",
     radar: "Radar", market: "Marketplace", scoops: "Scoops", backToCockpit: "Retour au Cockpit", backToHub: "Retour au hub",
   },
@@ -268,7 +268,7 @@ export const en = {
 
   nav: {
     today: "Today", vision: "Vision", roadmap: "Roadmap", ideas: "Ideas",
-    actions: "Actions", wellbeing: "Wellbeing", collab: "Collaborators", chat: "AI collaborator",
+    actions: "Action plan", wellbeing: "Wellbeing & Mindset", collab: "Collaborators", chat: "AI collaborator",
     crm: "CRM", signals: "Signals", settings: "Settings", review: "Weekly review",
     radar: "Radar", market: "Marketplace", scoops: "Scoops", backToCockpit: "Back to Cockpit", backToHub: "Back to hub",
   },

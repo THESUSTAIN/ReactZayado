@@ -1692,8 +1692,26 @@ async def basculer_tache(tache_id: str, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Tâche introuvable.")
     t.statut = "a_faire" if t.statut == "fait" else "fait"
     t.progression = 100 if t.statut == "fait" else t.progression
+    await db.flush()
+    await _recalculer_objectif(db, t.objectif_id)
     await db.commit()
     return {"id": t.id, "done": t.statut == "fait"}
+
+
+async def _recalculer_objectif(db: AsyncSession, objectif_id: Optional[str]) -> None:
+    """Avancement d'un objectif = part de ses actions terminées (s'il en a)."""
+    if not objectif_id:
+        return
+    o = await db.get(VisionObjectif, objectif_id)
+    if not o:
+        return
+    liees = list((await db.execute(select(VisionTache).where(VisionTache.objectif_id == objectif_id))).scalars())
+    if liees:
+        o.progression = round(100 * sum(t.statut == "fait" for t in liees) / len(liees))
+        if o.progression >= 100 and o.statut == "actif":
+            o.statut = "termine"
+        elif o.progression < 100 and o.statut == "termine":
+            o.statut = "actif"
 
 
 class TacheIn(BaseModel):
@@ -1731,6 +1749,8 @@ async def creer_tache(body: TacheIn, db: AsyncSession = Depends(get_db)):
     t = VisionTache(user_id=_uid(), titre=body.titre.strip(), duree_min=body.duree_min,
                     micro=body.duree_min <= 5, statut="a_faire", objectif_id=objectif_id)
     db.add(t)
+    await db.flush()
+    await _recalculer_objectif(db, objectif_id)
     await db.commit()
     await db.refresh(t)
     return {"id": t.id, "titre": t.titre, "statut": t.statut, "objectif_id": t.objectif_id}
@@ -1744,8 +1764,47 @@ async def statut_tache(tache_id: str, body: TacheStatutIn, db: AsyncSession = De
     t.statut = body.statut
     if body.statut == "fait":
         t.progression = 100
+    await db.flush()
+    await _recalculer_objectif(db, t.objectif_id)
     await db.commit()
     return {"id": t.id, "statut": t.statut}
+
+
+class TacheObjectifIn(BaseModel):
+    objectif_id: Optional[str] = None
+
+
+@api.patch("/taches/{tache_id}/objectif")
+async def relier_tache(tache_id: str, body: TacheObjectifIn, db: AsyncSession = Depends(get_db)):
+    """Relie (ou détache) une action à un objectif."""
+    uid = _uid()
+    t = (await db.execute(select(VisionTache).where(VisionTache.id == tache_id, VisionTache.user_id == uid))).scalar_one_or_none()
+    if not t:
+        raise HTTPException(status_code=404, detail="Tâche introuvable.")
+    ancien = t.objectif_id
+    if body.objectif_id:
+        o = (await db.execute(select(VisionObjectif).where(VisionObjectif.id == body.objectif_id, VisionObjectif.user_id == uid))).scalar_one_or_none()
+        if not o:
+            raise HTTPException(status_code=404, detail="Objectif introuvable.")
+    t.objectif_id = body.objectif_id or None
+    await db.flush()
+    await _recalculer_objectif(db, ancien)
+    await _recalculer_objectif(db, t.objectif_id)
+    await db.commit()
+    return {"id": t.id, "objectif_id": t.objectif_id}
+
+
+@api.delete("/taches/{tache_id}")
+async def supprimer_tache(tache_id: str, db: AsyncSession = Depends(get_db)):
+    t = (await db.execute(select(VisionTache).where(VisionTache.id == tache_id, VisionTache.user_id == _uid()))).scalar_one_or_none()
+    if not t:
+        raise HTTPException(status_code=404, detail="Tâche introuvable.")
+    obj = t.objectif_id
+    await db.delete(t)
+    await db.flush()
+    await _recalculer_objectif(db, obj)
+    await db.commit()
+    return {"ok": True}
 
 
 class SaveIn(BaseModel):
@@ -2264,6 +2323,21 @@ def _countdown_json(p: "VisionProfile") -> dict:
 @api.get("/vision/countdown")
 async def get_countdown(db: AsyncSession = Depends(get_db)):
     p = await _profil(db, _uid())
+    # Pré-remplissage : la vision saisie à l'onboarding devient l'objectif à
+    # 3 ans tant que l'utilisateur n'en a pas défini un (avant : bloc vide
+    # alors que la vision était connue). Modifiable ensuite (crayon).
+    if not getattr(p, "objectif_3ans", None) and (p.texte_vision or "").strip():
+        texte = re.sub(r"\s+", " ", p.texte_vision.strip())
+        if len(texte) > 140:
+            texte = texte[:137].rsplit(" ", 1)[0] + "…"
+        aujourd = date.today()
+        try:
+            echeance = aujourd.replace(year=aujourd.year + 3)
+        except ValueError:  # 29 février
+            echeance = aujourd.replace(year=aujourd.year + 3, day=28)
+        p.objectif_3ans, p.echeance_3ans, p.debut_3ans = texte, echeance.isoformat(), aujourd.isoformat()
+        await db.commit()
+        await db.refresh(p)
     return _countdown_json(p)
 
 
@@ -2454,8 +2528,80 @@ async def _idee_json(db: AsyncSession, it: Idee) -> dict:
 
 @api.get("/objectifs")
 async def list_objectifs(db: AsyncSession = Depends(get_db)):
-    rows = list((await db.execute(select(VisionObjectif).where(VisionObjectif.user_id == _uid()).order_by(VisionObjectif.created_at))).scalars())
-    return [{"id": o.id, "titre": o.titre, "echeance": o.echeance, "progression": o.progression, "statut": o.statut} for o in rows]
+    uid = _uid()
+    rows = list((await db.execute(select(VisionObjectif).where(VisionObjectif.user_id == uid).order_by(VisionObjectif.created_at))).scalars())
+    taches = list((await db.execute(select(VisionTache).where(VisionTache.user_id == uid, VisionTache.objectif_id.is_not(None)))).scalars())
+    compte = {}
+    for t in taches:
+        c = compte.setdefault(t.objectif_id, [0, 0])
+        c[0] += 1
+        c[1] += t.statut == "fait"
+    return [{"id": o.id, "titre": o.titre, "echeance": o.echeance, "progression": o.progression, "statut": o.statut,
+             "nb_actions": compte.get(o.id, [0, 0])[0], "nb_faites": compte.get(o.id, [0, 0])[1]} for o in rows]
+
+
+class ObjectifIn(BaseModel):
+    titre: str = Field(min_length=2, max_length=300)
+    echeance: Optional[str] = Field(default=None, max_length=10)
+
+
+class ObjectifPatch(BaseModel):
+    titre: Optional[str] = Field(default=None, min_length=2, max_length=300)
+    echeance: Optional[str] = Field(default=None, max_length=10)
+    statut: Optional[str] = Field(default=None, pattern="^(actif|termine|pause)$")
+    progression: Optional[int] = Field(default=None, ge=0, le=100)
+
+
+def _date_ok(d: Optional[str]) -> Optional[str]:
+    if not d:
+        return None
+    try:
+        return date.fromisoformat(d).isoformat()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Format de date attendu : AAAA-MM-JJ.")
+
+
+@api.post("/objectifs")
+async def creer_objectif(body: ObjectifIn, db: AsyncSession = Depends(get_db)):
+    uid = _uid()
+    actifs = (await db.execute(select(func.count()).select_from(VisionObjectif).where(
+        VisionObjectif.user_id == uid, VisionObjectif.statut == "actif"))).scalar_one()
+    if actifs >= 5:
+        raise HTTPException(status_code=409, detail="5 objectifs actifs maximum : termine ou mets en pause un objectif d'abord.")
+    o = VisionObjectif(user_id=uid, titre=body.titre.strip(), echeance=_date_ok(body.echeance) or iso_moins(-90), progression=0)
+    db.add(o)
+    await db.commit()
+    return {"id": o.id, "titre": o.titre, "echeance": o.echeance, "progression": 0, "statut": o.statut, "nb_actions": 0, "nb_faites": 0}
+
+
+@api.patch("/objectifs/{objectif_id}")
+async def maj_objectif(objectif_id: str, body: ObjectifPatch, db: AsyncSession = Depends(get_db)):
+    o = (await db.execute(select(VisionObjectif).where(VisionObjectif.id == objectif_id, VisionObjectif.user_id == _uid()))).scalar_one_or_none()
+    if not o:
+        raise HTTPException(status_code=404, detail="Objectif introuvable.")
+    if body.titre is not None:
+        o.titre = body.titre.strip()
+    if body.echeance is not None:
+        o.echeance = _date_ok(body.echeance)
+    if body.statut is not None:
+        o.statut = body.statut
+    if body.progression is not None:
+        o.progression = body.progression  # manuel si l'objectif n'a pas d'actions liées
+    await db.commit()
+    return {"ok": True}
+
+
+@api.delete("/objectifs/{objectif_id}")
+async def supprimer_objectif(objectif_id: str, db: AsyncSession = Depends(get_db)):
+    uid = _uid()
+    o = (await db.execute(select(VisionObjectif).where(VisionObjectif.id == objectif_id, VisionObjectif.user_id == uid))).scalar_one_or_none()
+    if not o:
+        raise HTTPException(status_code=404, detail="Objectif introuvable.")
+    for t in (await db.execute(select(VisionTache).where(VisionTache.objectif_id == objectif_id))).scalars():
+        t.objectif_id = None  # les actions restent, simplement détachées
+    await db.delete(o)
+    await db.commit()
+    return {"ok": True}
 
 
 @api.get("/idees")
@@ -2771,12 +2917,36 @@ def _opportunites_prospects(prospects: list, objectif: str) -> list:
     for i, p in enumerate(prospects[:3]):
         nom = " ".join(x for x in (p.get("prenom"), p.get("nom")) if x).strip() or "Un contact"
         role = p.get("titre") or "dirigeant"
+        verbe = "Proposer un partenariat à" if p.get("role") == "partenaire" else "Contacter"
         ops.append({
-            "titre": f"Contacter {nom}, {role}{' chez ' + p['entreprise'] if p.get('entreprise') else ''}",
+            "titre": f"{verbe} {nom}, {role}{' chez ' + p['entreprise'] if p.get('entreprise') else ''}",
             "canal": "linkedin" if p.get("linkedin") else "email",
             "message": p.get("message") or "", "score": 92 - i * 4, "objectif": objectif,
             "prospect": p,
         })
+    return ops
+
+
+def _opportunites_signaux(signaux: dict, objectif: str) -> list:
+    """Opportunités tirées des signaux réels (sans IA) pour une clientèle de particuliers."""
+    ops = []
+    mots = (signaux.get("recherches") or {}).get("mots") or []
+    contenus = signaux.get("contenus") or {}
+    ville = (signaux.get("zone") or {}).get("nom") or ""
+    if mots:
+        m = mots[0]
+        vol = f"{m['volume']} recherches/mois pour « {m['mot']} »" if m.get("volume") else f"On cherche « {m['mot']} »"
+        ops.append({"titre": f"{vol} : publie ce post Google Business", "canal": "google",
+                    "message": contenus.get("post_google") or "", "score": 88, "objectif": objectif, "signal": "google"})
+    dvf = signaux.get("dvf") or {}
+    if dvf.get("ventes"):
+        ops.append({"titre": f"{dvf['ventes']} ventes à {dvf.get('commune') or ville} depuis {dvf.get('depuis')} : dépose ce courrier d'estimation",
+                    "canal": "courrier", "message": dvf.get("courrier") or "", "score": 84, "objectif": objectif, "signal": "dvf"})
+    meta = contenus.get("meta") or {}
+    if meta.get("texte"):
+        rayon = (meta.get("ciblage") or {}).get("rayon_km") or 10
+        ops.append({"titre": f"Lance cette pub Facebook/Instagram{' autour de ' + ville if ville else ''} ({rayon} km, {meta.get('budget_jour') or 5} €/jour)",
+                    "canal": "meta", "message": meta["texte"], "score": 80, "objectif": objectif, "signal": "meta"})
     return ops
 
 
@@ -2785,14 +2955,36 @@ async def _calculer_radar(db: AsyncSession, uid: str, graine: int = 0) -> dict:
     # que l'offre a du quota) ; l'IA complète jusqu'à 3 opportunités.
     apollo = {"etat": "non_configure", "prospects": []}
     f_apollo = globals().get("_prospects_apollo")
+    # Clientèle de particuliers : Apollo sert à trouver des PRESCRIPTEURS
+    # (notaires, syndics, courtiers…), pas des clients finaux.
+    clientele = "b2b"
+    signaux = {}
+    try:
+        profil_r = await _profil(db, uid)
+        f_type = globals().get("_type_clientele")
+        clientele = f_type(dict(profil_r.contexte_metier or {})) if f_type else "b2b"
+        f_sig = globals().get("_radar_signaux")
+        if f_sig and clientele in ("b2c", "mixte"):
+            signaux = await f_sig(db, uid)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Radar : signaux ignorés (%s)", e)
     if f_apollo:
         try:
-            apollo = await f_apollo(db, uid)
+            apollo = await f_apollo(db, uid, "partenaire" if clientele == "b2c" else "client")
         except Exception as e:  # noqa: BLE001
             logger.warning("Radar : Apollo ignoré (%s)", e)
     objectifs = list((await db.execute(select(VisionObjectif).where(VisionObjectif.user_id == uid))).scalars())
     reels = _opportunites_prospects(apollo.get("prospects") or [], objectifs[0].titre if objectifs else "Trouver de nouveaux clients")
-    infos_apollo = {k: apollo.get(k) for k in ("etat", "quota", "utilises", "plan") if k in apollo}
+    if clientele == "b2c":
+        reels = reels[:1]
+    par_signaux = _opportunites_signaux(signaux, objectifs[0].titre if objectifs else "Trouver de nouveaux clients") if signaux else []
+    infos_apollo = {k: apollo.get(k) for k in ("etat", "quota", "utilises", "plan", "mode") if k in apollo}
+    infos_apollo["clientele"] = clientele
+    if clientele == "b2c" and par_signaux:
+        # Particuliers : 1 prescripteur réel + des actions appuyées sur les signaux (recherches, ventes, pub).
+        return {"opportunities": (reels + par_signaux)[:3],
+                "phrase_ia": "Des signaux réels autour de toi : ce que les gens cherchent, ce qui se vend, qui peut te recommander.",
+                "generated_at": datetime.now(timezone.utc).isoformat(), "source": "ia", "apollo": infos_apollo}
     if len(reels) >= 3 or (reels and not objectifs):
         return {"opportunities": reels[:3], "phrase_ia": "3 vraies personnes à contacter aujourd'hui, choisies selon ta cible.",
                 "generated_at": datetime.now(timezone.utc).isoformat(), "source": "ia", "apollo": infos_apollo}
@@ -2821,9 +3013,19 @@ async def _calculer_radar(db: AsyncSession, uid: str, graine: int = 0) -> dict:
     # Radar réellement branché sur l'IA (retour Marie Esther : « on dirait que
     # ça ne fonctionne pas ») — les opportunités sont générées depuis le vrai
     # contexte du compte ; le repli local ne sert qu'en cas d'indisponibilité.
+    consigne_b2c = ""
+    if clientele in ("b2c", "mixte"):
+        consigne_b2c = (
+            "La clientèle est faite de PARTICULIERS : interdit de proposer un simple type de client ou de démarcher "
+            "des particuliers par e-mail (règle CNIL). Chaque opportunité est une ACTION concrète appuyée sur un SIGNAL "
+            "RÉEL fourni dans « signaux » (une requête Google et son volume, les ventes DVF de la commune, un partenaire "
+            "prescripteur…) : publier ce post Google Business, lancer cette pub locale, déposer ce courrier dans tel "
+            "secteur, appeler tel type de prescripteur. Cite le signal dans le titre (ex. « 320 recherches/mois pour "
+            "“estimation maison Villeurbanne” »). Canal parmi email|linkedin|appel|whatsapp|google|meta|courrier. "
+        )
     systeme = (
         "Tu es le radar business de Zayado. À partir du contexte, tu proposes exactement 3 opportunités "
-        "concrètes et actionnables aujourd'hui, reliées aux objectifs. Tu réponds UNIQUEMENT en JSON valide : "
+        "concrètes et actionnables aujourd'hui, reliées aux objectifs. " + consigne_b2c + "Tu réponds UNIQUEMENT en JSON valide : "
         '{"opportunities":[{"titre":"...","canal":"email|linkedin|appel|whatsapp","message":"...","score":0-100,"objectif":"..."}],'
         '"phrase_ia":"une phrase courte qui résume pourquoi ces 3-là"}. Le message doit être prêt à envoyer, '
         "en français, ton chaleureux et professionnel, en VOUVOYANT le destinataire (c'est un prospect ou un client). "
@@ -2831,6 +3033,14 @@ async def _calculer_radar(db: AsyncSession, uid: str, graine: int = 0) -> dict:
     )
     try:
         contexte = await _contexte(db, uid)
+        if signaux:
+            resume = {
+                "clientele": clientele, "zone": (signaux.get("zone") or {}).get("nom"),
+                "recherches_google": [{"requete": m.get("mot"), "volume_mensuel": m.get("volume"), "tendance_%": m.get("tendance")}
+                                      for m in ((signaux.get("recherches") or {}).get("mots") or [])[:6]],
+                "ventes_dvf": {k: v for k, v in (signaux.get("dvf") or {}).items() if k != "courrier"} or None,
+            }
+            contexte += "\n\nsignaux = " + json.dumps(resume, ensure_ascii=False)
         client = _client_llm(f"radar-{uid}-{datetime.now(timezone.utc).date()}-{graine}", systeme)
         if client is None:
             raise RuntimeError("MAMMOTH_API_KEY absente")
@@ -3864,6 +4074,14 @@ install_vision_plus(globals())
 # Apollo.io → vrais prospects dans le Radar (clé plateforme APOLLO_API_KEY)
 from apollo_ext import install_apollo  # noqa: E402
 install_apollo(globals())
+
+# Radar « signaux » : recherches Google locales, pubs prêtes, ventes DVF
+from radar_signaux import install_radar_signaux  # noqa: E402
+install_radar_signaux(globals())
+
+# Bien-être & Mindset : carte du jour, parcours 7 jours, carnet, recadrage
+from mindset_ext import install_mindset  # noqa: E402
+install_mindset(globals())
 
 # ─────────────── Processus (page /app/processus) ───────────────
 # Avant : stockés dans le navigateur uniquement, avec 4 processus de démonstration

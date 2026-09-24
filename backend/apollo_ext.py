@@ -80,6 +80,42 @@ def filtres_depuis_contexte(cm: dict) -> dict:
     return {"person_titles": titres[:8], "person_locations": PAYS.get(marche, ["France"]), "q_keywords": ""}
 
 
+# Clients particuliers (B2C) : Apollo ne contient pas les particuliers, et les
+# démarcher par e-mail sans consentement est interdit (CNIL). On y cherche donc
+# les PRESCRIPTEURS : les pros qui voient passer tes futurs clients.
+PRESCRIPTEURS = [
+    (("immobili", "gestion locative", "agence", "transaction", "syndic", "location"),
+     ["Notaire", "Syndic de copropriété", "Courtier en crédit immobilier", "Gestionnaire de patrimoine",
+      "Promoteur immobilier", "Diagnostiqueur immobilier", "Expert-comptable"]),
+    (("coach", "thérapeut", "therapeut", "bien-être", "bien-etre", "sophro", "naturo", "yoga"),
+     ["DRH", "Responsable QVT", "Médecin du travail", "Directeur de salle de sport", "Responsable RH"]),
+    (("mariage", "événement", "evenement", "photographe", "traiteur"),
+     ["Wedding planner", "Gérant de lieu de réception", "Responsable événementiel", "Directeur d'hôtel"]),
+    (("travaux", "rénovation", "renovation", "artisan", "plomb", "électric", "electric", "menuis"),
+     ["Architecte", "Agent immobilier", "Syndic de copropriété", "Maître d'œuvre", "Gestionnaire de biens"]),
+    (("avocat", "juridique", "droit"), ["Expert-comptable", "Notaire", "Gestionnaire de patrimoine", "Banquier privé"]),
+    (("santé", "sante", "kiné", "kine", "ostéo", "osteo", "dentist"), ["Médecin généraliste", "Pharmacien", "Directeur de clinique"]),
+]
+
+
+def postes_prescripteurs(cm: dict) -> list:
+    texte = " ".join(str(cm.get(k) or "") for k in ("activite_type", "offre", "cible", "entreprise")).lower()
+    for mots, postes in PRESCRIPTEURS:
+        if any(m in texte for m in mots):
+            return postes
+    return ["Expert-comptable", "Gestionnaire de patrimoine", "Responsable associatif", "Gérant de commerce"]
+
+
+def message_partenaire(p: dict, cm: dict) -> str:
+    prenom = p.get("prenom") or ""
+    offre = str(cm.get("offre") or "mon activité").strip().rstrip(".").lower()
+    ville = (cm.get("zone_geo") or {}).get("nom") if isinstance(cm.get("zone_geo"), dict) else ""
+    return (f"Bonjour {prenom}, je travaille{' à ' + ville if ville else ''} sur {offre}. "
+            f"Vos clients ont parfois besoin de ce type d'accompagnement, et les miens du vôtre : "
+            "seriez-vous ouvert à un café de 20 minutes pour voir comment nous recommander mutuellement ? "
+            "Belle journée à vous.").replace("  ", " ")
+
+
 def message_modele(p: dict, offre: str) -> str:
     prenom = p.get("prenom") or ""
     entreprise = p.get("entreprise") or "votre entreprise"
@@ -111,6 +147,7 @@ def install_apollo(g: dict) -> None:
         message: Mapped[str] = mapped_column(Text, default="")
         enrichi: Mapped[str] = mapped_column(String(5), default="non")
         statut: Mapped[str] = mapped_column(String(20), default="nouveau")
+        role: Mapped[str] = mapped_column(String(20), nullable=True, default="client")  # client | partenaire
         created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     g["RadarProspect"] = RadarProspect
@@ -118,7 +155,8 @@ def install_apollo(g: dict) -> None:
     def _pj(p: RadarProspect) -> dict:
         return {"id": p.id, "prenom": p.prenom, "nom": p.nom, "titre": p.titre, "entreprise": p.entreprise,
                 "domaine": p.domaine, "linkedin": p.linkedin, "email": p.email, "ville": p.ville,
-                "message": p.message, "statut": p.statut, "jour": p.jour, "enrichi": p.enrichi == "oui"}
+                "message": p.message, "statut": p.statut, "jour": p.jour, "enrichi": p.enrichi == "oui",
+                "role": p.role or "client"}
 
     async def _appel(chemin: str, corps: dict) -> dict:
         async with httpx.AsyncClient(timeout=25.0) as http:
@@ -132,8 +170,12 @@ def install_apollo(g: dict) -> None:
         r.raise_for_status()
         return r.json()
 
-    async def _filtres(db: AsyncSession, uid: str, profil) -> dict:
+    async def _filtres(db: AsyncSession, uid: str, profil, mode: str = "client") -> dict:
         cm = dict(getattr(profil, "contexte_metier", None) or {})
+        if mode == "partenaire":
+            geo = cm.get("zone_geo") if isinstance(cm.get("zone_geo"), dict) else {}
+            lieu = [f"{geo['nom']}, France"] if geo.get("nom") else filtres_depuis_contexte(cm)["person_locations"]
+            return {"person_titles": postes_prescripteurs(cm), "person_locations": lieu, "q_keywords": ""}
         empreinte = "|".join(str(cm.get(k) or "") for k in ("cible", "activite_type", "offre", "marche"))
         cache = cm.get("apollo_filtres")
         if isinstance(cache, dict) and cache.get("_empreinte") == empreinte:
@@ -184,8 +226,9 @@ def install_apollo(g: dict) -> None:
                 logger.info("Messages Apollo par IA indisponibles (%s) : modèle utilisé.", e)
         return [message_modele(p, offre) for p in prospects]
 
-    async def prospects_du_jour(db: AsyncSession, uid: str) -> dict:
-        """Prospects réels du jour pour le Radar. Ne lève jamais : renvoie un état."""
+    async def prospects_du_jour(db: AsyncSession, uid: str, mode: str = "client") -> dict:
+        """Prospects réels du jour pour le Radar. Ne lève jamais : renvoie un état.
+        mode « client » (clientèle pro) ou « partenaire » (clientèle de particuliers → prescripteurs)."""
         jour = datetime.now(timezone.utc).date().isoformat()
         deja = list((await db.execute(select(RadarProspect).where(
             RadarProspect.user_id == uid, RadarProspect.jour == jour).order_by(RadarProspect.created_at))).scalars())
@@ -198,12 +241,13 @@ def install_apollo(g: dict) -> None:
         utilises = (await db.execute(select(func.count()).select_from(RadarProspect).where(
             RadarProspect.user_id == uid, RadarProspect.jour >= debut_mois))).scalar_one()
         info = {"quota": quota, "utilises": utilises, "plan": plan}
-        manque = min(PAR_JOUR - len(deja), quota - utilises)
+        par_jour = 1 if mode == "partenaire" else PAR_JOUR  # 1 prescripteur/jour suffit, le reste vient des signaux
+        manque = min(par_jour - len(deja), quota - utilises)
         if manque <= 0:
             return {"etat": "quota" if quota - utilises <= 0 and len(deja) == 0 else "ok",
                     "prospects": [_pj(p) for p in deja], **info}
         try:
-            filtres = await _filtres(db, uid, profil)
+            filtres = await _filtres(db, uid, profil, mode)
             connus = set((await db.execute(select(RadarProspect.apollo_id).where(RadarProspect.user_id == uid))).scalars())
             page = (datetime.now(timezone.utc).toordinal() + len(connus)) % 5 + 1
             corps = {k: v for k, v in filtres.items() if not k.startswith("_") and v}
@@ -243,13 +287,17 @@ def install_apollo(g: dict) -> None:
                     "ville": ", ".join(x for x in (e.get("city"), e.get("country")) if x) or None,
                     "enrichi": "oui" if e else "non",
                 })
-            msgs = await _messages(uid, fiches, dict(getattr(profil, "contexte_metier", None) or {}))
+            cm_p = dict(getattr(profil, "contexte_metier", None) or {})
+            if mode == "partenaire":
+                msgs = [message_partenaire(f, cm_p) for f in fiches]
+            else:
+                msgs = await _messages(uid, fiches, cm_p)
             for f, msg in zip(fiches, msgs):
-                db.add(RadarProspect(user_id=uid, jour=jour, message=msg, **f))
+                db.add(RadarProspect(user_id=uid, jour=jour, message=msg, role=mode, **f))
             await db.commit()
             tous = list((await db.execute(select(RadarProspect).where(
                 RadarProspect.user_id == uid, RadarProspect.jour == jour).order_by(RadarProspect.created_at))).scalars())
-            return {"etat": "ok", "prospects": [_pj(p) for p in tous], **info, "utilises": utilises + len(fiches)}
+            return {"etat": "ok", "prospects": [_pj(p) for p in tous], **info, "utilises": utilises + len(fiches), "mode": mode}
         except Exception as e:  # noqa: BLE001
             await db.rollback()
             logger.warning("Apollo indisponible : %s", e)

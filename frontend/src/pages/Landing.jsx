@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   Search, Sparkles, Menu, X, ShieldCheck, ChevronDown, Server, Lock, RefreshCw, Compass, Radar, Heart, ArrowRight, Check,
 } from "lucide-react";
-import { PLANS, prixMois } from "@/lib/plans";
+import GrilleTarifs from "@/components/pricing/GrilleTarifs";
 import { useSeo } from "@/lib/useSeo";
 
 // Page d'accueil publique (modèle validé : barre de saisie en verre, grand
@@ -20,11 +20,11 @@ const LIGNES = [
   },
   {
     id: "croissance", titre: "Croissance", icon: Radar,
-    texte: "Chaque matin, le Radar te propose 3 opportunités reliées à ta vision, avec un message déjà rédigé. Dès l'offre Pro, ton propre chatbot répond à tes clients.",
+    texte: "Chaque matin, le Radar te donne de vrais signaux : des personnes à contacter (ou des partenaires qui peuvent te recommander), ce que tes futurs clients tapent sur Google près de chez toi, et une pub Facebook prête à lancer. Dès l'offre Pro, ton propre chatbot répond à tes clients.",
   },
   {
     id: "gerer", titre: "Gérer", icon: Heart,
-    texte: "3 priorités adaptées à ton énergie du jour, ton pouls business (CA, trésorerie) et une revue de semaine. Tu avances sans t'épuiser.",
+    texte: "3 priorités adaptées à ton énergie, ton pouls business (CA, trésorerie) et une revue de semaine. Côté mindset : une carte du jour et des parcours de 7 jours pour oser vendre, dire non ou rebondir après un refus.",
   },
 ];
 
@@ -60,7 +60,7 @@ export default function Landing() {
 
   useSeo({
     title: "Zayado — le cockpit IA des entrepreneurs",
-    description: "Ta vision, tes priorités, ton énergie et tes chiffres au même endroit, avec une IA qui connaît ton projet. Offre Découverte gratuite, sans engagement.",
+    description: "Ta vision, tes priorités, ton énergie et tes chiffres au même endroit, avec une IA qui connaît ton projet. Essai 2 mois pour 1 €, sans engagement.",
     path: "/",
   });
 
@@ -119,7 +119,7 @@ export default function Landing() {
             </button>
           </form>
           <p className="mt-3 text-[13px] text-offwhite/80">
-            <b className="font-semibold text-offwhite">Offre Découverte gratuite</b>, sans carte bancaire · <Link to="/pricing" className="underline underline-offset-2 hover:text-gold">voir les offres</Link>
+            <b className="font-semibold text-offwhite">2 mois pour 1 €</b>, puis tarif fondateur · sans engagement · <Link to="/pricing" className="underline underline-offset-2 hover:text-gold">voir les offres</Link>
           </p>
 
           <h1 className="mt-14 font-display text-[40px] font-bold leading-[1.08] tracking-tight sm:mt-20 sm:text-[64px]" data-testid="landing-titre">
@@ -177,19 +177,9 @@ export default function Landing() {
         {/* Offres */}
         <section className="mx-auto mt-24 max-w-5xl px-5">
           <p className="text-center text-[11px] font-semibold uppercase tracking-[0.22em] text-gold">Offres</p>
-          <h2 className="mt-3 text-center font-display text-3xl font-bold sm:text-4xl">Commence gratuitement</h2>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {PLANS.map((p) => (
-              <div key={p.key} className={`glass flex flex-col rounded-[20px] p-5 ${p.star ? "ring-1 ring-gold/50" : ""}`} data-testid={`landing-offre-${p.key}`}>
-                <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-gold">{p.nom}</p>
-                <p className="mt-1 text-[12.5px] text-offwhite/60">{p.pourQui}</p>
-                <p className="mt-3 font-display text-3xl font-bold">{prixMois(p, "mensuel")} €<span className="ml-1 text-xs font-normal text-offwhite/50">HT / mois</span></p>
-                <ul className="mt-4 flex-1 space-y-1.5 text-[13px] text-offwhite/70">
-                  {p.points.slice(0, 3).map((pt) => <li key={pt} className="flex gap-2"><Check size={14} className="mt-0.5 shrink-0 text-gold" />{pt}</li>)}
-                </ul>
-              </div>
-            ))}
-          </div>
+          <h2 className="mt-3 text-center font-display text-3xl font-bold sm:text-4xl">Essaie 2 mois pour 1 €</h2>
+          {/* Même grille que la page Tarifs (tarif fondateur compris) : plus de prix différents d'une page à l'autre. */}
+          <div className="mt-8"><GrilleTarifs contact={false} /></div>
           <div className="mt-8 text-center">
             <Link to="/pricing" className="inline-flex items-center gap-2 rounded-full border border-white/40 px-6 py-3 text-[14px] font-medium hover:bg-white/10" data-testid="landing-tarifs">
               Comparer les offres <ArrowRight size={15} />

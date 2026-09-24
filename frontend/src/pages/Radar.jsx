@@ -4,20 +4,24 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import Lenis from "lenis";
 import {
   Radar as RadarGlyph, Loader2, Send, Linkedin, MessageCircle,
-  Sparkles, Copy, RefreshCw, Compass, ArrowLeft, Zap,
+  Sparkles, Copy, RefreshCw, Compass, ArrowLeft, Zap, Search, Megaphone, Mail, Phone,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Sidebar } from "@/components/kairos/Sidebar";
-import { TabBar } from "@/components/kairos/TabBar";
 import { Header } from "@/components/kairos/Header";
 import { GlassCard } from "@/components/kairos/GlassCard";
 import AiFallbackBanner from "@/components/kairos/AiFallbackBanner";
+import RadarSignaux from "@/components/kairos/RadarSignaux";
 import { fetchRadar, genererSwot, majProspect } from "@/lib/kairosApi";
 
 const CANAL_META = {
   email: { icon: Send, color: "#DEC2A3", label: "Email" },
   linkedin: { icon: Linkedin, color: "#5B8DEF", label: "LinkedIn" },
   whatsapp: { icon: MessageCircle, color: "#25D366", label: "WhatsApp" },
+  google: { icon: Search, color: "#8AB4F8", label: "Google" },
+  meta: { icon: Megaphone, color: "#9AA7FF", label: "Facebook / Instagram" },
+  courrier: { icon: Mail, color: "#F1E2CC", label: "Courrier" },
+  appel: { icon: Phone, color: "#7DD3C0", label: "Appel" },
 };
 
 const EASE = [0.22, 1, 0.36, 1];
@@ -90,7 +94,7 @@ function SwotSection() {
 
   return (
     <section className="pt-20" data-testid="radar-chapter-swot">
-      <Chapter num="03" sub="Vue d'ensemble" title="Ton SWOT, généré par l'IA" />
+      <Chapter num="04" sub="Vue d'ensemble" title="Ton SWOT, généré par l'IA" />
       {!swot && !loading && (
         <GlassCard className="p-6 text-center">
           <p className="text-sm text-offwhite/65">Une analyse forces / faiblesses / opportunités / menaces à partir de ton vrai contexte — pas un modèle générique.</p>
@@ -149,7 +153,13 @@ function FicheProspect({ p, message }) {
   const [statut, setStatut] = useState(p.statut || "nouveau");
   const changer = async (v) => {
     setStatut(v);
-    try { await majProspect(p.id, v); toast.success(v === "contacte" ? "Noté comme contacté" : v === "ecarte" ? "Prospect écarté" : "Statut mis à jour"); }
+    try {
+      await majProspect(p.id, v);
+      if (v === "ecarte") {
+        toast("Un refus fait partie du jeu.", { description: "5 minutes pour rebondir : parcours « Rebondir après un refus ».",
+          action: { label: "Ouvrir", onClick: () => { window.location.href = "/app/bien-etre?tab=parcours&p=rebondir"; } } });
+      } else toast.success(v === "contacte" ? "Noté comme contacté" : "Statut mis à jour");
+    }
     catch { toast.error("Mise à jour impossible"); }
   };
   const nom = [p.prenom, p.nom].filter(Boolean).join(" ");
@@ -160,7 +170,7 @@ function FicheProspect({ p, message }) {
         {(p.prenom || "?").slice(0, 1)}{(p.nom || "").slice(0, 1)}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[14.5px] font-semibold text-offwhite">{nom || "Contact"}</p>
+        <p className="truncate text-[14.5px] font-semibold text-offwhite">{nom || "Contact"}{p.role === "partenaire" && <span className="ml-2 rounded-full bg-gold/15 px-2 py-0.5 align-middle text-[10px] font-semibold text-gold">Prescripteur</span>}</p>
         <p className="truncate text-[12.5px] text-offwhite/60">{[p.titre, p.entreprise, p.ville].filter(Boolean).join(" · ")}</p>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -407,7 +417,7 @@ export default function Radar() {
           <section className="pt-20" data-testid="radar-chapter-opportunites">
             <Chapter num="02" sub="Le bijou" title="Opportunités qualifiées" />
             <Reveal className="mb-6 flex flex-wrap items-center gap-2">
-              {["tous", "email", "linkedin", "whatsapp"].map((c) => {
+              {["tous", ...Object.keys(CANAL_META).filter((k) => counts[k])].map((c) => {
                 const meta = CANAL_META[c];
                 const active = filter === c;
                 return (
@@ -503,12 +513,18 @@ export default function Radar() {
             )}
           </section>
 
-          {/* ── CHAPITRE 03 · SWOT ── */}
+          {/* ── CHAPITRE 03 · SIGNAUX DU TERRAIN ── */}
+          <section className="pt-20" data-testid="radar-chapter-signaux">
+            <Chapter num="03" sub="Le terrain" title="Signaux autour de toi" />
+            <RadarSignaux onChange={() => load()} />
+          </section>
+
+          {/* ── CHAPITRE 04 · SWOT ── */}
           <SwotSection />
 
-          {/* ── CHAPITRE 04 · ACTION ── */}
+          {/* ── CHAPITRE 05 · ACTION ── */}
           <section className="pt-20" data-testid="radar-chapter-action">
-            <Chapter num="04" sub="À toi de jouer" title="Passe à l'action" />
+            <Chapter num="05" sub="À toi de jouer" title="Passe à l'action" />
             <div className="grid gap-4 sm:grid-cols-3">
               {[
                 {
@@ -550,12 +566,6 @@ export default function Radar() {
           </section>
         </div>
       </div>
-      <TabBar active="radar" onSelect={(key) => {
-        if (key === "today") navigate("/app");
-        else if (key === "vision") navigate("/app/vision");
-        else if (key === "ideas") navigate("/app/ideas");
-        else if (key === "wellbeing") navigate("/app/bien-etre");
-      }} onOpenChat={() => navigate("/app")} />
     </div>
   );
 }

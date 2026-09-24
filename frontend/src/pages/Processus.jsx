@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { Sidebar } from "@/components/kairos/Sidebar";
-import { Header } from "@/components/kairos/Header";
+import { Navigate } from "react-router-dom";
 import {
   Workflow, Plus, Play, Pause, Edit3, Trash2, Users, Package, Truck,
   ClipboardList, Mail, DollarSign, HeadphonesIcon, ArrowRight, Check,
   Circle, ChevronRight, X, Sparkles, FileText, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { fetchProcessus, saveProcessus } from "@/lib/kairosApi";
+import { fetchProcessus, saveProcessus, creerTache } from "@/lib/kairosApi";
 
 const GOLD = "#DEC2A3";
 
@@ -50,7 +49,14 @@ const ICON_MAP = { Users, Mail, DollarSign, Package, Truck, ClipboardList, Headp
 const COULEURS = ["#60a5fa", "#DEC2A3", "#a3e635", "#f472b6", "#a78bfa", "#34d399"];
 const nouvelId = () => `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
+// L'ancienne page /app/processus est désormais un onglet du Plan d'action.
 export default function Processus() {
+  return <Navigate to="/app/actions?tab=processus" replace />;
+}
+
+// Contenu de l'onglet « Processus » : chaque étape peut devenir une action
+// (page Actions), reliée à l'objectif du processus.
+export function ProcessusContenu({ objectifs = [], onActionCreee }) {
   const [processes, setProcesses] = useState([]);
   const [charge, setCharge] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
@@ -120,6 +126,20 @@ export default function Processus() {
     setNouvelleEtape("");
   };
 
+  const relierObjectif = (objectif_id) => {
+    persist(processes.map((p) => p.id === selected.id ? { ...p, objectif_id: objectif_id || null } : p));
+  };
+
+  const versAction = async (idx) => {
+    const etape = selected.steps[idx];
+    try {
+      const t = await creerTache(`${etape.title} · ${selected.name}`.slice(0, 300), 25, selected.objectif_id || null);
+      persist(processes.map((p) => p.id === selected.id ? { ...p, steps: p.steps.map((s, i) => i === idx ? { ...s, action_id: t.id } : s) } : p));
+      toast.success(selected.objectif_id ? "Action créée et reliée à l'objectif" : "Action créée dans tes actions");
+      onActionCreee?.();
+    } catch { toast.error("Création de l'action impossible"); }
+  };
+
   const retirerEtape = (idx) => {
     persist(processes.map((p) => p.id === selected.id ? { ...p, steps: p.steps.filter((_, i) => i !== idx) } : p));
   };
@@ -129,20 +149,15 @@ export default function Processus() {
   const doneSteps = processes.reduce((s, p) => s + p.steps.filter((x) => x.done).length, 0);
 
   return (
-    <div className="min-h-screen">
-      <Sidebar />
-      <div className="lg:pl-[92px]">
-        <Header title="Processus" subtitle="Organise ton entreprise, l'IA suit pour toi." />
-
-        <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+    <div data-testid="processus-contenu">
           {/* Hero */}
           <div className="mb-6 rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-6 sm:p-8">
             <p className="text-[10.5px] font-semibold uppercase tracking-[0.24em]" style={{ color: GOLD }}>Automatisation douce</p>
-            <h1 className="mt-2 font-display text-[26px] font-semibold leading-tight sm:text-[34px]">
+            <h2 className="mt-2 font-display text-[24px] font-semibold leading-tight sm:text-[30px]">
               Chaque processus a un <span className="font-serif-italic italic" style={{ color: GOLD }}>chemin</span>, un rythme.
-            </h1>
+            </h2>
             <p className="mt-3 max-w-xl text-[14px] leading-relaxed text-white/60">
-              Onboarding, prospection, facturation, livraison… Crée tes processus une seule fois, puis coche les étapes au fil de l'eau. Marque celles que l'IA peut préparer pour toi (e-mails, relances, documents).
+              Onboarding, prospection, facturation, livraison… Crée tes processus une seule fois, puis coche les étapes au fil de l'eau. Relie un processus à un objectif : chaque étape peut devenir une action qui fait avancer cet objectif.
             </p>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-3">
@@ -216,7 +231,7 @@ export default function Processus() {
 
             {/* Detail */}
             {selected && (
-              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 h-fit sticky top-6">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 h-fit lg:sticky lg:top-24">
                 <div className="mb-4 flex items-center justify-between">
                   <h3 className="font-display text-[15.5px] font-semibold text-white">{selected.name}</h3>
                   <div className="flex gap-1">
@@ -226,6 +241,14 @@ export default function Processus() {
                     <button onClick={() => remove(selected.id)} className="rounded-lg p-1.5 text-white/60 hover:bg-rose-400/10 hover:text-rose-300"><Trash2 size={14} /></button>
                   </div>
                 </div>
+                <label className="mb-4 block">
+                  <span className="mb-1 block text-[11px] uppercase tracking-wider text-white/50">Fait avancer l'objectif</span>
+                  <select value={selected.objectif_id || ""} onChange={(e) => relierObjectif(e.target.value)} data-testid="processus-objectif"
+                    className="w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-[12.5px] text-white outline-none focus:border-gold/50">
+                    <option value="" className="bg-navy-800">Aucun objectif</option>
+                    {objectifs.filter((o) => o.statut !== "termine" || o.id === selected.objectif_id).map((o) => <option key={o.id} value={o.id} className="bg-navy-800">{o.titre}</option>)}
+                  </select>
+                </label>
                 <div className="space-y-2">
                   {selected.steps.map((s, i) => (
                     <div key={i} className={`flex items-start gap-3 rounded-xl border p-3 ${s.done ? "border-emerald-500/25 bg-emerald-500/[0.05]" : "border-white/10 bg-white/[0.02]"}`}>
@@ -241,6 +264,11 @@ export default function Processus() {
                           </span>
                         </div>
                       </div>
+                      {s.action_id ? (
+                        <span className="shrink-0 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-300" title="Une action existe pour cette étape">Action ✓</span>
+                      ) : !s.done && (
+                        <button onClick={() => versAction(i)} className="shrink-0 rounded-full border border-gold/35 px-2 py-0.5 text-[10.5px] font-semibold text-gold hover:bg-gold/10" data-testid={`processus-vers-action-${i}`} title="Créer une action pour cette étape">→ Action</button>
+                      )}
                       <button onClick={() => retirerEtape(i)} className="rounded p-1 text-white/30 hover:text-rose-300" aria-label="Retirer l'étape"><X size={12} /></button>
                     </div>
                   ))}
@@ -271,8 +299,6 @@ export default function Processus() {
               </div>
             )}
           </div>
-        </main>
-      </div>
     </div>
   );
 }

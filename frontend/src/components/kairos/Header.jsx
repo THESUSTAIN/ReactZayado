@@ -23,12 +23,13 @@ const PAGES = [
   { label: "Idées", path: "/app/ideas", mots: "idee capture" },
   { label: "Sources", path: "/app/sources", mots: "documents liens" },
   { label: "Feuille de route", path: "/app/roadmap", mots: "roadmap jalons trimestre" },
-  { label: "Actions", path: "/app/actions", mots: "taches missions todo priorités" },
-  { label: "Bien-être", path: "/app/bien-etre", mots: "energie respiration" },
+  { label: "Plan d'action · Actions", path: "/app/actions", mots: "taches missions todo priorités actions" },
+  { label: "Plan d'action · Objectifs", path: "/app/actions?tab=objectifs", mots: "objectifs 90 jours cap trimestre" },
+  { label: "Bien-être & Mindset", path: "/app/bien-etre", mots: "energie respiration mindset parcours carnet vendre refus" },
   { label: "Collaborateurs", path: "/app/collaborateurs", mots: "expert humain aide" },
   { label: "Agents IA", path: "/app/agents", mots: "ia automatisation" },
   { label: "Agent Business (chatbot)", path: "/app/chatbot-b2b", mots: "clients chatbot" },
-  { label: "Processus", path: "/app/processus", mots: "workflow" },
+  { label: "Plan d'action · Processus", path: "/app/actions?tab=processus", mots: "processus workflow étapes routine" },
   { label: "Mon espace", path: "/mon-espace", mots: "commandes achats compte" },
   { label: "Espace vendeur", path: "/espace-vendeur", mots: "marketplace vendre" },
   { label: "Paramètres", path: "/parametres", mots: "réglages compte profil connexion" },
@@ -39,7 +40,7 @@ const norm = (x) => (x || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").t
 
 const MODULES = [
   { name: "Agent Business",      icon: MessageCircle, path: "/app/chatbot-b2b",   badge: "49€" },
-  { name: "Processus",           icon: Workflow,     path: "/app/processus" },
+  { name: "Processus",           icon: Workflow,     path: "/app/actions?tab=processus" },
 ];
 
 export function Header() {
@@ -126,7 +127,7 @@ export function Header() {
   const mobileItems = [
     ["today", "Aujourd'hui", "/app"], ["vision", "Vision", "/app/vision"],
     ["radar", "Radar", "/app/radar"], ["ideas", "Idées", "/app/ideas"],
-    ["actions", "Actions", "/app/actions"], ["wellbeing", "Bien-être", "/app/bien-etre"],
+    ["actions", "Plan d'action", "/app/actions"], ["wellbeing", "Bien-être", "/app/bien-etre"],
   ];
 
   return (
@@ -163,7 +164,7 @@ export function Header() {
         <div className="hidden sm:block"><LanguageSwitcher /></div>
 
         <button onClick={() => openChat()}
-          className="rounded-xl border border-gold/30 bg-gold/10 p-2 text-gold transition-colors hover:bg-gold/20"
+          className={`rounded-xl border border-gold/30 bg-gold/10 p-2 text-gold transition-colors hover:bg-gold/20 ${location.pathname === "/app" ? "xl:hidden" : ""}`}
           title="Collaborateur IA (chat)" aria-label="Ouvrir le Collaborateur IA" data-testid="header-chat">
           <MessageCircle className="h-[18px] w-[18px]" />
         </button>
@@ -309,7 +310,6 @@ export function Header() {
         const active = location.pathname === path || (path !== "/app" && location.pathname.startsWith(path));
         return <button key={key} onClick={() => navigate(path)} data-testid={`mobile-nav-${key}`} aria-current={active ? "page" : undefined} className={`shrink-0 rounded-lg px-3 py-1.5 text-xs ${active ? "bg-gold text-navy-900" : "bg-white/5 text-offwhite/70"}`}>{label}</button>;
       })}
-      <button onClick={() => openChat()} className="shrink-0 rounded-lg bg-gold/15 px-3 py-1.5 text-xs text-gold" data-testid="mobile-nav-chat">Collaborateur IA</button>
       <button onClick={() => navigate("/app/collaborateurs")} className="shrink-0 rounded-lg bg-white/5 px-3 py-1.5 text-xs text-offwhite/70">Collaborateurs</button>
       <button onClick={() => navigate("/parametres")} className="shrink-0 rounded-lg bg-white/5 px-3 py-1.5 text-xs text-offwhite/70">Paramètres</button>
     </nav>

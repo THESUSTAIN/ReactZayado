@@ -6,7 +6,8 @@ import { useKairos } from "@/context/KairosContext";
 import { valuesLibrary } from "@/mock/data";
 import { saveProfile } from "@/lib/kairosApi";
 import { toast } from "sonner";
-import { PLANS_LANCEMENT, PLAN_ENTREPRISE, prixFondateurMois } from "@/lib/plans";
+import { PLANS_LANCEMENT, PLAN_ENTREPRISE, prixFondateurMois, ESSAI } from "@/lib/plans";
+import { lancerPaiement } from "@/lib/checkout";
 import { fetchTarifsFondateur } from "@/lib/kairosApi";
 import { Sparkles, ArrowRight, ArrowLeft, Plus, X, Target, Clock, Heart, Check, Loader2, Rocket, User, Briefcase, TrendingUp } from "lucide-react";
 import { savePouls } from "@/lib/kairosApi";
@@ -18,9 +19,12 @@ const STEPS = ["Bienvenue", "Identité", "Activité", "Cap financier", "Vision",
 const construirePlans = (fondateurOuvert) => [
   ...PLANS_LANCEMENT.map((p) => {
     const fonda = fondateurOuvert ? prixFondateurMois(p, "mensuel") : null;
+    const essai = p.key === ESSAI.plan;
     return {
-      key: p.key, name: p.nom, price: `${fonda ?? p.mensuel} €`, old: fonda != null ? `${p.mensuel} €` : null,
-      period: p.mensuel ? (fonda != null ? "HT / mois · tarif fondateur" : "HT / mois") : "pour toujours",
+      key: p.key, name: essai ? `${p.nom} · 2 mois pour ${ESSAI.prix} €` : p.nom,
+      price: essai ? `${ESSAI.prix} €` : `${fonda ?? p.mensuel} €`, old: !essai && fonda != null ? `${p.mensuel} €` : null,
+      period: essai ? `les ${ESSAI.mois} premiers mois, puis ${fonda ?? p.mensuel} € HT / mois${fonda != null ? " (tarif fondateur)" : ""}`
+        : (fonda != null ? "HT / mois · tarif fondateur" : "HT / mois"),
       features: p.points.slice(0, 4), highlight: !!p.star,
     };
   }),
@@ -46,7 +50,8 @@ export default function Onboarding() {
   const [fondateurOuvert, setFondateurOuvert] = useState(false);
   useEffect(() => { fetchTarifsFondateur().then((d) => setFondateurOuvert(!!d.ouverte)).catch(() => {}); }, []);
   const PLANS = construirePlans(fondateurOuvert);
-  const [plan, setPlan] = useState(["essentielle", "serenite", "pro", "business", "entreprise"].includes(planParam) ? (planParam === "business" ? "entreprise" : planParam) : "essentielle");
+  // Plus d'offre gratuite : Solo (essai 2 mois pour 1 €) est proposé par défaut.
+  const [plan, setPlan] = useState(["serenite", "pro", "business", "entreprise"].includes(planParam) ? (planParam === "business" ? "entreprise" : planParam) : "serenite");
   const [saving, setSaving] = useState(false);
   const [savePhase, setSavePhase] = useState(0);
   const [saveError, setSaveError] = useState("");
@@ -56,7 +61,7 @@ export default function Onboarding() {
   const [activite, setActivite] = useState(() => {
     let offre = "";
     try { offre = localStorage.getItem("zayado_idee_landing") || ""; } catch { /* stockage indisponible */ }
-    return { type: "", cible: "", offre, marche: "france" };
+    return { type: "", cible: "", offre, marche: "france", clientele: "", zone: "" };
   });
   const [capFin, setCapFin]     = useState({ ca_objectif: 0, ca_mensuel: 0, tresorerie: 0 });
 
@@ -87,6 +92,8 @@ export default function Onboarding() {
           entreprise: identite.entreprise, role: identite.role,
           activite_type: activite.type, cible: activite.cible, offre: activite.offre,
           marche: activite.marche,
+          ...(activite.clientele ? { clientele: activite.clientele } : {}),
+          ...(activite.zone.trim() ? { zone: activite.zone.trim() } : {}),
           plan_souhaite: plan,
         },
         onboarded: true,
@@ -110,15 +117,8 @@ export default function Onboarding() {
     setOnboardingData({ vision, why, goals: goals.filter(Boolean), values, checkinHour, plan });
     // Offre payante : on passe par le paiement (l'offre n'est activée qu'après paiement validé).
     if (plan === "serenite" || plan === "pro") {
-      try {
-        const r = await fetch(`${process.env.REACT_APP_BACKEND_URL || ""}/api/checkout`, {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ plan, cycle: cycleParam }),
-        });
-        const j = await r.json();
-        if (r.ok && j.checkoutUrl) { window.location.href = j.checkoutUrl; return; }
-      } catch (_) { /* on continue vers le cockpit */ }
-      toast.error("Le paiement n'a pas pu démarrer : tu peux le reprendre depuis la page Tarifs.");
+      // Solo : essai 2 mois pour 1 € (repli automatique sur l'offre normale si déjà utilisé).
+      if (await lancerPaiement(plan, { cycle: cycleParam, essai: plan === ESSAI.plan })) return;
     } else if (plan === "entreprise") {
       toast.info("Merci ! L'équipe Zayado te contacte pour préparer ton offre Équipe ou Entreprise.");
     }
@@ -218,6 +218,19 @@ export default function Onboarding() {
               <textarea value={activite.offre} onChange={(e) => setActivite({ ...activite, offre: e.target.value })}
                 placeholder="Ton offre phare (facultatif)" rows={2} data-testid="onboarding-activite-offre"
                 className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-offwhite placeholder:text-offwhite/40 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/30" />
+              <div>
+                <label className="mb-1.5 block text-xs text-offwhite/50">Tes clients sont… (le Radar s'adapte : prospects pros ou signaux locaux)</label>
+                <div className="flex flex-wrap gap-2" data-testid="onboarding-clientele">
+                  {[["b2c", "Des particuliers"], ["b2b", "Des professionnels"], ["mixte", "Les deux"]].map(([k, l]) => (
+                    <button key={k} type="button" onClick={() => setActivite({ ...activite, clientele: k })}
+                      className={`rounded-full px-4 py-2 text-[13px] font-medium transition ${activite.clientele === k ? "bg-gold text-navy-900" : "border border-white/15 bg-white/5 text-offwhite/75 hover:border-white/30"}`}
+                      data-testid={`onboarding-clientele-${k}`}>{l}</button>
+                  ))}
+                </div>
+              </div>
+              <input value={activite.zone} onChange={(e) => setActivite({ ...activite, zone: e.target.value })}
+                placeholder="Ta ville ou ton code postal (facultatif)" data-testid="onboarding-activite-zone"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-offwhite placeholder:text-offwhite/40 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/30" />
               <div>
                 <label className="mb-1.5 block text-xs text-offwhite/50">Ton pays / marché — pour l'actualité et le contexte économique</label>
                 <select value={activite.marche} onChange={(e) => setActivite({ ...activite, marche: e.target.value })} data-testid="onboarding-activite-marche"
@@ -346,7 +359,7 @@ export default function Onboarding() {
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Ton offre</span>
             </div>
             <h2 className="mt-2 font-display text-2xl font-bold text-offwhite">Choisis ton rythme</h2>
-            <p className="mt-1 text-sm text-offwhite/60">Commence gratuitement. Change d'avis quand tu veux, sans pression.</p>
+            <p className="mt-1 text-sm text-offwhite/60">Teste tout pendant 2 mois pour 1 €. Sans engagement ni renouvellement automatique.</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2" data-testid="onboarding-plans">
               {PLANS.map((p) => (
                 <button

@@ -32,7 +32,10 @@ import Admin from "@/pages/Admin";
 import ConsoleLogin from "@/pages/console/ConsoleLogin";
 import PublicVision from "@/pages/PublicVision";
 import TarifsEmbed from "@/pages/TarifsEmbed";
+import ExerciceEmbed from "@/pages/ExerciceEmbed";
 import Landing from "@/pages/Landing";
+import Activer from "@/pages/Activer";
+import AccesGate from "@/components/kairos/AccesGate";
 import { getToken } from "@/lib/kairosApi";
 
 // Deux apps séparées issues du même code — la saveur est choisie AU BUILD :
@@ -72,6 +75,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/embed/tarifs" element={<TarifsEmbed />} />
+          <Route path="/embed/exercice/:slug" element={<ExerciceEmbed />} />
           <Route path="*" element={<TarifsEmbed />} />
         </Routes>
       </BrowserRouter>
@@ -87,6 +91,7 @@ function App() {
           <BrowserRouter>
           <GlobalChat />
           <GuidedTour />
+          <AccesGate />
           <Routes>
             <Route path="/" element={getToken() ? <Navigate to="/app" replace /> : <Landing />} />
             <Route path="/accueil" element={<Landing />} />
@@ -94,6 +99,7 @@ function App() {
             {/* Lien public en lecture seule d'un Vision Board (sans compte) */}
             <Route path="/v/:token" element={<PublicVision />} />
             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+            <Route path="/activer" element={<ProtectedRoute><Activer /></ProtectedRoute>} />
             <Route path="/app" element={<ProtectedRoute><Cockpit /></ProtectedRoute>} />
             <Route path="/app/radar" element={<ProtectedRoute><Radar /></ProtectedRoute>} />
             <Route path="/app/actions" element={<ProtectedRoute><Actions /></ProtectedRoute>} />

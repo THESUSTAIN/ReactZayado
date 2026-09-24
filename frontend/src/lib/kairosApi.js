@@ -79,6 +79,11 @@ export const toggleTache = (id) => jsend(`/taches/${id}`, "PATCH");
 export const fetchTaches = () => jget("/taches");
 export const creerTache = (titre, duree_min = 15, objectif_id = null) => jsend("/taches", "POST", { titre, duree_min, ...(objectif_id ? { objectif_id } : {}) });
 export const majTacheStatut = (id, statut) => jsend(`/taches/${id}/statut`, "PATCH", { statut });
+export const relierTache = (id, objectif_id) => jsend(`/taches/${id}/objectif`, "PATCH", { objectif_id: objectif_id || null });
+export const supprimerTache = (id) => jsend(`/taches/${id}`, "DELETE");
+export const creerObjectif = (titre, echeance = null) => jsendDetail("/objectifs", "POST", { titre, ...(echeance ? { echeance } : {}) });
+export const majObjectif = (id, patch) => jsendDetail(`/objectifs/${id}`, "PATCH", patch);
+export const supprimerObjectif = (id) => jsend(`/objectifs/${id}`, "DELETE");
 
 // ── HeyGen (console admin) ──
 export const fetchHeygenAvatars = () => jget("/heygen/avatars");
@@ -220,6 +225,8 @@ export const fetchPouls = () => jget("/cockpit/pouls");
 export const savePouls = (data) => jsend("/cockpit/pouls", "PUT", data);
 export const fetchRadar = (refresh = false) => jget(refresh ? "/cockpit/radar?refresh=true" : "/cockpit/radar");
 export const fetchProspects = () => jget("/radar/prospects");
+export const fetchSignaux = () => jget("/radar/signaux");
+export const saveReglagesRadar = (patch) => jsend("/radar/reglages", "PUT", patch);
 export const majProspect = (id, statut) => jsend(`/radar/prospects/${id}`, "PATCH", { statut });
 export const genererSwot = () => jsend("/radar/swot", "POST");
 export const fetchImpact = () => jget("/cockpit/impact");
@@ -299,3 +306,14 @@ export const connecterTelegram = (bot_token) => jsend("/connections/telegram/con
 // texte générique sans rien signaler à l'écran : ce statut alimente le
 // bandeau d'alerte pour que le repli ne passe plus inaperçu.
 export const fetchIaStatut = () => jget("/ia/statut");
+
+// ── Bien-être & Mindset ──
+export const fetchMindsetJour = () => jget("/mindset/aujourdhui");
+export const fetchParcoursListe = () => jget("/mindset/parcours");
+export const fetchParcours = (id) => jget(`/mindset/parcours/${id}`);
+export const demarrerParcours = (id) => jsend(`/mindset/parcours/${id}/demarrer`, "POST", {});
+export const envoyerReponses = (source, ref, reponses) => jsendDetail("/mindset/reponses", "POST", { source, ref, reponses });
+export const fetchCarnet = () => jget("/mindset/carnet");
+export const supprimerEntreeCarnet = (id) => jsend(`/mindset/carnet/${id}`, "DELETE");
+export const recadrerPensee = (pensee) => jsend("/mindset/recadrer", "POST", { pensee });
+
