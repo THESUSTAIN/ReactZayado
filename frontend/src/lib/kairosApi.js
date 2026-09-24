@@ -218,7 +218,7 @@ export const lancerIdee = (id) => jsend(`/idees/${id}/lancer`, "POST", {});
 // ── Cockpit widgets (Pouls Business + Radar + Impact) ──
 export const fetchPouls = () => jget("/cockpit/pouls");
 export const savePouls = (data) => jsend("/cockpit/pouls", "PUT", data);
-export const fetchRadar = () => jget("/cockpit/radar");
+export const fetchRadar = (refresh = false) => jget(refresh ? "/cockpit/radar?refresh=true" : "/cockpit/radar");
 export const genererSwot = () => jsend("/radar/swot", "POST");
 export const fetchImpact = () => jget("/cockpit/impact");
 export const saveGeneratedDocument = (title, content, provider) => jsend("/documents/auto-save", "POST", { title, content, provider });
@@ -249,3 +249,19 @@ export const inviterParrainage = (email) => jsend("/parrainage/inviter", "POST",
 export const fetchDemandesCollaborateur = () => jget("/admin/demandes-collaborateur");
 export const fetchCompteDemo = () => jget("/admin/compte-demo");
 export const transfererCompteDemo = (email, tables) => jsend("/admin/compte-demo/transferer", "POST", { email, tables });
+
+// ── Agent Business (chatbot client à la marque de l'utilisateur) ──
+export const fetchAgentsBusiness = () => jget("/agent-business");
+export const creerAgentBusiness = (data) => jsend("/agent-business", "POST", data);
+export const modifierAgentBusiness = (id, data) => jsend(`/agent-business/${id}`, "PUT", data);
+export const testerAgentBusiness = (id, message, historique) =>
+  jsend(`/agent-business/${id}/tester`, "POST", { message, historique });
+
+// ── Offre d'un client (admin) et tarif fondateur ──
+export const changerPlanUtilisateur = (userId, plan, jours = 31, fondateur = false) =>
+  jsend(`/admin/utilisateurs/${userId}/plan`, "PATCH", { plan, jours, fondateur });
+export const fetchTarifsFondateur = async () => {
+  const r = await fetch(`${API}/tarifs/fondateur`);
+  if (!r.ok) throw new Error("tarifs fondateur");
+  return r.json();
+};

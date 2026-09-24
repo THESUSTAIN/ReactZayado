@@ -13,11 +13,13 @@ export const PLANS = [
   },
   {
     key: "serenite", nom: "Solo", mensuel: 24, annuel: 228, star: true,
+    fondateur: { mensuel: 19, annuel: 180 },
     pourQui: "Pour le solopreneur qui pilote seul",
     points: ["Tout Découverte", "Copilote IA sans limite (usage équitable)", "Vision Boards illimités, lien public, Vision Book", "Radar : 3 opportunités par jour", "Pouls business (Qonto) & revue hebdo", "E-mail du lundi : ta semaine en 1 minute"],
   },
   {
     key: "pro", nom: "Pro", mensuel: 69, annuel: 708,
+    fondateur: { mensuel: 49, annuel: 468 },
     pourQui: "Pour l'indépendant qui a des clients",
     points: ["Tout Solo", "Ton chatbot client, à ta marque", "Documents IA : brief, plan 30 j, SWOT", "Alertes WhatsApp & Telegram", "Espace vendeur (marketplace)", "Support prioritaire"],
   },
@@ -32,6 +34,16 @@ export const PLAN_ENTREPRISE = {
   key: "entreprise", nom: "Entreprise", devis: true, plancher: 299,
   pourQui: "Pour les structures plus grandes",
   points: ["Tout Équipe", "Comptes et chatbots sans limite", "Ton domaine, ta propre clé IA", "Accompagnement dédié"],
+};
+
+// Tarif fondateur (100 premiers clients, date de fin réglée côté serveur) :
+// garanti tant que le client reste abonné. Montants encaissés : backend/commerce_ext.py.
+export const PLANS_LANCEMENT = PLANS.filter((p) => ["essentielle", "serenite", "pro"].includes(p.key));
+export const prixFondateurMois = (p, cycle) =>
+  p.fondateur ? (cycle === "annuel" ? Math.round(p.fondateur.annuel / 12) : p.fondateur.mensuel) : null;
+export const dateFinFr = (iso) => {
+  try { return new Date(`${iso}T12:00:00`).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }); }
+  catch { return iso; }
 };
 
 export const planNom = (key) => [...PLANS, PLAN_ENTREPRISE].find((p) => p.key === key)?.nom || key;

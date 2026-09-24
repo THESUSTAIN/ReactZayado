@@ -1,39 +1,12 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Check, ArrowRight, ChevronDown, ShieldCheck, Server, Lock, FileText } from "lucide-react";
-import { PLANS, PLAN_ENTREPRISE, COMPARATIF, prixMois } from "@/lib/plans";
+import { useNavigate } from "react-router-dom";
+import { ChevronDown, ShieldCheck, Server, Lock, FileText } from "lucide-react";
+import { PLANS, COMPARATIF } from "@/lib/plans";
+import GrilleTarifs from "@/components/pricing/GrilleTarifs";
 import { toast } from "sonner";
 import { MarketingLayout } from "@/components/marketing/MarketingLayout";
 import { useSeo } from "@/lib/useSeo";
 import { appliquerCodePromo } from "@/lib/kairosApi";
-
-// Grille unique (lib/plans.js) : 4 cartes côte à côte + Entreprise en bandeau,
-// prix HT, « pour qui » sous chaque nom, comparatif à déplier.
-function Carte({ o, cycle }) {
-  const prix = prixMois(o, cycle);
-  const startUrl = `/login?next=${encodeURIComponent(`/onboarding?plan=${o.key}&cycle=${cycle}`)}`;
-  return (
-    <div className={`glass relative flex flex-col rounded-2xl p-6 ${o.star ? "border-gold/50 shadow-[0_20px_50px_-20px_rgba(222,194,163,0.3)] lg:-mt-3 lg:pb-9" : ""}`} data-testid={`pricing-${o.key}`}>
-      {o.star && <p className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-gold px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-navy-900">Le plus choisi</p>}
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">{o.nom}</p>
-      <p className="mt-1 text-[12.5px] text-offwhite/60">{o.pourQui}</p>
-      <p className="mt-4 font-display text-4xl font-extrabold">
-        {prix} €<span className="ml-1 text-sm font-normal text-offwhite/50">HT / mois</span>
-      </p>
-      <p className="mt-1 h-4 text-[11px] text-offwhite/45">
-        {o.mensuel > 0 ? (cycle === "annuel" ? `Facturé ${o.annuel.toLocaleString("fr-FR")} € HT / an` : `ou ${prixMois(o, "annuel")} € / mois en annuel`) : "Gratuit, sans carte bancaire"}
-      </p>
-      <Link to={startUrl} data-testid={`pricing-cta-${o.key}`} className={`mt-5 text-center ${o.star ? "btn-gold justify-center" : "btn-ghost justify-center"}`}>
-        {o.mensuel === 0 ? "Commencer gratuitement" : `Choisir ${o.nom}`}
-      </Link>
-      <ul className="mt-6 flex-1 space-y-2.5 border-t border-white/10 pt-5">
-        {o.points.map((pt) => (
-          <li key={pt} className="flex items-start gap-2 text-[13.5px] text-offwhite/75"><Check size={14} className="mt-0.5 shrink-0 text-gold" />{pt}</li>
-        ))}
-      </ul>
-    </div>
-  );
-}
 
 function CodePromo() {
   const [ouvert, setOuvert] = useState(false);
@@ -69,13 +42,12 @@ function CodePromo() {
 }
 
 export default function Pricing() {
-  const [cycle, setCycle] = useState("mensuel");
 
   const [comparer, setComparer] = useState(false);
 
   useSeo({
-    title: "Tarifs Zayado — gratuit, Solo 24 € HT, Pro 69 € HT, sans engagement",
-    description: "Zayado Découverte gratuit, Solo à 24 € HT/mois (19 € en annuel), Pro avec chatbot client à ta marque à 69 € HT/mois. 2 mois offerts en annuel. Sans engagement.",
+    title: "Tarifs Zayado — gratuit, Solo et Pro, tarif fondateur, sans engagement",
+    description: "Zayado Découverte gratuit, Solo pour piloter seul, Pro avec Agent Business à ta marque. Tarif fondateur pour les 100 premiers clients, garanti tant que tu restes abonné. Sans engagement.",
   });
 
   return (
@@ -91,32 +63,13 @@ export default function Pricing() {
             Prix hors taxes, sans engagement.
           </p>
 
-          <div className="mt-7 inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 p-1" data-testid="pricing-cycle-toggle">
-            <button onClick={() => setCycle("mensuel")} className={`rounded-full px-4 py-2 text-[12.5px] font-semibold transition ${cycle === "mensuel" ? "bg-gold text-navy-900" : "text-white/70"}`} data-testid="pricing-cycle-mensuel">Mensuel</button>
-            <button onClick={() => setCycle("annuel")} className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-[12.5px] font-semibold transition ${cycle === "annuel" ? "bg-gold text-navy-900" : "text-white/70"}`} data-testid="pricing-cycle-annuel">
-              Annuel <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${cycle === "annuel" ? "bg-navy-900/15" : "bg-gold/20 text-gold"}`}>2 mois offerts</span>
-            </button>
-          </div>
         </div>
 
-        <div className="mx-auto mt-14 grid max-w-6xl gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {PLANS.map((o) => <Carte key={o.key} o={o} cycle={cycle} />)}
-        </div>
-
-        {/* Entreprise : bandeau */}
-        <div className="mx-auto mt-6 flex max-w-6xl flex-col items-start justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-6 sm:flex-row sm:items-center" data-testid="pricing-plus-entreprise">
-          <div>
-            <p className="text-sm font-semibold text-offwhite">{PLAN_ENTREPRISE.nom} <span className="text-gold">— sur devis, dès {PLAN_ENTREPRISE.plancher} € HT / mois</span></p>
-            <p className="mt-1 text-xs text-offwhite/60">{PLAN_ENTREPRISE.pourQui} · {PLAN_ENTREPRISE.points.slice(1).join(" · ")}</p>
-          </div>
-          <a href="mailto:contact@zayado.net?subject=Offre Entreprise" className="shrink-0 rounded-xl border border-gold/40 px-4 py-2 text-xs font-semibold text-gold" data-testid="pricing-plus-cta-entreprise">
-            Parler à l'équipe <ArrowRight size={12} className="ml-1 inline" />
-          </a>
-        </div>
+        <div className="mt-8"><GrilleTarifs /></div>
 
         {/* Confiance */}
         <div className="mx-auto mt-8 flex max-w-4xl flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[12px] text-offwhite/60" data-testid="pricing-trust">
-          {[[ShieldCheck, "Sans engagement, résiliable en 1 clic"], [Server, "Hébergé en Europe · RGPD"], [Lock, "Paiement sécurisé Mollie"], [FileText, "Mises à jour incluses"]].map(([Icon, label]) => (
+          {[[ShieldCheck, "Sans engagement, sans renouvellement automatique"], [Server, "Hébergé en Europe · RGPD"], [Lock, "Paiement sécurisé Mollie"], [FileText, "Mises à jour incluses"]].map(([Icon, label]) => (
             <span key={label} className="inline-flex items-center gap-1.5"><Icon size={14} className="text-gold" />{label}</span>
           ))}
         </div>
@@ -158,8 +111,9 @@ export default function Pricing() {
             { q: "Qu'est-ce que la « maintenance incluse » ?", r: "Les mises à jour, l'amélioration continue et la sécurité — sans rien payer en plus, jamais. Tu utilises, on entretient." },
             { q: "Les prix sont-ils HT ou TTC ?", r: "Tous les prix affichés sont hors taxes. La TVA française (20 %) s'ajoute sur ta facture, que tu peux récupérer si ton entreprise y est assujettie." },
             { q: "Quelle différence entre Solo et Pro ?", r: "Solo, c'est ton cockpit complet pour piloter seul. Pro ajoute ce qui sert face à tes clients : ton propre chatbot à ta marque, les documents IA et les alertes WhatsApp / Telegram." },
-            { q: "Puis-je changer de palier en cours de route ?", r: "Oui, en un clic depuis tes paramètres. Le changement est immédiat et le montant au prorata." },
-            { q: "Et si j'arrête ?", r: "Tu gardes l'accès jusqu'à la fin de la période en cours, puis tu retombes sur l'offre gratuite. Tes données restent exportables à tout moment." },
+            { q: "Qu'est-ce que le tarif fondateur ?", r: "Une offre de lancement réservée aux 100 premiers clients, jusqu'à la date indiquée. Ton tarif fondateur t'est garanti tant que tu restes abonné, même quand les prix normaux s'appliquent aux nouveaux clients." },
+            { q: "Puis-je changer de palier en cours de route ?", r: "Oui : choisis l'offre supérieure sur cette page. La nouvelle offre démarre dès le paiement validé." },
+            { q: "Et si j'arrête ?", r: "Il n'y a pas de renouvellement automatique : tu gardes l'accès jusqu'à la fin de la période payée, puis tu retombes sur l'offre gratuite. Tes données restent exportables à tout moment." },
           ].map((f, i) => (
             <details key={i} className="glass rounded-2xl px-6 py-4" data-testid={`pricing-faq-${i}`}>
               <summary className="cursor-pointer text-sm font-semibold">{f.q}</summary>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { LayoutDashboard, Users, Store, Gift, Ticket, Video, Mail, Newspaper } from "lucide-react";
 import { SideMenuPro } from "@/components/pro/SideMenuPro";
 import {
-  fetchAdminVueEnsemble, fetchAdminUtilisateurs, changerRoleUtilisateur,
+  fetchAdminVueEnsemble, fetchAdminUtilisateurs, changerRoleUtilisateur, changerPlanUtilisateur,
   fetchModerationAttente, publierProduitVendeur, refuserProduitVendeur,
   fetchAdminParrainage, fetchCodesPromo, creerCodePromo, basculerCodePromo, supprimerCodePromo,
   fetchHeygenAvatars, fetchHeygenVoices, heygenGenerer, heygenStatut,
@@ -234,6 +234,19 @@ function Utilisateurs() {
     try { await changerRoleUtilisateur(id, role); charger(); }
     catch { setErreur("Échec du changement de rôle."); }
   };
+  const changerPlan = async (u, plan) => {
+    if (plan === u.plan) return;
+    let fondateur = false;
+    let jours = 31;
+    if (plan !== "essentielle") {
+      const saisie = window.prompt(`Accès ${plan} pour ${u.email} : combien de jours ?`, "31");
+      if (saisie === null) return;
+      jours = parseInt(saisie, 10) || 31;
+      fondateur = window.confirm("Lui garantir le tarif fondateur à ses renouvellements ?");
+    }
+    try { await changerPlanUtilisateur(u.id, plan, jours, fondateur); charger(); }
+    catch { setErreur("Échec du changement d'offre."); }
+  };
 
   if (erreur) return <Carte><p className="text-red-400 text-sm">{erreur}</p></Carte>;
   if (chargement) return <Carte><p className="text-offwhite/50 text-sm">Chargement…</p></Carte>;
@@ -243,7 +256,7 @@ function Utilisateurs() {
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left text-offwhite/50 border-b border-white/10">
-            <th className="pb-2">Email</th><th className="pb-2">Rôle</th><th className="pb-2">Inscrit le</th><th className="pb-2">Action</th>
+            <th className="pb-2">Email</th><th className="pb-2">Rôle</th><th className="pb-2">Offre</th><th className="pb-2">Inscrit le</th><th className="pb-2">Action</th>
           </tr>
         </thead>
         <tbody>
@@ -251,6 +264,17 @@ function Utilisateurs() {
             <tr key={u.id} className="border-b border-white/5">
               <td className="py-2.5">{u.email}</td>
               <td className="py-2.5"><span className="px-2 py-0.5 rounded-full bg-white/10 text-xs">{u.role}</span></td>
+              <td className="py-2.5">
+                <select value={u.plan || "essentielle"} onChange={(e) => changerPlan(u, e.target.value)}
+                  data-testid={`admin-plan-select-${u.id}`}
+                  className="bg-navy-800 border border-white/15 rounded-lg text-xs px-2 py-1">
+                  <option value="essentielle">Découverte</option>
+                  <option value="serenite">Solo</option>
+                  <option value="pro">Pro</option>
+                  <option value="business">Équipe</option>
+                  <option value="entreprise">Entreprise</option>
+                </select>
+              </td>
               <td className="py-2.5 text-offwhite/50">{new Date(u.inscrit_le).toLocaleDateString("fr-FR")}</td>
               <td className="py-2.5">
                 <select

@@ -3,15 +3,11 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/compone
 import { fetchState, saveProfile, exportData, deleteData } from "@/lib/kairosApi";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { planNom } from "@/lib/plans";
 import {
   User, CreditCard, Bell, Palette, ShieldCheck, Check, Download, Trash2, Clock, Lock, Loader2, Mail,
 } from "lucide-react";
 
-const PLANS = [
-  { key: "essentielle", name: "Découverte", price: "0 €", period: "pour toujours" },
-  { key: "serenite", name: "Solo", price: "24 €", period: "HT / mois", highlight: true },
-  { key: "pro", name: "Pro", price: "69 €", period: "HT / mois" },
-];
 const MASQUES = ["Sécurité / mot de passe", "Intégrations (Qonto, Pennylane, Odoo)", "Facturation Stripe", "Mémoire IA", "Recommandations Zayado", "Équipe & membres"];
 const inputCls = "w-full rounded-xl border border-white/12 bg-white/8 px-3 py-2.5 text-sm text-offwhite placeholder:text-offwhite/40 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/30";
 
@@ -38,7 +34,7 @@ export function SettingsModal({ open, onClose }) {
 
   const save = async () => {
     setSaving(true);
-    try { await saveProfile({ prenom, email, heure_checkin: heure, plan, notifications: notif, contexte_metier: { marche } }); toast.success("Paramètres enregistrés"); onClose(); }
+    try { await saveProfile({ prenom, email, heure_checkin: heure, notifications: notif, contexte_metier: { marche } }); toast.success("Paramètres enregistrés"); onClose(); }
     catch { toast.error("Enregistrement impossible."); }
     setSaving(false);
   };
@@ -88,16 +84,15 @@ export function SettingsModal({ open, onClose }) {
           </section>
 
           <section data-testid="settings-offre">
-            <Title icon={CreditCard} t="Ton offre" h="Tu choisis, tu changes quand tu veux." />
-            <div className="grid gap-2.5 sm:grid-cols-3">
-              {PLANS.map((p) => (
-                <button key={p.key} onClick={() => setPlan(p.key)} data-testid={`settings-plan-${p.key}`}
-                  className={`rounded-2xl border p-3 text-left transition-all ${plan === p.key ? "border-gold/60 bg-gold/10 ring-1 ring-gold/30" : "border-white/10 bg-white/5 hover:border-white/20"}`}>
-                  <div className="flex items-center justify-between"><span className="font-display text-base font-bold">{p.name}</span>{plan === p.key && <Check className="h-4 w-4 text-gold" />}</div>
-                  <div className="mt-1 flex items-baseline gap-1">{p.old && <span className="text-xs text-offwhite/40 line-through">{p.old}</span>}<span className="font-display text-xl font-extrabold">{p.price}</span><span className="text-[10px] text-offwhite/50">{p.period}</span></div>
-                  {p.highlight && <span className="mt-1 inline-block rounded-full bg-gold px-2 py-0.5 text-[9px] font-bold text-navy-900">Recommandé</span>}
-                </button>
-              ))}
+            <Title icon={CreditCard} t="Ton offre" h="L'offre change après le paiement, depuis la page Tarifs." />
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gold/40 bg-gold/10 p-4" data-testid={`settings-plan-${plan}`}>
+              <div>
+                <p className="text-[11px] uppercase tracking-widest text-offwhite/50">Offre actuelle</p>
+                <p className="font-display text-lg font-bold">{planNom(plan)}</p>
+              </div>
+              <button onClick={() => { onClose(); navigate("/pricing"); }} className="rounded-xl border border-gold/40 px-4 py-2 text-xs font-semibold text-gold" data-testid="settings-changer-offre">
+                {plan === "essentielle" ? "Voir les offres" : "Changer d'offre"}
+              </button>
             </div>
           </section>
 

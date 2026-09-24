@@ -5,17 +5,27 @@ import { Chip } from "@/components/kairos/Chip";
 import { useKairos } from "@/context/KairosContext";
 import { valuesLibrary } from "@/mock/data";
 import { saveProfile } from "@/lib/kairosApi";
-import { PLANS as PLANS_GRILLE, PLAN_ENTREPRISE } from "@/lib/plans";
+import { toast } from "sonner";
+import { PLANS_LANCEMENT, PLAN_ENTREPRISE, prixFondateurMois } from "@/lib/plans";
+import { fetchTarifsFondateur } from "@/lib/kairosApi";
 import { Sparkles, ArrowRight, ArrowLeft, Plus, X, Target, Clock, Heart, Check, Loader2, Rocket, User, Briefcase, TrendingUp } from "lucide-react";
 import { savePouls } from "@/lib/kairosApi";
 
 const STEPS = ["Bienvenue", "Identité", "Activité", "Cap financier", "Vision", "Objectifs 90j", "Valeurs & rituel", "Ton offre", "C'est prêt"];
 
-// Offres : source unique (lib/plans.js), prix HT.
-const PLANS = [...PLANS_GRILLE.map((p) => ({
-  key: p.key, name: p.nom, price: `${p.mensuel} €`, period: p.mensuel ? "HT / mois" : "pour toujours",
-  features: p.points.slice(0, 4), highlight: !!p.star,
-})), { key: PLAN_ENTREPRISE.key, name: PLAN_ENTREPRISE.nom, price: `dès ${PLAN_ENTREPRISE.plancher} €`, period: "HT / mois, sur devis", features: PLAN_ENTREPRISE.points.slice(0, 3), highlight: false }];
+// Offres : source unique (lib/plans.js), prix HT. 3 offres au lancement,
+// Équipe et Entreprise sur contact. Tarif fondateur affiché si l'offre est ouverte.
+const construirePlans = (fondateurOuvert) => [
+  ...PLANS_LANCEMENT.map((p) => {
+    const fonda = fondateurOuvert ? prixFondateurMois(p, "mensuel") : null;
+    return {
+      key: p.key, name: p.nom, price: `${fonda ?? p.mensuel} €`, old: fonda != null ? `${p.mensuel} €` : null,
+      period: p.mensuel ? (fonda != null ? "HT / mois · tarif fondateur" : "HT / mois") : "pour toujours",
+      features: p.points.slice(0, 4), highlight: !!p.star,
+    };
+  }),
+  { key: PLAN_ENTREPRISE.key, name: "Équipe / Entreprise", price: "Sur contact", period: "", features: ["Plusieurs comptes", "Plusieurs agents clients", "Accompagnement dédié"], highlight: false },
+];
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -32,7 +42,11 @@ export default function Onboarding() {
   // jamais lu — quelqu'un choisissant "Pro" à 49€ atterrissait ici
   // silencieusement remis sur le plan gratuit par défaut.
   const planParam = searchParams.get("plan");
-  const [plan, setPlan] = useState(PLANS.some((p) => p.key === planParam) ? planParam : "essentielle");
+  const cycleParam = searchParams.get("cycle") === "annuel" ? "annuel" : "mensuel";
+  const [fondateurOuvert, setFondateurOuvert] = useState(false);
+  useEffect(() => { fetchTarifsFondateur().then((d) => setFondateurOuvert(!!d.ouverte)).catch(() => {}); }, []);
+  const PLANS = construirePlans(fondateurOuvert);
+  const [plan, setPlan] = useState(["essentielle", "serenite", "pro", "business", "entreprise"].includes(planParam) ? (planParam === "business" ? "entreprise" : planParam) : "essentielle");
   const [saving, setSaving] = useState(false);
   const [savePhase, setSavePhase] = useState(0);
   const [saveError, setSaveError] = useState("");
@@ -88,6 +102,20 @@ export default function Onboarding() {
     // L’écran d’analyse doit être perceptible même lorsque l’API répond très vite.
     await new Promise((resolve) => setTimeout(resolve, Math.max(0, 1800 - (Date.now() - startedAt))));
     setOnboardingData({ vision, why, goals: goals.filter(Boolean), values, checkinHour, plan });
+    // Offre payante : on passe par le paiement (l'offre n'est activée qu'après paiement validé).
+    if (plan === "serenite" || plan === "pro") {
+      try {
+        const r = await fetch(`${process.env.REACT_APP_BACKEND_URL || ""}/api/checkout`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ plan, cycle: cycleParam }),
+        });
+        const j = await r.json();
+        if (r.ok && j.checkoutUrl) { window.location.href = j.checkoutUrl; return; }
+      } catch (_) { /* on continue vers le cockpit */ }
+      toast.error("Le paiement n'a pas pu démarrer : tu peux le reprendre depuis la page Tarifs.");
+    } else if (plan === "entreprise") {
+      toast.info("Merci ! L'équipe Zayado te contacte pour préparer ton offre Équipe ou Entreprise.");
+    }
     navigate("/app");
   };
 

@@ -227,14 +227,17 @@ export default function Radar() {
     return () => { cancelAnimationFrame(raf); lenis.destroy(); };
   }, []);
 
-  const load = () => {
+  const load = (refresh = false) => {
     setLoading(true);
-    fetchRadar()
-      .then(setData)
+    fetchRadar(refresh)
+      .then((d) => {
+        setData(d);
+        if (refresh && d.limite_relances) toast.info("Tu as déjà relancé le scan 5 fois aujourd'hui : voici les dernières opportunités.");
+      })
       .catch(() => toast.error("Radar indisponible"))
       .finally(() => setLoading(false));
   };
-  useEffect(load, []);
+  useEffect(() => load(), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const opportunities = useMemo(() => data?.opportunities || [], [data]);
   const counts = useMemo(() => {
@@ -295,8 +298,8 @@ export default function Radar() {
               </h1>
               <MaskedLine delay={0.55} className="mt-6 max-w-md">
                 <p className="text-sm leading-relaxed text-offwhite/65 sm:text-base">
-                  Chaque matin, Zayado balaie les signaux autorisés et les croise avec ta Vision.
-                  Trois opportunités qualifiées, un message pré-rédigé. Tu valides, c'est envoyé.
+                  Chaque jour, Zayado croise ta Vision et ton activité pour te proposer trois opportunités
+                  qualifiées, avec un message prêt à envoyer. Tu relis, tu copies, tu envoies.
                 </p>
               </MaskedLine>
               <motion.div
@@ -304,7 +307,7 @@ export default function Radar() {
                 transition={{ delay: 0.75, duration: 0.7, ease: EASE }}
                 className="mt-8 flex flex-wrap items-center gap-3"
               >
-                <button onClick={load} data-testid="radar-refresh-btn" className="btn-gold">
+                <button onClick={() => load(true)} disabled={loading} data-testid="radar-refresh-btn" className="btn-gold">
                   {loading ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
                   Relancer le scan
                 </button>
@@ -468,8 +471,8 @@ export default function Radar() {
               {[
                 {
                   icon: RefreshCw, title: "Relancer le scan", testid: "radar-action-rescan",
-                  text: "Un nouveau balayage des signaux, aligné sur ta Vision du moment.",
-                  action: load,
+                  text: "De nouvelles opportunités, alignées sur ta Vision du moment.",
+                  action: () => load(true),
                 },
                 {
                   icon: Compass, title: "Affiner ma Vision", testid: "radar-action-vision",
