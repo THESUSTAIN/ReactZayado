@@ -46,6 +46,9 @@ class FauxHttp:
         self.appels = []
         self.mollie = {}      # paiements simulés : id → corps envoyé
         self.payes = set()    # ids que Mollie déclare « paid »
+        self.abonnements = {}  # sub_id → corps envoyé (abonnements Mollie simulés)
+        self.recurrents = {}   # paiement récurrent simulé : tr_id → {subscriptionId, status, amount}
+        self.supprimes = []    # abonnements annulés
 
     @staticmethod
     def rep(code, data):
@@ -77,6 +80,12 @@ class FauxHttp:
                                                    "linkedin_url": "https://linkedin.com/in/test", "email": "claire@office.fr",
                                                    "organization": {"name": "Office", "primary_domain": "office.fr"}}
                                                   for d in corps["details"]]})
+        if "api.mollie.com" in url and url.rstrip("/").endswith("/customers"):
+            return self.rep(201, {"id": f"cst_{uuid.uuid4().hex[:8]}"})
+        if "api.mollie.com" in url and "/subscriptions" in url:
+            sid = f"sub_{uuid.uuid4().hex[:8]}"
+            self.abonnements[sid] = corps
+            return self.rep(201, {"id": sid, "status": "active"})
         if "api.mollie.com" in url:
             pid = f"tr_{uuid.uuid4().hex[:10]}"
             self.mollie[pid] = corps
@@ -97,6 +106,8 @@ class FauxHttp:
                                    "centre": {"coordinates": [4.88, 45.77]}, "departement": {"nom": "Rhône"}}])
         if "api.mollie.com" in url:
             pid = url.rsplit("/", 1)[-1]
+            if pid in self.recurrents:
+                return self.rep(200, {"id": pid, **self.recurrents[pid]})
             return self.rep(200, {"id": pid, "status": "paid" if pid in self.payes else "open"})
         if "cerema" in url:
             return self.rep(200, {"count": 3, "next": None, "results": [
@@ -128,7 +139,15 @@ async def _faux_get(self, url, *a, **kw):
     raise httpx.ConnectError(f"Réseau coupé pendant les tests : {url}")
 
 
-httpx.AsyncClient.post, httpx.AsyncClient.get = _faux_post, _faux_get
+async def _faux_delete(self, url, *a, **kw):
+    FAUX.appels.append(("DELETE", str(url), None))
+    if "api.mollie.com" in str(url):
+        FAUX.supprimes.append(str(url).rsplit("/", 1)[-1])
+        return FauxHttp.rep(204, {})
+    raise httpx.ConnectError(f"Réseau coupé pendant les tests : {url}")
+
+
+httpx.AsyncClient.post, httpx.AsyncClient.get, httpx.AsyncClient.delete = _faux_post, _faux_get, _faux_delete
 
 import server  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402

@@ -24,7 +24,9 @@ RUN rm -f tsconfig.json tsconfig.*.json vite.config.ts vite.config.js index.html
       src/App.tsx src/main.tsx src/vite-env.d.ts \
  && find src -name "*.tsx" -delete \
  && find src -name "*.ts" ! -name "*.d.ts" -delete
-RUN yarn build
+# Cache de compilation vidé à chaque build : sinon d'anciennes classes CSS
+# peuvent revenir (ex. champs blancs sur la page de connexion).
+RUN rm -rf node_modules/.cache && yarn build
 
 FROM nginx:alpine
 COPY --from=build /app/build /usr/share/nginx/html

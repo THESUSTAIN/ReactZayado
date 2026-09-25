@@ -830,12 +830,28 @@ def exiger_role(*roles_autorises: str):
     return _dependance
 
 
+def _abo_resume(a) -> Optional[dict]:
+    """Résumé lisible d'un abonnement pour l'admin (jamais d'identifiant de paiement)."""
+    if a is None:
+        return None
+    fin = a.fin if (a.fin is None or a.fin.tzinfo) else a.fin.replace(tzinfo=timezone.utc)
+    actif = bool(a.plan != "essentielle" and fin and fin > datetime.now(timezone.utc))
+    etat = ("essai" if a.cycle == "essai" else "actif") if actif else ("expire" if fin else "aucun")
+    if actif and getattr(a, "resilie", False):
+        etat = "resilie"
+    return {"etat": etat, "plan": a.plan, "cycle": a.cycle, "fin": fin.isoformat() if fin else None,
+            "fondateur": bool(a.fondateur), "prelevement_auto": bool(getattr(a, "mollie_subscription_id", None) and not getattr(a, "resilie", False)),
+            "montant_ttc": getattr(a, "montant_ttc", None), "plan_suivant": getattr(a, "plan_suivant", None)}
+
+
 @api.get("/admin/utilisateurs")
 async def lister_utilisateurs(db: AsyncSession = Depends(get_db), _role=Depends(exiger_role("admin"))):
     rows = list((await db.execute(select(User).order_by(User.created_at.desc()))).scalars())
     plans = {p.user_id: p.plan for p in (await db.execute(select(VisionProfile))).scalars()}
+    Abo = globals().get("Abonnement")
+    abos = {a.user_id: a for a in (await db.execute(select(Abo))).scalars()} if Abo is not None else {}
     return {"items": [{"id": u.id, "email": u.email, "role": u.role, "plan": plans.get(u.id, "essentielle"),
-                       "inscrit_le": u.created_at.isoformat()} for u in rows]}
+                       "inscrit_le": u.created_at.isoformat(), "abonnement": _abo_resume(abos.get(u.id))} for u in rows]}
 
 
 class AdminPlanIn(BaseModel):
@@ -874,7 +890,29 @@ async def admin_vue_ensemble(db: AsyncSession = Depends(get_db), _role=Depends(e
     for r in ("client", "vendeur", "admin"):
         c = (await db.execute(select(func.count()).select_from(User).where(User.role == r))).scalar_one()
         par_role[r] = c
-    return {"utilisateurs_total": total, "par_role": par_role}
+    # Indicateurs d'abonnement : actifs par offre, essais, résiliations, revenu mensuel récurrent.
+    Abo = globals().get("Abonnement")
+    abos = [_abo_resume(a) for a in (await db.execute(select(Abo))).scalars()] if Abo is not None else []
+    par_offre = {}
+    essais = resilies = fondateurs = 0
+    mrr_ttc = 0.0
+    for a in abos:
+        if a["etat"] in ("actif", "essai", "resilie"):
+            par_offre[a["plan"]] = par_offre.get(a["plan"], 0) + 1
+        essais += a["etat"] == "essai"
+        resilies += a["etat"] == "resilie"
+        fondateurs += a["fondateur"]
+        if a["prelevement_auto"] and a["montant_ttc"]:
+            m = float(a["montant_ttc"])
+            mrr_ttc += m / 12 if a["cycle"] == "annuel" else m
+    # Pas de TVA collectée (entreprise non assujettie) : mrr_ttc = le vrai revenu encaissé,
+    # c'est la seule ligne qui compte. Plus de mrr_ht fictif (division par 1,2 non pertinente).
+    inscrits_7j = (await db.execute(select(func.count()).select_from(User).where(
+        User.created_at >= datetime.now(timezone.utc) - timedelta(days=7)))).scalar_one()
+    return {"utilisateurs_total": total, "par_role": par_role, "inscrits_7j": inscrits_7j,
+            "abonnements": {"par_offre": par_offre, "essais_en_cours": essais, "resilies_en_cours": resilies,
+                            "fondateurs": fondateurs, "mrr_ttc": round(mrr_ttc, 2),
+                            "payants": sum(v for k, v in par_offre.items()) - essais}}
 
 
 # Catalogue des notifications de l'app (inspiré de Zayado v13, restreint aux
@@ -1728,6 +1766,15 @@ class TacheStatutIn(BaseModel):
 async def lister_taches(db: AsyncSession = Depends(get_db)):
     """Liste toutes les tâches de l'utilisateur (page Actions / kanban)."""
     uid = _uid()
+    # Fusion : l'ancienne « Feuille de route » (jalons Q1-Q4) faisait doublon avec le
+    # Plan d'action. Ses jalons deviennent des actions, une seule fois, puis disparaissent.
+    anciens = list((await db.execute(select(RoadmapItem).where(RoadmapItem.user_id == uid))).scalars())
+    if anciens:
+        for it in anciens:
+            db.add(VisionTache(user_id=uid, titre=f"[{it.quarter.upper()}] {it.titre}"[:300], duree_min=25,
+                               statut="fait" if it.done else "a_faire", icon="Flag"))
+            await db.delete(it)
+        await db.commit()
     rows = (await db.execute(
         select(VisionTache).where(VisionTache.user_id == uid).order_by(VisionTache.created_at.desc())
     )).scalars()
@@ -3407,6 +3454,10 @@ async def whatsapp_web_message(request: Request, db: AsyncSession = Depends(get_
     # uniquement) : l'identité vient de agent_id, transmis par le
     # microservice — c'est l'uid qu'on lui avait donné dans /session/start.
     uid = body.get("agent_id") or DEMO_USER_ID
+    # Validation d'un brouillon d'email IA par « ok envoi » (admin uniquement)
+    _ok_envoi = await globals()["traiter_ok_envoi"](db, uid, message) if "traiter_ok_envoi" in globals() else None
+    if _ok_envoi:
+        return {"reply": _ok_envoi}
     contexte = await _contexte(db, uid)
     systeme = (f"{SYSTEM_PROMPT}\n\n--- Contexte de l'utilisatrice ---\n{contexte}"
                "\n\nTu réponds ici sur WhatsApp : reste concise (quelques phrases), pas de markdown.")
@@ -4027,10 +4078,14 @@ PRICING = {
     # Les clés restent les mêmes (abonnements existants, Mollie) ; seuls les
     # libellés et montants changent. Annuel ≈ 2 mois offerts.
     # Abonnés existants : ils gardent leur ancien prix tant que leur abonnement court.
-    "essentielle": {"label": "Découverte", "mensuel": 0.0, "annuel": 0.0, "desc": "Cockpit du jour, 1 Vision Board, check-in, 20 questions IA / mois"},
-    "serenite": {"label": "Solo", "mensuel": 24.0, "annuel": 228.0, "desc": "Cockpit complet : Copilote IA, Radar, Pouls Business, Vision Boards illimités"},
+    "essentielle": {"label": "Aucune offre", "mensuel": 0.0, "annuel": 0.0, "desc": "Compte sans offre active"},
+    # Rêveur : l'entrée de gamme « rêver et clarifier » (Vision Board, Idées, chat IA).
+    # Rêveur : prix fixé TTC (clientèle souvent non assujettie à la TVA) : 15 € TTC / mois, 150 € TTC / an.
+    "reveur": {"label": "Rêveur", "mensuel": 12.5, "annuel": 125.0, "ttc": {"mensuel": 15.0, "annuel": 150.0},
+               "desc": "Vision Board, Idées et chat IA"},
+    "serenite": {"label": "Solo", "mensuel": 29.0, "annuel": 288.0, "desc": "Cockpit complet : Copilote IA, Radar, Pouls Business, Vision Boards illimités"},
     "pro": {"label": "Pro", "mensuel": 69.0, "annuel": 708.0, "desc": "Solo + chatbot client à ta marque, documents IA, alertes WhatsApp/Telegram"},
-    "business": {"label": "Équipe", "mensuel": 149.0, "annuel": 1548.0, "desc": "Pro + 3 comptes, 3 chatbots, chatbot sur tes documents"},
+    "business": {"label": "Équipe", "mensuel": 149.0, "annuel": 1548.0, "desc": "Pro pour toi + 2 comptes Solo pour ton équipe, 3 chatbots, chatbot sur tes documents"},
     # Entreprise : devis avec plancher, clé IA personnelle possible.
     "entreprise": {"label": "Entreprise", "mensuel": None, "annuel": None, "plancher": 299.0, "desc": "Équipe + comptes et chatbots illimités, sur devis, clé IA personnelle possible"},
 }
@@ -4082,6 +4137,14 @@ install_radar_signaux(globals())
 # Bien-être & Mindset : carte du jour, parcours 7 jours, carnet, recadrage
 from mindset_ext import install_mindset  # noqa: E402
 install_mindset(globals())
+
+# ── Bien-être : rituels persistants, série de jours, courbe d'énergie actionnable ──
+from rituels_ext import install_rituels  # noqa: E402
+install_rituels(globals())
+
+# ── Emails IA (admin) : brouillon IA → validation lien / WhatsApp → envoi Brevo ──
+from emails_ia_ext import install_emails_ia  # noqa: E402
+install_emails_ia(globals())
 
 # ─────────────── Processus (page /app/processus) ───────────────
 # Avant : stockés dans le navigateur uniquement, avec 4 processus de démonstration
@@ -4464,6 +4527,40 @@ async def admin_diagnostics():
         "whatsapp": bool(os.environ.get("WA_SERVICE_SECRET")),
         "telegram": bool(os.environ.get("TELEGRAM_BOT_TOKEN")),
     }
+    # Tout ce que l'app utilise, avec l'effet concret si c'est absent (affiché dans l'admin).
+    def _env(*noms):
+        return all((os.environ.get(n) or "").strip() for n in noms)
+    branchements = [
+        {"cle": "ia", "nom": "IA texte (Mammouth)", "ok": ia_texte_ok, "variables": ["MAMMOTH_API_KEY"], "critique": True,
+         "effet": "Copilote, Radar et Agent Business répondent avec un texte générique."},
+        {"cle": "mollie", "nom": "Paiements (Mollie)", "ok": _env("MOLLIE_API_KEY"), "variables": ["MOLLIE_API_KEY"], "critique": True,
+         "effet": "Personne ne peut payer ni s'abonner."},
+        {"cle": "jwt", "nom": "Sessions (JWT_SECRET)", "ok": jwt_perso, "variables": ["JWT_SECRET"], "critique": True,
+         "effet": "Le serveur refuse de démarrer en production."},
+        {"cle": "email", "nom": "E-mails (Brevo)", "ok": bool(os.environ.get("BREVO_API_KEY") or EMAIL_KEY),
+         "variables": ["BREVO_API_KEY", "BREVO_SENDER_EMAIL"], "critique": True,
+         "effet": "Pas de lien magique, ni de rappel de fin d'essai, ni d'e-mail du lundi."},
+        {"cle": "apollo", "nom": "Prospects (Apollo)", "ok": _env("APOLLO_API_KEY"), "variables": ["APOLLO_API_KEY"], "critique": False,
+         "effet": "Le Radar ne propose pas de vraies personnes à contacter."},
+        {"cle": "dataforseo", "nom": "Volumes Google (DataForSEO)", "ok": _env("DATAFORSEO_LOGIN", "DATAFORSEO_PASSWORD"),
+         "variables": ["DATAFORSEO_LOGIN", "DATAFORSEO_PASSWORD"], "critique": False,
+         "effet": "Recherches Google en estimations IA au lieu des volumes réels."},
+        {"cle": "shopify", "nom": "Boutique (Shopify)", "ok": _env("SHOPIFY_SHOP_DOMAIN", "SHOPIFY_ADMIN_TOKEN"),
+         "variables": ["SHOPIFY_SHOP_DOMAIN", "SHOPIFY_ADMIN_TOKEN"], "critique": False,
+         "effet": "Les produits des vendeurs ne sont pas publiés sur zayado.net."},
+        {"cle": "fernet", "nom": "Chiffrement des clés (FERNET_KEY)", "ok": fernet_ok, "variables": ["FERNET_KEY"], "critique": False,
+         "effet": "Les clés d'intégration des clients sont stockées en clair."},
+        {"cle": "google", "nom": "Connexion Google", "ok": _env("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"),
+         "variables": ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"], "critique": False, "effet": "Bouton Google indisponible (e-mail OK)."},
+        {"cle": "microsoft", "nom": "Connexion Microsoft", "ok": _env("MICROSOFT_CLIENT_ID", "MICROSOFT_CLIENT_SECRET"),
+         "variables": ["MICROSOFT_CLIENT_ID", "MICROSOFT_CLIENT_SECRET"], "critique": False, "effet": "Bouton Microsoft indisponible (e-mail OK)."},
+        {"cle": "whatsapp", "nom": "Alertes WhatsApp", "ok": cles["whatsapp"], "variables": ["WA_SERVICE_SECRET"], "critique": False,
+         "effet": "Pas d'alertes WhatsApp (offre Pro)."},
+        {"cle": "telegram", "nom": "Alertes Telegram", "ok": cles["telegram"], "variables": ["TELEGRAM_BOT_TOKEN"], "critique": False,
+         "effet": "Pas d'alertes Telegram (offre Pro)."},
+        {"cle": "heygen", "nom": "Vidéos IA (HeyGen)", "ok": cles["video_heygen"], "variables": ["HEYGEN_API_KEY"], "critique": False,
+         "effet": "Onglet Vidéos IA inutilisable."},
+    ]
     manquantes = sorted(k for k, v in cles.items() if not v)
     return {
         "cles": cles,
@@ -4480,6 +4577,7 @@ async def admin_diagnostics():
             ),
         },
         "require_auth": os.environ.get("REQUIRE_AUTH") == "1",
+        "branchements": branchements,
     }
 
 

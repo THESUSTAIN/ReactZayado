@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import GrilleTarifs from "@/components/pricing/GrilleTarifs";
 
 // Page légère à intégrer en iframe sur Shopify / Instant :
-//   https://app.zayado.net/embed/tarifs                 → Solo (essai 2 mois pour 1 €), Pro + contact
+//   https://app.zayado.net/embed/tarifs                 → Solo (essai 1 mois pour 1 €), Pro + contact
 //   https://app.zayado.net/embed/tarifs?offres=pro      → Pro seul (page Agent Business)
 //   &cycle=annuel  → affiche d'abord les prix annuels   ·  &contact=0 → sans bandeau Équipe
 // Elle envoie sa hauteur à la page parente pour que l'iframe s'ajuste toute seule.

@@ -2,10 +2,11 @@ import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   Search, TrendingUp, TrendingDown, Minus, Copy, ExternalLink, MapPin, Users, Home, Printer, Megaphone,
-  ShieldCheck, Loader2, Facebook, Info,
+  ShieldCheck, Loader2, Facebook, Info, CheckCircle2, CircleDashed, CircleSlash, Linkedin, Mail, ArrowRight,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { GlassCard } from "@/components/kairos/GlassCard";
-import { fetchSignaux, saveReglagesRadar } from "@/lib/kairosApi";
+import { fetchSignaux, saveReglagesRadar, fetchSourcesRadar, fetchProspects, majProspect } from "@/lib/kairosApi";
 
 // Signaux du terrain : ce que les gens tapent sur Google près de chez toi,
 // une pub Facebook/Instagram prête à lancer, les ventes réelles (immobilier)
@@ -217,9 +218,93 @@ function Ventes({ d }) {
   );
 }
 
+// « Sources du Radar » : ce qui est branché, ce qui ne l'est pas, et pourquoi.
+function Sources({ d }) {
+  const navigate = useNavigate();
+  const icone = (s) => s.actif ? <CheckCircle2 size={16} className="text-emerald-300" />
+    : s.etat === "inutile" ? <CircleSlash size={16} className="text-offwhite/35" />
+    : <CircleDashed size={16} className="text-gold" />;
+  return (
+    <GlassCard className="mb-5" data-testid="radar-sources">
+      <p className="mb-3 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-offwhite/60"><Info size={13} /> Ce qui alimente ton Radar</p>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {d.sources.map((s) => (
+          <div key={s.cle} data-testid={`radar-source-${s.cle}`} data-etat={s.etat}
+            className={`flex gap-2.5 rounded-xl border p-3 ${s.actif ? "border-emerald-300/25 bg-emerald-300/[0.06]" : s.etat === "inutile" ? "border-white/[0.08] bg-white/[0.03] opacity-70" : "border-gold/25 bg-gold/[0.06]"}`}>
+            <span className="mt-0.5 shrink-0">{icone(s)}</span>
+            <div className="min-w-0">
+              <p className="text-[13.5px] font-semibold text-offwhite">{s.nom}</p>
+              <p className="text-[12px] text-offwhite/60">{s.role}</p>
+              <p className={`mt-1 text-[11.5px] font-medium ${s.actif ? "text-emerald-300" : "text-offwhite/55"}`}>{s.detail}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      {d.a_faire?.length > 0 && (
+        <div className="mt-4 space-y-2">
+          {d.a_faire.map((a) => (
+            <div key={a.cle} className="flex flex-wrap items-center gap-3 rounded-xl border border-gold/30 bg-gold/10 px-4 py-2.5 text-[13px] text-offwhite/85" data-testid={`radar-afaire-${a.cle}`}>
+              <span className="min-w-0 flex-1">{a.texte}</span>
+              {a.lien && <button onClick={() => navigate(a.lien)} className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-gold hover:underline">Y aller <ArrowRight size={13} /></button>}
+            </div>
+          ))}
+        </div>
+      )}
+      {d.admin?.variables_manquantes?.length > 0 && (
+        <p className="mt-4 rounded-xl border border-rose-300/30 bg-rose-300/10 px-4 py-2.5 text-[12.5px] text-offwhite/85" data-testid="radar-admin-variables">
+          <b>Admin</b> · variables à ajouter sur Railway (service backend) : {d.admin.variables_manquantes.map((v) => <code key={v} className="mx-1 rounded bg-white/10 px-1.5 py-0.5 text-[11.5px]">{v}</code>)}
+        </p>
+      )}
+    </GlassCard>
+  );
+}
+
+// « Mes contacts » : les personnes trouvées par Apollo, avec leur suivi.
+const STATUTS = [["nouveau", "À contacter"], ["contacte", "Contacté"], ["en_discussion", "En discussion"], ["signe", "Signé"], ["ecarte", "Écarté"]];
+function Contacts() {
+  const [items, setItems] = useState(null);
+  useEffect(() => { fetchProspects().then((d) => setItems(d.items || [])).catch(() => setItems([])); }, []);
+  if (!items || items.length === 0) return null;
+  const changer = async (id, statut) => {
+    try { const p = await majProspect(id, statut); setItems((x) => x.map((e) => (e.id === id ? p : e))); } catch { toast.error("Mise à jour impossible"); }
+  };
+  return (
+    <GlassCard className="mb-5" data-testid="radar-contacts">
+      <div className="mb-3 flex items-center gap-2">
+        <Users size={16} className="text-gold" />
+        <p className="font-display text-lg font-semibold">Mes contacts trouvés</p>
+        <span className="ml-auto text-[11.5px] text-offwhite/55">{items.length} au total · source Apollo</span>
+      </div>
+      <div className="divide-y divide-white/[0.08]">
+        {items.slice(0, 30).map((p) => (
+          <div key={p.id} className="flex flex-wrap items-center gap-3 py-3" data-testid="radar-contact">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[14px] font-semibold text-offwhite">{[p.prenom, p.nom].filter(Boolean).join(" ") || "Contact"}{p.role === "partenaire" && <span className="ml-2 rounded-full bg-white/10 px-2 py-0.5 text-[10.5px] font-medium text-offwhite/70">prescripteur</span>}</p>
+              <p className="truncate text-[12px] text-offwhite/60">{[p.titre, p.entreprise, p.ville].filter(Boolean).join(" · ")}</p>
+            </div>
+            <div className="flex items-center gap-1.5">
+              {p.message && <button onClick={() => copier(p.message, "Message copié")} aria-label="Copier le message" className="rounded-lg p-2 text-offwhite/60 hover:bg-white/10 hover:text-gold"><Copy size={14} /></button>}
+              {p.email && <a href={`mailto:${p.email}`} aria-label="E-mail" className="rounded-lg p-2 text-offwhite/60 hover:bg-white/10 hover:text-gold"><Mail size={14} /></a>}
+              {p.linkedin && <a href={p.linkedin} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="rounded-lg p-2 text-offwhite/60 hover:bg-white/10 hover:text-gold"><Linkedin size={14} /></a>}
+              <select value={p.statut} onChange={(e) => changer(p.id, e.target.value)} data-testid="radar-contact-statut"
+                className="h-8 rounded-lg border border-white/[0.14] bg-[#1a2a55] px-2 text-[12px] text-offwhite outline-none">
+                {STATUTS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+              </select>
+            </div>
+          </div>
+        ))}
+      </div>
+    </GlassCard>
+  );
+}
+
 export default function RadarSignaux({ onChange }) {
   const [sig, setSig] = useState(null);
-  const charger = () => fetchSignaux().then(setSig).catch(() => setSig({ erreur: true }));
+  const [src, setSrc] = useState(null);
+  const charger = () => {
+    fetchSignaux().then(setSig).catch(() => setSig({ erreur: true }));
+    fetchSourcesRadar().then(setSrc).catch(() => setSrc(null));
+  };
   useEffect(() => { charger(); }, []);
   if (!sig) return <div className="flex items-center gap-2 text-sm text-offwhite/55"><Loader2 size={15} className="animate-spin text-gold" /> Lecture des signaux…</div>;
   if (sig.erreur) return null;
@@ -227,14 +312,16 @@ export default function RadarSignaux({ onChange }) {
   return (
     <div data-testid="radar-signaux">
       <Reglages sig={sig} onSaved={apres} />
-      {sig.manque?.includes("zone") && sig.clientele !== "b2b" && (
+      {src?.sources && <Sources d={src} />}
+      <Contacts />
+      {!src && sig.manque?.includes("zone") && sig.clientele !== "b2b" && (
         <p className="mb-5 rounded-xl border border-gold/30 bg-gold/10 px-4 py-3 text-[13px] text-offwhite/85">Indique ta ville ci-dessus : les recherches Google, la pub et les ventes seront calculées autour de chez toi.</p>
       )}
       {sig.recherches && <Recherches r={sig.recherches} />}
       {sig.contenus && <Publier c={sig.contenus} />}
       {sig.dvf && <Ventes d={sig.dvf} />}
       {sig.clientele === "b2b" && (
-        <p className="text-[13px] text-offwhite/60">Clientèle de professionnels : le Radar te propose chaque jour de vraies personnes à contacter (ci-dessus), avec un message prêt.</p>
+        <p className="text-[13px] text-offwhite/60">Clientèle de professionnels : le Radar te propose chaque jour de vraies personnes à contacter (dans les opportunités ci-dessus et dans « Mes contacts trouvés »), avec un message prêt.</p>
       )}
     </div>
   );

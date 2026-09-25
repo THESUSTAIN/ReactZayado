@@ -1,0 +1,30 @@
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Faut-il savoir coder ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Non. Tu remplis tes informations dans Zayado, et l'équipe Zayado installe l'agent sur ton site."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Que se passe-t-il si le chatbot ne connaît pas la réponse ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Il le dit, n'invente ni prix ni disponibilité, et propose de mettre le client en relation avec toi."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Puis-je avoir plusieurs chatbots ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Oui avec l'offre Équipe (3 chatbots) ou Entreprise (sur devis)."
+      }
+    }
+  ]
+}

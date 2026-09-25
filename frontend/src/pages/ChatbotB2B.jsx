@@ -320,7 +320,7 @@ export default function ChatbotB2B() {
                       </a>
                     </div>
                   </div>
-                  <p className="mt-4 text-center text-[11.5px] text-white/40">Prix HT, sans engagement ni renouvellement automatique. Paiement sécurisé par Mollie.</p>
+                  <p className="mt-4 text-center text-[11.5px] text-white/40">Prix HT, sans engagement, résiliable en 1 clic. Paiement sécurisé par Mollie.</p>
                 </div>
               )}
             </>

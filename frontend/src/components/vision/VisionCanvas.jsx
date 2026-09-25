@@ -7,7 +7,7 @@ import {
   LayoutTemplate, Quote, FileDown, ArrowRight, Wand2, RefreshCw, Maximize2, Heart,
   Undo2, Redo2, Spline, PenTool, Trash2, LayoutGrid, Columns3, Table2, Video, Heading1,
   Activity, ChevronLeft, ChevronRight, Presentation, Download, RotateCcw, StickyNote,
-  Pencil, Pin, PinOff, Share2, Map as MapIcon, Copy, Filter, BookOpen, Search, Files, Upload,
+  Pencil, Pin, PinOff, Share2, Map as MapIcon, Copy, Filter, BookOpen, Search, Files, Upload, MoreHorizontal, Sparkles,
 } from "lucide-react";
 import {
   fetchBoard, saveBoard, fetchStarterTemplates, generateAiDoc, generateBoard, fetchInspire, searchUnsplash,
@@ -205,10 +205,18 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
   const navigate = useNavigate();
   const live = useVisionLive(readOnly ? (liveData || {}) : undefined);
   const isSmall = useIsSmall();
+  // Mobile : vue « liste » (un mur par écran) ou vue « carte » (le board entier, lignes et carte mentale comprises).
+  const [vueCarteMobile, setVueCarteMobile] = useState(true); // comme Storyflow : le board entier, on se déplace et on zoome
+  const [feuille, setFeuille] = useState(null); // mobile : « plus » | « outils » | « ia »
+  const listeMobile = isSmall && !vueCarteMobile;
   const prenom = live.data?.state?.profile?.prenom || "";
 
   const [boardKey, setBoardKey] = useState(() => {
-    try { return localStorage.getItem(BOARD_STORAGE) || "perso"; } catch (_) { return "perso"; }
+    try {
+      const urlKey = new URLSearchParams(window.location.search).get("board");
+      if (urlKey) return urlKey;
+      return localStorage.getItem(BOARD_STORAGE) || "perso";
+    } catch (_) { return "perso"; }
   });
   const [items, setItems] = useState([]);
   const [loaded, setLoaded] = useState(false);
@@ -428,7 +436,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
     const ro = new ResizeObserver(() => measure());
     board.querySelectorAll("[data-item-id]").forEach((el) => ro.observe(el));
     return () => ro.disconnect();
-  }, [items, loaded, measure]);
+  }, [items, loaded, measure, vueCarteMobile]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* Au chargement : zoom lisible ajusté pour ~3 murs, puis se placer sur le contenu */
   useEffect(() => {
@@ -440,15 +448,15 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
     const minX = vals.length ? Math.min(...vals.map((r) => r.x)) : 0;
     const minY = vals.length ? Math.min(...vals.map((r) => r.y)) : 0;
     const ws = walls.map((w) => rectsRef.current[w.id]).filter(Boolean).sort((a, b) => a.x - b.x);
-    let z = 0.8;
-    if (ws.length) {
+    let z = isSmall ? 0.7 : 0.8;
+    if (ws.length && !isSmall) {
       const last = ws[Math.min(2, ws.length - 1)];
       const span = last.x + last.w - ws[0].x;
       z = clampZ(Math.max(0.55, Math.min(1, (el.clientWidth - 150) / span)));
     }
     setZoom(z);
     requestAnimationFrame(() => {
-      el.scrollLeft = Math.max(0, minX * z - (readOnly ? 40 : 120));
+      el.scrollLeft = Math.max(0, minX * z - (isSmall ? 16 : readOnly ? 40 : 120));
       el.scrollTop = Math.max(0, minY * z - 70);
     });
   }, [loaded, rects, activeItems.length, walls, readOnly]);
@@ -499,6 +507,25 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
       el.scrollTop = cy * z1 - el.clientHeight / 2;
     });
   }, []);
+
+  /* Mobile : zoom à deux doigts (pincer) sur le board, comme Storyflow. */
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!isSmall || !el) return undefined;
+    let debut = null;
+    const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    const start = (e) => { if (e.touches.length === 2) debut = { d: dist(e.touches), z: zoomRef.current }; };
+    const move = (e) => {
+      if (e.touches.length !== 2 || !debut) return;
+      e.preventDefault();
+      zoomTo(debut.z * (dist(e.touches) / debut.d));
+    };
+    const end = (e) => { if (e.touches.length < 2) debut = null; };
+    el.addEventListener("touchstart", start, { passive: true });
+    el.addEventListener("touchmove", move, { passive: false });
+    el.addEventListener("touchend", end, { passive: true });
+    return () => { el.removeEventListener("touchstart", start); el.removeEventListener("touchmove", move); el.removeEventListener("touchend", end); };
+  }, [isSmall, vueCarteMobile, loaded, zoomTo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const viewCenter = () => {
     const el = scrollRef.current;
@@ -754,7 +781,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
   /* ── Glisser-déposer (cartes libres, cartes dans les murs, murs) ── */
   const onPointerDownItem = (e, item) => {
     if (readOnly) return;
-    if (isSmall) { setSelectedId(item.id); return; } // mobile : on défile, on ne glisse pas
+    if (isSmall && mode !== "line") { setSelectedId(item.id); return; } // mobile : on défile, on ne glisse pas
     if (e.pointerType === "mouse" && e.button !== 0) return;
     if (mode === "line") {
       e.stopPropagation();
@@ -1356,9 +1383,9 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
       <div key={w.id} data-item-id={w.id} data-selected={isSelected ? "true" : "false"} data-testid={`vision-wall-${w.id}`}
         className={`sf-item sf-wall group ${dt ? "sf-wall-drop" : ""}`}
         onPointerDown={(e) => onPointerDownItem(e, w)}
-        style={isSmall
+        style={listeMobile
           ? { position: "relative", width: "100%", touchAction: "auto" }
-          : { position: "absolute", left: w.x, top: w.y, width: w.w || 500, zIndex: isDragging ? 45 : 1, touchAction: readOnly ? "auto" : "none", cursor: readOnly ? "default" : mode === "line" ? "crosshair" : mode === "select" ? "grab" : "inherit", boxShadow: isSelected && !readOnly ? "0 0 0 2px var(--sf-accent)" : undefined }}>
+          : { position: "absolute", left: w.x, top: w.y, width: w.w || 500, zIndex: isDragging ? 45 : 1, touchAction: readOnly || isSmall ? "auto" : "none", cursor: readOnly ? "default" : mode === "line" ? "crosshair" : mode === "select" ? "grab" : "inherit", boxShadow: isSelected && !readOnly ? "0 0 0 2px var(--sf-accent)" : undefined }}>
         <div className="mb-4 flex items-center gap-3 px-2" onDoubleClick={(e) => { e.stopPropagation(); if (!readOnly) setEditingId(w.id); }}>
           <span className="sf-wall-bar" style={{ background: w.color || "#94A3B8" }} />
           {isEditing ? (
@@ -1527,7 +1554,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
   return (
     <div ref={rootRef} data-testid="vision-canvas-container"
       onDragOver={onFileDragOver} onDragLeave={onFileDragLeave} onDrop={onFileDrop}
-      className={`sf relative overflow-hidden ${presenting ? "sf-present fixed inset-0 z-[80] h-[100dvh] w-screen" : readOnly ? "h-full" : "h-[calc(100dvh-120px)] md:h-[calc(100dvh-150px)] md:rounded-2xl md:border md:border-white/10"}`}>
+      className={`sf relative overflow-hidden ${presenting ? "sf-present fixed inset-0 z-[80] h-[100dvh] w-screen" : readOnly ? "h-full" : "h-full md:h-[calc(100dvh-150px)] md:rounded-2xl md:border md:border-white/10"}`}>
       {!readOnly && (
         <input ref={fileInputRef} type="file" accept="image/*" multiple hidden data-testid="vision-file-input"
           onChange={(e) => { addImageFiles(e.target.files); e.target.value = ""; setMenu(null); }} />
@@ -1684,7 +1711,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
           <ol className="mt-4 space-y-2">
             {[
               ["1", "Écris ta vision et ton pourquoi", "/onboarding"],
-              ["2", "Fixe 3 objectifs pour ce trimestre", "/app/roadmap"],
+              ["2", "Fixe 3 objectifs pour ce trimestre", "/app/actions?tab=objectifs"],
               ["3", "Ajoute ta première action de 15 minutes", "/app/actions"],
             ].map(([n, label, route]) => (
               <li key={n}>
@@ -1700,8 +1727,48 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
         </div>
       )}
 
-      {/* ── Barre IA (bas) ── */}
-      {!readOnly && (
+      {/* ── Mobile : barre du bas façon Storyflow (••• · Demander à l'IA · +) ── */}
+      {!readOnly && isSmall && !presenting && (
+        <MobileBar feuille={feuille} setFeuille={setFeuille}
+          outils={[
+            { id: "note", icon: Type, label: "Note", action: () => addByTool("note", listeMobile && currentMobileWallId ? { wall: currentMobileWallId } : {}) },
+            { id: "wall", icon: Columns3, label: "Mur", action: () => addByTool("wall") },
+            { id: "line", icon: Spline, label: "Ligne", action: () => { setVueCarteMobile(true); setMode("line"); setLineFrom(null); toast("Touche la 1ʳᵉ carte, puis la 2ᵉ à relier"); } },
+            { id: "list", icon: ListChecks, label: "À cocher", action: () => addByTool("list") },
+            { id: "image", icon: ImageIcon, label: "Image", action: () => { setFeuille(null); setMenu("images-m"); } },
+            { id: "sticky", icon: StickyNote, label: "Post-it", action: () => addByTool("sticky") },
+            { id: "heading", icon: Heading1, label: "Titre", action: () => addByTool("heading") },
+            { id: "table", icon: Table2, label: "Tableau", action: () => addByTool("table") },
+            { id: "video", icon: Video, label: "Vidéo", action: () => addByTool("video") },
+            { id: "live", icon: Activity, label: "Carte live", action: () => { setFeuille(null); setMenu("live"); } },
+          ]}
+          plus={[
+            { id: "undo", icon: Undo2, label: "Annuler", action: undo, disabled: !canUndo },
+            { id: "redo", icon: Redo2, label: "Rétablir", action: redo, disabled: !canRedo },
+            { id: "zoom-out", icon: Minus, label: "Dézoomer", action: () => zoomTo(zoom - 0.15), keep: true },
+            { id: "zoom-in", icon: Plus, label: `Zoomer · ${zoomPct}%`, action: () => zoomTo(zoom + 0.15), keep: true },
+            { id: "fit", icon: Maximize2, label: "Ajuster", action: () => { needScrollRef.current = true; setRects((r) => ({ ...r })); } },
+            { id: "vue", icon: vueCarteMobile ? Columns3 : MapIcon, label: vueCarteMobile ? "Vue liste" : "Vue carte", action: () => { needScrollRef.current = true; setVueCarteMobile((v) => !v); } },
+            { id: "tpl", icon: LayoutTemplate, label: "Modèles", action: openTemplates },
+            { id: "trash", icon: Trash2, label: `Corbeille (${trashItems.length})`, action: () => setMenu("trash-m") },
+          ]}
+          prompt={prompt} setPrompt={setPrompt} onGenerate={handleGenerateBoard} generating={generating} onVoice={handleVoice}
+          modeLigne={mode === "line"} onFinLigne={() => { setMode("select"); setLineFrom(null); }} />
+      )}
+      {isSmall && (
+        <>
+          <Popover open={menu === "images-m"} onClose={() => setMenu(null)} className="inset-x-3 bottom-24 p-3" style={{ position: "fixed", zIndex: 70 }}>
+            <input autoFocus placeholder="Colle l'URL d'une image" onKeyDown={(e) => e.key === "Enter" && addImageFromUrl(e.target.value)} className="sf-field" />
+            <button onClick={() => fileInputRef.current?.click()} className="sf-btn sf-btn-outline mt-2 w-full justify-center" style={{ height: 34 }}><Upload size={14} /> Importer une photo</button>
+            <div className="mt-3"><AiImageRow onPick={addImageFromUrl} /></div>
+          </Popover>
+          <Popover open={menu === "live"} onClose={() => setMenu(null)} className="inset-x-3 bottom-24 max-h-[60vh] overflow-y-auto" style={{ position: "fixed", zIndex: 70 }}>{livePanel}</Popover>
+          <Popover open={menu === "trash-m"} onClose={() => setMenu(null)} className="inset-x-3 bottom-24 p-2" style={{ position: "fixed", zIndex: 70 }}>{trashPanel}</Popover>
+        </>
+      )}
+
+      {/* ── Barre IA (bas, ordinateur) ── */}
+      {!readOnly && !isSmall && (
         <div className={`sf-hide-present absolute left-1/2 z-30 -translate-x-1/2 ${isSmall ? "bottom-3 w-[calc(100%-24px)]" : "bottom-4 w-[min(94vw,620px)]"}`} data-testid="vision-prompt-bar">
           {!isSmall && (
             <div className="sf-chrome mx-auto mb-2 flex w-fit max-w-full items-center gap-1 overflow-x-auto rounded-full p-1" data-testid="vision-template-strip" style={{ scrollbarWidth: "none" }}>
@@ -1792,7 +1859,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
         </div>
       )}
 
-      {isSmall ? (
+      {listeMobile ? (
         /* ───────── Mobile : un mur par écran ───────── */
         <div className="sf-surface flex h-full flex-col" data-testid="vision-mobile">
           <div className="sf-scroll flex shrink-0 gap-1.5 overflow-x-auto px-3 pb-2 pt-[60px]" data-testid="vision-mobile-tabs">
@@ -1959,3 +2026,58 @@ function ShareDialog({ board, onClose }) {
 }
 
 export { STICKY_PALETTE, stickyOf, usesPaperPalette };
+
+
+/* ───────── Mobile : barre du bas façon Storyflow ───────── */
+function MobileBar({ feuille, setFeuille, outils, plus, prompt, setPrompt, onGenerate, generating, onVoice, modeLigne, onFinLigne }) {
+  const tuile = "flex w-[74px] shrink-0 flex-col items-center gap-1.5 rounded-2xl py-2 text-[12px] disabled:opacity-35";
+  return (
+    <div className="sf-hide-present absolute inset-x-0 bottom-0 z-40 px-4 pb-[calc(14px+env(safe-area-inset-bottom))]" data-testid="vision-mobile-bar">
+      {feuille && <div className="fixed inset-0 z-[-1]" onClick={() => setFeuille(null)} />}
+      {modeLigne && (
+        <div className="sf-chrome mx-auto mb-3 flex w-fit items-center gap-2 rounded-full px-4 py-2 text-[13px]" data-testid="vision-mobile-ligne">
+          <Spline size={14} style={{ color: "var(--sf-accent)" }} /> Relie deux cartes
+          <button onClick={onFinLigne} className="ml-1 font-semibold" style={{ color: "var(--sf-accent)" }}>Terminé</button>
+        </div>
+      )}
+      {feuille === "outils" && (
+        <div className="sf-chrome mb-3 flex gap-1 overflow-x-auto rounded-[26px] p-2" style={{ scrollbarWidth: "none" }} data-testid="vision-mobile-outils">
+          {outils.map((o) => (
+            <button key={o.id} onClick={() => { setFeuille(null); o.action(); }} className={tuile} data-testid={`vision-mobile-outil-${o.id}`}>
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl" style={{ background: "rgba(255,255,255,0.08)", color: "var(--sf-accent)" }}><o.icon size={20} /></span>
+              <span style={{ color: "var(--sf-text-2)" }}>{o.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {feuille === "plus" && (
+        <div className="sf-chrome mb-3 flex gap-1 overflow-x-auto rounded-[26px] p-2" style={{ scrollbarWidth: "none" }} data-testid="vision-mobile-plus">
+          {plus.map((o) => (
+            <button key={o.id} disabled={o.disabled} onClick={() => { if (!o.keep) setFeuille(null); o.action(); }} className={tuile} data-testid={`vision-mobile-plus-${o.id}`}>
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl" style={{ background: "rgba(255,255,255,0.08)" }}><o.icon size={20} /></span>
+              <span className="text-center leading-tight" style={{ color: "var(--sf-text-2)" }}>{o.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="flex items-center gap-2">
+        <button onClick={() => setFeuille(feuille === "plus" ? null : "plus")} className="sf-chrome flex h-12 w-12 shrink-0 items-center justify-center rounded-full" aria-label="Options du board" data-testid="vision-mobile-more"
+          style={feuille === "plus" ? { color: "var(--sf-accent)" } : undefined}><MoreHorizontal size={20} /></button>
+        <div className="sf-chrome flex min-w-0 flex-1 items-center gap-1.5 rounded-full px-1.5 py-1.5">
+          <button onClick={() => setFeuille(feuille === "outils" ? null : "outils")} aria-label="Ajouter" data-testid="vision-mobile-add"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition"
+            style={feuille === "outils" ? { background: "var(--sf-accent)", color: "#0f1b3a" } : { background: "rgba(222,194,163,0.18)", color: "var(--sf-accent)" }}>
+            {feuille === "outils" ? <X size={17} /> : <Plus size={18} />}
+          </button>
+          <input value={prompt} onChange={(e) => setPrompt(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") onGenerate(); }} onFocus={() => setFeuille(null)}
+            placeholder="Décris ton projet…" className="sf-input min-w-0 flex-1 px-1 text-[15px]" data-testid="vision-mobile-ia-input" />
+          <VoiceCapture onTranscribed={onVoice} compact />
+          <button onClick={onGenerate} disabled={!prompt.trim() || generating} aria-label="Générer avec l'IA" data-testid="vision-mobile-ai"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full disabled:opacity-40" style={{ background: "var(--sf-accent)", color: "#0f1b3a" }}>
+            {generating ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

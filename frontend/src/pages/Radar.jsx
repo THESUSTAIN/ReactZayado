@@ -405,7 +405,7 @@ export default function Radar() {
                   ))}
                   {(!data?.objectifs_utilises || data.objectifs_utilises.length === 0) && (
                     <span className="text-xs italic text-offwhite/50">
-                      Aucun objectif relié — pose ton cap sur la Vision pour activer le radar.
+                      Aucun objectif pour l'instant : pose-en un dans ton Plan d'action pour guider le Radar.
                     </span>
                   )}
                 </div>
@@ -447,10 +447,10 @@ export default function Radar() {
                   <RadarGlyph className="mx-auto mb-4 h-9 w-9 text-gold/60" />
                   <p className="font-display text-lg font-bold text-offwhite">Le radar n'a rien capté ici</p>
                   <p className="mx-auto mt-2 max-w-sm text-sm text-offwhite/60">
-                    Ajoute des objectifs sur ta Vision ou change de filtre pour voir les opportunités.
+                    Pose un objectif dans ton Plan d'action, choisis ta clientèle et ta ville ci-dessous, ou change de filtre.
                   </p>
-                  <button onClick={() => navigate("/app/vision")} data-testid="radar-empty-vision-btn" className="btn-gold mt-6">
-                    <Compass size={15} /> Ouvrir ma Vision
+                  <button onClick={() => navigate("/app/actions?tab=objectifs")} data-testid="radar-empty-vision-btn" className="btn-gold mt-6">
+                    <Compass size={15} /> Poser un objectif
                   </button>
                 </GlassCard>
               </Reveal>

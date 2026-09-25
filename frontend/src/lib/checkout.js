@@ -1,7 +1,7 @@
 import { toast } from "sonner";
 import { ESSAI } from "@/lib/plans";
 
-// Démarre un paiement Mollie et redirige. Pour Solo, l'essai « 2 mois pour 1 € »
+// Démarre un paiement Mollie et redirige. Pour Solo, l'essai « 1 mois pour 1 € »
 // est tenté d'abord ; s'il a déjà été utilisé (409), on bascule sur l'offre normale.
 export async function lancerPaiement(plan, { cycle = "mensuel", essai = plan === ESSAI.plan } = {}) {
   const appel = async (corps) => {

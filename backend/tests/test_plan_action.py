@@ -32,3 +32,11 @@ def test_objectif_d_un_autre_compte_refuse(client, compte):
     t = client.post("/api/taches", headers=h2, json={"titre": "X"}).json()
     assert client.patch(f"/api/taches/{t['id']}/objectif", headers=h2, json={"objectif_id": o["id"]}).status_code == 404
     assert client.patch(f"/api/objectifs/{o['id']}", headers=h2, json={"titre": "Piraté"}).status_code == 404
+
+
+def test_feuille_de_route_fusionnee_dans_le_plan_d_action(client, compte):
+    _, h = compte()
+    client.post("/api/vision/roadmap", headers=h, json={"quarter": "q2", "titre": "Lancer le podcast"})
+    items = client.get("/api/taches", headers=h).json()["items"]
+    assert any(t["titre"] == "[Q2] Lancer le podcast" for t in items)
+    assert client.get("/api/vision/roadmap", headers=h).json() in ([], {"items": []}) or not client.get("/api/vision/roadmap", headers=h).json().get("items")

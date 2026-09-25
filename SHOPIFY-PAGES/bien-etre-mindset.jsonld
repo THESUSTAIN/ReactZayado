@@ -1,0 +1,30 @@
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Combien de temps cela prend-il ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "5 minutes par jour. Les parcours sont conçus pour être faits entre deux rendez-vous."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Mes réponses sont-elles privées ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Oui, ton carnet n'est lisible que par toi."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Est-ce inclus dans l'offre Rêveur ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Non, l'espace Bien-être & Mindset fait partie de l'offre Solo et des offres supérieures."
+      }
+    }
+  ]
+}

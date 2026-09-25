@@ -70,7 +70,7 @@ export default function ExerciceEmbed() {
               Le parcours « {ex.titre} » continue pendant 7 jours, 5 minutes par jour, avec tes réponses gardées dans ton carnet privé et une IA qui connaît ton activité.
             </p>
             <a href={lien} target="_top" rel="noopener" className="mt-4 inline-flex h-11 items-center gap-2 rounded-full bg-gradient-to-b from-[#F1E2CC] to-[#DEC2A3] px-6 text-[14px] font-semibold text-navy-900">
-              Continuer dans Zayado · 2 mois pour 1 € <ArrowRight size={16} />
+              Continuer dans Zayado · 1 mois pour 1 € <ArrowRight size={16} />
             </a>
           </div>
         )}

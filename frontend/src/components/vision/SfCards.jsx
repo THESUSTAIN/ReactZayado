@@ -267,10 +267,10 @@ export function useVisionLive(override) {
 }
 
 export const LIVE_SOURCES = [
-  { id: "score",       label: "Score « Vision réalisée »", route: "/app/roadmap" },
+  { id: "score",       label: "Score « Vision réalisée »", route: "/app/actions?tab=objectifs" },
   { id: "alertes",     label: "À surveiller (alertes)",    route: "/app" },
   { id: "vision",      label: "Ma vision & mon pourquoi",  route: "/onboarding" },
-  { id: "objectifs",   label: "Objectifs du trimestre",    route: "/app/roadmap" },
+  { id: "objectifs",   label: "Objectifs du trimestre",    route: "/app/actions?tab=objectifs" },
   { id: "trajectoire", label: "Trajectoire (Q1 → Vision)", route: "/app/vision?view=roadmap" },
   { id: "actions",     label: "Actions (cases à cocher)",  route: "/app/actions" },
   { id: "energie",     label: "Énergie du moment",         route: "/app/bien-etre" },

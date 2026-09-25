@@ -1,10 +1,9 @@
 import React from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate, Navigate } from "react-router-dom";
 import { Sidebar } from "@/components/kairos/Sidebar";
 import { VisionHub } from "@/components/vision/VisionHub";
 import { VisionCanvas } from "@/components/vision/VisionCanvas";
 import { BalanceWheel } from "@/components/vision/BalanceWheel";
-import { RoadmapBoard } from "@/components/vision/RoadmapBoard";
 import { ArrowLeft, Home } from "lucide-react";
 import { LanguageSwitcher } from "@/components/kairos/LanguageSwitcher";
 import { useI18n } from "@/i18n";
@@ -24,7 +23,7 @@ export default function VisionBoard() {
   return (
     <div className="min-h-screen">
       <Sidebar />
-      <div className="lg:pl-[92px]">
+      <div className={view === "canvas" ? "flex h-[100dvh] flex-col overflow-hidden md:block md:h-auto md:overflow-visible lg:pl-[92px]" : "lg:pl-[92px]"}>
         <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-white/10 bg-navy-900/70 px-4 py-3 backdrop-blur-2xl sm:px-6">
           {view !== "hub" && (
             <button
@@ -52,11 +51,11 @@ export default function VisionBoard() {
           </button>
         </header>
 
-        <main className="px-4 pb-24 pt-5 sm:px-6" data-testid={`vision-view-${view}`}>
+        <main className={view === "canvas" ? "min-h-0 flex-1 md:px-6 md:pb-24 md:pt-5" : "px-4 pb-24 pt-5 sm:px-6"} data-testid={`vision-view-${view}`}>
           {view === "hub" && <VisionHub onOpen={goView} onOpenBoard={ouvrirBoard} />}
           {view === "canvas" && <VisionCanvas />}
           {view === "wheel" && <BalanceWheel />}
-          {view === "roadmap" && <RoadmapBoard />}
+          {view === "roadmap" && <Navigate to="/app/actions?tab=objectifs" replace />}
         </main>
       </div>
     </div>

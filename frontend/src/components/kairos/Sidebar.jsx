@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard, Compass, Lightbulb, CheckSquare, Heart, Users, Settings, CalendarCheck, Radar,
+  LayoutDashboard, Compass, Lightbulb, CheckSquare, Heart, Users, Settings, CalendarCheck, Radar, Lock,
 } from "lucide-react";
+import { chargerAbonnement, MENU_REVEUR } from "@/lib/acces";
+import { BottomNav } from "./BottomNav";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { useI18n } from "@/i18n";
 import { fetchActualite } from "@/lib/kairosApi";
@@ -50,6 +52,9 @@ export function Sidebar() {
     return "today";
   }, [location.pathname]);
   const { t } = useI18n();
+  const [planActuel, setPlanActuel] = useState(null);
+  useEffect(() => { chargerAbonnement().then((a) => setPlanActuel(a.plan)).catch(() => {}); }, []);
+  const verrouille = (key) => planActuel === "reveur" && !MENU_REVEUR.includes(key);
   const [active, setActive] = useState(deriveActive());
   useEffect(() => { setActive(deriveActive()); }, [deriveActive]);
 
@@ -73,6 +78,8 @@ export function Sidebar() {
   };
 
   return (
+    <>
+    <BottomNav />
     <aside className="side-nav hidden lg:flex" data-testid="sidebar">
       <button onClick={() => navigate("/")} className="mt-3.5 mb-3 flex h-12 w-12 items-center justify-center" aria-label="Accueil">
         <img src="/logo.png" alt="Zayado" className="h-12 w-12 object-contain drop-shadow-[0_6px_14px_rgba(0,0,0,0.35)]" />
@@ -103,8 +110,9 @@ export function Sidebar() {
                       : "text-offwhite/60 hover:bg-white/10 hover:text-offwhite"
                   }`}
                 >
-                  <Icon size={19} />
-                  {item.alert && (
+                  <Icon size={19} className={verrouille(item.key) ? "opacity-40" : ""} />
+                  {verrouille(item.key) && <Lock size={10} className="absolute bottom-1.5 right-1.5 text-gold" data-testid={`nav-lock-${item.key}`} />}
+                  {item.alert && !verrouille(item.key) && (
                     <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-alert ring-2 ring-navy-900 shadow-[0_0_8px_2px_rgba(211,47,47,0.6)]" data-testid="scoop-alert-dot" />
                   )}
                   <span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-lg border border-white/15 bg-navy-800 px-2.5 py-1.5 text-xs text-offwhite opacity-0 shadow-xl transition-opacity group-hover:opacity-100">
@@ -133,5 +141,6 @@ export function Sidebar() {
         </span>
       </button>
     </aside>
+    </>
   );
 }

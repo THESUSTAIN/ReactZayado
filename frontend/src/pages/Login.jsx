@@ -6,8 +6,18 @@ import { Mail, ArrowRight, Loader2, Eye, ShieldCheck, Server, Lock, RotateCcw } 
 import { GlassCard } from "@/components/kairos/GlassCard";
 import {
   fetchConnexionOptions, demanderLien, entrerApercu, connexionDemo, oauthStart, oauthEchange, verifierLien, setToken, fetchState,
-  connexionMdp, inscriptionMdp,
+  connexionMdp, inscriptionMdp, getToken,
 } from "@/lib/kairosApi";
+
+// Zayado ouvert dans un onglet Microsoft Teams (ou toute iframe) : les pages de
+// connexion Google / Microsoft refusent l'affichage en iframe, on les ouvre donc
+// dans une fenêtre, qui renvoie le jeton à l'onglet puis se ferme.
+const DANS_TEAMS = (() => {
+  try {
+    if (new URLSearchParams(window.location.search).get("teams") === "1") sessionStorage.setItem("zayado_teams", "1");
+    return window.self !== window.top || sessionStorage.getItem("zayado_teams") === "1";
+  } catch { return true; }
+})();
 
 function GoogleIcon() {
   return (
@@ -33,7 +43,7 @@ export default function Login() {
 
   // Connexion email + mot de passe (demande utilisateur : ne pas être limité
   // au lien magique). modeAuth: "lien" | "mdp" ; inscription: bool.
-  const [modeAuth, setModeAuth] = useState("lien");
+  const [modeAuth, setModeAuth] = useState(DANS_TEAMS ? "mdp" : "lien");
   const [inscription, setInscription] = useState(false);
   const [motDePasse, setMotDePasse] = useState("");
   const [voirMdp, setVoirMdp] = useState(false);
@@ -96,7 +106,16 @@ export default function Login() {
     setVerification(true);
     window.history.replaceState({}, "", "/login");
     oauthEchange(provider, code, `${window.location.origin}/login`, state)
-      .then((rep) => { setToken(rep.access_token); toast.success("Connexion réussie."); enter(); })
+      .then((rep) => {
+        setToken(rep.access_token);
+        // Fenêtre ouverte depuis l'onglet Teams : on renvoie le jeton puis on se ferme.
+        if (window.name === "zayado-auth" && window.opener) {
+          try { window.opener.postMessage({ type: "zayado-token", token: rep.access_token }, window.location.origin); } catch { /* opener coupé */ }
+          window.close();
+          return;
+        }
+        toast.success("Connexion réussie."); enter();
+      })
       .catch(() => {
         setVerification(false);
         toast.error(`Connexion ${provider === "google" ? "Google" : "Microsoft"} impossible. Réessaie, ou utilise ton email.`);
@@ -118,11 +137,30 @@ export default function Login() {
       });
   }, []);
 
+  // Fenêtre de connexion (Teams) : le jeton revient par message ou par le stockage partagé.
+  useEffect(() => {
+    if (!DANS_TEAMS) return undefined;
+    const recu = (e) => {
+      if (e.origin !== window.location.origin || e.data?.type !== "zayado-token" || !e.data.token) return;
+      setToken(e.data.token); toast.success("Connexion réussie."); enter();
+    };
+    window.addEventListener("message", recu);
+    return () => window.removeEventListener("message", recu);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const doOauth = async (provider, label) => {
     setRedirecting(label);
     try {
       const res = await oauthStart(provider, `${window.location.origin}/login`);
       if (res?.configured && res.authorization_url) {
+        if (DANS_TEAMS) {
+          const w = window.open(res.authorization_url, "zayado-auth", "width=520,height=720");
+          if (!w) { toast.error("Autorise les fenêtres pop-up, ou connecte-toi avec ton e-mail et ton mot de passe."); return; }
+          const t = setInterval(() => {
+            if (getToken()) { clearInterval(t); enter(); } else if (w.closed) { clearInterval(t); }
+          }, 800);
+          return;
+        }
         window.location.href = res.authorization_url;
         return;
       }
@@ -191,7 +229,8 @@ export default function Login() {
             <img src="/logo.png" alt="Zayado" className="mx-auto mb-3 h-14 w-14 object-contain" />
             <h1 className="font-display text-3xl font-extrabold text-offwhite">Zayado</h1>
             <p className="mt-1 text-[11px] uppercase tracking-[0.25em] text-gold">ESPACE PRIVÉ</p>
-            <p className="mt-4 text-sm text-offwhite/70">Connecte-toi à ton espace privé Zayado — sans mot de passe à retenir.</p>
+            <p className="mt-4 text-sm text-offwhite/70">{DANS_TEAMS ? "Connecte-toi à ton espace Zayado depuis Microsoft Teams." : "Connecte-toi à ton espace privé Zayado — sans mot de passe à retenir."}</p>
+            {DANS_TEAMS && <p className="mt-2 rounded-xl border border-gold/30 bg-gold/10 px-3 py-2 text-[12px] text-offwhite/80" data-testid="login-teams">Dans Teams, le plus simple : ton e-mail et ton mot de passe. Google et Microsoft s'ouvrent dans une petite fenêtre.</p>}
           </div>
 
           {/* Boutons sociaux */}

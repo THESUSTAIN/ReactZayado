@@ -212,9 +212,7 @@ body.theme-clair .sf {
 .sf-present .sf-hide-present { display: none !important; }
 /* Présentation / pages isolées : le ciel de final 13 en fond opaque */
 .sf-present, .sf-standalone {
-  background:
-    radial-gradient(ellipse at 20% 10%, rgba(45, 81, 150, 0.45) 0%, transparent 50%),
-    linear-gradient(180deg, #172c5c 0%, #101f47 30%, #0a1230 60%, #05081a 100%);
+  background: var(--fond-zayado);
 }
 
 /* ── Cartes LIVE : distinctes des notes (liseré + bandeau source) ── */

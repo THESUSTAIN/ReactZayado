@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { LayoutDashboard, Users, Store, Gift, Ticket, Video, Mail, Newspaper } from "lucide-react";
+import { LayoutDashboard, Users, Store, Gift, Ticket, Video, Mail, Newspaper, CheckCircle2, AlertTriangle, CircleDashed } from "lucide-react";
 import { SideMenuPro } from "@/components/pro/SideMenuPro";
 import {
+  fetchAdminDiagnostics,
   fetchAdminVueEnsemble, fetchAdminUtilisateurs, changerRoleUtilisateur, changerPlanUtilisateur,
   fetchModerationAttente, publierProduitVendeur, refuserProduitVendeur,
   fetchAdminParrainage, fetchCodesPromo, creerCodePromo, basculerCodePromo, supprimerCodePromo,
@@ -9,7 +10,10 @@ import {
   fetchAdminCommerceStats, fetchAdminCommerceOrders, changerStatutCommandeAdmin,
   fetchAdminCommerceProducts, fetchAdminCommerceVendors,
   fetchDemandesCollaborateur, fetchCompteDemo, transfererCompteDemo,
+  fetchAdminNotifications,
 } from "@/lib/kairosApi";
+import { Bell } from "lucide-react";
+import EmailsIA from "@/components/admin/EmailsIA";
 
 // Menu inspiré de la structure Sentriq (Vue d'ensemble / Utilisateurs / ...).
 // Le Parrainage vient de final-main/affiliate.py, les Codes promo de
@@ -28,8 +32,8 @@ const ONGLETS = [
   { key: "demandes", label: "Demandes collaborateurs" },
   { key: "compte-demo", label: "Compte démo" },
   { key: "videos-ia", label: "Vidéos IA" },
+  { key: "notifications", label: "Notifications" },
   { key: "emails-ia", label: "Emails IA" },
-  { key: "articles-seo", label: "Articles SEO" },
 ];
 
 export default function Admin() {
@@ -38,12 +42,12 @@ export default function Admin() {
   const ICONS = {
     vue: <LayoutDashboard size={16} />, utilisateurs: <Users size={16} />, vendeurs: <Store size={16} />,
     parrainage: <Gift size={16} />, "codes-promo": <Ticket size={16} />, commerce: <Ticket size={16} />, catalogue: <Store size={16} />, "comptes-vendeurs": <Users size={16} />, "videos-ia": <Video size={16} />,
-    "emails-ia": <Mail size={16} />, "articles-seo": <Newspaper size={16} />,
+    "emails-ia": <Mail size={16} />, "articles-seo": <Newspaper size={16} />, notifications: <Bell size={16} />,
   };
   const menuItems = ONGLETS.map((o) => ({ key: o.key, label: o.label, icon: ICONS[o.key] }));
 
   return (
-    <div className="min-h-screen bg-navy-900 text-offwhite">
+    <div className="min-h-screen text-offwhite">
       <SideMenuPro
         titre="Console Admin"
         sousTitre="Zayado — pilotage plateforme"
@@ -68,7 +72,8 @@ export default function Admin() {
         {onglet === "demandes" && <DemandesCollaborateur />}
         {onglet === "compte-demo" && <CompteDemo />}
         {onglet === "videos-ia" && <VideosIA />}
-        {onglet === "emails-ia" && <AVenir label="Emails IA" description="Génération de séquences email par IA — pas encore construit côté serveur ici. Existe en référence chez Sentriq (onglet « Emails IA ») ; à porter si tu confirmes le périmètre exact voulu." />}
+        {onglet === "notifications" && <NotificationsAdmin />}
+        {onglet === "emails-ia" && <EmailsIA />}
         {onglet === "articles-seo" && <AVenir label="Articles SEO" description="Génération d'articles SEO par IA — même remarque : référence Sentriq disponible, pas encore de route serveur ici." />}
       </div>
       </div>
@@ -175,20 +180,78 @@ function Carte({ children }) {
   return <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">{children}</div>;
 }
 
+const NOMS_OFFRES = { reveur: "Rêveur", serenite: "Solo", pro: "Pro", business: "Équipe", entreprise: "Entreprise" };
+const eur = (v) => `${Number(v || 0).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €`;
+
+function Kpi({ label, valeur, note, or }) {
+  return (
+    <Carte>
+      <p className="text-offwhite/50 text-xs uppercase tracking-wide">{label}</p>
+      <p className={`text-3xl font-bold mt-1 ${or ? "text-gold" : ""}`}>{valeur}</p>
+      {note && <p className="mt-1 text-[11px] text-offwhite/45">{note}</p>}
+    </Carte>
+  );
+}
+
+function Branchements() {
+  const [d, setD] = useState(null);
+  useEffect(() => { fetchAdminDiagnostics().then(setD).catch(() => setD({ erreur: true })); }, []);
+  if (!d) return <Carte><p className="text-sm text-offwhite/50">Vérification des branchements…</p></Carte>;
+  if (d.erreur || !d.branchements) return <Carte><p className="text-sm text-red-400">Diagnostic indisponible.</p></Carte>;
+  const manquants = d.branchements.filter((x) => !x.ok);
+  return (
+    <Carte>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <p className="font-semibold">Branchements</p>
+        <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${manquants.some((x) => x.critique) ? "bg-red-400/15 text-red-300" : manquants.length ? "bg-amber-300/15 text-amber-200" : "bg-emerald-400/15 text-emerald-300"}`} data-testid="admin-branchements-statut">
+          {manquants.some((x) => x.critique) ? "À corriger avant la mise en vente" : manquants.length ? `${manquants.length} option(s) non branchée(s)` : "Tout est branché"}
+        </span>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2" data-testid="admin-branchements">
+        {d.branchements.map((x) => (
+          <div key={x.cle} className={`flex gap-2.5 rounded-xl border p-3 ${x.ok ? "border-emerald-300/20 bg-emerald-300/[0.05]" : x.critique ? "border-red-300/30 bg-red-300/[0.07]" : "border-white/10 bg-white/[0.03]"}`}>
+            <span className="mt-0.5 shrink-0">{x.ok ? <CheckCircle2 size={16} className="text-emerald-300" /> : x.critique ? <AlertTriangle size={16} className="text-red-300" /> : <CircleDashed size={16} className="text-offwhite/50" />}</span>
+            <div className="min-w-0">
+              <p className="text-[13.5px] font-semibold">{x.nom}</p>
+              {!x.ok && <p className="text-[12px] text-offwhite/60">{x.effet}</p>}
+              {!x.ok && <p className="mt-1 text-[11px] text-offwhite/45">Railway (service backend) : {x.variables.map((v) => <code key={v} className="mr-1 rounded bg-white/10 px-1">{v}</code>)}</p>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </Carte>
+  );
+}
+
 function VueEnsemble() {
   const [donnees, setDonnees] = useState(null);
   const [erreur, setErreur] = useState(null);
   useEffect(() => {
-    fetchAdminVueEnsemble().then(setDonnees).catch(() => setErreur("Accès refusé ou erreur serveur — vérifie que ton compte a bien le rôle admin."));
+    fetchAdminVueEnsemble().then(setDonnees).catch(() => setErreur("Accès refusé ou erreur serveur — vérifie que ton compte a bien le rôle admin (déconnecte-toi puis reconnecte-toi après un changement de rôle)."));
   }, []);
   if (erreur) return <Carte><p className="text-red-400 text-sm">{erreur}</p></Carte>;
   if (!donnees) return <Carte><p className="text-offwhite/50 text-sm">Chargement…</p></Carte>;
+  const ab = donnees.abonnements || { par_offre: {} };
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-      <Carte><p className="text-offwhite/50 text-xs uppercase tracking-wide">Utilisateurs</p><p className="text-3xl font-bold mt-1">{donnees.utilisateurs_total}</p></Carte>
-      <Carte><p className="text-offwhite/50 text-xs uppercase tracking-wide">Clients</p><p className="text-3xl font-bold mt-1">{donnees.par_role.client}</p></Carte>
-      <Carte><p className="text-offwhite/50 text-xs uppercase tracking-wide">Vendeurs</p><p className="text-3xl font-bold mt-1">{donnees.par_role.vendeur}</p></Carte>
-      <Carte><p className="text-offwhite/50 text-xs uppercase tracking-wide">Admins</p><p className="text-3xl font-bold mt-1">{donnees.par_role.admin}</p></Carte>
+    <div className="space-y-4" data-testid="admin-vue">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 sm:gap-4">
+        <Kpi label="Revenu mensuel" valeur={eur(ab.mrr_ttc)} note="TTC prélevés — pas de TVA collectée" or />
+        <Kpi label="Clients payants" valeur={ab.payants ?? 0} />
+        <Kpi label="Essais en cours" valeur={ab.essais_en_cours ?? 0} note="1 € · 1 mois" />
+        <Kpi label="Résiliations" valeur={ab.resilies_en_cours ?? 0} note="accès jusqu'à fin de période" />
+        <Kpi label="Fondateurs" valeur={ab.fondateurs ?? 0} />
+        <Kpi label="Inscrits (7 j)" valeur={donnees.inscrits_7j ?? 0} note={`${donnees.utilisateurs_total} au total`} />
+      </div>
+      <Carte>
+        <p className="mb-3 font-semibold">Abonnés par offre</p>
+        <div className="flex flex-wrap gap-2" data-testid="admin-par-offre">
+          {["reveur", "serenite", "pro", "business", "entreprise"].map((k) => (
+            <span key={k} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm">{NOMS_OFFRES[k]} <b className="ml-1 text-gold">{ab.par_offre?.[k] || 0}</b></span>
+          ))}
+          <span className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-offwhite/60">Vendeurs {donnees.par_role.vendeur} · Admins {donnees.par_role.admin}</span>
+        </div>
+      </Carte>
+      <Branchements />
     </div>
   );
 }
@@ -216,7 +279,7 @@ function ComptesVendeurs() {
   useEffect(() => { fetchAdminCommerceVendors().then((d) => setItems(d.items)).catch((e) => setError(e.message)); }, []);
   if (error) return <Carte><p className="text-sm text-red-400">{error}</p></Carte>;
   if (!items) return <Carte><p className="text-sm text-offwhite/50">Chargement…</p></Carte>;
-  return <Carte><div className="overflow-x-auto"><table className="w-full min-w-[560px] text-sm"><thead><tr className="border-b border-white/10 text-left text-offwhite/50"><th className="pb-2">Email</th><th className="pb-2">Boutique</th><th className="pb-2">Rôle</th><th className="pb-2">Produits</th></tr></thead><tbody>{items.map((v) => <tr key={v.id} className="border-b border-white/5"><td className="py-2.5">{v.email}</td><td className="py-2.5">{v.shop || "—"}</td><td className="py-2.5"><span className="rounded-full bg-white/10 px-2 py-1 text-xs">{v.role}</span></td><td className="py-2.5">{v.products}</td></tr>)}</tbody></table></div></Carte>;
+  return <Carte><div className="overflow-x-auto"><table className="w-full min-w-[820px] text-sm"><thead><tr className="border-b border-white/10 text-left text-offwhite/50"><th className="pb-2">Email</th><th className="pb-2">Boutique</th><th className="pb-2">Rôle</th><th className="pb-2">Produits</th></tr></thead><tbody>{items.map((v) => <tr key={v.id} className="border-b border-white/5"><td className="py-2.5">{v.email}</td><td className="py-2.5">{v.shop || "—"}</td><td className="py-2.5"><span className="rounded-full bg-white/10 px-2 py-1 text-xs">{v.role}</span></td><td className="py-2.5">{v.products}</td></tr>)}</tbody></table></div></Carte>;
 }
 
 function Utilisateurs() {
@@ -256,7 +319,7 @@ function Utilisateurs() {
       <div className="overflow-x-auto"><table className="w-full min-w-[560px] text-sm">
         <thead>
           <tr className="text-left text-offwhite/50 border-b border-white/10">
-            <th className="pb-2">Email</th><th className="pb-2">Rôle</th><th className="pb-2">Offre</th><th className="pb-2">Inscrit le</th><th className="pb-2">Action</th>
+            <th className="pb-2">Email</th><th className="pb-2">Rôle</th><th className="pb-2">Offre</th><th className="pb-2">Abonnement</th><th className="pb-2">Inscrit le</th><th className="pb-2">Action</th>
           </tr>
         </thead>
         <tbody>
@@ -269,11 +332,22 @@ function Utilisateurs() {
                   data-testid={`admin-plan-select-${u.id}`}
                   className="bg-navy-800 border border-white/15 rounded-lg text-xs px-2 py-1">
                   <option value="essentielle">Aucune offre</option>
+                  <option value="reveur">Rêveur</option>
                   <option value="serenite">Solo</option>
                   <option value="pro">Pro</option>
                   <option value="business">Équipe</option>
                   <option value="entreprise">Entreprise</option>
                 </select>
+              </td>
+              <td className="py-2.5 text-xs" data-testid={`admin-abo-${u.id}`}>
+                {u.abonnement && u.abonnement.etat !== "aucun" ? (
+                  <>
+                    <span className={`rounded-full px-2 py-0.5 ${{ actif: "bg-emerald-400/15 text-emerald-300", essai: "bg-gold/15 text-gold", resilie: "bg-amber-300/15 text-amber-200", expire: "bg-white/10 text-offwhite/50" }[u.abonnement.etat]}`}>
+                      {{ actif: "Actif", essai: "Essai", resilie: "Résilié", expire: "Expiré" }[u.abonnement.etat]}
+                    </span>
+                    <span className="ml-1.5 text-offwhite/55">{u.abonnement.fin ? `→ ${new Date(u.abonnement.fin).toLocaleDateString("fr-FR")}` : ""}{u.abonnement.prelevement_auto ? " · auto" : ""}{u.abonnement.fondateur ? " · fondateur" : ""}{u.abonnement.plan_suivant ? ` · puis ${NOMS_OFFRES[u.abonnement.plan_suivant] || u.abonnement.plan_suivant}` : ""}</span>
+                  </>
+                ) : <span className="text-offwhite/35">—</span>}
               </td>
               <td className="py-2.5 text-offwhite/50">{new Date(u.inscrit_le).toLocaleDateString("fr-FR")}</td>
               <td className="py-2.5">
@@ -366,6 +440,57 @@ function Parrainage() {
                 <td className="py-2.5"><span className={`px-2 py-0.5 rounded-full text-xs ${r.statut === "actif" ? "bg-gold/15 text-gold" : "bg-white/10"}`}>{r.statut}</span></td>
                 <td className="py-2.5">{r.bonus_credits} crédits</td>
                 <td className="py-2.5 text-offwhite/50">{new Date(r.depuis).toLocaleDateString("fr-FR")}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table></div>
+      </Carte>
+    </div>
+  );
+}
+
+function NotificationsAdmin() {
+  const [donnees, setDonnees] = useState(null);
+  const [erreur, setErreur] = useState(null);
+  useEffect(() => {
+    fetchAdminNotifications().then(setDonnees).catch(() => setErreur("Accès refusé ou erreur serveur."));
+  }, []);
+  if (erreur) return <Carte><p className="text-red-400 text-sm">{erreur}</p></Carte>;
+  if (!donnees) return <Carte><p className="text-offwhite/50 text-sm">Chargement…</p></Carte>;
+  const actifs = donnees.comptes.filter((c) => c.notifications).length;
+  return (
+    <div className="space-y-4">
+      <Carte>
+        <p className="text-offwhite/50 text-xs uppercase tracking-wide mb-3">Types de notifications envoyées par l'appli</p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {donnees.catalogue.map((n) => (
+            <div key={n.cle} className="rounded-lg border border-white/10 px-3 py-2">
+              <p className="text-sm font-semibold text-offwhite">{n.label}</p>
+              <p className="text-xs text-offwhite/50 mt-0.5">{n.desc}</p>
+            </div>
+          ))}
+        </div>
+      </Carte>
+      <div className="grid grid-cols-2 gap-4">
+        <Carte><p className="text-offwhite/50 text-xs uppercase tracking-wide">Comptes avec notifications actives</p><p className="text-3xl font-bold mt-1">{actifs} / {donnees.comptes.length}</p></Carte>
+        <Carte><p className="text-offwhite/50 text-xs uppercase tracking-wide">Types catalogués</p><p className="text-3xl font-bold mt-1">{donnees.catalogue.length}</p></Carte>
+      </div>
+      <Carte>
+        <p className="text-offwhite/50 text-xs uppercase tracking-wide mb-2">Qui reçoit quoi</p>
+        <div className="overflow-x-auto"><table className="w-full min-w-[560px] text-sm">
+          <thead>
+            <tr className="text-left text-offwhite/50 border-b border-white/10">
+              <th className="pb-2">Compte</th><th className="pb-2">Notifications</th><th className="pb-2">Heure check-in</th><th className="pb-2">Fuseau</th><th className="pb-2">Marché</th>
+            </tr>
+          </thead>
+          <tbody>
+            {donnees.comptes.map((c) => (
+              <tr key={c.email} className="border-b border-white/5">
+                <td className="py-2.5">{c.prenom ? `${c.prenom} · ` : ""}{c.email}</td>
+                <td className="py-2.5"><span className={`px-2 py-0.5 rounded-full text-xs ${c.notifications ? "bg-gold/15 text-gold" : "bg-white/10 text-offwhite/50"}`}>{c.notifications ? "Actives" : "Coupées"}</span></td>
+                <td className="py-2.5 text-offwhite/70">{c.heure_checkin || "—"}</td>
+                <td className="py-2.5 text-offwhite/50">{c.fuseau || "—"}</td>
+                <td className="py-2.5 text-offwhite/50">{c.marche}</td>
               </tr>
             ))}
           </tbody>

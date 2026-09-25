@@ -56,3 +56,30 @@ def test_statut_prospect(client, compte, env):
     r = client.patch(f"/api/radar/prospects/{op['prospect']['id']}", headers=h, json={"statut": "contacte"})
     assert r.status_code == 200 and r.json()["statut"] == "contacte"
     assert client.patch(f"/api/radar/prospects/{op['prospect']['id']}", headers=h, json={"statut": "n'importe"}).status_code == 400
+
+
+def test_sources_radar_lisibles(client, compte, env):
+    """Le Radar dit clairement ce qui est branché, et l'admin voit les variables manquantes."""
+    for v in ("APOLLO_API_KEY", "DATAFORSEO_LOGIN", "DATAFORSEO_PASSWORD"):
+        env(**{v: ""})
+    _, h = compte(plan="serenite")
+    _profil(client, h, CONSEIL)
+    s = client.get("/api/radar/sources", headers=h).json()
+    ap = next(x for x in s["sources"] if x["cle"] == "apollo")
+    assert ap["etat"] == "non_configure" and not ap["actif"]
+    assert "admin" not in s  # un client ne voit pas les noms de variables
+    _, ha = compte(role="admin")
+    sa = client.get("/api/radar/sources", headers=ha).json()
+    assert "APOLLO_API_KEY" in sa["admin"]["variables_manquantes"]
+
+
+def test_apollo_actif_pour_admin_sans_abonnement(client, compte, env, faux):
+    env(APOLLO_API_KEY="apollo-test")
+    _, h = compte(role="admin")
+    _profil(client, h, CONSEIL)
+    s = client.get("/api/radar/sources", headers=h).json()
+    ap = next(x for x in s["sources"] if x["cle"] == "apollo")
+    assert ap["etat"] == "ok" and "admin" in s and "APOLLO_API_KEY" not in s["admin"]["variables_manquantes"]
+    r = client.get("/api/cockpit/radar", headers=h).json()
+    assert r["apollo"]["quota"] > 0
+    assert any(o.get("prospect") for o in r["opportunities"])

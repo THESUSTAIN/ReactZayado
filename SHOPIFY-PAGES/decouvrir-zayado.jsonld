@@ -1,0 +1,46 @@
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "À qui s'adresse Zayado ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Aux indépendants, solopreneurs et dirigeants de TPE qui veulent un seul endroit pour piloter leur activité : vision, priorités, prospection, clients et équilibre personnel."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Y a-t-il un engagement ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Non. L'abonnement se renouvelle chaque mois (ou chaque année) et se résilie en un clic depuis les paramètres. Tu gardes l'accès jusqu'à la fin de la période payée."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Comment fonctionne l'essai à 1 € ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "L'offre Solo est à 1 € TTC pendant 2 mois. Ensuite, l'abonnement continue au tarif fondateur s'il est encore ouvert. Tu reçois un e-mail 7 jours avant le premier prélèvement."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Où sont hébergées mes données ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "En Europe, conformément au RGPD. Tes données restent exportables à tout moment."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Zayado fonctionne-t-il sur mobile ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Oui, l'application s'utilise dans le navigateur, sur ordinateur comme sur téléphone, et dans Microsoft Teams."
+      }
+    }
+  ]
+}

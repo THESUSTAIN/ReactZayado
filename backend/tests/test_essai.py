@@ -1,4 +1,4 @@
-"""Modèle tarifaire : plus d'offre gratuite, essai Solo « 2 mois pour 1 € » (paiement Mollie simulé)."""
+"""Modèle tarifaire : plus d'offre gratuite, essai Solo « 1 mois pour 1 € » (paiement Mollie simulé)."""
 from datetime import datetime, timezone
 
 
@@ -8,7 +8,7 @@ def test_nouveau_compte_sans_acces_mais_essai_disponible(client, compte):
     assert a["acces"] == "aucun" and a["essai"]["disponible"] is True and a["essai"]["prix"] == 1
 
 
-def test_essai_un_euro_active_solo_60_jours_et_reserve_le_fondateur(client, compte, env, faux):
+def test_essai_un_euro_active_solo_30_jours_et_reserve_le_fondateur(client, compte, env, faux):
     env(MOLLIE_API_KEY="test_cle")
     _, h = compte()
     r = client.post("/api/checkout", headers=h, json={"plan": "serenite", "essai": True})
@@ -20,7 +20,7 @@ def test_essai_un_euro_active_solo_60_jours_et_reserve_le_fondateur(client, comp
     a = client.get("/api/abonnement", headers=h).json()
     assert a["acces"] == "actif" and a["en_essai"] is True and a["plan"] == "serenite"
     jours = (datetime.fromisoformat(a["fin"]) - datetime.now(timezone.utc)).days
-    assert 58 <= jours <= 60
+    assert 28 <= jours <= 30
     assert a["fondateur"] is True            # prix fondateur réservé pour la suite
     assert a["essai"]["disponible"] is False
     # Un seul essai par compte

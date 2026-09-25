@@ -4,17 +4,18 @@ import {
   LayoutTemplate, PieChart, CalendarRange,
   Compass, Palette, Network, LayoutGrid, ArrowRight, Lock, Target,
 } from "lucide-react";
+import { toast } from "sonner";
 import { fetchObjectifs } from "@/lib/kairosApi";
+import { creerCarteMentale, creerCockpitStrategique } from "@/lib/carteMentale";
 import { BoardsGallery } from "@/components/vision/BoardsGallery";
 
 
 const MODELS = [
   { id: "wheel", icon: PieChart, title: "Roue de l'équilibre", desc: "Tes piliers de vie, branchés sur tes données Bien-être.", live: true },
-  { id: "roadmap", icon: CalendarRange, title: "Feuille de route 90 jours", desc: "Trois horizons pour passer de la vision à l'action.", live: true },
   { id: "vmi", icon: Compass, title: "Vision · Mission · Identité", desc: "Clarifie ton cap, ta raison d'être et ton identité de marque.", soon: true },
   { id: "mood", icon: Palette, title: "Moodboard Élan / Refuge", desc: "Deux ambiances pilotées par tes modes d'énergie.", soon: true },
-  { id: "mindmap", icon: Network, title: "Carte mentale", desc: "Explore tes idées en arborescence connectée.", soon: true },
-  { id: "cockpit", icon: LayoutGrid, title: "Cockpit stratégique", desc: "Un tableau de bord vivant de tes indicateurs clés.", soon: true },
+  { id: "mindmap", icon: Network, title: "Carte mentale", desc: "Ta vision au centre, tes clients, ton offre, tes chiffres et ton énergie en branches reliées.", live: true },
+  { id: "cockpit", icon: LayoutGrid, title: "Cockpit stratégique", desc: "6 murs reliés en direct : objectifs, finances, actions, énergie, idées et victoires.", live: true },
 ];
 
 function Card({ item, onOpen, delay }) {
@@ -70,6 +71,17 @@ export function VisionHub({ onOpen, onOpenBoard }) {
   // choisir, sans jamais voir ce qu'il venait de créer.
   const [objectifs, setObjectifs] = useState(null);
   useEffect(() => { fetchObjectifs().then((d) => setObjectifs(d.items || d || [])).catch(() => setObjectifs([])); }, []);
+  // Carte mentale : crée un board pré-rempli (vision au centre + 4 branches reliées) puis l'ouvre.
+  const creerDepuisModele = async (fn, attente, pret) => {
+    const t = toast.loading(attente);
+    try { const b = await fn(); toast.success(pret, { id: t }); onOpenBoard(b); }
+    catch { toast.error("Création impossible pour le moment. Réessaie.", { id: t }); }
+  };
+  const ouvrirModele = (id, opts) => {
+    if (id === "mindmap") return creerDepuisModele(creerCarteMentale, "Création de ta carte mentale…", "Ta carte mentale est prête");
+    if (id === "cockpit") return creerDepuisModele(creerCockpitStrategique, "Création de ton cockpit stratégique…", "Ton cockpit stratégique est prêt");
+    return onOpen(id, opts);
+  };
 
   return (
     <div className="mx-auto max-w-5xl" data-testid="vision-hub">
@@ -111,7 +123,7 @@ export function VisionHub({ onOpen, onOpenBoard }) {
           <LayoutTemplate size={15} className="text-gold" /> Modèles
         </h3>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {MODELS.map((item, i) => <Card key={item.title} item={item} onOpen={onOpen} delay={0.12 + i * 0.05} />)}
+          {MODELS.map((item, i) => <Card key={item.title} item={item} onOpen={ouvrirModele} delay={0.12 + i * 0.05} />)}
         </div>
       </section>
     </div>

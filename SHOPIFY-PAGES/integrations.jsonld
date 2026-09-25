@@ -1,0 +1,30 @@
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Faut-il un compte Microsoft 365 pour Teams ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Oui, l'application Zayado s'ajoute à ton Teams professionnel. Si le chargement d'applications est bloqué, ton administrateur peut l'ajouter pour toute l'entreprise."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Mes accès bancaires sont-ils partagés ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Non. Zayado utilise les accès en lecture fournis par Qonto ou Pennylane, et tu peux les retirer à tout moment."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Une intégration manque ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Écris-nous à contact@zayado.net : les demandes les plus fréquentes passent en priorité."
+      }
+    }
+  ]
+}

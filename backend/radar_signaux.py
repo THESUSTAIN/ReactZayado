@@ -31,7 +31,7 @@ from typing import Optional
 import httpx
 from fastapi import Depends, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy import JSON, DateTime, String, UniqueConstraint, select
+from sqlalchemy import JSON, DateTime, String, UniqueConstraint, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -345,7 +345,7 @@ def install_radar_signaux(g: dict) -> None:
         plan = (getattr(profil, "plan", None) or "essentielle").lower()
         User = g.get("User")
         u = await db.get(User, uid) if User is not None else None
-        if plan == "essentielle" and not (u and u.role in ("admin", "vendeur")):
+        if plan in ("essentielle", "reveur") and not (u and u.role in ("admin", "vendeur")):
             sortie["verrou"] = True
             return sortie
         if clientele in ("b2c", "mixte"):
@@ -362,6 +362,71 @@ def install_radar_signaux(g: dict) -> None:
     @api.get("/radar/signaux")
     async def radar_signaux(db: AsyncSession = Depends(get_db)):
         return await signaux(db, _uid())
+
+    @api.get("/radar/sources")
+    async def radar_sources(db: AsyncSession = Depends(get_db)):
+        """Ce qui alimente le Radar, en clair : chaque source est active ou non,
+        et pourquoi. Les admins voient en plus les variables Railway à poser."""
+        uid = _uid()
+        profil = await g["_profil"](db, uid)
+        cm = dict(profil.contexte_metier or {})
+        clientele = type_clientele(cm)
+        User = g.get("User")
+        u = await db.get(User, uid) if User is not None else None
+        admin = bool(u and u.role == "admin")
+        ia = bool(os.environ.get("MAMMOTH_API_KEY") or os.environ.get("MAMMOUTH_API_KEY"))
+        dfs = bool(os.environ.get("DATAFORSEO_LOGIN") and os.environ.get("DATAFORSEO_PASSWORD"))
+        f_ap = g.get("_statut_apollo")
+        apollo = await f_ap(db, uid) if f_ap else {"etat": "non_configure"}
+        VO = g.get("VisionObjectif")
+        nb_obj = 0
+        if VO is not None:
+            nb_obj = (await db.execute(select(func.count()).select_from(VO).where(VO.user_id == uid))).scalar_one()
+        zone = bool(cm.get("zone"))
+        immo = est_immobilier(cm)
+        particuliers = clientele in ("b2c", "mixte")
+        sources = [
+            {"cle": "apollo", "nom": "Contacts réels (Apollo)",
+             "role": "Des prescripteurs à contacter" if clientele == "b2c" else "De vraies personnes à contacter",
+             "actif": apollo.get("etat") == "ok", "etat": apollo.get("etat"),
+             "detail": {"ok": f"{apollo.get('utilises', 0)} / {apollo.get('quota', 0)} contacts ce mois",
+                        "quota": f"Quota du mois atteint ({apollo.get('quota', 0)})",
+                        "hors_offre": "Inclus à partir de l'offre Solo",
+                        "non_configure": "Pas encore branché"}.get(apollo.get("etat"), "")},
+            {"cle": "google", "nom": "Recherches Google",
+             "role": "Ce que les gens tapent près de chez toi", "actif": particuliers and zone,
+             "etat": ("reel" if dfs else "estimation") if particuliers else "inutile",
+             "detail": ("Volumes réels (DataForSEO)" if dfs else "Suggestions IA, volumes non activés") if particuliers
+                       else "Utile si tu vends à des particuliers"},
+            {"cle": "meta", "nom": "Pub Facebook / Instagram",
+             "role": "Une annonce prête à lancer", "actif": particuliers and zone,
+             "etat": "ok" if particuliers else "inutile",
+             "detail": "Prête dès que ta ville est indiquée" if particuliers else "Utile si tu vends à des particuliers"},
+            {"cle": "dvf", "nom": "Ventes immobilières (DVF)",
+             "role": "Les ventes réelles de ta commune", "actif": immo and zone,
+             "etat": "ok" if immo else "inutile",
+             "detail": "Données publiques de l'État" if immo else "Réservé aux métiers de l'immobilier"},
+            {"cle": "ia", "nom": "Messages rédigés par l'IA", "role": "Un message prêt pour chaque opportunité",
+             "actif": ia, "etat": "ok" if ia else "repli",
+             "detail": "Mammouth AI" if ia else "Modèles de messages génériques"},
+        ]
+        a_faire = []
+        if nb_obj == 0:
+            a_faire.append({"cle": "objectifs", "texte": "Pose au moins un objectif : le Radar s'en sert pour choisir tes opportunités.",
+                            "lien": "/app/actions?tab=objectifs"})
+        if particuliers and not zone:
+            a_faire.append({"cle": "zone", "texte": "Indique ta ville pour activer Google, la pub et les ventes.", "lien": None})
+        sortie = {"clientele": clientele, "zone": cm.get("zone"), "objectifs": nb_obj, "sources": sources, "a_faire": a_faire}
+        if admin:
+            manquantes = []
+            if not (os.environ.get("APOLLO_API_KEY") or "").strip():
+                manquantes.append("APOLLO_API_KEY")
+            if not dfs:
+                manquantes += [v for v in ("DATAFORSEO_LOGIN", "DATAFORSEO_PASSWORD") if not os.environ.get(v)]
+            if not ia:
+                manquantes.append("MAMMOTH_API_KEY")
+            sortie["admin"] = {"variables_manquantes": manquantes}
+        return sortie
 
     class ReglagesIn(BaseModel):
         clientele: Optional[str] = Field(default=None, max_length=10)

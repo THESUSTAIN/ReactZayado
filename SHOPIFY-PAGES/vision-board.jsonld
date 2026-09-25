@@ -1,0 +1,38 @@
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Le vision board est-il inclus dans toutes les offres ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Oui, dès l'offre Rêveur à 15 € HT par mois, avec des boards illimités."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Puis-je avoir plusieurs vision boards ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Oui : un board personnel, un board pour ton entreprise, un pour un projet… sans limite."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Dois-je savoir dessiner ou faire du design ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Non. L'IA propose la structure et les images ; tu n'as qu'à ajuster les textes."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Mon vision board est-il privé ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Oui. Il n'est visible que par toi, sauf si tu crées volontairement un lien de partage en lecture seule."
+      }
+    }
+  ]
+}

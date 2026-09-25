@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Loader2, Store, Plus, Send, Trash2, Pencil, ShieldCheck, Check, X, Package } from "lucide-react";
 import { GlassCard } from "@/components/kairos/GlassCard";
 import { SideMenuPro } from "@/components/pro/SideMenuPro";
+import { useThemePro } from "@/lib/themePro";
 import { call } from "@/lib/part2Api";
 import { PhotosProduit } from "@/components/pro/PhotosProduit";
 
@@ -29,8 +30,9 @@ function montrerErreur(e) {
 
 // Défini hors du composant : sinon il serait recréé à chaque rendu et les champs perdraient le focus à chaque frappe.
 function Shell({ children, menu }) {
+  const [theme] = useThemePro();
   return (
-  <div className="min-h-screen bg-navy-900 text-offwhite">
+  <div className={`min-h-screen text-offwhite ${theme === "clair" ? "pro-clair" : "pro-sombre"}`} data-testid="vendeur-root">
     {menu}
     <div className="lg:pl-[248px]">
       <header className="entete-navy sticky top-0 z-20 hidden items-center gap-3 lg:flex border-b border-white/10 px-4 py-3 backdrop-blur-2xl sm:px-6" style={{ background: "rgba(15,27,58,0.86)" }}>

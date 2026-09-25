@@ -22,7 +22,7 @@ export default function MonEspace() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-navy-900 px-4 py-8 text-offwhite sm:px-8">
+    <main className="min-h-screen px-4 py-8 text-offwhite sm:px-8">
       <div className="mx-auto max-w-4xl">
         <button onClick={() => navigate("/app")} className="mb-6 inline-flex items-center gap-2 text-xs text-offwhite/60 hover:text-offwhite">
           <ArrowLeft size={14} /> Retour au cockpit

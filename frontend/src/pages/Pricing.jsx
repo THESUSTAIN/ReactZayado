@@ -46,8 +46,8 @@ export default function Pricing() {
   const [comparer, setComparer] = useState(false);
 
   useSeo({
-    title: "Tarifs Zayado — essai 2 mois pour 1 €, Solo et Pro, tarif fondateur, sans engagement",
-    description: "Essaie Zayado Solo 2 mois pour 1 €, puis le tarif fondateur garanti tant que tu restes abonné. Pro avec Agent Business à ta marque. Sans engagement ni renouvellement automatique.",
+    title: "Tarifs Zayado — Rêveur 15 €, Solo 1 mois pour 1 €, Pro, Équipe · sans engagement",
+    description: "Rêveur à 15 € pour ta Vision et tes idées. Solo 1 mois pour 1 €, puis tarif fondateur garanti. Pro avec Agent Business à ta marque. Sans engagement, résiliable en 1 clic.",
     path: "/pricing",
   });
 
@@ -61,7 +61,7 @@ export default function Pricing() {
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-offwhite/65 sm:text-base">
             Vision, priorités, énergie et chiffres de ton activité au même endroit, avec une IA qui connaît ton projet.
-            Essai Solo : 2 mois pour 1 €. Ensuite, prix hors taxes, sans engagement.
+            Rêveur dès 15 € · Solo : 1 mois pour 1 €. Prix TTC, sans engagement.
           </p>
 
         </div>
@@ -70,7 +70,7 @@ export default function Pricing() {
 
         {/* Confiance */}
         <div className="mx-auto mt-8 flex max-w-4xl flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[12px] text-offwhite/60" data-testid="pricing-trust">
-          {[[ShieldCheck, "Sans engagement, sans renouvellement automatique"], [Server, "Hébergé en Europe · RGPD"], [Lock, "Paiement sécurisé Mollie"], [FileText, "Mises à jour incluses"]].map(([Icon, label]) => (
+          {[[ShieldCheck, "Sans engagement · résiliable en 1 clic"], [Server, "Hébergé en Europe · RGPD"], [Lock, "Paiement sécurisé Mollie"], [FileText, "Mises à jour incluses"]].map(([Icon, label]) => (
             <span key={label} className="inline-flex items-center gap-1.5"><Icon size={14} className="text-gold" />{label}</span>
           ))}
         </div>
@@ -110,13 +110,15 @@ export default function Pricing() {
           <h2 className="mb-6 text-center font-display text-2xl font-bold">Questions sur les tarifs</h2>
           {[
             { q: "Qu'est-ce que la « maintenance incluse » ?", r: "Les mises à jour, l'amélioration continue et la sécurité — sans rien payer en plus, jamais. Tu utilises, on entretient." },
-            { q: "Comment marche l'essai à 1 € ?", r: "Tu paies 1 € TTC une seule fois et tu as l'offre Solo complète pendant 2 mois. Rien ne se renouvelle tout seul : à la fin, tu choisis de continuer (au tarif fondateur réservé pendant ton essai, s'il est encore ouvert) ou d'arrêter. Un essai par compte." },
-            { q: "Pourquoi pas d'offre gratuite ?", r: "Parce que Zayado utilise de vraies sources (IA, prospects, données Google) qui ont un coût. L'essai à 1 € te laisse tout tester pendant 2 mois, sans engagement." },
-            { q: "Les prix sont-ils HT ou TTC ?", r: "Les prix des offres sont hors taxes : la TVA française (20 %) s'ajoute sur ta facture, que tu peux récupérer si ton entreprise y est assujettie. L'essai est à 1 € TTC." },
-            { q: "Quelle différence entre Solo et Pro ?", r: "Solo, c'est ton cockpit complet pour piloter seul. Pro ajoute ce qui sert face à tes clients : ton propre chatbot à ta marque, les documents IA et les alertes WhatsApp / Telegram." },
+            { q: "Comment marche l'essai à 1 € ?", r: "Tu paies 1 € TTC et tu as l'offre Solo complète pendant 1 mois. Ensuite, l'abonnement continue automatiquement au tarif fondateur réservé pendant ton essai (s'il est encore ouvert). Tu reçois un e-mail 7 jours avant le premier prélèvement et tu peux résilier en 1 clic dans Paramètres. Un essai par compte." },
+            { q: "C'est quoi l'offre Rêveur ?", r: "Pour poser ta vision et nourrir tes idées sans tout le cockpit : Vision Boards illimités avec images IA, Idées développées par l'IA et le chat qui connaît ton projet, pour 15 € TTC par mois. Tu passes à Solo quand tu veux passer à l'action." },
+            { q: "Pourquoi pas d'offre gratuite ?", r: "Parce que Zayado utilise de vraies sources (IA, prospects, données Google) qui ont un coût. L'essai à 1 € te laisse tout tester pendant 1 mois, sans engagement." },
+            { q: "Les prix sont-ils HT ou TTC ?", r: "Tous les prix sont TTC, essai compris : nous ne sommes pas assujettis à la TVA, donc le montant affiché est le montant exact prélevé, sans rien à ajouter." },
+            { q: "Quelle différence entre Solo et Pro ?", r: "Solo, c'est ton cockpit complet pour piloter seul. Pro ajoute ce qui sert face à tes clients : ton propre chatbot à ta marque, 90 prospects par mois au lieu de 30, les documents IA et les alertes WhatsApp / Telegram. Séparément, ces outils coûteraient plus de 200 € par mois (bouton « Pourquoi Pro ? »)." },
+            { q: "Comment marche l'offre Équipe ?", r: "Tu as tout Pro, et tu invites 2 personnes (associé, assistant, commercial) depuis Paramètres. Chacune reçoit son propre espace Solo : son cockpit, sa Vision, son Radar. Tu peux retirer ou remplacer quelqu'un à tout moment." },
             { q: "Qu'est-ce que le tarif fondateur ?", r: "Une offre de lancement réservée aux 100 premiers clients, jusqu'à la date indiquée. Ton tarif fondateur t'est garanti tant que tu restes abonné, même quand les prix normaux s'appliquent aux nouveaux clients." },
-            { q: "Puis-je changer de palier en cours de route ?", r: "Oui : choisis l'offre supérieure sur cette page. La nouvelle offre démarre dès le paiement validé." },
-            { q: "Et si j'arrête ?", r: "Il n'y a pas de renouvellement automatique : tu gardes l'accès jusqu'à la fin de la période payée, puis ton espace se met en pause. Tes données sont conservées et restent exportables : tu les retrouves en reprenant une offre." },
+            { q: "Puis-je changer de palier en cours de route ?", r: "Oui : choisis la nouvelle offre sur cette page. Elle démarre dès le paiement validé, le temps qu'il te restait est converti au prorata, et l'ancien prélèvement s'arrête." },
+            { q: "Et si j'arrête ?", r: "Un clic dans Paramètres › Abonnement : plus aucun prélèvement, et tu gardes l'accès jusqu'à la fin de la période payée. Ensuite ton espace se met en pause ; tes données sont conservées et exportables, tu les retrouves en reprenant une offre." },
           ].map((f, i) => (
             <details key={i} className="glass rounded-2xl px-6 py-4" data-testid={`pricing-faq-${i}`}>
               <summary className="cursor-pointer text-sm font-semibold">{f.q}</summary>

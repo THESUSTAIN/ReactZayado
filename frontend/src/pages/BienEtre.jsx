@@ -5,16 +5,17 @@ import MindsetParcours from "@/components/mindset/MindsetParcours";
 import MindsetCarnet from "@/components/mindset/MindsetCarnet";
 import { Sidebar } from "@/components/kairos/Sidebar";
 import { Header } from "@/components/kairos/Header";
-import BreathingSession from "@/components/kairos/BreathingSession";
+import BreathingSession, { PROTOCOLES } from "@/components/kairos/BreathingSession";
+import { AMBIANCES_SON, jouerAmbiance, arreterAmbiance } from "@/lib/ambiance";
 import {
   Heart, Battery, Activity, Moon, Wind, Coffee, BookOpen, Music,
   Sparkles, ChevronRight, Plus, Check, Waves, Cloud, Leaf, Play,
-  TrendingUp, Zap, Calendar, ArrowRight, Circle, CheckCircle2,
+  TrendingUp, Zap, Calendar, ArrowRight, Circle, CheckCircle2, Flame, Volume2, Square,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useKairos } from "@/context/KairosContext";
 import { EnergyCheckin } from "@/components/kairos/EnergyCheckin";
-import { fetchState, completerCheckin } from "@/lib/kairosApi";
+import { fetchState, completerCheckin, fetchRituels, basculerRituel, fetchCourbeEnergie } from "@/lib/kairosApi";
 
 const GOLD = "#DEC2A3";
 const MOOD_FACES = ["😞", "🙁", "😐", "🙂", "😊"];
@@ -37,19 +38,14 @@ const RITUALS = [
   { id: "r6", icon: Sparkles,  title: "Visualisation Refuge",  desc: "8 min · Ton lieu-refuge intérieur",                time: "08:00" },
 ];
 
-const AMBIENCES = [
-  { icon: Waves, label: "Vagues" },
-  { icon: Cloud, label: "Pluie douce" },
-  { icon: Leaf,  label: "Forêt" },
-  { icon: Music, label: "Piano lo-fi" },
-];
-
 export default function BienEtre() {
   const { user, trend, aCheckin, energy } = useKairos();
   // Mesures réelles du jour (serveur). null = pas encore mesuré — « — », jamais un faux chiffre.
   const [vitals, setVitals] = useState(null);
-  const [ambience, setAmbience] = useState("Vagues");
-  const [checked, setChecked] = useState({});  // ritual id → true
+  const [checked, setChecked] = useState({});  // ritual id → true (enregistré côté serveur)
+  const [serie, setSerie] = useState(null);
+  const [courbe, setCourbe] = useState(null);
+  const [seance, setSeance] = useState(null);   // { protocole, ambiance, duree } quand la séance est lancée
   const [showCheckin, setShowCheckin] = useState(false);
   const [energieOpen, setEnergieOpen] = useState(false);
   const [breathingOpen, setBreathingOpen] = useState(false);
@@ -59,8 +55,9 @@ export default function BienEtre() {
   const parcoursOuvert = params.get("p") || null;
   const allerA = (tab, p = null) => { setParams(p ? { tab, p } : { tab }); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
-  // Historique réel : les check-ins énergie du compte (14 derniers jours).
-  const history = (trend || []).slice(-7).map((p) => p.value);
+  // Historique réel : les 7 derniers jours avec leur vrai jour de semaine (serveur).
+  const semaine = courbe?.semaine || [];
+  const history = semaine.filter((j) => j.energie != null).map((j) => j.energie);
 
   const chargerVitals = () => fetchState().then((d) => {
     const today = new Date().toISOString().slice(0, 10);
@@ -72,13 +69,16 @@ export default function BienEtre() {
     });
   }).catch(() => setVitals({}));
 
+  const chargerRituels = () => fetchRituels().then((d) => {
+    setChecked(Object.fromEntries((d.faits || []).map((id) => [id, true])));
+    setSerie(d.serie);
+  }).catch(() => {});
+
   useEffect(() => {
     chargerVitals();
-    try {
-      const c = localStorage.getItem("kairos_rituals_done_" + new Date().toISOString().slice(0, 10));
-      if (c) setChecked(JSON.parse(c));
-      localStorage.removeItem("kairos_vitals"); // anciennes mesures locales, remplacées par le serveur
-    } catch {}
+    chargerRituels();
+    fetchCourbeEnergie().then(setCourbe).catch(() => setCourbe({ semaine: [] }));
+    try { localStorage.removeItem("kairos_vitals"); } catch { /* stockage indisponible */ }
   }, [energy?.score]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const ouvrirVital = (k) => {
@@ -94,11 +94,19 @@ export default function BienEtre() {
     catch { toast.error("Fais d'abord ton check-in énergie du jour."); setEnergieOpen(true); chargerVitals(); }
   };
 
-  const toggleRitual = (id) => {
-    const next = { ...checked, [id]: !checked[id] };
-    setChecked(next);
-    localStorage.setItem("kairos_rituals_done_" + new Date().toISOString().slice(0, 10), JSON.stringify(next));
-    if (next[id]) toast.success("Rituel accompli. Bravo à toi.");
+  const toggleRitual = async (id) => {
+    setChecked((x) => ({ ...x, [id]: !x[id] }));
+    try {
+      const r = await basculerRituel(id);
+      setChecked((x) => ({ ...x, [id]: r.fait }));
+      setSerie(r.serie);
+      if (r.fait) toast.success(r.serie?.jours > 1 ? `Rituel accompli · série de ${r.serie.jours} jours` : "Rituel accompli. Bravo à toi.");
+    } catch { setChecked((x) => ({ ...x, [id]: !x[id] })); toast.error("Impossible d'enregistrer pour le moment."); }
+  };
+  // Une séance terminée coche le rituel correspondant (et compte dans la série).
+  const seanceTerminee = (protocole) => {
+    const id = protocole === "refuge" ? "r6" : "r1";
+    if (!checked[id]) toggleRitual(id);
   };
 
   const doneCount = Object.values(checked).filter(Boolean).length;
@@ -186,11 +194,16 @@ export default function BienEtre() {
             <div className="mb-4 flex items-end justify-between">
               <div>
                 <h2 className="font-display text-[20px] font-semibold sm:text-[22px]">Tes 3 rituels doux du jour</h2>
-                <p className="mt-1 text-[13px] text-white/55">Coche celui qui t'a fait du bien. Aucun objectif, pas de pression.</p>
+                <p className="mt-1 text-[13px] text-white/55">Coche celui qui t'a fait du bien : chaque jour avec un geste pour toi (rituel, check-in ou exercice) prolonge ta série.</p>
               </div>
               <div className="text-right">
                 <div className="text-[10px] uppercase tracking-widest text-white/45">Aujourd'hui</div>
                 <div className="font-display text-[18px] font-semibold" style={{ color: GOLD }}>{doneCount} / {totalRituals}</div>
+                {serie && (
+                  <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-gold/10 px-2 py-0.5 text-[11px] font-semibold text-gold" data-testid="bienetre-serie">
+                    <Flame size={12} /> {serie.jours} jour{serie.jours > 1 ? "s" : ""} de suite{serie.record > serie.jours ? ` · record ${serie.record}` : ""}
+                  </div>
+                )}
               </div>
             </div>
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
@@ -202,7 +215,7 @@ export default function BienEtre() {
                   const done = !!checked[r.id];
                   return (
                     <div key={r.id} className={`group flex items-start gap-3 rounded-xl border p-4 transition ${done ? "border-emerald-500/30 bg-emerald-500/[0.06]" : "border-white/10 bg-white/[0.03] hover:border-white/25"}`}>
-                      <button onClick={() => toggleRitual(r.id)}
+                      <button onClick={() => toggleRitual(r.id)} data-testid={`rituel-${r.id}`}
                         className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 transition ${done ? "border-emerald-500 bg-emerald-500" : "border-white/25 bg-transparent hover:border-white/50"}`}>
                         {done && <Check size={13} className="text-navy-900" strokeWidth={3} />}
                       </button>
@@ -220,33 +233,8 @@ export default function BienEtre() {
             </div>
           </section>
 
-          {/* Big breathing hero card */}
-          <section className="mt-6 relative overflow-hidden rounded-2xl border border-white/10 p-6 sm:p-8"
-            style={{ background: "linear-gradient(135deg, rgba(96,165,250,0.15), rgba(147,197,253,0.10), rgba(56,178,172,0.10))" }}>
-            <div className="pointer-events-none absolute -top-16 -right-16 h-64 w-64 rounded-full opacity-40 blur-3xl"
-              style={{ background: "radial-gradient(circle, rgba(147,197,253,0.6), transparent 70%)" }} />
-            <div className="relative flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="max-w-lg">
-                <div className="flex items-center gap-2">
-                  <Wind size={16} style={{ color: GOLD }} />
-                  <span className="text-[10.5px] font-semibold uppercase tracking-[0.24em]" style={{ color: GOLD }}>Respiration guidée</span>
-                </div>
-                <h3 className="mt-3 font-display text-[24px] font-semibold text-white sm:text-[30px]">
-                  Une <span className="font-serif-italic italic" style={{ color: GOLD }}>bulle</span> pour respirer.
-                </h3>
-                <p className="mt-2 font-hand text-[22px] leading-tight text-white/85">Inspire. Retiens. Expire. Recommence.</p>
-                <p className="mt-2 text-[13px] text-white/60">3 protocoles : 4-7-8 (calme), Box (focus), Cohérence (anti-stress). Ambiance sonore optionnelle.</p>
-              </div>
-              <button onClick={() => setBreathingOpen(true)}
-                className="group relative flex h-32 w-32 items-center justify-center rounded-full transition hover:scale-105 sm:h-36 sm:w-36"
-                style={{
-                  background: "radial-gradient(circle at 40% 35%, rgba(255,255,255,0.95), rgba(220,220,235,0.75) 55%, rgba(180,180,220,0.55))",
-                  boxShadow: "0 0 50px rgba(147,197,253,0.5), inset 0 0 30px rgba(96,165,250,0.25)",
-                }}>
-                <span className="font-display text-[22px] font-bold text-navy-900 sm:text-[26px]">Commencer</span>
-              </button>
-            </div>
-          </section>
+          {/* Une seule séance : protocole + ambiance sonore + durée au même endroit */}
+          <SeanceDuMoment vitals={vitals} onLancer={setSeance} />
 
           {/* Layout 2 cols: 14 jours + Insight */}
           <div className="mt-6 grid gap-4 lg:grid-cols-[2fr_1fr]">
@@ -277,53 +265,29 @@ export default function BienEtre() {
                     <line key={n} x1="0" x2="400" y1={140 - n * 26} y2={140 - n * 26} stroke="rgba(255,255,255,0.05)" strokeDasharray="2 4" />
                   ))}
                   {(() => {
-                    const points = history.map((v, i) => `${(i * 60) + 20},${140 - v * 26}`);
-                    const line = points.join(" ");
-                    const area = `M20,140 L${line.replace(/ /g, " L")} L${20 + (history.length - 1) * 60},140 Z`;
+                    const pts = semaine.map((j, i) => (j.energie != null ? [(i * 60) + 20, 140 - j.energie * 26] : null)).filter(Boolean);
+                    const line = pts.map(([x, y]) => `${x},${y}`).join(" ");
+                    const area = pts.length ? `M${pts[0][0]},140 L${line.replace(/ /g, " L")} L${pts[pts.length - 1][0]},140 Z` : "";
+                    const creux = courbe?.analyse?.creux?.jour?.slice(0, 3);
                     return (
                       <>
-                        <path d={area} fill="url(#ge)" />
+                        {semaine.map((j, i) => (j.jour === creux ? <rect key={`c${i}`} x={(i * 60) - 5} y="0" width="50" height="140" rx="8" fill="rgba(185,82,78,0.12)" /> : null))}
+                        {area && <path d={area} fill="url(#ge)" />}
                         <polyline points={line} fill="none" stroke={GOLD} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        {history.map((v, i) => (
-                          <circle key={i} cx={(i * 60) + 20} cy={140 - v * 26} r="4" fill={GOLD} />
-                        ))}
+                        {pts.map(([x, y], i) => <circle key={i} cx={x} cy={y} r="4" fill={GOLD} />)}
                       </>
                     );
                   })()}
                 </svg>
                 <div className="mt-2 flex justify-between px-4 text-[10px] text-white/40">
-                  {["L", "M", "M", "J", "V", "S", "D"].map((d, i) => <span key={i}>{d}</span>)}
+                  {semaine.map((j) => <span key={j.date} className={j.jour === courbe?.analyse?.creux?.jour?.slice(0, 3) ? "text-rose-300" : ""}>{j.jour}</span>)}
                 </div>
               </div>
               )}
             </div>
 
-            <InsightDuJour history={history} vitals={vitals} onCheckin={() => setEnergieOpen(true)} onRespirer={() => setBreathingOpen(true)} />
+            <InsightDuJour history={history} vitals={vitals} analyse={courbe?.analyse} onCheckin={() => setEnergieOpen(true)} onRespirer={() => setBreathingOpen(true)} />
           </div>
-
-          {/* Ambience & séance */}
-          <section className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
-            <div className="mb-4 flex items-center gap-2">
-              <Cloud size={15} style={{ color: GOLD }} />
-              <h3 className="font-display text-[15px] font-semibold">Ambiance du Refuge</h3>
-            </div>
-            <div className="grid gap-2 grid-cols-2 sm:grid-cols-4">
-              {AMBIENCES.map((a) => {
-                const active = ambience === a.label;
-                return (
-                  <button key={a.label} onClick={() => setAmbience(a.label)}
-                    className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition ${active ? "border-[color:var(--g)] bg-[color:var(--g)]/10" : "border-white/10 bg-white/[0.02] hover:border-white/25"}`}
-                    style={{ "--g": GOLD }}>
-                    <a.icon size={18} style={{ color: active ? GOLD : "rgba(255,255,255,0.6)" }} />
-                    <span className="text-[12px] text-white/80">{a.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-            <button onClick={() => setBreathingOpen(true)} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-[13px] font-semibold text-navy-900" style={{ background: GOLD }}>
-              <Play size={14} fill="currentColor" /> Lancer la séance · {ambience} · 8 min
-            </button>
-          </section>
 
           {/* Rituels bonus */}
           <section className="mt-6">
@@ -354,14 +318,77 @@ export default function BienEtre() {
           vitals={vitals} onSave={(k, v) => { saveVital(k, v); if (typeof showCheckin === "string") setShowCheckin(false); }}
           onClose={() => setShowCheckin(false)} />
       )}
-      {breathingOpen && <BreathingSession onClose={() => setBreathingOpen(false)} />}
+      {breathingOpen && <BreathingSession onClose={() => setBreathingOpen(false)} onTermine={seanceTerminee} />}
+      {seance && <BreathingSession autoStart defaultCycle={seance.protocole} durationMin={seance.duree} ambiance={seance.ambiance}
+        onClose={() => setSeance(null)} onTermine={seanceTerminee} />}
       <EnergyCheckin open={energieOpen} onClose={() => { setEnergieOpen(false); setTimeout(chargerVitals, 800); }} />
     </div>
   );
 }
 
+/** Séance du moment : un seul lecteur — protocole, ambiance sonore (vraie, générée en direct) et durée. */
+function SeanceDuMoment({ vitals, onLancer }) {
+  const heure = new Date().getHours();
+  const conseil = vitals?.stress >= 4 ? "coherence" : vitals?.energy != null && vitals.energy <= 2 ? "4-7-8" : heure >= 19 ? "refuge" : "box";
+  const [protocole, setProtocole] = useState(conseil);
+  const [ambiance, setAmbiance] = useState("pluie");
+  const [duree, setDuree] = useState(5);
+  const [ecoute, setEcoute] = useState(null);
+  useEffect(() => { setProtocole(conseil); }, [conseil]);
+  useEffect(() => () => arreterAmbiance(), []);
+  const essayer = (id) => {
+    if (ecoute === id || id === "aucune") { arreterAmbiance(); setEcoute(null); return; }
+    if (jouerAmbiance(id, 0.5)) setEcoute(id);
+  };
+  const lancer = () => { arreterAmbiance(); setEcoute(null); onLancer({ protocole, ambiance, duree }); };
+  const choix = (actif) => `rounded-xl border px-3 py-2 text-left transition ${actif ? "border-[#DEC2A3] bg-[#DEC2A3]/12" : "border-white/10 bg-white/[0.03] hover:border-white/25"}`;
+  const raison = { coherence: "ton stress est élevé", "4-7-8": "ton énergie est basse", refuge: "la journée se termine", box: "pour rester concentré" }[conseil];
+  return (
+    <section className="mt-6 relative overflow-hidden rounded-2xl border border-white/12 p-5 sm:p-7" data-testid="seance-du-moment"
+      style={{ background: "linear-gradient(135deg, rgba(96,165,250,0.14), rgba(147,197,253,0.08), rgba(56,178,172,0.09))" }}>
+      <div className="flex items-center gap-2">
+        <Wind size={16} style={{ color: GOLD }} />
+        <span className="text-[10.5px] font-semibold uppercase tracking-[0.24em]" style={{ color: GOLD }}>Séance du moment</span>
+      </div>
+      <h3 className="mt-2 font-display text-[22px] font-semibold text-white sm:text-[26px]">Une pause guidée, <span className="font-serif-italic italic" style={{ color: GOLD }}>avec le son</span>.</h3>
+      <p className="mt-1 text-[13px] text-white/60">Conseillée maintenant : <b className="text-white/85">{PROTOCOLES[conseil].name}</b>, parce que {raison}.</p>
+
+      <p className="mt-5 mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/50">Protocole</p>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        {Object.entries(PROTOCOLES).map(([id, p]) => (
+          <button key={id} onClick={() => setProtocole(id)} className={choix(protocole === id)} data-testid={`seance-protocole-${id}`}>
+            <span className="block text-[13px] font-semibold text-white">{p.name}</span>
+            <span className="block text-[11.5px] text-white/55">{p.desc}</span>
+          </button>
+        ))}
+      </div>
+
+      <p className="mt-5 mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/50">Ambiance sonore · touche pour écouter</p>
+      <div className="flex flex-wrap gap-2">
+        {AMBIANCES_SON.map((a) => (
+          <button key={a.id} onClick={() => { setAmbiance(a.id); essayer(a.id); }} data-testid={`seance-son-${a.id}`}
+            className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[12.5px] transition ${ambiance === a.id ? "border-[#DEC2A3] bg-[#DEC2A3]/15 text-white" : "border-white/15 text-white/70 hover:border-white/30"}`}>
+            {ecoute === a.id ? <Square size={11} fill="currentColor" /> : a.id !== "aucune" ? <Volume2 size={13} /> : null} {a.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-5 flex flex-wrap items-center gap-3">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/50">Durée</span>
+        {[3, 5, 8, 12].map((m) => (
+          <button key={m} onClick={() => setDuree(m)} className={`rounded-full px-3 py-1 text-[12px] font-semibold ${duree === m ? "text-navy-900" : "border border-white/15 text-white/70"}`}
+            style={duree === m ? { background: GOLD } : {}}>{m} min</button>
+        ))}
+        <button onClick={lancer} className="ml-auto inline-flex items-center gap-2 rounded-full px-6 py-3 text-[14px] font-semibold text-navy-900" style={{ background: GOLD }} data-testid="seance-lancer">
+          <Play size={15} fill="currentColor" /> Lancer · {duree} min
+        </button>
+      </div>
+    </section>
+  );
+}
+
 /** Insight calculé sur tes vrais check-ins (avant : une phrase inventée, identique pour tout le monde). */
-function InsightDuJour({ history, vitals, onCheckin, onRespirer }) {
+function InsightDuJour({ history, vitals, analyse, onCheckin, onRespirer }) {
   let titre, texte, action = null;
   const n = history.length;
   if (n < 3) {
@@ -392,6 +419,16 @@ function InsightDuJour({ history, vitals, onCheckin, onRespirer }) {
       </div>
       <p className="font-serif-italic italic text-[16px] leading-snug text-white/90">{titre}</p>
       <p className="mt-3 text-[13px] leading-relaxed text-white/60">{texte}</p>
+      {analyse?.creux && (
+        <p className="mt-3 rounded-xl border border-rose-300/25 bg-rose-300/[0.07] px-3 py-2 text-[12.5px] leading-relaxed text-white/85" data-testid="bienetre-creux">
+          <b className="capitalize">{analyse.creux.jour}</b> = ton creux ({analyse.creux.moyenne}/5) → planifie léger ce jour-là.
+        </p>
+      )}
+      {analyse?.fort && (
+        <p className="mt-2 rounded-xl border border-emerald-300/25 bg-emerald-300/[0.07] px-3 py-2 text-[12.5px] leading-relaxed text-white/85" data-testid="bienetre-fort">
+          <b className="capitalize">{analyse.fort.jour}</b> = ton jour fort ({analyse.fort.moyenne}/5) → garde-le pour prospecter et vendre.
+        </p>
+      )}
       {action && (
         <button onClick={action.onClick} className="mt-4 w-full rounded-lg py-2 text-[12px] font-semibold text-navy-900" style={{ background: GOLD }}>{action.label}</button>
       )}

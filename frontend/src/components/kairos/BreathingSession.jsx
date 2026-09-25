@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Wind, X, Play, Pause } from "lucide-react";
+import { Wind, X, Play, Pause, Volume2, VolumeX } from "lucide-react";
 import { toast } from "sonner";
+import { jouerAmbiance, arreterAmbiance, volumeAmbiance, AMBIANCES_SON } from "@/lib/ambiance";
 
 const GOLD = "#DEC2A3";
 
@@ -9,11 +10,17 @@ const CYCLES = {
   "4-7-8": { name: "4-7-8 · Calme profond", steps: [{ label: "Inspire", dur: 4000, scale: 1.15 }, { label: "Retiens", dur: 7000, scale: 1.15 }, { label: "Expire", dur: 8000, scale: 0.9 }], desc: "Diminue l'anxiété et prépare au sommeil" },
   "box":   { name: "Box breathing · Focus",   steps: [{ label: "Inspire", dur: 4000, scale: 1.15 }, { label: "Retiens", dur: 4000, scale: 1.15 }, { label: "Expire", dur: 4000, scale: 0.9 }, { label: "Pause", dur: 4000, scale: 0.9 }], desc: "Concentration & clarté (Navy SEAL)" },
   "coherence": { name: "Cohérence cardiaque",  steps: [{ label: "Inspire", dur: 5000, scale: 1.15 }, { label: "Expire", dur: 5000, scale: 0.9 }], desc: "5 min · 6 cycles / min · anti-stress" },
+  "refuge": { name: "Refuge · visualisation", steps: [{ label: "Inspire", dur: 6000, scale: 1.12 }, { label: "Expire", dur: 6000, scale: 0.92 }], desc: "Respiration lente et ton lieu-refuge intérieur",
+    guide: ["Imagine un lieu où tu te sens en sécurité.", "Regarde les couleurs, la lumière.", "Écoute les sons autour de toi.", "Sens la température de l'air.", "Tu peux revenir ici quand tu veux."] },
 };
+export const PROTOCOLES = CYCLES;
 
-export default function BreathingSession({ onClose, defaultCycle = "4-7-8", durationMin = 5 }) {
+export default function BreathingSession({ onClose, defaultCycle = "4-7-8", durationMin = 5, ambiance = "aucune", autoStart = false, onTermine }) {
   const [cycleId, setCycleId] = useState(defaultCycle);
-  const [running, setRunning] = useState(false);
+  const [running, setRunning] = useState(autoStart);
+  const [son, setSon] = useState(ambiance);
+  const [volume, setVolume] = useState(0.6);
+  const preset = autoStart;
   const [stepIdx, setStepIdx] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const [duration, setDuration] = useState(durationMin);
@@ -22,6 +29,13 @@ export default function BreathingSession({ onClose, defaultCycle = "4-7-8", dura
   const totalMs = duration * 60 * 1000;
   const timerRef = useRef(null);
   const startRef = useRef(null);
+
+  // Ambiance sonore : joue pendant la séance, se coupe en pause et à la fermeture.
+  useEffect(() => {
+    if (running && son !== "aucune") jouerAmbiance(son, volume); else arreterAmbiance();
+  }, [running, son]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { volumeAmbiance(volume); }, [volume]);
+  useEffect(() => () => arreterAmbiance(), []);
 
   useEffect(() => {
     if (!running) return;
@@ -33,6 +47,7 @@ export default function BreathingSession({ onClose, defaultCycle = "4-7-8", dura
       if (total >= totalMs) {
         setRunning(false);
         toast.success("Séance terminée. Bravo à toi.");
+        onTermine?.(cycleId);
         return;
       }
       // Compute current step based on cycle length
@@ -59,14 +74,14 @@ export default function BreathingSession({ onClose, defaultCycle = "4-7-8", dura
       <div className="flex w-full max-w-md items-center justify-between">
         <button onClick={onClose} className="rounded-lg p-2 text-white/60 hover:bg-white/5 hover:text-white"><X size={20} /></button>
         <div className="text-center">
-          <div className="text-[10px] uppercase tracking-[0.24em]" style={{ color: GOLD }}>Respiration</div>
+          <div className="text-[10px] uppercase tracking-[0.24em]" style={{ color: GOLD }}>Séance du moment</div>
           <div className="font-display text-[14px] font-semibold text-white">{cycle.name}</div>
         </div>
         <div className="w-9" />
       </div>
 
       {/* Cycle picker */}
-      {!running && (
+      {!running && !preset && (
         <div className="w-full max-w-md space-y-2">
           {Object.entries(CYCLES).map(([id, c]) => (
             <button key={id} onClick={() => setCycleId(id)}
@@ -94,6 +109,9 @@ export default function BreathingSession({ onClose, defaultCycle = "4-7-8", dura
           <div className="mt-1 font-serif-italic italic text-[15px] text-white/60">
             {running ? `${mm}:${ss} restant` : "Trouve une position confortable"}
           </div>
+          {running && cycle.guide && (
+            <p className="mx-auto mt-3 max-w-xs text-[14px] leading-relaxed text-white/80" data-testid="seance-guide">{cycle.guide[Math.floor(elapsed / 24000) % cycle.guide.length]}</p>
+          )}
         </div>
         <div className="relative flex h-72 w-72 items-center justify-center sm:h-80 sm:w-80">
           {/* Glow */}
@@ -124,6 +142,21 @@ export default function BreathingSession({ onClose, defaultCycle = "4-7-8", dura
       </div>
 
       {/* Controls */}
+      <div className="flex w-full max-w-md flex-col items-center gap-3">
+        <div className="flex flex-wrap items-center justify-center gap-1.5" data-testid="seance-sons">
+          {AMBIANCES_SON.map((a) => (
+            <button key={a.id} onClick={() => setSon(a.id)}
+              className={`rounded-full px-3 py-1 text-[11.5px] font-medium transition ${son === a.id ? "text-navy-900" : "border border-white/15 text-white/70"}`}
+              style={son === a.id ? { background: GOLD } : {}}>{a.label}</button>
+          ))}
+        </div>
+        {son !== "aucune" && (
+          <label className="flex items-center gap-2 text-white/60">
+            {volume > 0.02 ? <Volume2 size={15} /> : <VolumeX size={15} />}
+            <input type="range" min="0" max="1" step="0.05" value={volume} onChange={(e) => setVolume(Number(e.target.value))} className="w-40 accent-[#DEC2A3]" aria-label="Volume" />
+          </label>
+        )}
+      </div>
       <div className="flex w-full max-w-md items-center justify-center gap-3">
         <button onClick={() => { setRunning(!running); if (!running && elapsed >= totalMs) setElapsed(0); }}
           className="flex items-center gap-2 rounded-full px-8 py-3.5 text-[14px] font-semibold text-navy-900 shadow-lg"

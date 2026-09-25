@@ -170,11 +170,9 @@ function ChatTab({ firstName }) {
       </div>
       <div className="border-t border-white/10 px-4 py-3">
         <div className="mb-3 flex flex-wrap gap-2">
-          <button onClick={() => window.dispatchEvent(new CustomEvent("zayado:ouvrir-collaborateur", { detail: { contexte: contexteChat.texte } }))}
-            data-testid="ai-shortcut-collaborateur"
-            className="inline-flex items-center gap-1.5 rounded-full border border-gold/30 bg-gold/10 px-3 py-1.5 text-xs font-medium text-gold transition-colors hover:bg-gold/20">
-            <Users className="h-3.5 w-3.5" /> Écrire à un collaborateur
-          </button>
+          {/* Bouton « Écrire à un collaborateur » retiré ici : doublon exact du bouton
+              « Collaborateur » déjà présent en permanence dans l'en-tête du chat
+              (même action, même modale — data-testid="chat-collaborateur-btn"). */}
           {SHORTCUTS.map((s) => (
             <button key={s.key} onClick={() => send(s.prompt)} disabled={streaming} data-testid={`ai-shortcut-${s.key}`}
               className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-offwhite/80 transition-colors hover:border-gold/40 hover:text-gold disabled:opacity-50">

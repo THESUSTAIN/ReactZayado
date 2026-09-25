@@ -1,11 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Search, Moon, Sun, Mail, Grid3x3, Bell, MessageCircle, Workflow, Radio, CheckSquare, HelpCircle, Settings, LogOut, User, ChevronDown, CornerDownLeft } from "lucide-react";
+import { chargerAbonnement } from "@/lib/acces";
+import { BatteryMedium, Search, Moon, Sun, Mail, Grid3x3, Bell, MessageCircle, Workflow, Radio, CheckSquare, HelpCircle, Settings, LogOut, User, ChevronDown, CornerDownLeft } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useKairos } from "@/context/KairosContext";
+import { EnergyCheckin } from "./EnergyCheckin";
+import { getToken } from "@/lib/kairosApi";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { useI18n } from "@/i18n";
 import { fetchActualite, fetchDecisions, setToken } from "@/lib/kairosApi";
@@ -22,7 +25,7 @@ const PAGES = [
   { label: "Revue hebdo", path: "/app/revue", mots: "semaine bilan review" },
   { label: "Idées", path: "/app/ideas", mots: "idee capture" },
   { label: "Sources", path: "/app/sources", mots: "documents liens" },
-  { label: "Feuille de route", path: "/app/roadmap", mots: "roadmap jalons trimestre" },
+  { label: "Feuille de route (Plan d'action)", path: "/app/actions?tab=objectifs", mots: "roadmap jalons trimestre feuille de route" },
   { label: "Plan d'action · Actions", path: "/app/actions", mots: "taches missions todo priorités actions" },
   { label: "Plan d'action · Objectifs", path: "/app/actions?tab=objectifs", mots: "objectifs 90 jours cap trimestre" },
   { label: "Bien-être & Mindset", path: "/app/bien-etre", mots: "energie respiration mindset parcours carnet vendre refus" },
@@ -44,11 +47,24 @@ const MODULES = [
 ];
 
 export function Header() {
-  const { user, modeInfo } = useKairos();
+  const { user, modeInfo, aCheckin, loaded } = useKairos();
+  // Rappel doré tant que le check-in du jour n'est pas fait : c'est la donnée qui alimente tout le cockpit.
+  const [checkinOuvert, setCheckinOuvert] = useState(false);
   const { t } = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
+  const rappelCheckin = loaded && !aCheckin && !!getToken() && (location.pathname.startsWith("/app") || location.pathname === "/parametres");
   const [q, setQ] = useState("");
+  // En-tête transparent en haut de page ; dès qu'on défile, un voile flouté
+  // évite que le contenu passe lisiblement sous les boutons.
+  const [defile, setDefile] = useState(false);
+  const [planHeader, setPlanHeader] = useState(null);
+  useEffect(() => { chargerAbonnement().then((a) => setPlanHeader(a.plan)).catch(() => {}); }, []);
+  useEffect(() => {
+    const f = () => setDefile(window.scrollY > 8);
+    f(); window.addEventListener("scroll", f, { passive: true });
+    return () => window.removeEventListener("scroll", f);
+  }, []);
   const [rechercheOuverte, setRechercheOuverte] = useState(false);
   const [sel, setSel] = useState(0);
   const [rechercheMobile, setRechercheMobile] = useState(false);
@@ -131,9 +147,9 @@ export function Header() {
   ];
 
   return (
-    <div className="sticky top-0 z-30">
+    <div className={`sticky top-0 z-30 transition-colors duration-300 ${defile ? "bg-[#0f1b3a]/70 backdrop-blur-xl" : "bg-transparent"}`}>
     <header
-      className="flex items-center gap-2 border-b border-white/10 bg-[#0f1b3a]/60 px-4 py-3 backdrop-blur-xl sm:gap-3 sm:px-6"
+      className="flex items-center gap-2 bg-transparent px-4 py-3 sm:gap-3 sm:px-6"
       data-testid="app-header"
     >
       <button onClick={() => navigate("/app")} className="shrink-0 lg:hidden" aria-label="Accueil">
@@ -162,6 +178,15 @@ export function Header() {
           <Search className="h-[18px] w-[18px]" />
         </button>
         <div className="hidden sm:block"><LanguageSwitcher /></div>
+
+        {rappelCheckin && (
+          <button onClick={() => setCheckinOuvert(true)} data-testid="header-rappel-checkin"
+            className="relative inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-gold/50 bg-gradient-to-b from-[#F1E2CC] to-[#DEC2A3] px-2.5 py-2 text-[12px] font-semibold text-navy-900 shadow-[0_6px_18px_-6px_rgba(222,194,163,0.7)] transition hover:brightness-105"
+            title="Ton check-in du jour n'est pas encore fait">
+            <BatteryMedium className="h-4 w-4" /><span className="hidden md:inline">Check-in du jour</span>
+            <span className="absolute -right-1 -top-1 h-2.5 w-2.5 animate-pulse rounded-full bg-gold ring-2 ring-navy-900" />
+          </button>
+        )}
 
         <button onClick={() => openChat()}
           className={`rounded-xl border border-gold/30 bg-gold/10 p-2 text-gold transition-colors hover:bg-gold/20 ${location.pathname === "/app" ? "xl:hidden" : ""}`}
@@ -305,14 +330,8 @@ export function Header() {
         <div className="relative">{listeResultats}</div>
       </div>
     )}
-    <nav className="flex gap-1 overflow-x-auto border-b border-white/10 bg-[#0f1b3a]/85 px-3 py-2 backdrop-blur-xl lg:hidden" aria-label="Navigation mobile" data-testid="mobile-nav">
-      {mobileItems.map(([key, label, path]) => {
-        const active = location.pathname === path || (path !== "/app" && location.pathname.startsWith(path));
-        return <button key={key} onClick={() => navigate(path)} data-testid={`mobile-nav-${key}`} aria-current={active ? "page" : undefined} className={`shrink-0 rounded-lg px-3 py-1.5 text-xs ${active ? "bg-gold text-navy-900" : "bg-white/5 text-offwhite/70"}`}>{label}</button>;
-      })}
-      <button onClick={() => navigate("/app/collaborateurs")} className="shrink-0 rounded-lg bg-white/5 px-3 py-1.5 text-xs text-offwhite/70">Collaborateurs</button>
-      <button onClick={() => navigate("/parametres")} className="shrink-0 rounded-lg bg-white/5 px-3 py-1.5 text-xs text-offwhite/70">Paramètres</button>
-    </nav>
+    {/* Navigation mobile : barre du bas (BottomNav), plus de doublon en haut. */}
+      {checkinOuvert && <EnergyCheckin open={checkinOuvert} onClose={() => setCheckinOuvert(false)} />}
     </div>
   );
 }

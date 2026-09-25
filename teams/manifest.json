@@ -1,0 +1,67 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.17",
+  "version": "1.0.0",
+  "id": "5b0c3e7a-8f2d-4c61-9a57-2e6d1f4b9c30",
+  "developer": {
+    "name": "SAS TheSustain (Zayado)",
+    "websiteUrl": "https://zayado.net",
+    "privacyUrl": "https://zayado.net/policies/privacy-policy",
+    "termsOfUseUrl": "https://zayado.net/policies/terms-of-service"
+  },
+  "name": {
+    "short": "Zayado",
+    "full": "Zayado — le cockpit IA des entrepreneurs"
+  },
+  "description": {
+    "short": "Ton cockpit d'entrepreneur dans Teams : priorités, Radar et Plan d'action.",
+    "full": "Zayado réunit ta vision, tes priorités du jour, ton énergie et tes chiffres, avec une IA qui connaît ton projet. Dans Teams, retrouve ton point du jour, le Radar (de vrais prospects avec un message prêt), ton Plan d'action et ton Vision Board, à côté de tes conversations. Un compte Zayado est nécessaire (essai Solo 2 mois pour 1 €)."
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#0F1B3A",
+  "staticTabs": [
+    {
+      "entityId": "aujourdhui",
+      "name": "Aujourd'hui",
+      "contentUrl": "https://app.zayado.net/app?teams=1",
+      "websiteUrl": "https://app.zayado.net/app",
+      "scopes": [
+        "personal"
+      ]
+    },
+    {
+      "entityId": "radar",
+      "name": "Radar",
+      "contentUrl": "https://app.zayado.net/app/radar?teams=1",
+      "websiteUrl": "https://app.zayado.net/app/radar",
+      "scopes": [
+        "personal"
+      ]
+    },
+    {
+      "entityId": "plan-action",
+      "name": "Plan d'action",
+      "contentUrl": "https://app.zayado.net/app/actions?teams=1",
+      "websiteUrl": "https://app.zayado.net/app/actions",
+      "scopes": [
+        "personal"
+      ]
+    },
+    {
+      "entityId": "vision",
+      "name": "Vision",
+      "contentUrl": "https://app.zayado.net/app/vision?teams=1",
+      "websiteUrl": "https://app.zayado.net/app/vision",
+      "scopes": [
+        "personal"
+      ]
+    }
+  ],
+  "validDomains": [
+    "app.zayado.net",
+    "zayado.net"
+  ]
+}

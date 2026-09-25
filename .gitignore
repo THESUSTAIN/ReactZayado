@@ -81,43 +81,18 @@ memory/test_credentials.md
 # Mobile development
 android-sdk/
 
+# Testing workspace artifacts
+/tests/test-results/
+
 # overlay black-box crash/user-report dumps — session data, never history
 **/.emergent/recordings/
-frontend/node_modules/.cache/default-development/1.pack
-frontend/node_modules/.cache/default-development/3.pack
 frontend/node_modules/.cache/default-development/0.pack
-frontend/node_modules/.cache/default-development/2.pack
+frontend/node_modules/.cache/default-development/4.pack
+frontend/node_modules/.cache/default-development/7.pack
 .env
 .env.*
 *.env
 credentials.json
 *.key
 .credentials
-frontend/node_modules/.cache/default-development/4.pack
-frontend/node_modules/.cache/default-development/6.pack
-frontend/node_modules/.cache/default-development/8.pack
-frontend/node_modules/.cache/default-development/7.pack
-frontend/node_modules/.cache/default-development/10.pack
-frontend/node_modules/.cache/default-development/5.pack
-frontend/node_modules/.cache/default-development/15.pack
-frontend/node_modules/.cache/default-development/16.pack
-frontend/node_modules/.cache/default-development/11.pack
-
-# ── Secrets & données — ajoutés après l'audit d'installation ──
-# Ces fichiers étaient VERSIONNÉS par erreur dans le zip livré :
-#  - .token_* : JWT réels (expirés, mais à ne jamais committer)
-#  - backend/*.db : base SQLite contenant 26 comptes réels
-#    (emails + hash bcrypt, dont admin@zayado.fr) et les données
-#    personnelles des tables vision_*.
-.env
-.env.local
-backend/.env
-frontend/.env
-.token_*
-*.token
-backend/*.db
-backend/*.db-journal
-backend/*.sqlite
-backend/*.sqlite3
-*.pem
-*.key
+frontend/node_modules/.cache/default-development/3.pack

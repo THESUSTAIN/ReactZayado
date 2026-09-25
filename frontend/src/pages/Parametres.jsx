@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { planNom } from "@/lib/plans";
+import { planNom, ESSAI } from "@/lib/plans";
 import { lancerPaiement } from "@/lib/checkout";
 import {
   User, Palette, Bell, Plug, ShieldCheck, CreditCard, Gift, Loader2, Save, Download, Cloud,
@@ -9,7 +9,9 @@ import { toast } from "sonner";
 import {
   fetchState, saveProfile, fetchConnections, fetchMesFilleuls, inviterParrainage, appliquerCodePromo, fetchMoi,
   fetchAbonnement, fetchCommandes, telechargerExport, deleteData, fetchTarifsFondateur,
+  resilierAbonnement, reprendreAbonnement, changerOffre, fetchEquipe, inviterCoequipier, retirerCoequipier,
 } from "@/lib/kairosApi";
+import { oublierAbonnement } from "@/lib/acces";
 import { useI18n } from "@/i18n";
 import { Link, useNavigate } from "react-router-dom";
 import IntegrationsSection from "@/components/kairos/IntegrationsSection";
@@ -28,7 +30,7 @@ const SECTIONS = [
   { id: "cloud-save", label: "Enregistrement cloud", Icon: Cloud, mots: "drive google onedrive sharepoint document automatique nuage" },
   { id: "parrainage", label: "Parrainage", Icon: Gift, mots: "inviter filleul crédit bonus" },
   { id: "securite", label: "Sécurité & données", Icon: ShieldCheck, mots: "export rgpd données suppression connexion email" },
-  { id: "facturation", label: "Offre & factures", Icon: CreditCard, mots: "plan abonnement prix code réduction facture historique fondateur" },
+  { id: "facturation", label: "Offre & factures", Icon: CreditCard, mots: "plan abonnement prix code réduction facture historique fondateur résilier prélèvement équipe coéquipier" },
 ];
 
 // Complétion du profil (comme final-main) : ce qui aide vraiment le Copilote.
@@ -134,7 +136,7 @@ export default function Parametres() {
               {active === "general" && <SectionGeneral />}
               {active === "vision" && <SectionVision />}
               {active === "notifications" && <SectionNotifications />}
-              {active === "integrations" && <IntegrationsSection />}
+              {active === "integrations" && <><CarteTeams /><IntegrationsSection /></>}
               {active === "cloud-save" && <SectionCloudSave />}
               {active === "parrainage" && <SectionParrainage />}
               {active === "securite" && <SectionSecurite />}
@@ -513,6 +515,111 @@ function SectionSecurite() {
   );
 }
 
+function CarteTeams() {
+  return (
+    <Carte titre="Zayado dans Microsoft Teams" desc="Ouvre ton cockpit dans un onglet Teams : Aujourd'hui, Radar, Plan d'action et Vision, à côté de tes conversations.">
+      <ol className="list-decimal space-y-1.5 pl-5 text-[13px] leading-relaxed text-offwhite/75" data-testid="parametres-teams">
+        <li>Télécharge le pack Zayado pour Teams (fichier .zip, ne pas le décompresser).</li>
+        <li>Dans Teams : <b>Applications</b> › <b>Gérer vos applications</b> › <b>Charger une application</b> › <b>Charger une application personnalisée</b>.</li>
+        <li>Choisis le fichier, puis <b>Ajouter</b>. Connecte-toi une fois avec ton e-mail et ton mot de passe Zayado.</li>
+      </ol>
+      <p className="mt-2 text-[12px] text-offwhite/50">Si le chargement est bloqué, ton administrateur Microsoft 365 peut l'ajouter pour toute l'entreprise (Centre d'administration Teams › Gérer les applications › Charger).</p>
+      <a href="/teams/zayado-teams.zip" download className={`${BTN_OR} mt-3`} data-testid="parametres-teams-telecharger"><Download size={14} /> Télécharger le pack Teams</a>
+    </Carte>
+  );
+}
+
+const dateFr = (iso) => (iso ? new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "");
+
+function Renouvellement({ abo, onChange }) {
+  const [envoi, setEnvoi] = useState(false);
+  const [depart, setDepart] = useState(false);
+  const r = abo?.renouvellement;
+  if (!r) return null;
+  const reveurPossible = r.automatique && abo.plan !== "reveur" && r.plan_suivant !== "reveur";
+  const action = async (fn, ok, ko) => {
+    setEnvoi(true);
+    try { await fn(); toast.success(ok); oublierAbonnement(); setDepart(false); onChange(); } catch { toast.error(ko); }
+    setEnvoi(false);
+  };
+  const resilier = () => action(resilierAbonnement, "Abonnement résilié : aucun autre prélèvement.", "Résiliation impossible pour le moment. Écris-nous à contact@zayado.net.");
+  const reprendre = () => action(reprendreAbonnement, "C'est reparti : ton abonnement continue.", "Impossible de reprendre : choisis une offre sur la page Tarifs.");
+  const passerReveur = () => action(() => changerOffre("reveur"), `Tu passeras à Rêveur le ${dateFr(r.date)} (15 € TTC / mois).`, "Changement impossible pour le moment.");
+  return (
+    <div className="mt-4 space-y-3" data-testid="parametres-renouvellement">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-3">
+        <p className="text-xs leading-relaxed text-offwhite/70">
+          {r.automatique
+            ? <>Prochain prélèvement le <b className="text-offwhite">{dateFr(r.date)}</b>{r.montant_ttc ? <> : <b className="text-offwhite">{Number(r.montant_ttc).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} € TTC</b></> : null}{r.plan_suivant === "reveur" ? <> (offre <b className="text-offwhite">Rêveur</b> à partir de cette date)</> : null}. Sans engagement.</>
+            : r.resilie ? <>Résilié : plus aucun prélèvement. Accès jusqu'au <b className="text-offwhite">{dateFr(r.date)}</b>.</>
+            : <>Accès jusqu'au <b className="text-offwhite">{dateFr(r.date)}</b>.</>}
+        </p>
+        {r.automatique && !depart && <button onClick={() => setDepart(true)} disabled={envoi} className="rounded-lg border border-white/20 px-3 py-1.5 text-xs text-offwhite/80 hover:bg-white/10 disabled:opacity-60" data-testid="parametres-resilier">Résilier</button>}
+        {r.resilie && <button onClick={reprendre} disabled={envoi} className="rounded-lg bg-gold px-3 py-1.5 text-xs font-semibold text-navy-900 disabled:opacity-60" data-testid="parametres-reprendre">Reprendre mon abonnement</button>}
+      </div>
+      {depart && (
+        <div className="rounded-xl border border-gold/35 bg-gold/[0.08] p-4" data-testid="parametres-avant-depart">
+          {reveurPossible ? (
+            <>
+              <p className="text-sm font-semibold text-offwhite">Tu ne prospectes pas en ce moment ?</p>
+              <p className="mt-1 text-xs leading-relaxed text-offwhite/70">Garde ta Vision, tes objectifs et tes idées au lieu de tout mettre en pause : l'offre <b>Rêveur</b> à 15 € TTC / mois, à partir du {dateFr(r.date)}. Ton tarif fondateur reste acquis si tu reviens à Solo ou Pro.</p>
+            </>
+          ) : <p className="text-sm text-offwhite/80">Plus aucun prélèvement ; tu gardes l'accès jusqu'au {dateFr(r.date)} et tes données restent exportables.</p>}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {reveurPossible && <button onClick={passerReveur} disabled={envoi} className="rounded-lg bg-gold px-3 py-1.5 text-xs font-semibold text-navy-900 disabled:opacity-60" data-testid="parametres-passer-reveur">Passer à Rêveur</button>}
+            <button onClick={resilier} disabled={envoi} className="rounded-lg border border-white/20 px-3 py-1.5 text-xs text-offwhite/80 hover:bg-white/10 disabled:opacity-60" data-testid="parametres-resilier-confirmer">Résilier quand même</button>
+            <button onClick={() => setDepart(false)} className="px-2 text-xs text-offwhite/55 hover:text-offwhite">Annuler</button>
+          </div>
+        </div>
+      )}
+      {abo.en_essai && reveurPossible && !depart && (
+        <p className="text-[11.5px] text-offwhite/50">Tu veux juste garder ta Vision et tes idées après l'essai ? <button onClick={passerReveur} disabled={envoi} className="font-semibold text-gold hover:underline" data-testid="parametres-essai-reveur">Passer à Rêveur (15 € TTC) à la fin de l'essai</button></p>
+      )}
+    </div>
+  );
+}
+
+function GestionEquipe() {
+  const [eq, setEq] = useState(null);
+  const [email, setEmail] = useState("");
+  const [envoi, setEnvoi] = useState(false);
+  const charger = () => fetchEquipe().then(setEq).catch(() => setEq(null));
+  useEffect(() => { charger(); }, []);
+  if (!eq || eq.places <= 0) return null;
+  const inviter = async (e) => {
+    e.preventDefault();
+    if (!email.includes("@")) return;
+    setEnvoi(true);
+    try { await inviterCoequipier(email.trim()); toast.success("Invitation envoyée"); setEmail(""); charger(); }
+    catch (err) { toast.error(String(err.message).includes("409") ? "Déjà dans l'équipe, ou plus de place disponible." : "Invitation impossible pour le moment."); }
+    setEnvoi(false);
+  };
+  const retirer = async (id) => {
+    if (!window.confirm("Retirer cette personne ? Son espace se met en pause (ses données sont conservées).")) return;
+    try { await retirerCoequipier(id); charger(); } catch { toast.error("Suppression impossible"); }
+  };
+  return (
+    <Carte titre="Mon équipe" desc={`Ton offre comprend ${eq.places} coéquipier(s). Chacun a son propre espace Solo : cockpit, Vision, Radar et Plan d'action.`}>
+      <div className="space-y-2" data-testid="parametres-equipe">
+        {eq.membres.map((m) => (
+          <div key={m.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm">
+            <Mail size={14} className="shrink-0 text-gold" />
+            <span className="min-w-0 flex-1 truncate">{m.email}</span>
+            <span className={`text-xs ${m.inscrit ? "text-emerald-300" : "text-offwhite/50"}`}>{m.inscrit ? "Espace créé" : "Invitation envoyée"}</span>
+            <button onClick={() => retirer(m.id)} aria-label="Retirer" className="rounded-lg p-1.5 text-offwhite/50 hover:bg-white/10 hover:text-rose-300"><Trash2 size={14} /></button>
+          </div>
+        ))}
+        {eq.membres.length < eq.places && (
+          <form onSubmit={inviter} className="flex gap-2 pt-1">
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@coequipier.fr" className={`${INPUT} flex-1`} data-testid="parametres-equipe-email" />
+            <button type="submit" disabled={envoi} className={BTN_OR} data-testid="parametres-equipe-inviter"><Plus size={14} className="mr-1 inline" />Inviter</button>
+          </form>
+        )}
+      </div>
+    </Carte>
+  );
+}
+
 function SectionFacturation() {
   const [abo, setAbo] = useState(null);
   const [commandes, setCommandes] = useState(null);
@@ -520,8 +627,9 @@ function SectionFacturation() {
   const [code, setCode] = useState("");
   const [envoi, setEnvoi] = useState(false);
 
+  const chargerAbo = () => fetchAbonnement().then(setAbo).catch(() => fetchState().then((d) => setAbo({ plan: d.profile?.plan || "essentielle" })).catch(() => setAbo({ plan: "essentielle" })));
   useEffect(() => {
-    fetchAbonnement().then(setAbo).catch(() => fetchState().then((d) => setAbo({ plan: d.profile?.plan || "essentielle" })).catch(() => setAbo({ plan: "essentielle" })));
+    chargerAbo();
     fetchCommandes().then((d) => setCommandes((d.items || []).filter((c) => c.kind === "saas" || c.kind === "service" || c.kind === "produit"))).catch(() => setCommandes([]));
     fetchTarifsFondateur().then(setFondateur).catch(() => {});
   }, []);
@@ -555,12 +663,12 @@ function SectionFacturation() {
               <p className="text-lg font-semibold text-gold" data-testid="parametres-plan">{planNom(abo.plan || "essentielle")}</p>
               <p className="text-xs text-offwhite/55">
                 {abo.fondateur ? "Tarif fondateur garanti · " : ""}
-                {abo.en_essai ? `Essai 2 mois · jusqu'au ${new Date(abo.fin).toLocaleDateString("fr-FR")}` : abo.acces === "actif" && abo.fin ? `Accès jusqu'au ${new Date(abo.fin).toLocaleDateString("fr-FR")}` : abo.acces === "actif" ? "Offre active" : "Ton espace est en pause : tes données sont conservées"}
+                {abo.en_essai ? `Essai ${ESSAI.mois} mois · jusqu'au ${new Date(abo.fin).toLocaleDateString("fr-FR")}` : abo.acces === "actif" && abo.fin ? `Accès jusqu'au ${new Date(abo.fin).toLocaleDateString("fr-FR")}` : abo.acces === "actif" ? "Offre active" : "Ton espace est en pause : tes données sont conservées"}
               </p>
             </div>
             {abo.acces !== "actif" && abo.essai?.disponible ? (
               <button onClick={() => { setPaiement(true); lancerPaiement("serenite", { essai: true }).then((ok) => !ok && setPaiement(false)); }} disabled={paiement}
-                className="inline-flex items-center gap-2 rounded-xl bg-gold px-4 py-2 text-xs font-semibold text-navy-900 disabled:opacity-60" data-testid="parametres-essai"><Sparkles size={13} /> Essayer 2 mois pour 1 €</button>
+                className="inline-flex items-center gap-2 rounded-xl bg-gold px-4 py-2 text-xs font-semibold text-navy-900 disabled:opacity-60" data-testid="parametres-essai"><Sparkles size={13} /> Essayer 1 mois pour 1 €</button>
             ) : (
               <Link to="/pricing" className="inline-flex items-center gap-2 rounded-xl bg-gold px-4 py-2 text-xs font-semibold text-navy-900"><Sparkles size={13} /> {abo.acces === "actif" ? "Voir les offres" : "Reprendre une offre"}</Link>
             )}
@@ -574,10 +682,17 @@ function SectionFacturation() {
             </button>
           </div>
         )}
+        <Renouvellement abo={abo} onChange={chargerAbo} />
+        {abo?.equipe && (
+          <p className="mt-3 rounded-xl border border-gold/30 bg-gold/10 px-3 py-2 text-xs text-offwhite/80" data-testid="parametres-membre-equipe">
+            Espace Solo offert par l'équipe de <b>{abo.equipe.titulaire}</b>.
+          </p>
+        )}
         {fondateur?.ouverte && !abo?.fondateur && (
           <p className="mt-3 rounded-xl bg-gold/10 px-3 py-2 text-xs text-gold">Tarif fondateur ouvert{fondateur.places_restantes != null ? ` · ${fondateur.places_restantes} places restantes` : ""} : ton prix reste garanti tant que tu restes abonné·e.</p>
         )}
       </Carte>
+      <GestionEquipe />
       <Carte titre="Historique & factures" desc="Tes paiements Mollie. Le reçu détaillé est envoyé par e-mail à chaque paiement.">
         {commandes === null && <p className="text-sm text-offwhite/50">Chargement…</p>}
         {commandes?.length === 0 && <p className="text-sm text-offwhite/50">Aucun paiement pour l'instant.</p>}

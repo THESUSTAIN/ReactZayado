@@ -1,0 +1,38 @@
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "D'où viennent les contacts ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "De la base professionnelle Apollo, interrogée avec les critères de ta cible. Zayado ne revend aucune donnée."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Est-ce conforme au RGPD ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "La prospection B2B par e-mail est autorisée si le message concerne l'activité professionnelle de la personne et permet de s'opposer facilement. Pour les particuliers, le Radar ne propose pas de démarchage direct."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Combien de temps par jour ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Environ 10 minutes : tu relis 3 opportunités, tu ajustes le message, tu envoies."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Puis-je choisir ma zone ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Oui, tu indiques ta ville ou ton code postal ; les recherches Google, la pub et les ventes sont calculées autour."
+      }
+    }
+  ]
+}

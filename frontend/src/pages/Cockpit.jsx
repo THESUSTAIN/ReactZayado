@@ -19,16 +19,19 @@ import RadarWidget from "@/components/kairos/RadarWidget";
 import ImpactBanner from "@/components/kairos/ImpactBanner";
 import { useI18n } from "@/i18n";
 import PinnedVisionCards from "@/components/vision/PinnedVisionCards";
-import { fetchPointDuJour } from "@/lib/kairosApi";
+import { fetchPointDuJour, fetchSerie } from "@/lib/kairosApi";
 import {
   BatteryMedium, Check, Trophy, Target, Sparkles, TrendingUp,
   Scale, ChevronRight, Sun, Leaf, Zap, FileText, Users, Footprints, CheckSquare,
+  Flame,
 } from "lucide-react";
 
 export default function Cockpit() {
   const { user, energy, balance, priorities, goal, victory, trend, mode, modeInfo, isRecovery, aCheckin } = useKairos();
   const { t } = useI18n();
   const [checkinOpen, setCheckinOpen] = useState(false);
+  const [serie, setSerie] = useState(null);
+  useEffect(() => { fetchSerie().then(setSerie).catch(() => {}); }, [aCheckin]);
   const navigate = useNavigate();
 
   const energyPercent = (energy.score / 5) * 100;
@@ -52,6 +55,12 @@ export default function Cockpit() {
                 {t("cockpit.greeting")}, {user.firstName}
               </h1>
             </div>
+            {serie && serie.jours > 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-gold/35 bg-gold/10 px-3 py-1.5 text-[12.5px] font-semibold text-gold" data-testid="cockpit-serie"
+                title="Jours de suite avec au moins un geste pour toi : check-in, rituel ou exercice Mindset">
+                <Flame className="h-4 w-4" /> {serie.jours} jour{serie.jours > 1 ? "s" : ""} de suite{!serie.aujourdhui_fait ? " · à prolonger aujourd'hui" : ""}
+              </span>
+            )}
             <button onClick={() => setCheckinOpen(true)} className="btn-ghost" data-testid="open-checkin-btn">
               <BatteryMedium className="h-4 w-4 text-gold" /> {t("cockpit.checkin")}
             </button>

@@ -6,7 +6,7 @@ import { useKairos } from "@/context/KairosContext";
 import { valuesLibrary } from "@/mock/data";
 import { saveProfile } from "@/lib/kairosApi";
 import { toast } from "sonner";
-import { PLANS_LANCEMENT, PLAN_ENTREPRISE, prixFondateurMois, ESSAI } from "@/lib/plans";
+import { PLANS, PLANS_LANCEMENT, PLAN_ENTREPRISE, prixFondateurMois, ESSAI } from "@/lib/plans";
 import { lancerPaiement } from "@/lib/checkout";
 import { fetchTarifsFondateur } from "@/lib/kairosApi";
 import { Sparkles, ArrowRight, ArrowLeft, Plus, X, Target, Clock, Heart, Check, Loader2, Rocket, User, Briefcase, TrendingUp } from "lucide-react";
@@ -28,7 +28,11 @@ const construirePlans = (fondateurOuvert) => [
       features: p.points.slice(0, 4), highlight: !!p.star,
     };
   }),
-  { key: PLAN_ENTREPRISE.key, name: "Équipe / Entreprise", price: "Sur contact", period: "", features: ["Plusieurs comptes", "Plusieurs agents clients", "Accompagnement dédié"], highlight: false },
+  ...PLANS.filter((p) => p.key === "business").map((p) => ({
+    key: p.key, name: p.nom, price: `${p.mensuel} €`, old: null, period: "HT / mois · toi + 2 comptes Solo",
+    features: p.points.slice(0, 4), highlight: false,
+  })),
+  { key: PLAN_ENTREPRISE.key, name: "Entreprise", price: "Sur contact", period: "", features: ["Au-delà de 3 personnes", "Plusieurs agents clients", "Accompagnement dédié"], highlight: false },
 ];
 
 export default function Onboarding() {
@@ -51,7 +55,7 @@ export default function Onboarding() {
   useEffect(() => { fetchTarifsFondateur().then((d) => setFondateurOuvert(!!d.ouverte)).catch(() => {}); }, []);
   const PLANS = construirePlans(fondateurOuvert);
   // Plus d'offre gratuite : Solo (essai 2 mois pour 1 €) est proposé par défaut.
-  const [plan, setPlan] = useState(["serenite", "pro", "business", "entreprise"].includes(planParam) ? (planParam === "business" ? "entreprise" : planParam) : "serenite");
+  const [plan, setPlan] = useState(["reveur", "serenite", "pro", "business", "entreprise"].includes(planParam) ? planParam : "serenite");
   const [saving, setSaving] = useState(false);
   const [savePhase, setSavePhase] = useState(0);
   const [saveError, setSaveError] = useState("");
@@ -72,7 +76,7 @@ export default function Onboarding() {
   // et on va au Cockpit — avant, le bouton renvoyait vers « / » puis /login.
   const passer = async () => {
     try { await saveProfile({ onboarded: true, ...(identite.prenom ? { prenom: identite.prenom } : {}) }); } catch (_) { /* on laisse passer quand même */ }
-    navigate("/app");
+    navigate("/activer");
   };
 
   const finish = async () => {
@@ -116,13 +120,15 @@ export default function Onboarding() {
     await new Promise((resolve) => setTimeout(resolve, Math.max(0, 1800 - (Date.now() - startedAt))));
     setOnboardingData({ vision, why, goals: goals.filter(Boolean), values, checkinHour, plan });
     // Offre payante : on passe par le paiement (l'offre n'est activée qu'après paiement validé).
-    if (plan === "serenite" || plan === "pro") {
+    if (["reveur", "serenite", "pro", "business"].includes(plan)) {
       // Solo : essai 2 mois pour 1 € (repli automatique sur l'offre normale si déjà utilisé).
       if (await lancerPaiement(plan, { cycle: cycleParam, essai: plan === ESSAI.plan })) return;
     } else if (plan === "entreprise") {
-      toast.info("Merci ! L'équipe Zayado te contacte pour préparer ton offre Équipe ou Entreprise.");
+      toast.info("Merci ! L'équipe Zayado te contacte pour préparer ton offre Entreprise.");
     }
-    navigate("/app");
+    // Onboarding terminé : la page d'activation (paiement) vient maintenant,
+    // jamais avant que le projet soit raconté.
+    navigate("/activer");
   };
 
   useEffect(() => {
@@ -359,7 +365,7 @@ export default function Onboarding() {
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Ton offre</span>
             </div>
             <h2 className="mt-2 font-display text-2xl font-bold text-offwhite">Choisis ton rythme</h2>
-            <p className="mt-1 text-sm text-offwhite/60">Teste tout pendant 2 mois pour 1 €. Sans engagement ni renouvellement automatique.</p>
+            <p className="mt-1 text-sm text-offwhite/60">Solo : 2 mois pour 1 €, puis prélèvement mensuel au tarif fondateur. Sans engagement, résiliable en 1 clic.</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2" data-testid="onboarding-plans">
               {PLANS.map((p) => (
                 <button

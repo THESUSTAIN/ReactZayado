@@ -205,6 +205,7 @@ def install_part2(g: dict) -> None:
         created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     IMAGE_LIMITE_JOUR = int(os.environ.get("IMAGE_DAILY_LIMIT", "10"))
+    IMAGE_LIMITE_REVEUR = int(os.environ.get("IMAGE_DAILY_LIMIT_REVEUR", "3"))
 
     class ImageIn(BaseModel):
         prompt: str = Field(min_length=3, max_length=500)
@@ -320,8 +321,12 @@ def install_part2(g: dict) -> None:
         depuis = utcnow() - timedelta(hours=24)
         n = (await db.execute(select(func.count()).select_from(VisionImage)
                               .where(VisionImage.user_id == uid, VisionImage.created_at >= depuis))).scalar_one()
-        if n >= IMAGE_LIMITE_JOUR:
-            raise HTTPException(429, f"Limite de {IMAGE_LIMITE_JOUR} images IA par 24 h atteinte.")
+        # Offre Rêveur : 3 images par jour (coût IA maîtrisé à 15 €) ; sinon la limite normale.
+        profil = await g["_profil"](db, uid)
+        limite = IMAGE_LIMITE_REVEUR if (getattr(profil, "plan", "") or "") == "reveur" else IMAGE_LIMITE_JOUR
+        if n >= limite:
+            raise HTTPException(429, f"Limite de {limite} images IA par 24 h atteinte."
+                                + (" L'offre Solo en permet 10 par jour." if limite == IMAGE_LIMITE_REVEUR else ""))
         try:
             octets, mime = await _generer_image(body.prompt.strip())
         except HTTPException:

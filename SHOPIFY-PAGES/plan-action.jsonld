@@ -1,0 +1,30 @@
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "D'où viennent mes actions ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Tu les crées directement, ou depuis une idée validée ou une étape de processus. Une idée lancée peut aussi être envoyée vers Trello, Jira, HubSpot ou Teams."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Pourquoi 5 objectifs maximum ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Parce qu'au-delà, on se disperse. Tu peux mettre un objectif en pause pour en ouvrir un autre."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Le plan d'action est-il inclus dans Rêveur ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Non, il fait partie de l'offre Solo (2 mois pour 1 €), avec le cockpit et le Radar."
+      }
+    }
+  ]
+}

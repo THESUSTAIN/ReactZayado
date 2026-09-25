@@ -1,21 +1,38 @@
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { fetchAbonnement, getToken } from "@/lib/kairosApi";
+import { toast } from "sonner";
+import { fetchState, getToken } from "@/lib/kairosApi";
+import { chargerAbonnement, oublierAbonnement, pageAutorisee } from "@/lib/acces";
 
 // Plus d'offre gratuite : sans offre active (ni rôle interne), l'espace /app
-// renvoie vers /activer (essai 2 mois pour 1 € ou offre). Paramètres, Mon espace
-// et l'onboarding restent accessibles (facturation, export des données).
-let cache = { t: 0, acces: null };
-export const oublierAcces = () => { cache = { t: 0, acces: null }; };
+// renvoie d'abord vers l'onboarding si le projet n'a jamais été raconté,
+// puis seulement vers /activer (essai 1 mois pour 1 € ou offre).
+// Offre Rêveur : seules Vision, Idées (et le chat de l'en-tête) sont ouvertes.
+export const oublierAcces = oublierAbonnement;
 
 export default function AccesGate() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   useEffect(() => {
     if (!pathname.startsWith("/app") || !getToken()) return;
-    const verifier = (acces) => { if (acces === "aucun") navigate("/activer", { replace: true }); };
-    if (cache.acces && Date.now() - cache.t < 60_000) { verifier(cache.acces); return; }
-    fetchAbonnement().then((a) => { cache = { t: Date.now(), acces: a.acces }; verifier(a.acces); }).catch(() => {});
+    chargerAbonnement().then((a) => {
+      if (a.acces === "aucun") {
+        fetchState()
+          .then((s) => navigate(s?.onboarded ? "/activer" : "/onboarding", { replace: true }))
+          .catch(() => navigate("/activer", { replace: true }));
+        return;
+      }
+      if (!pageAutorisee(a.plan, pathname)) {
+        navigate("/app/vision", { replace: true });
+        if (pathname !== "/app") {
+          toast("Cette partie est incluse dans l'offre Solo", {
+            id: "reveur-verrou",
+            description: "Ton offre Rêveur comprend la Vision, les Idées et le chat IA.",
+            action: { label: "Voir Solo", onClick: () => navigate("/pricing") },
+          });
+        }
+      }
+    }).catch(() => {});
   }, [pathname, navigate]);
   return null;
 }

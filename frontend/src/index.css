@@ -4,8 +4,32 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Correctif de robustesse : ces opacités peuvent manquer dans le CSS
+   compilé (cache de build) → les champs repasseraient en fond blanc. */
+.bg-white\/8 { background-color: rgb(255 255 255 / 0.08); }
+.bg-white\/12 { background-color: rgb(255 255 255 / 0.12); }
+.border-white\/8 { border-color: rgb(255 255 255 / 0.08); }
+.border-white\/12 { border-color: rgb(255 255 255 / 0.12); }
+
+/* Chrome peint les champs auto-complétés en blanc : on garde le thème navy. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill {
+  -webkit-text-fill-color: #edf2ff;
+  -webkit-box-shadow: 0 0 0 1000px #1a2a55 inset;
+  caret-color: #edf2ff;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
 @layer base {
     :root {
+  /* Fond Zayado = exactement le ciel de final-main (App.css .sky-bg), partout : app, accueil, admin. */
+  --fond-zayado:
+    radial-gradient(ellipse at 20% 10%, rgba(45, 81, 150, 0.45) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 8%, rgba(30, 60, 110, 0.35) 0%, transparent 55%),
+    radial-gradient(ellipse at 50% 90%, rgba(5, 8, 20, 0.95) 0%, transparent 60%),
+    linear-gradient(180deg, #172c5c 0%, #101f47 30%, #0a1230 60%, #05081a 100%);
         --background: 222 59% 14%;
         --foreground: 222 60% 96%;
         --card: 222 50% 18%;
@@ -46,10 +70,9 @@
         @apply text-offwhite font-sans;
         /* Ciel navy de final 13 : bleu roi profond vers quasi-noir, vertical,
            sans ruban teal (c'est lui qui donnait ce bleu « bizarre »). */
-        background:
-            radial-gradient(ellipse at 20% 10%, rgba(45, 81, 150, 0.45) 0%, transparent 50%),
-            radial-gradient(ellipse at 80% 8%, rgba(30, 60, 110, 0.35) 0%, transparent 55%),
-            linear-gradient(180deg, #172c5c 0%, #101f47 30%, #0a1230 60%, #05081a 100%);
+        /* Fond unique Zayado : exactement le même sur l'app et la page d'accueil
+           (navy, sans bas noir). Défini une seule fois dans --fond-zayado. */
+        background: var(--fond-zayado);
         background-attachment: fixed;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
@@ -163,9 +186,8 @@
 
 /* ── Bleu Zayado exact (charte ReactZayado/v13) : diagonale lumineuse, voile léger ── */
 .zayado-blue {
-  background:
-    radial-gradient(ellipse 70% 50% at 15% 0%, rgba(45, 81, 150, 0.22), transparent 62%),
-    linear-gradient(180deg, #172c5c 0%, #101f47 30%, #0a1230 60%, #05081a 100%);
+  /* Transparent : c'est le ciel global (AuroraBackground = .sky-bg de final-main) qui s'affiche. */
+  background: transparent;
 }
 
 /* Rouge de marque Zayado (#a01722 éclairci pour lisibilité sur navy) — tirets discrets */
@@ -250,13 +272,15 @@
 }
 .menu-island {
   width: 96px; min-height: 392px; padding: 30px 0 28px !important;
-  background: linear-gradient(180deg, #1e3a8a 0%, #0a1f4e 100%);
-  border-radius: 0 30px 30px 0 !important; box-shadow: 0 16px 34px rgba(4,13,34,.28);
+  /* Navy profond, accordé au ciel de l'app (avant : bleu roi trop vif). */
+  background: linear-gradient(180deg, #182d5e 0%, #0d1838 100%);
+  border: 1px solid rgba(255,255,255,.07); border-left: 0;
+  border-radius: 0 30px 30px 0 !important; box-shadow: 0 16px 34px rgba(4,13,34,.35);
   position: relative; display: flex; align-items: center; justify-content: center;
 }
 .menu-island ul { min-height: 326px; justify-content: space-between; gap: 0 !important; }
-.menu-scoop-top { fill: #1e3a8a; }
-.menu-scoop-bottom { fill: #0a1f4e; }
+.menu-scoop-top { fill: #182d5e; }
+.menu-scoop-bottom { fill: #0d1838; }
 
 /* ── Thème clair (body.theme-clair) — activé par le bouton lune/soleil du
    header. Même logique que .theme-creme : on inverse les surfaces sans
@@ -294,3 +318,53 @@ body.theme-clair .text-navy-900 { color: #1F2A44 !important; }
 body.theme-clair input, body.theme-clair select, body.theme-clair textarea { color: #1F2A44; }
 /* Le fond aurora navy est masqué en thème clair — le dégradé crème du body prend le relais. */
 body.theme-clair .aurora-bg { display: none; }
+
+/* Menu mobile du bas : on réserve sa hauteur pour que rien ne passe dessous. */
+@media (max-width: 1023px) {
+  body.avec-nav-bas { padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
+}
+
+/* Chat (Copilote / Collaborateur IA) : accordé à l'app — même navy que le ciel, or de la marque. */
+.chat-zayado {
+  background: linear-gradient(180deg, rgba(23, 44, 92, 0.97) 0%, rgba(14, 27, 62, 0.98) 55%, rgba(10, 18, 48, 0.98) 100%);
+  color: #F5F1EA;
+  border-left: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: -18px 0 50px rgba(3, 8, 24, 0.45);
+  backdrop-filter: blur(24px);
+}
+.chat-zayado .chat-badge { background: linear-gradient(135deg, #F1E2CC, #DEC2A3); color: #0f1b3a; }
+.chat-zayado .chat-msg-ia { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.08); color: #F5F1EA; }
+.chat-zayado .chat-msg-user { background: linear-gradient(135deg, #F1E2CC, #DEC2A3); color: #0f1b3a; }
+.chat-zayado .chat-envoyer { background: linear-gradient(135deg, #F1E2CC, #DEC2A3); color: #0f1b3a; }
+.chat-zayado textarea:focus { border-color: rgba(222, 194, 163, 0.5); }
+
+/* ── Espaces pro (console admin, espace vendeur) : thème clair par défaut,
+   fond blanc → bleu ciel avec nuages bleus, menu latéral navy. Mode sombre au choix. ── */
+.pro-clair {
+  background:
+    radial-gradient(ellipse 900px 380px at 12% -5%, rgba(147, 197, 253, 0.38), transparent 60%),
+    radial-gradient(ellipse 700px 300px at 92% 8%, rgba(191, 219, 254, 0.55), transparent 60%),
+    radial-gradient(ellipse 900px 360px at 55% 105%, rgba(165, 200, 250, 0.35), transparent 60%),
+    linear-gradient(180deg, #fbfdff 0%, #f1f6ff 50%, #e8f0fe 100%);
+  background-attachment: fixed;
+  color: #16213d;
+}
+.pro-sombre { background: var(--fond-zayado); background-attachment: fixed; }
+.pro-clair .text-offwhite { color: #16213d !important; }
+.pro-clair .text-offwhite\/90, .pro-clair .text-offwhite\/85, .pro-clair .text-offwhite\/80 { color: rgba(22, 33, 61, 0.86) !important; }
+.pro-clair .text-offwhite\/75, .pro-clair .text-offwhite\/70, .pro-clair .text-offwhite\/65 { color: rgba(22, 33, 61, 0.72) !important; }
+.pro-clair .text-offwhite\/60, .pro-clair .text-offwhite\/55, .pro-clair .text-offwhite\/50 { color: #5b6b8c !important; }
+.pro-clair .text-offwhite\/45, .pro-clair .text-offwhite\/40, .pro-clair .text-offwhite\/35, .pro-clair .text-offwhite\/30 { color: #8391ad !important; }
+.pro-clair .text-gold { color: #9a6a2c !important; }
+.pro-clair .bg-white\/5, .pro-clair .bg-white\/10, .pro-clair .bg-white\/\[0\.03\], .pro-clair .bg-white\/\[0\.04\], .pro-clair .bg-white\/\[0\.05\], .pro-clair .bg-white\/\[0\.06\], .pro-clair .bg-white\/\[0\.08\], .pro-clair .glass, .pro-clair .glass-strong, .pro-clair .fenetre {
+  background: #ffffff !important; box-shadow: 0 1px 2px rgba(16, 38, 84, 0.06), 0 8px 24px rgba(16, 38, 84, 0.06);
+}
+.pro-clair .border-white\/5, .pro-clair .border-white\/8, .pro-clair .border-white\/10, .pro-clair .border-white\/12, .pro-clair .border-white\/15, .pro-clair .border-white\/20, .pro-clair .border-white\/\[0\.14\] { border-color: #dbe4f3 !important; }
+.pro-clair .bg-navy-800, .pro-clair .bg-navy-900, .pro-clair select, .pro-clair input, .pro-clair textarea { background-color: #ffffff !important; color: #16213d !important; border-color: #cfdbef !important; }
+.pro-clair .bg-gold\/10, .pro-clair .bg-gold\/15 { background: rgba(222, 194, 163, 0.28) !important; }
+.pro-clair .text-emerald-300 { color: #0f8a5f !important; }
+.pro-clair .text-red-300, .pro-clair .text-red-400 { color: #c2410c !important; }
+.pro-clair .text-amber-200, .pro-clair .text-amber-300 { color: #a16207 !important; }
+.pro-clair .entete-navy { background: rgba(255, 255, 255, 0.82) !important; border-color: #dbe4f3 !important; }
+.pro-clair .entete-navy .text-offwhite { color: #16213d !important; }
+.pro-clair table thead tr { color: #5b6b8c; }

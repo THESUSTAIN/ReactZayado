@@ -1,3 +1,66 @@
+# Déploiement
+
+> **Important : remplace le dossier en entier, ne fusionne pas.** Supprime l'ancien contenu du dépôt
+> (sauf `.git`) avant de copier ce zip. Sinon d'anciens fichiers restent (ex. `backend/tests/__init__.py`,
+> `TabBar.jsx`, `App.tsx`) et cassent les tests ou embrouillent le code.
+>
+> **Vérifier que le Radar est branché :** connecte-toi en admin → Radar → « Ce qui alimente ton Radar ».
+> Le cadre rouge « Admin » liste les variables Railway manquantes.
+
+
+## Nouveautés v20
+
+- Chat : couleurs accordées à l'app (navy du ciel, or #DEC2A3 de la marque) au lieu du panneau final-main.
+- Menu latéral SaaS : navy profond (fini le bleu roi vif).
+- Console admin et espace vendeur : thème clair par défaut (fond blanc → bleu ciel, nuages bleus), menu latéral navy sobre ; bouton « Mode sombre » en bas du menu (choix mémorisé).
+
+## Nouveautés v19
+
+- Chat (Copilote / Collaborateur IA) : même panneau que final-main (fond marine plein #0f1b3a, liseré or, bulles or pour tes messages), au lieu du verre laiteux. Sur mobile, il passe au-dessus du menu du bas.
+
+## Nouveautés v18
+
+- Couleurs : fond identique à final-main partout (ciel `.sky-bg` : dégradé navy, nuages, grain), y compris l'accueil, l'admin, Mon espace, la connexion et l'activation.
+- Vision Board mobile : board entier par défaut (murs, lignes), zoom à deux doigts, barre du bas « ••• · + · Décris ton projet », plus de vide noir en bas.
+- La « Feuille de route » (Q1-Q4) est fusionnée dans le Plan d'action : ses jalons deviennent des actions automatiquement, `/app/roadmap` redirige vers les objectifs.
+
+## Nouveautés v17
+
+- Mobile : menu en bas d'écran rétabli (Aujourd'hui, Vision, Radar, Plan d'action, Plus) sur toutes les pages ; la bande de menu du haut est retirée (plus de doublon).
+- Vision Board mobile : boutons « Ajouter », « Modèles » et « Vue carte / Vue liste » ; les cartes mentales s'ouvrent en vue carte.
+- Modèle « Cockpit stratégique » ouvert (6 murs reliés en direct).
+- Un seul fond pour toute l'app et la page d'accueil (variable CSS `--fond-zayado`).
+
+## Nouveautés v16
+
+- Vision Board : le modèle **Carte mentale** est de retour (board pré-rempli : ta vision au centre, 4 branches reliées).
+- Bien-être : une seule **Séance du moment** (protocole + ambiance sonore + durée) ; les sons (pluie, vagues, forêt, bols) sont générés dans le navigateur, aucun fichier à héberger.
+- Rituels enregistrés côté serveur (nouvelle table `rituels_faits`, créée automatiquement) et **série de jours** affichée dans le cockpit.
+- Courbe d'énergie avec les vrais jours et repérage du jour creux / jour fort.
+- Rappel doré « Check-in du jour » dans l'en-tête tant que le check-in n'est pas fait.
+
+## Nouveautés v15
+
+- Rêveur encaissé **15 € TTC** (prix fixe, quelle que soit la TVA). Solo, Pro et Équipe restent affichés HT, avec l'équivalent TTC sous chaque prix.
+- Pendant l'essai à 1 € : 10 prospects Apollo par mois (`APOLLO_QUOTA_ESSAI`, défaut 10), puis le quota normal.
+- Rêveur : 3 images IA par jour (`IMAGE_DAILY_LIMIT_REVEUR`, défaut 3).
+- Au moment de résilier (et dans le rappel de fin d'essai), le client peut **passer à Rêveur** au lieu de partir.
+- Admin › Vue d'ensemble : revenu mensuel, clients payants, essais, résiliations, abonnés par offre, et la liste des **branchements** (ce qui manque sur Railway et l'effet concret).
+- Pages Shopify : la page prospection s'appelle maintenant `/pages/trouver-des-clients`.
+
+## Nouveautés v14 (à lire avant de déployer)
+
+**Abonnements automatiques Mollie.** Le 1er paiement (essai à 1 € ou 1er mois) enregistre le moyen de paiement ; les prélèvements suivants partent tout seuls (abonnement Mollie). Rien à configurer sur Railway, mais vérifie dans Mollie › Paramètres › Méthodes de paiement que la **carte bancaire** est active (c'est elle qui permet les paiements récurrents).
+- Les clients qui ont payé **avant la v14** n'ont pas d'abonnement automatique : à la fin de leur période, ils repassent par la page Tarifs (leur tarif fondateur est conservé).
+- Rappel par e-mail 7 jours avant la fin d'un essai (15 jours avant un renouvellement annuel). Pour couper : `RAPPELS_ABONNEMENT=0`.
+- Résiliation en 1 clic : Paramètres › Offre & factures.
+
+**Nouvelle grille.** Rêveur 15 € · Solo 29 € (24 € fondateur) · Pro 69 € (49 € fondateur) · Équipe 149 € (toi + 2 comptes Solo, gérés dans Paramètres › Offre & factures). Montants HT, TVA ajoutée à l'encaissement (`TVA_TAUX`).
+
+**Microsoft Teams.** Le pack est téléchargeable dans Paramètres › Intégrations (fichier `/teams/zayado-teams.zip`, sources dans le dossier `teams/`). nginx autorise désormais l'affichage de l'appli dans Teams (`frame-ancestors`).
+
+**Pages SEO Shopify.** Dossier `SHOPIFY-PAGES/` : 7 pages prêtes à coller + `GUIDE.md`.
+
 # Déploiement Zayado — Shopify public + espace privé
 
 ## Architecture retenue
@@ -84,7 +147,8 @@ Le domaine public Shopify ne doit pas être utilisé comme URL API privée. Pour
 | Variable | Rôle | Exemple |
 |---|---|---|
 | `APOLLO_API_KEY` | Clé Apollo **de Zayado** (clé « master » ou avec le droit `api_search`). Active les vrais prospects dans le Radar. | `xxxxxxxx` |
-| `APOLLO_QUOTA_SERENITE` / `_PRO` / `_BUSINESS` / `_ESSENTIELLE` | Prospects par mois et par offre (défaut 30 / 90 / 150 / 0). | `30` |
+| `APOLLO_QUOTA_SERENITE` / `_PRO` / `_BUSINESS` / `_REVEUR` | Prospects par mois et par offre (défaut 30 / 90 / 150 / 0). | `30` |
+| `APOLLO_QUOTA_INTERNE` | Prospects par mois pour les comptes admin / vendeur (défaut 90). | `90` |
 | `SHOPIFY_SHOP_DOMAIN` | Boutique qui reçoit les produits vendeurs. | `ad2ax0-u1.myshopify.com` |
 | `SHOPIFY_ADMIN_TOKEN` | Jeton Admin API de l'app personnalisée Shopify (droits `write_products`, `read_products`, `write_publications`, `read_publications`). | `shpat_…` |
 | `SHOPIFY_PRODUCT_STATUS` | `ACTIVE` (défaut : en vitrine après modération) ou `DRAFT`. | `ACTIVE` |

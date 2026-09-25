@@ -36,7 +36,7 @@ log = logging.getLogger("kairos.apollo")
 
 APOLLO_BASE = os.environ.get("APOLLO_BASE_URL", "https://api.apollo.io/api/v1").rstrip("/")
 PAR_JOUR = 3
-QUOTAS_DEFAUT = {"essentielle": 0, "serenite": 30, "pro": 90, "business": 150, "entreprise": 300}
+QUOTAS_DEFAUT = {"essentielle": 0, "reveur": 0, "serenite": 30, "pro": 90, "business": 150, "entreprise": 300}
 
 # Cible (texte libre de l'onboarding) → intitulés de poste Apollo. Sert quand
 # l'IA n'est pas disponible pour traduire la cible.
@@ -65,6 +65,18 @@ def quota_mensuel(plan: str) -> int:
     if env and env.strip().isdigit():
         return int(env)
     return QUOTAS_DEFAUT.get(plan, 0)
+
+
+def quota_essai() -> int:
+    """Prospects par mois pendant l'essai à 1 € (défaut 10)."""
+    env = os.environ.get("APOLLO_QUOTA_ESSAI")
+    return int(env) if env and env.strip().isdigit() else 10
+
+
+def quota_interne() -> int:
+    """Comptes admin / vendeur : quota Apollo propre (sinon 0 sans abonnement)."""
+    env = os.environ.get("APOLLO_QUOTA_INTERNE")
+    return int(env) if env and env.strip().isdigit() else 90
 
 
 def filtres_depuis_contexte(cm: dict) -> dict:
@@ -226,6 +238,39 @@ def install_apollo(g: dict) -> None:
                 logger.info("Messages Apollo par IA indisponibles (%s) : modèle utilisé.", e)
         return [message_modele(p, offre) for p in prospects]
 
+    async def _plan_quota(db: AsyncSession, uid: str, profil) -> tuple:
+        plan = (getattr(profil, "plan", None) or "essentielle").lower()
+        quota = quota_mensuel(plan)
+        User = g.get("User")
+        u = await db.get(User, uid) if User is not None else None
+        if u is not None and u.role in ("admin", "vendeur"):
+            return plan, max(quota, quota_interne())
+        # Essai à 1 € : quota réduit pendant l'essai, quota normal dès le 1er prélèvement.
+        Ab = g.get("Abonnement")
+        a = await db.get(Ab, uid) if Ab is not None else None
+        if a is not None and a.cycle == "essai":
+            quota = min(quota, quota_essai())
+        return plan, quota
+
+    async def statut_apollo(db: AsyncSession, uid: str) -> dict:
+        """État lisible d'Apollo pour l'écran « Sources du Radar »."""
+        profil = await g["_profil"](db, uid)
+        plan, quota = await _plan_quota(db, uid, profil)
+        jour = datetime.now(timezone.utc).date().isoformat()
+        utilises = (await db.execute(select(func.count()).select_from(RadarProspect).where(
+            RadarProspect.user_id == uid, RadarProspect.jour >= jour[:8] + "01"))).scalar_one()
+        if not cle_apollo():
+            etat = "non_configure"
+        elif quota <= 0:
+            etat = "hors_offre"
+        elif utilises >= quota:
+            etat = "quota"
+        else:
+            etat = "ok"
+        return {"etat": etat, "quota": quota, "utilises": utilises, "plan": plan}
+
+    g["_statut_apollo"] = statut_apollo
+
     async def prospects_du_jour(db: AsyncSession, uid: str, mode: str = "client") -> dict:
         """Prospects réels du jour pour le Radar. Ne lève jamais : renvoie un état.
         mode « client » (clientèle pro) ou « partenaire » (clientèle de particuliers → prescripteurs)."""
@@ -235,8 +280,7 @@ def install_apollo(g: dict) -> None:
         if not cle_apollo():
             return {"etat": "non_configure", "prospects": [_pj(p) for p in deja]}
         profil = await g["_profil"](db, uid)
-        plan = (getattr(profil, "plan", None) or "essentielle").lower()
-        quota = quota_mensuel(plan)
+        plan, quota = await _plan_quota(db, uid, profil)
         debut_mois = jour[:8] + "01"
         utilises = (await db.execute(select(func.count()).select_from(RadarProspect).where(
             RadarProspect.user_id == uid, RadarProspect.jour >= debut_mois))).scalar_one()

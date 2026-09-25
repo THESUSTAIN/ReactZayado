@@ -33,12 +33,12 @@ export default function GlobalChat() {
   return (
     <>
       <div
-        className={`fixed inset-0 z-[55] bg-[#060a18]/70 backdrop-blur-sm transition-opacity duration-200 ${open ? "opacity-100" : "pointer-events-none opacity-0"}`}
+        className={`fixed inset-0 z-[59] bg-[#060a18]/70 backdrop-blur-sm transition-opacity duration-200 ${open ? "opacity-100" : "pointer-events-none opacity-0"}`}
         onClick={() => setOpen(false)}
         aria-hidden="true"
       />
       <aside
-        className={`fixed right-0 top-0 z-[56] flex h-[100dvh] w-full flex-col fenetre !border-y-0 !border-r-0 transition-transform duration-300 sm:w-[400px] ${open ? "translate-x-0" : "translate-x-full"}`}
+        className={`chat-zayado fixed right-0 top-0 z-[60] flex h-[100dvh] w-full flex-col transition-transform duration-300 sm:w-[420px] ${open ? "translate-x-0" : "translate-x-full"}`}
         aria-hidden={!open}
         data-testid="global-chat"
       >

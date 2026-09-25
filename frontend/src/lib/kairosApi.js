@@ -40,6 +40,10 @@ async function jsend(path, method, body) {
 
 // ── État & profil ──
 export const fetchState = () => jget("/state");
+export const fetchRituels = () => jget("/rituels");
+export const basculerRituel = (id) => jsend(`/rituels/${id}/basculer`, "POST", {});
+export const fetchSerie = () => jget("/serie");
+export const fetchCourbeEnergie = () => jget("/bien-etre/energie");
 export const fetchMoi = () => jget("/auth/me");
 export const capturerLead = (email, source) => jsend("/leads", "POST", { email, source });
 
@@ -226,6 +230,7 @@ export const savePouls = (data) => jsend("/cockpit/pouls", "PUT", data);
 export const fetchRadar = (refresh = false) => jget(refresh ? "/cockpit/radar?refresh=true" : "/cockpit/radar");
 export const fetchProspects = () => jget("/radar/prospects");
 export const fetchSignaux = () => jget("/radar/signaux");
+export const fetchSourcesRadar = () => jget("/radar/sources");
 export const saveReglagesRadar = (patch) => jsend("/radar/reglages", "PUT", patch);
 export const majProspect = (id, statut) => jsend(`/radar/prospects/${id}`, "PATCH", { statut });
 export const genererSwot = () => jsend("/radar/swot", "POST");
@@ -234,6 +239,7 @@ export const saveGeneratedDocument = (title, content, provider) => jsend("/docum
 
 // ── Admin (accès réservé au rôle admin — vérifié côté serveur, pas ici) ──
 export const fetchAdminVueEnsemble = () => jget("/admin/vue-ensemble");
+export const fetchAdminDiagnostics = () => jget("/admin/diagnostics");
 export const fetchAdminUtilisateurs = () => jget("/admin/utilisateurs");
 export const changerRoleUtilisateur = (userId, role) => jsend(`/admin/utilisateurs/${userId}/role?nouveau_role=${encodeURIComponent(role)}`, "PATCH");
 export const fetchModerationAttente = () => jget("/vendeur/moderation/attente");
@@ -245,6 +251,7 @@ export const changerStatutCommandeAdmin = (id, status) => jsend(`/admin/commerce
 export const fetchAdminCommerceProducts = () => jget("/admin/commerce/products");
 export const fetchAdminCommerceVendors = () => jget("/admin/commerce/vendors");
 export const fetchAdminParrainage = () => jget("/admin/parrainage");
+export const fetchAdminNotifications = () => jget("/admin/notifications");
 export const appliquerCodePromo = (code) => jsend("/codes-promo/appliquer", "POST", { code });
 export const fetchCodesPromo = () => jget("/admin/codes-promo");
 export const creerCodePromo = (data) => jsend("/admin/codes-promo", "POST", data);
@@ -277,6 +284,12 @@ export const fetchTarifsFondateur = async () => {
 
 // ── Paramètres : abonnement, commandes, export ──
 export const fetchAbonnement = () => jget("/abonnement");
+export const resilierAbonnement = () => jsend("/abonnement/resilier", "POST", {});
+export const reprendreAbonnement = () => jsend("/abonnement/reprendre", "POST", {});
+export const changerOffre = (plan) => jsend("/abonnement/changer", "POST", { plan });
+export const fetchEquipe = () => jget("/equipe");
+export const inviterCoequipier = (email) => jsend("/equipe", "POST", { email });
+export const retirerCoequipier = (id) => jsend(`/equipe/${id}`, "DELETE");
 export const fetchCommandes = () => jget("/commerce/orders");
 /** Export RGPD : le lien direct n'envoyait pas le jeton (401). On télécharge avec l'en-tête. */
 export async function telechargerExport() {
@@ -317,3 +330,21 @@ export const fetchCarnet = () => jget("/mindset/carnet");
 export const supprimerEntreeCarnet = (id) => jsend(`/mindset/carnet/${id}`, "DELETE");
 export const recadrerPensee = (pensee) => jsend("/mindset/recadrer", "POST", { pensee });
 
+
+// ── Emails IA (admin) — les erreurs remontent le message du serveur (detail) ──
+async function jsendMsg(path, method, body) {
+  const r = await fetch(`${API}${path}`, {
+    method,
+    headers: _headers({ "Content-Type": "application/json" }),
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (r.status === 401) { setToken(null); _versLogin(); }
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(typeof data.detail === "string" ? data.detail : `${method} ${path} ${r.status}`);
+  return data;
+}
+export const fetchEmailsIA = () => jget("/admin/emails-ia");
+export const creerBrouillonEmailIA = (data) => jsendMsg("/admin/emails-ia/brouillon", "POST", data);
+export const envoyerBrouillonEmailIA = (id) => jsendMsg(`/admin/emails-ia/${id}/envoyer`, "POST", {});
+export const annulerBrouillonEmailIA = (id) => jsendMsg(`/admin/emails-ia/${id}/annuler`, "POST", {});
+export const enregistrerCleBrevo = (data) => jsendMsg("/admin/emails-ia/cle-brevo", "POST", data);

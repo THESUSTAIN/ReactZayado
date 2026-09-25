@@ -20,7 +20,6 @@ import Agents from "@/pages/Agents";
 import ChatbotB2B from "@/pages/ChatbotB2B";
 import Processus from "@/pages/Processus";
 import Collaborateur from "@/pages/Collaborateur";
-import Roadmap from "@/pages/Roadmap";
 import Pricing from "@/pages/Pricing";
 import PricingSuccess from "@/pages/PricingSuccess";
 import Mockup from "@/pages/Mockup";
@@ -107,7 +106,8 @@ function App() {
             <Route path="/app/revue" element={<ProtectedRoute><WeeklyReview /></ProtectedRoute>} />
             <Route path="/app/ideas" element={<ProtectedRoute><Ideas /></ProtectedRoute>} />
             <Route path="/app/sources" element={<ProtectedRoute><Sources /></ProtectedRoute>} />
-            <Route path="/app/roadmap" element={<ProtectedRoute><Roadmap /></ProtectedRoute>} />
+            {/* L'ancienne Feuille de route est fusionnée dans le Plan d'action (plus de doublon). */}
+            <Route path="/app/roadmap" element={<Navigate to="/app/actions?tab=objectifs" replace />} />
             <Route path="/app/bien-etre" element={<ProtectedRoute><BienEtre /></ProtectedRoute>} />
             <Route path="/app/agents" element={<ProtectedRoute><Agents /></ProtectedRoute>} />
             <Route path="/app/chatbot-b2b" element={<ProtectedRoute><ChatbotB2B /></ProtectedRoute>} />

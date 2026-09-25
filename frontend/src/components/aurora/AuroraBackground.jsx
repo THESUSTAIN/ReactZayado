@@ -14,11 +14,7 @@ export function AuroraBackground() {
       <div
         className="absolute inset-0"
         style={{
-          background:
-            "radial-gradient(ellipse at 20% 10%, rgba(45,81,150,0.45) 0%, transparent 50%)," +
-            "radial-gradient(ellipse at 80% 8%, rgba(30,60,110,0.35) 0%, transparent 55%)," +
-            "radial-gradient(ellipse at 50% 90%, rgba(5,8,20,0.95) 0%, transparent 60%)," +
-            "linear-gradient(180deg, #172c5c 0%, #101f47 30%, #0a1230 60%, #05081a 100%)",
+          background: "var(--fond-zayado)",
         }}
       />
       {/* Nuages doux */}
