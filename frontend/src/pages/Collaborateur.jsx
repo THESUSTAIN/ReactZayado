@@ -40,7 +40,7 @@ export default function Collaborateur() {
     <div className="min-h-screen">
       <Sidebar />
       <div className="lg:pl-[92px]">
-        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-white/10 bg-navy-900/70 px-6 py-4 backdrop-blur-2xl">
+        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-white/5 bg-[#0b1a3d]/60 px-6 py-4 backdrop-blur-xl">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold/15 ring-1 ring-gold/30">
             <Users size={18} className="text-gold" />
           </div>

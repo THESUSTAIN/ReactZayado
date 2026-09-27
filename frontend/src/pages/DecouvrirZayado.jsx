@@ -137,8 +137,7 @@ export default function DecouvrirZayado() {
       {/* Barre du haut — identique à la page d'accueil */}
       <header className="relative z-20 mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
         <Link to="/" className="flex items-center gap-2" data-testid="decouvrir-logo">
-          <img src="/logo.png" alt="Zayado" className="h-9 w-9 object-contain" />
-          <span className="hidden font-display text-lg font-bold sm:inline">Zayado</span>
+          <img src="/logo-zayado-blanc.png" alt="Zayado" className="h-9 w-auto object-contain" />
         </Link>
         <div className="flex items-center gap-3" ref={menuRef}>
           <Link to={START} className="inline-flex items-center gap-2 rounded-full border border-white/60 px-4 py-2 text-[14px] font-medium text-offwhite transition hover:bg-white/10" data-testid="decouvrir-copilote">
@@ -212,7 +211,7 @@ export default function DecouvrirZayado() {
                     ))}
                   </ul>
                 </div>
-                <div className="overflow-hidden rounded-[18px] border border-white/20 bg-[#16275a]/60">
+                <div className="overflow-hidden rounded-[18px] border border-white/20 bg-[#182d5e]/60">
                   <img src={m.image} alt={`Zayado — ${m.titre}`} loading="lazy" className="block aspect-[16/10] w-full object-cover object-top"
                     onError={(e) => { e.currentTarget.src = "/screenshots/cockpit.webp"; }} />
                 </div>

@@ -17,8 +17,7 @@ export function MarketingLayout({ children }) {
     <div className="zayado-blue min-h-screen text-offwhite" data-testid="marketing-layout">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5">
         <Link to="/" className="flex items-center gap-2.5" data-testid="mkt-logo">
-          <img src="/logo.png" alt="Zayado" className="h-9 w-9 object-contain" />
-          <span className="font-display text-base font-bold">Zayado</span>
+          <img src="/logo-zayado-blanc.png" alt="Zayado" className="h-9 w-auto object-contain" />
         </Link>
         <nav className="hidden items-center gap-6 md:flex">
           {LIENS.map((l) => (

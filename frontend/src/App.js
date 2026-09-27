@@ -16,6 +16,7 @@ import WeeklyReview from "@/pages/WeeklyReview";
 import Ideas from "@/pages/Ideas";
 import Sources from "@/pages/Sources";
 import BienEtre from "@/pages/BienEtre";
+import MaFoi from "@/pages/MaFoi";
 import Agents from "@/pages/Agents";
 import ChatbotB2B from "@/pages/ChatbotB2B";
 import Processus from "@/pages/Processus";
@@ -34,6 +35,14 @@ import TarifsEmbed from "@/pages/TarifsEmbed";
 import ExerciceEmbed from "@/pages/ExerciceEmbed";
 import Landing from "@/pages/Landing";
 import Activer from "@/pages/Activer";
+import DecouvrirZayado from "@/pages/DecouvrirZayado";
+import Programmes from "@/pages/Programmes";
+import IaLanding from "@/pages/marketing/IaLanding";
+import IaFeature from "@/pages/marketing/IaFeature";
+import VisionObjectifs from "@/pages/marketing/VisionObjectifs";
+import ProspectionCroissance from "@/pages/marketing/ProspectionCroissance";
+import BienEtreDirigeant from "@/pages/marketing/BienEtreDirigeant";
+import { useParams } from "react-router-dom";
 import AccesGate from "@/components/kairos/AccesGate";
 import { getToken } from "@/lib/kairosApi";
 
@@ -49,6 +58,12 @@ function ProtectedRoute({ children }) {
     return <Navigate to={`/login?next=${encodeURIComponent(next)}`} replace />;
   }
   return children;
+}
+
+// Mappe le slug d'URL (/ia/organisation-entrepreneur) vers la clé de contenu (organisation).
+function IaFeatureRoute() {
+  const { kind } = useParams();
+  return <IaFeature kind={(kind || "organisation").split("-")[0]} />;
 }
 
 function App() {
@@ -94,6 +109,12 @@ function App() {
           <Routes>
             <Route path="/" element={getToken() ? <Navigate to="/app" replace /> : <Landing />} />
             <Route path="/accueil" element={<Landing />} />
+            <Route path="/decouvrir-zayado" element={<DecouvrirZayado />} />
+            <Route path="/ia" element={<IaLanding />} />
+            <Route path="/ia/:kind" element={<IaFeatureRoute />} />
+            <Route path="/fonctionnalites/vision-objectifs" element={<VisionObjectifs />} />
+            <Route path="/fonctionnalites/prospection-croissance" element={<ProspectionCroissance />} />
+            <Route path="/fonctionnalites/bien-etre-dirigeant" element={<BienEtreDirigeant />} />
             <Route path="/login" element={<Login />} />
             {/* Lien public en lecture seule d'un Vision Board (sans compte) */}
             <Route path="/v/:token" element={<PublicVision />} />
@@ -109,6 +130,7 @@ function App() {
             {/* L'ancienne Feuille de route est fusionnée dans le Plan d'action (plus de doublon). */}
             <Route path="/app/roadmap" element={<Navigate to="/app/actions?tab=objectifs" replace />} />
             <Route path="/app/bien-etre" element={<ProtectedRoute><BienEtre /></ProtectedRoute>} />
+            <Route path="/app/ma-foi" element={<ProtectedRoute><MaFoi /></ProtectedRoute>} />
             <Route path="/app/agents" element={<ProtectedRoute><Agents /></ProtectedRoute>} />
             <Route path="/app/chatbot-b2b" element={<ProtectedRoute><ChatbotB2B /></ProtectedRoute>} />
             <Route path="/app/processus" element={<ProtectedRoute><Processus /></ProtectedRoute>} />
@@ -119,6 +141,7 @@ function App() {
             <Route path="/mon-espace" element={<ProtectedRoute><MonEspace /></ProtectedRoute>} />
             <Route path="/acheter" element={<ProtectedRoute><Achat /></ProtectedRoute>} />
             <Route path="/parametres" element={<ProtectedRoute><Parametres /></ProtectedRoute>} />
+            <Route path="/programmes" element={<ProtectedRoute><Programmes /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/pricing/success" element={<PricingSuccess />} />

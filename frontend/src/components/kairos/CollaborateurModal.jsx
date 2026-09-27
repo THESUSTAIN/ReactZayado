@@ -44,7 +44,7 @@ export default function CollaborateurModal({ open, onClose, contexte = "" }) {
   };
 
   return (
-    <div className="absolute inset-0 z-20 flex items-end justify-center bg-[#060a18]/70 p-3 backdrop-blur-sm sm:items-center" onClick={onClose} data-testid="collab-modal">
+    <div className="absolute inset-0 z-20 flex items-end justify-center bg-[#0b1a3d]/70 p-3 backdrop-blur-sm sm:items-center" onClick={onClose} data-testid="collab-modal">
       <div className="w-full max-w-md rounded-2xl fenetre p-5 text-offwhite" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="flex items-center gap-2.5">

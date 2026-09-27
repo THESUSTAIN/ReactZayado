@@ -45,7 +45,7 @@ class FakeHttp:
     async def __aenter__(self): return self
     async def __aexit__(self,*a): pass
     async def post(self,url,headers=None,json=None):
-        posted.append(json["to"][0]["email"]); 
+        posted.append(json["to"][0]["email"])
         return types.SimpleNamespace(status_code=(500 if json["to"][0]["email"]=="bad@x.fr" else 201), text="err")
 RealClient = httpx.AsyncClient
 m.httpx.AsyncClient = FakeHttp

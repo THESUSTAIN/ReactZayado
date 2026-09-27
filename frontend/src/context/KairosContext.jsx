@@ -30,6 +30,7 @@ export function KairosProvider({ children }) {
   const [victory, setVictory] = useState(SAFE.victory);
   const [trend, setTrend] = useState(SAFE.trend);
   const [aCheckin, setACheckin] = useState(SAFE.aCheckin);
+  const [contexte, setContexte] = useState({});
   const [onboardingData, setOnboardingData] = useState(null);
   const [loaded, setLoaded] = useState(false);
 
@@ -37,6 +38,7 @@ export function KairosProvider({ children }) {
     setUser({ firstName: s.profile?.prenom || "toi" });
     setEnergy({ score: s.energy?.score ?? 4, mood: s.energy?.mood || "aligné" });
     setACheckin(Boolean(s.energy?.a_checkin));
+    setContexte(s.vision?.contexte_metier || {});
     setBalance(s.balance || SAFE.balance);
     setPriorities(s.priorities || []);
     if (s.goal) {
@@ -68,9 +70,9 @@ export function KairosProvider({ children }) {
 
   const value = useMemo(() => ({
     user, energy, setEnergy, balance, priorities, togglePriority,
-    goal, victory, trend, mode, modeInfo, isRecovery, loaded, aCheckin,
+    goal, victory, trend, mode, modeInfo, isRecovery, loaded, aCheckin, contexte,
     submitCheckin, onboardingData, setOnboardingData,
-  }), [user, energy, balance, priorities, goal, victory, trend, mode, modeInfo, isRecovery, loaded, aCheckin, togglePriority, submitCheckin, onboardingData]);
+  }), [user, energy, balance, priorities, goal, victory, trend, mode, modeInfo, isRecovery, loaded, aCheckin, contexte, togglePriority, submitCheckin, onboardingData]);
 
   return <KairosContext.Provider value={value}>{children}</KairosContext.Provider>;
 }

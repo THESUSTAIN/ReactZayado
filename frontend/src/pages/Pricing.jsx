@@ -20,7 +20,7 @@ function CodePromo() {
     setEnvoi(true);
     try {
       await appliquerCodePromo(code.trim());
-      toast.success("Code appliqué ! Connecte-toi pour voir tes crédits.");
+      toast.success("Code appliqué ! Connecte-toi pour profiter de tes mois offerts.");
       navigate("/login");
     } catch { toast.error("Code invalide, inactif ou déjà utilisé."); }
     finally { setEnvoi(false); }

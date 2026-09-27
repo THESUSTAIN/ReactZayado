@@ -4,7 +4,6 @@ import {
   Search, Sparkles, Menu, X, ShieldCheck, ChevronDown, Server, Lock, RefreshCw, Compass, Radar, Heart, ArrowRight, Check,
   Bot, ListChecks, Lightbulb, Users, Plug, TrendingUp,
 } from "lucide-react";
-import GrilleTarifs from "@/components/pricing/GrilleTarifs";
 import Economies from "@/components/pricing/Economies";
 import { useSeo } from "@/lib/useSeo";
 
@@ -284,7 +283,7 @@ export default function Landing() {
 
         {/* Visuel de l'appli */}
         <section className="mx-auto mt-12 max-w-3xl px-5">
-          <div className="rounded-[22px] border-2 border-[#DEC2A3]/80 bg-[#16275a]/70 p-1.5 shadow-[0_30px_80px_rgba(4,10,28,0.45),0_0_0_6px_rgba(255,255,255,0.05)] backdrop-blur-xl">
+          <div className="rounded-[22px] border-2 border-[#DEC2A3]/80 bg-[#182d5e]/70 p-1.5 shadow-[0_30px_80px_rgba(4,10,28,0.45),0_0_0_6px_rgba(255,255,255,0.05)] backdrop-blur-xl">
             <img src="/screenshots/cockpit-accueil.webp" alt="Le cockpit Zayado : énergie, équilibre, objectif et point du jour"
               className="block w-full rounded-[16px]" loading="eager" data-testid="landing-visuel"
               onError={(e) => { e.currentTarget.src = "/screenshots/cockpit.webp"; }} />
@@ -325,18 +324,7 @@ export default function Landing() {
         <Remplace />
         <Integrations />
 
-        {/* Offres */}
-        <section className="mx-auto mt-24 max-w-5xl px-5">
-          <p className="text-center text-[11px] font-semibold uppercase tracking-[0.22em] text-gold">Offres</p>
-          <h2 className="mt-3 text-center font-display text-3xl font-bold sm:text-4xl">Dès 15 €, ou Solo 1 mois pour 1 €</h2>
-          {/* Même grille que la page Tarifs (tarif fondateur compris) : plus de prix différents d'une page à l'autre. */}
-          <div className="mt-8"><GrilleTarifs /></div>
-          <div className="mt-8 text-center">
-            <Link to="/pricing" className="inline-flex items-center gap-2 rounded-full border border-white/40 px-6 py-3 text-[14px] font-medium hover:bg-white/10" data-testid="landing-tarifs">
-              Comparer les offres <ArrowRight size={15} />
-            </Link>
-          </div>
-        </section>
+        {/* Section tarifs retirée de l'accueil : elle vit désormais uniquement sur la page /pricing. */}
 
         {/* Dernier appel */}
         <section className="mx-auto mt-24 max-w-3xl px-5 pb-20 text-center">

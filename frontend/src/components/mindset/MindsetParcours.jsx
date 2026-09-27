@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Check, Lock, Loader2, Trophy } from "lucide-react";
-import { fetchParcoursListe, fetchParcours, demarrerParcours } from "@/lib/kairosApi";
+import { ArrowLeft, ArrowRight, Check, Lock, Loader2, Trophy, Sparkles, ExternalLink } from "lucide-react";
+import { fetchParcoursListe, fetchParcours, demarrerParcours, saveProfile } from "@/lib/kairosApi";
 import Exercice from "@/components/mindset/Exercice";
 
 // Onglet « Parcours » : 4 programmes de 7 jours, un jour débloqué par jour.
@@ -101,13 +101,60 @@ function Detail({ id, onRetour }) {
 
 export default function MindsetParcours({ ouvert, onOuvrir }) {
   const [items, setItems] = useState(null);
-  useEffect(() => { if (!ouvert) fetchParcoursListe().then((d) => setItems(d.items)).catch(() => setItems([])); }, [ouvert]);
+  const [foiActive, setFoiActive] = useState(false);
+  const [activation, setActivation] = useState(false);
+  const charger = () => fetchParcoursListe().then((d) => { setItems(d.items); setFoiActive(!!d.foi_active); }).catch(() => setItems([]));
+  useEffect(() => { if (!ouvert) charger(); }, [ouvert]); // eslint-disable-line react-hooks/exhaustive-deps
   if (ouvert) return <Detail id={ouvert} onRetour={() => onOuvrir(null)} />;
   if (!items) return <Loader2 size={18} className="animate-spin text-gold" />;
+
+  const activerFoi = async () => {
+    setActivation(true);
+    try {
+      await saveProfile({ contexte_metier: { parcours_foi: true } });
+      toast.success("Parcours « Entreprendre avec la foi » activé.");
+      charger();
+    } catch { toast.error("Activation impossible pour l'instant."); }
+    setActivation(false);
+  };
+
   return (
     <div>
       <p className="mb-5 max-w-2xl text-[14px] leading-relaxed text-offwhite/70">Choisis un frein sur lequel avancer. Chaque jour : une idée, un exercice de 5 minutes, tes réponses gardées dans ton carnet. Un jour se débloque chaque jour.</p>
       <Liste items={items} onOuvrir={onOuvrir} />
+
+      {/* Contenu Foi : proposé ici, là où vivent les parcours — jamais imposé.
+          Zayado est ouvert à tous ; qui ne se reconnaît pas passe son chemin. */}
+      {!foiActive ? (
+        <div className="mt-5 rounded-[22px] border border-dashed border-white/20 bg-white/[0.03] p-5 sm:p-6" data-testid="foi-optin-carte">
+          <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/80"><Sparkles size={13} /> Optionnel</p>
+          <p className="mt-2 font-display text-[19px] font-semibold text-offwhite/90">Entrepreneur·e et chrétien·ne ?</p>
+          <p className="mt-1.5 max-w-xl text-[13.5px] leading-relaxed text-offwhite/60">
+            Un parcours de 7 jours existe pour toi : allier travail et vie spirituelle — vision, intégrité, sabbat,
+            service, mission. Invisible si tu ne l'actives pas.
+          </p>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <button onClick={activerFoi} disabled={activation}
+              className="inline-flex h-10 items-center gap-2 rounded-full bg-gradient-to-b from-[#F1E2CC] to-[#DEC2A3] px-5 text-[13px] font-semibold text-navy-900 disabled:opacity-60"
+              data-testid="foi-activer">
+              {activation ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} Activer ce parcours
+            </button>
+            <a href="https://thesustain.net" target="_blank" rel="noreferrer"
+              className="inline-flex h-10 items-center gap-1.5 rounded-full border border-white/15 px-5 text-[13px] font-medium text-offwhite/70 hover:border-gold/40 hover:text-gold"
+              data-testid="foi-thesustain">
+              Découvrir TheSustain <ExternalLink size={13} />
+            </a>
+          </div>
+        </div>
+      ) : (
+        <p className="mt-5 flex flex-wrap items-center gap-2 text-[12.5px] text-offwhite/55" data-testid="foi-active-note">
+          <Sparkles size={13} className="text-gold" />
+          Parcours Foi actif. Pour aller plus loin avec des entrepreneurs qui partagent ta vision :
+          <a href="https://thesustain.net" target="_blank" rel="noreferrer" className="font-semibold text-gold hover:underline" data-testid="foi-adhesion">
+            adhérer à TheSustain →
+          </a>
+        </p>
+      )}
     </div>
   );
 }

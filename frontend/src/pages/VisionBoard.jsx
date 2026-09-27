@@ -24,7 +24,7 @@ export default function VisionBoard() {
     <div className="min-h-screen">
       <Sidebar />
       <div className={view === "canvas" ? "flex h-[100dvh] flex-col overflow-hidden md:block md:h-auto md:overflow-visible lg:pl-[92px]" : "lg:pl-[92px]"}>
-        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-white/10 bg-navy-900/70 px-4 py-3 backdrop-blur-2xl sm:px-6">
+        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-white/5 bg-[#0b1a3d]/60 px-4 py-3 backdrop-blur-xl sm:px-6">
           {view !== "hub" && (
             <button
               onClick={() => goView("hub")}

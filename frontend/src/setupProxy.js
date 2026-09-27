@@ -6,7 +6,7 @@
 // BACKEND_URL est vide par défaut).
 //
 // En local, sans ce fichier, il fallait renseigner REACT_APP_BACKEND_URL
-// (ex. http://localhost:8002). L'appel devenait alors cross-origin, ce qui
+// (ex. http://localhost:8001). L'appel devenait alors cross-origin, ce qui
 // ne reproduit pas la production et fait dépendre le dev local de CORS.
 //
 // Ce proxy rétablit la parité : le dev server sert /api sur sa propre
@@ -14,7 +14,7 @@
 // REACT_APP_BACKEND_URL vide en local.
 const { createProxyMiddleware } = require("http-proxy-middleware");
 
-const cible = process.env.BACKEND_URL || "http://localhost:8002";
+const cible = process.env.BACKEND_URL || "http://localhost:8001";
 
 module.exports = function (app) {
   app.use(

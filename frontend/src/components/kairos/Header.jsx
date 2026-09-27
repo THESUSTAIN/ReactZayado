@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { chargerAbonnement } from "@/lib/acces";
-import { BatteryMedium, Search, Moon, Sun, Mail, Grid3x3, Bell, MessageCircle, Workflow, Radio, CheckSquare, HelpCircle, Settings, LogOut, User, ChevronDown, CornerDownLeft } from "lucide-react";
+import { BatteryMedium, Search, Moon, Sun, Mail, Grid3x3, Bell, MessageCircle, Workflow, Radio, CheckSquare, HelpCircle, Settings, LogOut, User, ChevronDown, CornerDownLeft, Compass, Flame, MailOpen, CalendarCheck } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuGroup,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useKairos } from "@/context/KairosContext";
@@ -11,7 +11,7 @@ import { EnergyCheckin } from "./EnergyCheckin";
 import { getToken } from "@/lib/kairosApi";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { useI18n } from "@/i18n";
-import { fetchActualite, fetchDecisions, setToken } from "@/lib/kairosApi";
+import { fetchActualite, fetchDecisions, setToken, fetchRituels, fetchLettres } from "@/lib/kairosApi";
 import { openChat } from "./GlobalChat";
 import { startTour } from "./GuidedTour";
 
@@ -47,7 +47,10 @@ const MODULES = [
 ];
 
 export function Header() {
-  const { user, modeInfo, aCheckin, loaded } = useKairos();
+  const { user, modeInfo, aCheckin, loaded, contexte } = useKairos();
+  // Jour de repos (sabbat) : ce jour-là, les rappels doux se taisent —
+  // l'app respecte le repos au lieu de réclamer de l'attention.
+  const enRepos = typeof contexte?.jour_repos === "number" && contexte.jour_repos === new Date().getDay();
   // Rappel doré tant que le check-in du jour n'est pas fait : c'est la donnée qui alimente tout le cockpit.
   const [checkinOuvert, setCheckinOuvert] = useState(false);
   const { t } = useI18n();
@@ -55,13 +58,22 @@ export function Header() {
   const location = useLocation();
   const rappelCheckin = loaded && !aCheckin && !!getToken() && (location.pathname.startsWith("/app") || location.pathname === "/parametres");
   const [q, setQ] = useState("");
-  // En-tête transparent en haut de page ; dès qu'on défile, un voile flouté
-  // évite que le contenu passe lisiblement sous les boutons.
+  // En-tête transparent en haut de page. Il se MASQUE quand on défile vers le
+  // bas (le contenu respire) et réapparaît dès qu'on remonte, avec un léger
+  // voile navy flouté pour rester lisible au-dessus du contenu.
+  const [cache, setCache] = useState(false);
   const [defile, setDefile] = useState(false);
   const [planHeader, setPlanHeader] = useState(null);
   useEffect(() => { chargerAbonnement().then((a) => setPlanHeader(a.plan)).catch(() => {}); }, []);
   useEffect(() => {
-    const f = () => setDefile(window.scrollY > 8);
+    let dernierY = window.scrollY;
+    const f = () => {
+      const y = window.scrollY;
+      setCache(y > 90 && y > dernierY + 4);
+      if (y < dernierY - 4) setCache(false);
+      setDefile(y > 8);
+      dernierY = y;
+    };
     f(); window.addEventListener("scroll", f, { passive: true });
     return () => window.removeEventListener("scroll", f);
   }, []);
@@ -125,9 +137,15 @@ export function Header() {
     try { localStorage.setItem(THEME_KEY, clair ? "clair" : "sombre"); } catch { /* stockage indisponible */ }
   }, [clair]);
 
-  // Notifications réelles : actualité du jour non lue + décisions en attente.
+  // Notifications réelles : actualité du jour non lue, décisions en attente,
+  // check-in manquant, rappel Vision Board, revue hebdo, série de rituels en
+  // danger, lettre au futur moi arrivée à sa date.
   const [actuNonVue, setActuNonVue] = useState(false);
   const [decisionsEnAttente, setDecisionsEnAttente] = useState(0);
+  const [lettrePrete, setLettrePrete] = useState(null);
+  const [serieEnDanger, setSerieEnDanger] = useState(false);
+  const [visionDue, setVisionDue] = useState(false);
+  const [revueDue, setRevueDue] = useState(false);
   useEffect(() => {
     const aujourdHui = new Date().toISOString().slice(0, 10);
     fetchActualite().then((d) => {
@@ -137,8 +155,26 @@ export function Header() {
     fetchDecisions().then((d) => {
       setDecisionsEnAttente((d?.decisions || []).filter((x) => x.statut === "proposee").length);
     }).catch(() => {});
+    // Lettre scellée arrivée à sa date d'ouverture.
+    fetchLettres().then((d) => {
+      setLettrePrete((d?.items || []).find((l) => l.prete && !l.lue) || null);
+    }).catch(() => {});
+    // Série de rituels en danger : une série existe mais rien n'est fait aujourd'hui.
+    fetchRituels().then((d) => {
+      setSerieEnDanger((d?.serie?.jours || 0) > 1 && (d?.faits || []).length === 0);
+    }).catch(() => {});
+    // Rappel Vision Board : revoir sa vision au moins deux fois par semaine.
+    const visionVue = localStorage.getItem("vision_vue_le");
+    setVisionDue(!visionVue || (Date.now() - new Date(visionVue).getTime()) > 3 * 24 * 3600 * 1000);
+    // Revue hebdo : à partir de vendredi, tant que la semaine n'est pas bouclée.
+    const jour = new Date().getDay();
+    const semaine = (() => { const d = new Date(); const t = new Date(d.getFullYear(), 0, 1); return `${d.getFullYear()}-S${Math.ceil((((d - t) / 86400000) + 1) / 7)}`; })();
+    setRevueDue(jour >= 5 && localStorage.getItem("revue_faite_semaine") !== semaine);
   }, []);
-  const notifCount = (actuNonVue ? 1 : 0) + decisionsEnAttente;
+  const notifCount = enRepos
+    ? (actuNonVue ? 1 : 0) + decisionsEnAttente + (lettrePrete ? 1 : 0)
+    : (actuNonVue ? 1 : 0) + decisionsEnAttente + (rappelCheckin ? 1 : 0)
+      + (lettrePrete ? 1 : 0) + (serieEnDanger ? 1 : 0) + (visionDue ? 1 : 0) + (revueDue ? 1 : 0);
 
   const mobileItems = [
     ["today", "Aujourd'hui", "/app"], ["vision", "Vision", "/app/vision"],
@@ -147,7 +183,7 @@ export function Header() {
   ];
 
   return (
-    <div className={`sticky top-0 z-30 transition-colors duration-300 ${defile ? "bg-[#0f1b3a]/70 backdrop-blur-xl" : "bg-transparent"}`}>
+    <div className={`sticky top-0 z-30 transition-all duration-300 ${cache ? "pointer-events-none -translate-y-full opacity-0" : "translate-y-0 opacity-100"} ${defile && !cache ? "bg-[#0b1a3d]/60 backdrop-blur-xl" : "bg-transparent"}`}>
     <header
       className="flex items-center gap-2 bg-transparent px-4 py-3 sm:gap-3 sm:px-6"
       data-testid="app-header"
@@ -210,7 +246,7 @@ export function Header() {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="glass-strong w-80 border-white/10 text-offwhite">
-            <DropdownMenuLabel className="text-xs uppercase tracking-[0.2em] text-gold">Messages clients</DropdownMenuLabel>
+            <DropdownMenuGroup><DropdownMenuLabel className="text-xs uppercase tracking-[0.2em] text-gold">Messages clients</DropdownMenuLabel></DropdownMenuGroup>
             <DropdownMenuSeparator className="bg-white/10" />
             <div className="px-3 py-5 text-center" data-testid="messages-empty">
               <p className="text-xs leading-relaxed text-offwhite/60">Aucun message pour le moment. Quand ton Agent Business (chatbot) échangera avec tes clients, leurs réponses arriveront ici.</p>
@@ -225,7 +261,7 @@ export function Header() {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="glass-strong w-64 border-white/10 text-offwhite">
-            <DropdownMenuLabel className="text-xs uppercase tracking-[0.2em] text-gold">Modules Zayado</DropdownMenuLabel>
+            <DropdownMenuGroup><DropdownMenuLabel className="text-xs uppercase tracking-[0.2em] text-gold">Modules Zayado</DropdownMenuLabel></DropdownMenuGroup>
             <DropdownMenuSeparator className="bg-white/10" />
             {modules.map((e) => (
               <DropdownMenuItem key={e.name} onClick={() => navigate(e.path)}
@@ -256,7 +292,12 @@ export function Header() {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="glass-strong w-80 border-white/10 text-offwhite">
-            <DropdownMenuLabel className="text-xs uppercase tracking-[0.2em] text-gold">Notifications</DropdownMenuLabel>
+            <DropdownMenuGroup><DropdownMenuLabel className="text-xs uppercase tracking-[0.2em] text-gold">Notifications</DropdownMenuLabel></DropdownMenuGroup>
+            {enRepos && (
+              <p className="px-2 py-1.5 text-[11px] italic text-gold/80" data-testid="notif-jour-repos">
+                Jour de repos : les rappels doux se taisent aujourd'hui. Bonne pause.
+              </p>
+            )}
             <DropdownMenuSeparator className="bg-white/10" />
             {actuNonVue && (
               <DropdownMenuItem className="flex cursor-pointer items-start gap-3 py-3 focus:bg-white/10" data-testid="notif-actu"
@@ -275,6 +316,60 @@ export function Header() {
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-offwhite">{decisionsEnAttente} décision{decisionsEnAttente > 1 ? "s" : ""} en attente</p>
                   <p className="text-xs text-offwhite/60">Ton Copilote attend ton feu vert (onglet Décisions).</p>
+                </div>
+              </DropdownMenuItem>
+            )}
+            {!enRepos && rappelCheckin && (
+              <DropdownMenuItem className="flex cursor-pointer items-start gap-3 py-3 focus:bg-white/10" data-testid="notif-checkin"
+                onClick={() => setCheckinOuvert(true)}>
+                <BatteryMedium className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-offwhite">Check-in du jour à faire</p>
+                  <p className="text-xs text-offwhite/60">30 secondes pour mesurer ton énergie — tout le cockpit s'en sert.</p>
+                </div>
+              </DropdownMenuItem>
+            )}
+            {lettrePrete && (
+              <DropdownMenuItem className="flex cursor-pointer items-start gap-3 py-3 focus:bg-white/10" data-testid="notif-lettre"
+                onClick={() => navigate("/app/bien-etre?tab=carnet")}>
+                <MailOpen className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-offwhite">Ta lettre du futur est arrivée</p>
+                  <p className="text-xs text-offwhite/60">Écrite le {lettrePrete.ecrite_le} — elle t'attend dans ton carnet.</p>
+                </div>
+              </DropdownMenuItem>
+            )}
+            {!enRepos && visionDue && (
+              <DropdownMenuItem className="flex cursor-pointer items-start gap-3 py-3 focus:bg-white/10" data-testid="notif-vision"
+                onClick={() => { localStorage.setItem("vision_vue_le", new Date().toISOString()); setVisionDue(false); navigate("/app/vision"); }}>
+                <Compass className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-offwhite">Revois ta vision</p>
+                  <p className="text-xs text-offwhite/60">30 secondes devant ton Vision Board pour ne pas lâcher le cap.</p>
+                </div>
+              </DropdownMenuItem>
+            )}
+            {!enRepos && serieEnDanger && (
+              <DropdownMenuItem className="flex cursor-pointer items-start gap-3 py-3 focus:bg-white/10" data-testid="notif-serie"
+                onClick={() => navigate("/app/bien-etre")}>
+                <Flame className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-offwhite">Ta série de rituels tient encore</p>
+                  <p className="text-xs text-offwhite/60">Un seul petit rituel aujourd'hui et la flamme continue.</p>
+                </div>
+              </DropdownMenuItem>
+            )}
+            {!enRepos && revueDue && (
+              <DropdownMenuItem className="flex cursor-pointer items-start gap-3 py-3 focus:bg-white/10" data-testid="notif-revue"
+                onClick={() => {
+                  const d = new Date(); const t = new Date(d.getFullYear(), 0, 1);
+                  localStorage.setItem("revue_faite_semaine", `${d.getFullYear()}-S${Math.ceil((((d - t) / 86400000) + 1) / 7)}`);
+                  setRevueDue(false); navigate("/app/revue");
+                }}>
+                <CalendarCheck className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-offwhite">Boucle ta semaine</p>
+                  <p className="text-xs text-offwhite/60">Revue hebdo : 5 questions guidées, 5 minutes.</p>
                 </div>
               </DropdownMenuItem>
             )}

@@ -35,7 +35,7 @@ function Shell({ children, menu }) {
   <div className={`min-h-screen text-offwhite ${theme === "clair" ? "pro-clair" : "pro-sombre"}`} data-testid="vendeur-root">
     {menu}
     <div className="lg:pl-[248px]">
-      <header className="entete-navy sticky top-0 z-20 hidden items-center gap-3 lg:flex border-b border-white/10 px-4 py-3 backdrop-blur-2xl sm:px-6" style={{ background: "rgba(15,27,58,0.86)" }}>
+      <header className="entete-navy sticky top-0 z-20 hidden items-center gap-3 lg:flex border-b border-white/5 px-4 py-3 backdrop-blur-xl sm:px-6" style={{ background: "rgba(11,26,61,0.6)" }}>
         <Store size={18} className="text-gold" />
         <h1 className="font-display text-lg font-bold text-offwhite sm:text-xl">Espace Vendeur</h1>
       </header>

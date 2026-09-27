@@ -12,8 +12,8 @@ const GOLD = "#DEC2A3";
 
 // Couleurs d'aperçu des boards (plus de fausses photos ni de faux compteurs).
 const TEINTES = [
-  "linear-gradient(160deg,#2b4a7e,#0f1b3a)", "linear-gradient(160deg,#6b5236,#0f1b3a)",
-  "linear-gradient(160deg,#2f5d55,#0f1b3a)", "linear-gradient(160deg,#5b3d6b,#0f1b3a)",
+  "linear-gradient(160deg,#26437e,#0f1b3a)", "linear-gradient(160deg,#7A5C3E,#0f1b3a)",
+  "linear-gradient(160deg,#3E4A66,#0f1b3a)", "linear-gradient(160deg,#8a6a45,#0f1b3a)",
 ];
 
 const QUOTES = [
@@ -71,7 +71,7 @@ export default function VisionBoardMobileHome({ onOpenBoard }) {
       background: `#0f1b3a radial-gradient(ellipse 800px 500px at 50% 0%, rgba(74,106,158,0.35) 0%, transparent 60%) no-repeat`,
     }}>
       {/* Top bar */}
-      <header className="sticky top-0 z-30 flex items-center justify-between px-5 pt-4 pb-3 backdrop-blur-xl" style={{ background: "rgba(15,27,58,0.72)" }}>
+      <header className="sticky top-0 z-30 flex items-center justify-between px-5 pt-4 pb-3 backdrop-blur-xl" style={{ background: "rgba(11,26,61,0.6)" }}>
         <button onClick={() => navigate("/app")} className="rounded-lg p-2 hover:bg-white/5" aria-label="Retour au cockpit"><HomeIcon size={20} /></button>
         <div className="text-center">
           <div className="text-[10px] uppercase tracking-[0.22em]" style={{ color: GOLD }}>Zayado</div>

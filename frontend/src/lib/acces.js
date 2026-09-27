@@ -14,6 +14,8 @@ export function chargerAbonnement() {
 }
 
 // Offre Rêveur : Vision Board, Idées et chat IA (le chat est dans l'en-tête).
+// Ma Foi n'est plus dans cette liste : elle suit désormais la même règle
+// d'accès payant que le reste de /app (voir AccesGate.jsx).
 export const PAGES_REVEUR = ["/app/vision", "/app/ideas", "/app/sources"];
 export const pageAutorisee = (plan, pathname) =>
   plan !== "reveur" || !pathname.startsWith("/app") || PAGES_REVEUR.some((p) => pathname.startsWith(p));

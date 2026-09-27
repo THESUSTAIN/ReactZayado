@@ -11,8 +11,19 @@ import { lancerPaiement } from "@/lib/checkout";
 import { fetchTarifsFondateur } from "@/lib/kairosApi";
 import { Sparkles, ArrowRight, ArrowLeft, Plus, X, Target, Clock, Heart, Check, Loader2, Rocket, User, Briefcase, TrendingUp } from "lucide-react";
 import { savePouls } from "@/lib/kairosApi";
+import { enregistrerChoixAccueil } from "@/lib/kairosApi";
+import { Info } from "lucide-react";
+import TheSustainInfo from "@/components/kairos/TheSustainInfo";
 
 const STEPS = ["Bienvenue", "Identité", "Activité", "Cap financier", "Vision", "Objectifs 90j", "Valeurs & rituel", "Ton offre", "C'est prêt"];
+
+// Écran de présentation : 3 slides qui se succèdent (bien-être, pilotage IA,
+// rentabilité) avant le choix « Oui, je veux ça » / « Pas encore ».
+const SLIDES = [
+  { icon: Heart, titre: "Ton bien-être d'abord", texte: "Retrouve ton énergie et allège ta charge mentale — un matin à la fois, à ton rythme." },
+  { icon: Sparkles, titre: "Piloté par l'IA", texte: "Ton copilote trie tes priorités et t'accompagne selon ton énergie réelle, chaque jour." },
+  { icon: TrendingUp, titre: "Une activité rentable", texte: "De vrais clients à contacter et ton chiffre d'affaires suivi — sans jamais ouvrir un tableur." },
+];
 
 // Offres : source unique (lib/plans.js), prix HT. 3 offres au lancement,
 // Équipe et Entreprise sur contact. Tarif fondateur affiché si l'offre est ouverte.
@@ -40,6 +51,11 @@ export default function Onboarding() {
   const [searchParams] = useSearchParams();
   const { user, setOnboardingData } = useKairos();
   const [step, setStep] = useState(0);
+  // Écran de présentation aspirationnel, montré uniquement au tout premier
+  // passage (première inscription) avant l'étape « Bienvenue ».
+  const [presentation, setPresentation] = useState(true);
+  const [slide, setSlide] = useState(0);
+  const [infoSens, setInfoSens] = useState(false);
 
   const [vision, setVision] = useState("");
   const [why, setWhy] = useState("");
@@ -71,6 +87,13 @@ export default function Onboarding() {
 
   const next = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
   const back = () => setStep((s) => Math.max(s - 1, 0));
+
+  // Mesure d'accueil : on enregistre le choix (best-effort) puis on entre dans le wizard.
+  const choisir = (choix) => {
+    try { enregistrerChoixAccueil(choix); } catch (_) { /* best-effort */ }
+    try { localStorage.setItem("zayado_accueil_choix", choix); } catch (_) { /* stockage indisponible */ }
+    setPresentation(false);
+  };
 
   // « Passer » : on mémorise que l'onboarding est fait (sinon il revenait à chaque connexion)
   // et on va au Cockpit — avant, le bouton renvoyait vers « / » puis /login.
@@ -159,6 +182,72 @@ export default function Onboarding() {
 
   return (
     <div className="zayado-blue relative flex min-h-screen flex-col items-center justify-center px-4 py-10">
+      {/* Présentation aspirationnelle — 3 slides puis le choix (premier contact) */}
+      {presentation && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden px-6 text-center" style={{ background: "var(--fond-zayado)" }} data-testid="onboarding-presentation">
+          {/* Vidéo d'ambiance (boucle muette) + voile navy ; si la vidéo manque,
+              le poster puis le fond navy dégradé restent derrière. */}
+          <video
+            autoPlay muted loop playsInline poster="/presentation-poster.jpg"
+            className="absolute inset-0 h-full w-full object-cover"
+            aria-hidden="true"
+            data-testid="onboarding-presentation-video"
+          >
+            <source src="/presentation.mp4" type="video/mp4" />
+          </video>
+          <div className="absolute inset-0 bg-[#0b1a3d]/60" aria-hidden="true" />
+          <button onClick={() => setInfoSens(true)} data-testid="onboarding-info-sens" aria-label="En savoir plus sur l'espace Sens"
+            className="absolute right-5 top-5 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-white/25 text-offwhite/70 transition hover:border-white/50 hover:text-offwhite">
+            <Info size={16} />
+          </button>
+          <img src="/logo.png" alt="Zayado" className="relative mb-8 h-14 w-14 animate-fade-up object-contain" />
+
+          <div key={slide} className="zayado-stagger relative max-w-2xl animate-fade-up" data-testid={`onboarding-slide-${slide}`}>
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gold/15 ring-1 ring-gold/30">
+              {(() => { const I = SLIDES[slide].icon; return <I className="h-8 w-8 text-gold" />; })()}
+            </div>
+            <p className="font-display text-4xl font-extrabold leading-tight text-offwhite sm:text-6xl">{SLIDES[slide].titre}</p>
+            <p className="mx-auto mt-5 max-w-xl font-display text-xl font-medium leading-snug text-offwhite/85 sm:text-2xl">{SLIDES[slide].texte}</p>
+          </div>
+
+          {/* Points de progression */}
+          <div className="relative mt-10 flex items-center gap-2" data-testid="onboarding-slide-dots">
+            {SLIDES.map((_, i) => (
+              <button key={i} onClick={() => setSlide(i)} aria-label={`Slide ${i + 1}`} data-testid={`onboarding-slide-dot-${i}`}
+                className={`h-2 rounded-full transition-all ${i === slide ? "w-8 bg-gold" : "w-2 bg-white/25"}`} />
+            ))}
+          </div>
+
+          <div className="absolute bottom-10 flex w-full max-w-md items-center justify-between gap-4 px-2">
+            {slide < SLIDES.length - 1 ? (
+              <>
+                <button onClick={() => choisir("pas_encore")} data-testid="onboarding-presentation-later"
+                  className="rounded-full border border-white/25 px-6 py-3.5 text-sm font-medium text-offwhite/70 transition hover:border-white/50 hover:text-offwhite">
+                  Passer
+                </button>
+                <button onClick={() => setSlide((s) => Math.min(s + 1, SLIDES.length - 1))} data-testid="onboarding-slide-next"
+                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-b from-[#F1E2CC] to-[#DEC2A3] px-8 py-3.5 text-sm font-bold text-navy-900 shadow-[0_10px_30px_-8px_rgba(222,194,163,0.6)] transition hover:brightness-105">
+                  Suivant <ArrowRight className="h-4 w-4" />
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => choisir("pas_encore")} data-testid="onboarding-presentation-later"
+                  className="rounded-full border border-white/25 px-6 py-3.5 text-sm font-medium text-offwhite/70 transition hover:border-white/50 hover:text-offwhite">
+                  Pas encore
+                </button>
+                <button onClick={() => choisir("oui")} data-testid="onboarding-presentation-yes"
+                  className="rounded-full bg-gradient-to-b from-[#F1E2CC] to-[#DEC2A3] px-8 py-3.5 text-sm font-bold text-navy-900 shadow-[0_10px_30px_-8px_rgba(222,194,163,0.6)] transition hover:brightness-105">
+                  Oui, je veux ça
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      <TheSustainInfo open={infoSens} onClose={() => setInfoSens(false)} />
+
       {/* Progress */}
       <div className="mb-8 flex w-full max-w-xl items-center gap-2" data-testid="onboarding-progress">
         {STEPS.map((label, i) => (

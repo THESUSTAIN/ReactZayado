@@ -12,7 +12,7 @@ import {
 export const LABEL_COLORS = [
   { bg: "#EDE7F6", fg: "#4C1D95" }, // violet
   { bg: "#E0F2E9", fg: "#14532D" }, // vert
-  { bg: "#E3ECFA", fg: "#1E3A8A" }, // bleu
+  { bg: "#E3ECFA", fg: "#26437e" }, // bleu
   { bg: "#FBEFD9", fg: "#7C2D12" }, // ambre
   { bg: "#FBE7F0", fg: "#831843" }, // rose
   { bg: "#DDF3F1", fg: "#134E4A" }, // turquoise

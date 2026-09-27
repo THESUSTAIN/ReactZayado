@@ -7,11 +7,33 @@ import { getToken } from "@/lib/kairosApi";
  * Chat « Collaborateur IA » accessible depuis toutes les pages (comme dans final 13) :
  * rail gauche, en-tête ou barre mobile envoient l'événement « zayado:open-chat ».
  * Sur le Cockpit en grand écran, le panneau est déjà ouvert à droite : on ne double pas.
+ *
+ * Corrigé : l'onglet demandé (« actu », « decisions ») était envoyé par événement
+ * 50 ms après l'ouverture — sur mobile/tiroir, le panneau se montait APRÈS
+ * l'événement et restait sur l'onglet Assistant (le briefing ne s'ouvrait pas).
+ * Désormais l'onglet en attente est mémorisé ici et consommé au montage du panneau.
  */
+let ongletEnAttente = null;
+let promptEnAttente = null;
+
+export const prendreOngletEnAttente = () => { const o = ongletEnAttente; ongletEnAttente = null; return o; };
+export const prendrePromptEnAttente = () => { const p = promptEnAttente; promptEnAttente = null; return p; };
+
 export const openChat = (onglet) => {
+  if (onglet) ongletEnAttente = onglet;
   window.dispatchEvent(new Event("zayado:open-chat"));
-  if (onglet === "decisions") setTimeout(() => window.dispatchEvent(new Event("kairos:ouvrir-decisions")), 50);
-  if (onglet === "actu") setTimeout(() => window.dispatchEvent(new Event("kairos:ouvrir-actu")), 50);
+  // L'événement reste utile quand le panneau est déjà monté (desktop /app) :
+  // il fait basculer l'onglet sans fermer/rouvrir.
+  if (onglet === "decisions") setTimeout(() => window.dispatchEvent(new Event("kairos:ouvrir-decisions")), 80);
+  if (onglet === "actu") setTimeout(() => window.dispatchEvent(new Event("kairos:ouvrir-actu")), 80);
+};
+
+/** Ouvre le chat sur l'Assistant avec une question déjà prête à envoyer. */
+export const discuterAvecIA = (question) => {
+  promptEnAttente = question;
+  ongletEnAttente = "chat";
+  window.dispatchEvent(new Event("zayado:open-chat"));
+  setTimeout(() => window.dispatchEvent(new CustomEvent("kairos:prompt-chat", { detail: question })), 80);
 };
 
 export default function GlobalChat() {
@@ -33,7 +55,7 @@ export default function GlobalChat() {
   return (
     <>
       <div
-        className={`fixed inset-0 z-[59] bg-[#060a18]/70 backdrop-blur-sm transition-opacity duration-200 ${open ? "opacity-100" : "pointer-events-none opacity-0"}`}
+        className={`fixed inset-0 z-[59] bg-[#0b1a3d]/70 backdrop-blur-sm transition-opacity duration-200 ${open ? "opacity-100" : "pointer-events-none opacity-0"}`}
         onClick={() => setOpen(false)}
         aria-hidden="true"
       />

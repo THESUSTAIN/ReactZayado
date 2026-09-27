@@ -178,9 +178,9 @@ export default function Login() {
     try { await connexionDemo("thomas@zayado.net", "Thomas"); toast.success("Compte test ouvert"); enter(); }
     catch { toast.error("Compte test indisponible ici."); }
   };
-  const openThesustain = async () => {
+  const openEspaceSens = async () => {
     try { await connexionDemo("membre@thesustain.net"); enter(); }
-    catch { toast.error("SSO thesustain.net indisponible ici."); }
+    catch { toast.error("Espace Sens indisponible ici."); }
   };
 
   const envoyer = async () => {
@@ -226,8 +226,7 @@ export default function Login() {
       <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-md">
         <GlassCard data-testid="login-card">
           <div className="mb-6 text-center">
-            <img src="/logo.png" alt="Zayado" className="mx-auto mb-3 h-14 w-14 object-contain" />
-            <h1 className="font-display text-3xl font-extrabold text-offwhite">Zayado</h1>
+            <img src="/logo-zayado-blanc.png" alt="Zayado" className="mx-auto mb-3 h-12 w-auto object-contain" />
             <p className="mt-1 text-[11px] uppercase tracking-[0.25em] text-gold">ESPACE PRIVÉ</p>
             <p className="mt-4 text-sm text-offwhite/70">{DANS_TEAMS ? "Connecte-toi à ton espace Zayado depuis Microsoft Teams." : "Connecte-toi à ton espace privé Zayado — sans mot de passe à retenir."}</p>
             {DANS_TEAMS && <p className="mt-2 rounded-xl border border-gold/30 bg-gold/10 px-3 py-2 text-[12px] text-offwhite/80" data-testid="login-teams">Dans Teams, le plus simple : ton e-mail et ton mot de passe. Google et Microsoft s'ouvrent dans une petite fenêtre.</p>}
@@ -327,9 +326,9 @@ export default function Login() {
           <div className="my-4 h-px bg-white/10" />
 
 {(options.apercu_actif || PREVIEW) && (
-                    <button onClick={openThesustain} data-testid="login-thesustain-btn"
+                    <button onClick={openEspaceSens} data-testid="login-espace-sens-btn"
             className="flex w-full items-center justify-center gap-2 rounded-xl border border-gold/40 bg-transparent px-3 py-2.5 text-sm font-semibold text-gold transition hover:bg-gold/10">
-            Connexion SSO (thesustain.net)
+            Connexion espace Sens
           </button>
           )}
 

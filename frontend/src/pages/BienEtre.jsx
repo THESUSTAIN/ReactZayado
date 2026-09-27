@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import MindsetAujourdhui from "@/components/mindset/MindsetAujourdhui";
 import MindsetParcours from "@/components/mindset/MindsetParcours";
 import MindsetCarnet from "@/components/mindset/MindsetCarnet";
+import SensEquilibre from "@/components/kairos/SensEquilibre";
 import { Sidebar } from "@/components/kairos/Sidebar";
 import { Header } from "@/components/kairos/Header";
 import BreathingSession, { PROTOCOLES } from "@/components/kairos/BreathingSession";
@@ -51,7 +52,7 @@ export default function BienEtre() {
   const [breathingOpen, setBreathingOpen] = useState(false);
   // Onglets (dans l'URL : ?tab=parcours&p=oser-vendre — utilisable depuis le Radar ou le cockpit)
   const [params, setParams] = useSearchParams();
-  const onglet = ["aujourdhui", "parcours", "carnet"].includes(params.get("tab")) ? params.get("tab") : "aujourdhui";
+  const onglet = ["aujourdhui", "parcours", "carnet", "sens"].includes(params.get("tab")) ? params.get("tab") : "aujourdhui";
   const parcoursOuvert = params.get("p") || null;
   const allerA = (tab, p = null) => { setParams(p ? { tab, p } : { tab }); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
@@ -110,7 +111,7 @@ export default function BienEtre() {
   };
 
   const doneCount = Object.values(checked).filter(Boolean).length;
-  const totalRituals = 3;
+  const totalRituals = RITUALS.length;
   const avgEnergy = history.length ? (history.reduce((s, v) => s + v, 0) / history.length).toFixed(1) : null;
 
   return (
@@ -123,7 +124,7 @@ export default function BienEtre() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-offwhite/60">Bien-être & Mindset</p>
           <h1 className="mt-1 font-display text-3xl font-bold sm:text-4xl">Prendre soin de toi</h1>
           <nav className="-mx-4 mb-7 mt-5 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0" data-testid="bienetre-onglets">
-            {[["aujourdhui", "Aujourd'hui"], ["parcours", "Parcours"], ["carnet", "Mon carnet"]].map(([k, l]) => (
+            {[["aujourdhui", "Aujourd'hui"], ["parcours", "Parcours"], ["carnet", "Mon carnet"], ["sens", "Sens & équilibre"]].map(([k, l]) => (
               <button key={k} onClick={() => allerA(k)} data-testid={`bienetre-onglet-${k}`}
                 className={`shrink-0 rounded-full px-5 py-2.5 text-[13.5px] font-semibold transition ${onglet === k ? "bg-gradient-to-b from-[#F1E2CC] to-[#DEC2A3] text-navy-900" : "border border-white/20 bg-white/[0.05] text-offwhite/75 hover:bg-white/10"}`}>
                 {l}
@@ -133,27 +134,9 @@ export default function BienEtre() {
 
           {onglet === "parcours" && <MindsetParcours ouvert={parcoursOuvert} onOuvrir={(id) => allerA("parcours", id)} />}
           {onglet === "carnet" && <MindsetCarnet />}
+          {onglet === "sens" && <SensEquilibre />}
           {onglet === "aujourdhui" && (<>
           <MindsetAujourdhui onOuvrirParcours={(id) => allerA("parcours", id)} onOuvrirCarnet={() => allerA("carnet")} />
-          {/* Hero citation */}
-          <div className="mb-6 rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-6 sm:p-8">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1">
-                <p className="text-[10.5px] font-semibold uppercase tracking-[0.24em]" style={{ color: GOLD }}>Aujourd'hui · Vitals</p>
-                <h2 className="mt-2 font-display text-[26px] font-semibold leading-[1.12] sm:text-[34px]">
-                  Tes 4 indicateurs, en <span className="font-serif-italic italic" style={{ color: GOLD }}>lecture douce</span>
-                </h2>
-                <p className="mt-2 font-hand text-[22px] leading-tight text-white/85 sm:text-[26px]">
-                  Écoute. Ajuste. Repose.
-                </p>
-              </div>
-              <button onClick={() => (vitals?.energy == null ? setEnergieOpen(true) : setShowCheckin(true))}
-                className="hidden shrink-0 items-center gap-2 rounded-xl px-5 py-3 text-[13px] font-semibold text-navy-900 shadow-lg sm:flex"
-                style={{ background: GOLD }}>
-                <Plus size={14} /> Check-in maintenant
-              </button>
-            </div>
-          </div>
 
           {/* 4 vitals cards */}
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -193,7 +176,7 @@ export default function BienEtre() {
           <section className="mt-8">
             <div className="mb-4 flex items-end justify-between">
               <div>
-                <h2 className="font-display text-[20px] font-semibold sm:text-[22px]">Tes 3 rituels doux du jour</h2>
+                <h2 className="font-display text-[20px] font-semibold sm:text-[22px]">Tes rituels doux du jour</h2>
                 <p className="mt-1 text-[13px] text-white/55">Coche celui qui t'a fait du bien : chaque jour avec un geste pour toi (rituel, check-in ou exercice) prolonge ta série.</p>
               </div>
               <div className="text-right">
@@ -211,7 +194,7 @@ export default function BienEtre() {
                 <span className="block h-full transition-all duration-500" style={{ width: `${Math.min(100, (doneCount / totalRituals) * 100)}%`, background: `linear-gradient(90deg, ${GOLD}, ${GOLD}aa)` }} />
               </div>
               <div className="grid gap-2 md:grid-cols-3">
-                {RITUALS.slice(0, 3).map((r) => {
+                {RITUALS.map((r) => {
                   const done = !!checked[r.id];
                   return (
                     <div key={r.id} className={`group flex items-start gap-3 rounded-xl border p-4 transition ${done ? "border-emerald-500/30 bg-emerald-500/[0.06]" : "border-white/10 bg-white/[0.03] hover:border-white/25"}`}>
@@ -289,25 +272,6 @@ export default function BienEtre() {
             <InsightDuJour history={history} vitals={vitals} analyse={courbe?.analyse} onCheckin={() => setEnergieOpen(true)} onRespirer={() => setBreathingOpen(true)} />
           </div>
 
-          {/* Rituels bonus */}
-          <section className="mt-6">
-            <h3 className="mb-3 font-display text-[15px] font-semibold text-white/80">Autres rituels doux</h3>
-            <div className="grid gap-2 md:grid-cols-3">
-              {RITUALS.slice(3).map((r) => (
-                <button key={r.id} onClick={() => toggleRitual(r.id)}
-                  className={`flex items-center gap-3 rounded-xl border p-3.5 text-left transition ${checked[r.id] ? "border-emerald-500/30 bg-emerald-500/[0.06]" : "border-white/10 bg-white/[0.03] hover:border-white/25"}`}>
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ background: `${GOLD}22` }}>
-                    <r.icon size={15} style={{ color: GOLD }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[13px] font-semibold text-white">{r.title}</div>
-                    <div className="text-[11px] text-white/50">{r.desc}</div>
-                  </div>
-                  {checked[r.id] ? <CheckCircle2 size={16} className="text-emerald-400" /> : <Circle size={16} className="text-white/25" />}
-                </button>
-              ))}
-            </div>
-          </section>
           </>)}
         </main>
       </div>
@@ -448,7 +412,7 @@ function CheckinModal({ focus, vitals, onSave, onClose }) {
   const v = VITALS_LABEL[tab];
   const [choix, setChoix] = useState(null);
   return (
-    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-[#060a18]/70 backdrop-blur-sm p-4 backdrop-blur-sm sm:items-center" onClick={onClose}>
+    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-[#0b1a3d]/70 backdrop-blur-sm p-4 backdrop-blur-sm sm:items-center" onClick={onClose}>
       <div className="fenetre w-full max-w-md rounded-t-2xl p-6 sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-5 flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl" style={{ background: `${v.color}22` }}>

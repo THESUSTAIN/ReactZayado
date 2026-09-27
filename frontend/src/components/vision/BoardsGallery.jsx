@@ -84,7 +84,7 @@ function NouveauBoard({ onClose, onCree }) {
     } catch { toast.error("Création impossible (12 boards maximum)."); setEnvoi(false); }
   };
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#060a18]/70 p-0 backdrop-blur-sm sm:items-center sm:p-6" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#0b1a3d]/70 p-0 backdrop-blur-sm sm:items-center sm:p-6" onClick={onClose}>
       <form onSubmit={creer} onClick={(e) => e.stopPropagation()} className="fenetre w-full max-w-md rounded-t-3xl p-6 sm:rounded-3xl" data-testid="vision-nouveau-board">
         <div className="mb-4 flex items-center justify-between">
           <p className="font-display text-xl font-semibold">Nouveau board</p>

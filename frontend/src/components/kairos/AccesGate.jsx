@@ -15,6 +15,9 @@ export default function AccesGate() {
   const navigate = useNavigate();
   useEffect(() => {
     if (!pathname.startsWith("/app") || !getToken()) return;
+    // Ma Foi suit désormais la même règle d'accès que le reste de /app :
+    // offre active requise (voir lib/acces.js). Le futur critère "SSO connecté"
+    // sera ajouté ici une fois le module Connexions (OAuth) porté depuis app-main.
     chargerAbonnement().then((a) => {
       if (a.acces === "aucun") {
         fetchState()

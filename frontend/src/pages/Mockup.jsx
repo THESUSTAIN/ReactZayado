@@ -20,7 +20,7 @@ export default function Mockup() {
 
   return (
     <div className="min-h-screen text-white" style={{ background: NAVY }}>
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-navy-900/70 backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-white/5 bg-[#0b1a3d]/60 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
           <button onClick={() => navigate("/app")} className="flex items-center gap-2 text-white/70 hover:text-white">
             <ArrowLeft size={16} /> <span className="text-sm">Retour app</span>

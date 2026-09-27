@@ -108,6 +108,8 @@ export const exportData = () => jget("/export");
 export const deleteData = () => jsend("/donnees", "DELETE");
 export const fetchConnexionOptions = () => jget("/connexion/options");
 export const demanderLien = (email, origin) => jsend("/connexion/lien", "POST", { email, origin });
+// Mesure d'accueil : choix « oui » / « pas_encore » sur l'écran de présentation.
+export const enregistrerChoixAccueil = (choix) => jsend("/accueil/choix", "POST", { choix });
 export const verifierLien = (token) => jsend("/connexion/verifier", "POST", { token });
 export const entrerApercu = () => jsend("/connexion/apercu", "POST");
 export const connexionDemo = (email, prenom) => jsend("/connexion/demo", "POST", { email, prenom });
@@ -258,8 +260,26 @@ export const creerCodePromo = (data) => jsend("/admin/codes-promo", "POST", data
 export const basculerCodePromo = (id, active) => jsend(`/admin/codes-promo/${id}`, "PUT", { active });
 export const supprimerCodePromo = (id) => jsend(`/admin/codes-promo/${id}`, "DELETE");
 export const fetchConnections = () => jget("/connections");
+export const fetchConnectionProviders = () => jget("/connections/providers");
+export const connecterProvider = (provider, values) => jsendMsg(`/connections/${provider}`, "POST", { values });
+export const deconnecterProvider = (provider) => jsendMsg(`/connections/${provider}`, "DELETE");
+export const fetchAdminConnexionsStats = () => jget("/admin/connections/stats");
+export const fetchAdminConnexionsListe = () => jget("/admin/connections/list");
+export const fetchAppLogs = (params = {}) => {
+  const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== "")).toString();
+  return jget(`/app-logs${qs ? `?${qs}` : ""}`);
+};
+export const fetchAppLogsSummary = () => jget("/app-logs/summary");
+export const purgerAppLogs = (days = 30) => jsendMsg(`/app-logs/purge?days=${days}`, "DELETE");
 export const fetchMesFilleuls = () => jget("/parrainage/mes-filleuls");
 export const inviterParrainage = (email) => jsend("/parrainage/inviter", "POST", { email });
+// Programmes partenaires (parrainage / ambassadeur / affiliation)
+export const fetchProgrammes = () => jget("/programmes");
+export const fetchMonProgramme = () => jget("/programmes/mon-programme");
+export const demanderProgramme = (programme) => jsend("/programmes/demander", "POST", { programme });
+export const fetchAdminProgrammes = () => jget("/admin/programmes");
+export const validerProgramme = (userId, programme) => jsend(`/admin/programmes/${userId}/valider`, "POST", { programme });
+export const payerCommission = (userId) => jsend(`/admin/programmes/${userId}/payer`, "POST");
 
 // ── Admin : demandes Collaborateurs + récupération du compte démo ──
 export const fetchDemandesCollaborateur = () => jget("/admin/demandes-collaborateur");
@@ -330,6 +350,26 @@ export const fetchCarnet = () => jget("/mindset/carnet");
 export const supprimerEntreeCarnet = (id) => jsend(`/mindset/carnet/${id}`, "DELETE");
 export const recadrerPensee = (pensee) => jsend("/mindset/recadrer", "POST", { pensee });
 
+// Lettre à ton futur moi : scellée jusqu'à la date choisie, annoncée par la cloche.
+export const fetchLettres = () => jget("/mindset/lettres");
+export const scellerLettre = (texte, ouvre_le) => jsendMsgCheck("/mindset/lettres", "POST", { texte, ouvre_le });
+export const marquerLettreLue = (id) => jsend(`/mindset/lettres/${id}/lue`, "POST", {});
+
+async function jsendMsgCheck(path, method, body) {
+  const r = await fetch(`${API}${path}`, {
+    method,
+    headers: _headers({ "Content-Type": "application/json" }),
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (r.status === 401) { setToken(null); _versLogin(); }
+  if (!r.ok) {
+    let msg = `${method} ${path} ${r.status}`;
+    try { const d = await r.json(); if (d?.detail) msg = d.detail; } catch { /* pas de JSON */ }
+    throw new Error(msg);
+  }
+  return r.json();
+}
+
 
 // ── Emails IA (admin) — les erreurs remontent le message du serveur (detail) ──
 async function jsendMsg(path, method, body) {
@@ -348,3 +388,11 @@ export const creerBrouillonEmailIA = (data) => jsendMsg("/admin/emails-ia/brouil
 export const envoyerBrouillonEmailIA = (id) => jsendMsg(`/admin/emails-ia/${id}/envoyer`, "POST", {});
 export const annulerBrouillonEmailIA = (id) => jsendMsg(`/admin/emails-ia/${id}/annuler`, "POST", {});
 export const enregistrerCleBrevo = (data) => jsendMsg("/admin/emails-ia/cle-brevo", "POST", data);
+
+// ── Newsletters (admin, marque Zayado) — veille externe → réécriture IA → Brevo ──
+export const fetchNewsletters = (statut) => jget(`/admin/newsletters${statut ? `?statut=${statut}` : ""}`);
+export const fetchNewsletter = (id) => jget(`/admin/newsletters/${id}`);
+export const majNewsletter = (id, data) => jsendMsg(`/admin/newsletters/${id}`, "PUT", data);
+export const relancerNewsletter = (id) => jsendMsg(`/admin/newsletters/${id}/relancer`, "POST", {});
+export const rejeterNewsletter = (id) => jsendMsg(`/admin/newsletters/${id}`, "DELETE");
+export const pousserNewsletterBrevo = (id) => jsendMsg(`/admin/newsletters/${id}/pousser-brevo`, "POST", {});

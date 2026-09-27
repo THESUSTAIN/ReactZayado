@@ -94,7 +94,7 @@ export default function Roadmap() {
     <div className="min-h-screen">
       <Sidebar />
       <div className="lg:pl-[92px]">
-        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-white/10 bg-navy-900/70 px-6 py-4 backdrop-blur-2xl">
+        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-white/5 bg-[#0b1a3d]/60 px-6 py-4 backdrop-blur-xl">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold/15 ring-1 ring-gold/30">
             <Map size={18} className="text-gold" />
           </div>
@@ -200,7 +200,7 @@ function RoadmapEditor({ item, onSave, onClose }) {
     visible: item.visible !== false,
   });
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-[#060a18]/70 backdrop-blur-sm p-4 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-[#0b1a3d]/70 backdrop-blur-sm p-4 backdrop-blur-sm" onClick={onClose}>
       <div className="glass-strong relative w-full max-w-lg rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
         <button onClick={onClose} className="absolute right-4 top-4 text-offwhite/60 hover:text-white"><X size={18} /></button>
         <h3 className="font-display text-lg font-bold text-white">{item.id ? "Modifier" : "Nouvel item"}</h3>

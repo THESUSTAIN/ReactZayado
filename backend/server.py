@@ -27,7 +27,7 @@ from fastapi import APIRouter, Depends, FastAPI, File, Form, HTTPException, Requ
 from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import (
-    Boolean, DateTime, ForeignKey, Integer, JSON, String, Text, delete as sa_delete, func, select,
+    Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, delete as sa_delete, func, select,
 )
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -45,6 +45,61 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite+aiosqlite:////app/backend/
 EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY")
 DEMO_USER_ID = "demo-user"
 MODELE = ("anthropic", "claude-sonnet-4-5-20250929")
+
+# ─────────────── Programmes partenaires (parrainage / ambassadeur / affiliation) ───────────────
+# Trois façons de recommander Zayado. « parrainage » est ouvert à tous ; « ambassadeur »
+# et « affiliation » demandent une validation admin (rôle influenceur/partenaire).
+PROGRAMMES = {
+    "parrainage": {
+        "cle": "parrainage",
+        "label": "Parrainage",
+        "public": "Pour tous les abonnés",
+        "recompense": "1 mois d'abonnement offert par filleul qui s'abonne",
+        "type": "mois_offert",
+        "sur_demande": False,
+    },
+    "ambassadeur": {
+        "cle": "ambassadeur",
+        "label": "Ambassadeur",
+        "public": "Pour les créateurs & partenaires de confiance",
+        "recompense": "Accès offert + 5 € par filleul actif",
+        "type": "commission",
+        "sur_demande": True,
+    },
+    "affiliation": {
+        "cle": "affiliation",
+        "label": "Affiliation",
+        "public": "Pour les influenceurs & apporteurs d'affaires",
+        "recompense": "Commission récurrente par paliers (jusqu'à 20 € / filleul)",
+        "type": "commission",
+        "sur_demande": True,
+    },
+}
+# Paliers d'affiliation : plus on apporte de filleuls actifs, plus la commission
+# unitaire (en €) augmente. Le palier est calculé sur le nombre de filleuls actifs.
+AFFILIATION_PALIERS = [
+    {"cle": "bronze",  "label": "Bronze",  "min_filleuls": 0,  "taux": 0.10, "montant": 8.0},
+    {"cle": "argent",  "label": "Argent",  "min_filleuls": 5,  "taux": 0.15, "montant": 12.0},
+    {"cle": "or",      "label": "Or",      "min_filleuls": 15, "taux": 0.20, "montant": 16.0},
+    {"cle": "diamant", "label": "Diamant", "min_filleuls": 50, "taux": 0.25, "montant": 20.0},
+]
+AMBASSADEUR_MONTANT = 5.0  # € par filleul actif
+
+
+def _palier_affiliation(nb_filleuls_actifs: int) -> dict:
+    """Renvoie le palier d'affiliation correspondant au nombre de filleuls actifs."""
+    palier = AFFILIATION_PALIERS[0]
+    for p in AFFILIATION_PALIERS:
+        if nb_filleuls_actifs >= p["min_filleuls"]:
+            palier = p
+    return palier
+
+
+def _generer_code_parrainage(uid: str) -> str:
+    """Code de partage court et lisible dérivé de l'id utilisateur."""
+    return f"ZAY{uid.replace('-', '')[:6].upper()}"
+
+
 
 # ── Connexions externes (WhatsApp Web, Telegram...) — porté depuis app-main ──
 from cryptography.fernet import Fernet
@@ -156,8 +211,10 @@ _ROUTES_PUBLIQUES_EXACTES = {
     "/api/mollie/webhook",             # appelé par Mollie
     "/api/commerce/health",
     "/api/codes-promo/appliquer",      # simple vérification d'un code
+    "/api/programmes",                 # catalogue public des 3 programmes partenaires
     "/api/subscribe",                  # inscription newsletter (e-mail de bienvenue)
     "/api/tarifs/fondateur",           # état de l'offre fondateur (page Tarifs)
+    "/api/accueil/choix",              # mesure d'accueil (écran de présentation, avant connexion)
 }
 _ROUTES_PUBLIQUES_PREFIXES = (
     "/api/connexion/",                 # options, lien magique, OAuth (démo bloquée à part)
@@ -212,6 +269,9 @@ class _AuthMiddleware(BaseHTTPMiddleware):
 EMAIL_BASE_URL = "https://integrations.emergentagent.com"
 EMAIL_KEY = os.environ.get("EMERGENT_EMAIL_KEY")
 EMAIL_FROM_NAME = os.environ.get("EMAIL_FROM_NAME", "Zayado")
+# Logo (wordmark bleu, fond clair) affiché en-tête de tous les e-mails.
+# Surchargeable sur Railway via EMAIL_LOGO_URL si le domaine change.
+EMAIL_LOGO_URL = os.environ.get("EMAIL_LOGO_URL", "https://app.zayado.net/logo-zayado-bleu.png")
 _SHORTENERS = ("bit.ly", "tinyurl.com", "t.co", "is.gd", "cutt.ly", "goo.gl", "rebrand.ly")
 _CRED_ASK = ("reply with your password", "send your password", "cvv", "seed phrase",
              "recovery phrase", "verify your card", "social security number")
@@ -274,6 +334,26 @@ def _assert_safe_email(subject: str, html: str) -> None:
         for m in _HOSTISH.finditer(text):
             if not _same_site(m.group(1).lower(), real):
                 raise ValueError(f"Anchor host mismatch (G3)")
+
+
+def _email_wrap(inner_html: str, *, logo_url: str = "") -> str:
+    """En-tête (logo bleu sur fond clair) + pied de page communs à tous les
+    e-mails Zayado. `inner_html` = contenu propre à chaque e-mail."""
+    url = (logo_url or EMAIL_LOGO_URL or "").strip()
+    if url.lower().startswith("https://"):
+        entete = f'<img src="{escape(url, quote=True)}" alt="Zayado" style="height:34px;width:auto;display:block;border:0" />'
+    else:
+        entete = '<span style="font-family:Georgia,serif;font-size:22px;font-weight:bold;color:#0B1F3A">Zayado</span>'
+    return (
+        '<div style="background:#EEF1F8;padding:28px 12px;font-family:Arial,Helvetica,sans-serif">'
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">'
+        '<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #E3E8F3">'
+        f'<tr><td style="background:#F8F4EF;padding:18px 28px;border-bottom:1px solid #ECEFF7">{entete}</td></tr>'
+        f'<tr><td style="padding:26px 28px;color:#0B1F3A;font-size:15px;line-height:1.6">{inner_html}</td></tr>'
+        '<tr><td style="padding:16px 28px;background:#0B1F3A;color:#9FB2CC;font-size:11px;line-height:1.5">Envoyé par Zayado — nous ne demandons jamais de mot de passe par e-mail.</td></tr>'
+        '</table></td></tr></table></div>'
+    )
+
 
 async def send_email(*, to: str, subject: str, html: str) -> Optional[str]:
     _assert_safe_email(subject, html)
@@ -501,8 +581,16 @@ class User(Base):
     # le rôle stocké ici. "client" par défaut — jamais élevé automatiquement,
     # seul un admin existant peut promouvoir un compte (voir /admin/utilisateurs/{id}/role).
     role: Mapped[str] = mapped_column(String(20), default="client")
-    # Crédits bonus — utilisés notamment par le parrainage ci-dessous.
-    credits: Mapped[int] = mapped_column(Integer, default=0)
+    # Programme partenaire : "parrainage" (défaut, tout le monde), "ambassadeur", "affiliation".
+    programme: Mapped[str] = mapped_column(String(20), default="parrainage")
+    # Demande de passage à ambassadeur/affiliation en attente de validation admin.
+    programme_demande: Mapped[str] = mapped_column(String(20), nullable=True)
+    # Code de parrainage/partage unique (généré à la demande).
+    code_parrainage: Mapped[str] = mapped_column(String(20), nullable=True, unique=True)
+    # Solde de commission dû en euros (ambassadeur/affiliation), remis à 0 au paiement.
+    solde_commission: Mapped[float] = mapped_column(Float, default=0.0)
+    # Mois d'abonnement offerts à créditer (parrainage & codes promo) — remplace l'ancien "credits".
+    mois_offerts_dus: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
@@ -517,30 +605,44 @@ class Lead(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class AccueilChoix(Base):
+    """Mesure d'accueil : sur l'écran de présentation, chaque visiteur clique
+    « Oui, je veux ça » ou « Pas encore ». On compte les deux pour l'admin
+    (taux de conversion de l'accueil)."""
+    __tablename__ = "accueil_choix"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
+    choix: Mapped[str] = mapped_column(String(20), index=True)  # "oui" | "pas_encore"
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 class Referral(Base):
-    """Parrainage — un utilisateur parraine un email, gagne un bonus une fois
-    que le filleul crée un vrai compte. Adapté du système "affiliate" vu dans
-    final-main (Dokan-style), simplifié ici : pas de commission en % sur
-    transaction (pas de table transactions dans ce projet), juste un crédit
-    fixe par filleul actif — plus simple à auditer, suffisant pour démarrer."""
+    """Parrainage / affiliation — un partenaire invite un email ; il gagne sa
+    récompense une fois que le filleul crée un vrai compte. La récompense dépend
+    du programme du parrain au moment de l'activation (voir /auth/register) :
+    - parrainage  → "mois_offert" (1 mois d'abonnement offert)
+    - ambassadeur → "commission" (montant fixe en €)
+    - affiliation → "commission" (montant selon le palier atteint)."""
     __tablename__ = "referrals"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
     referrer_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     referred_email: Mapped[str] = mapped_column(String(255), nullable=False)
     referred_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     statut: Mapped[str] = mapped_column(String(20), default="en_attente")  # en_attente, actif, expire
-    bonus_credits: Mapped[int] = mapped_column(Integer, default=0)
+    recompense_type: Mapped[str] = mapped_column(String(20), default="mois_offert")  # mois_offert | commission
+    recompense_valeur: Mapped[float] = mapped_column(Float, default=0.0)  # mois (1) ou euros
+    # Colonne héritée de l'ancien système de crédits : conservée en base (nullable, défaut 0)
+    # uniquement pour compatibilité — plus jamais utilisée par la logique.
+    bonus_credits: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
 class PromoCode(Base):
-    """Codes promo — porté depuis ReactZayado/admin_routes.py, adapté au
-    modèle User simplifié de ce projet (pas de bonus_credits séparé ici,
-    "credits" fait office des deux)."""
+    """Codes promo — un code valide offre soit des mois d'abonnement, soit
+    l'accès à un plan. (L'ancien type "credits" a été retiré.)"""
     __tablename__ = "promo_codes"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
     code: Mapped[str] = mapped_column(String(50), unique=True, index=True)
-    type: Mapped[str] = mapped_column(String(20), default="credits")  # credits, plan
+    type: Mapped[str] = mapped_column(String(20), default="mois_offert")  # mois_offert, plan
     value: Mapped[int] = mapped_column(Integer, default=0)
     max_uses: Mapped[int] = mapped_column(Integer, default=100)
     current_uses: Mapped[int] = mapped_column(Integer, default=0)
@@ -760,7 +862,22 @@ async def register(body: AuthIn, db: AsyncSession = Depends(get_db)):
             invitation.referred_id = user.id
             parrain = (await db.execute(select(User).where(User.id == invitation.referrer_id))).scalar_one_or_none()
             if parrain:
-                parrain.credits = (parrain.credits or 0) + invitation.bonus_credits
+                prog = parrain.programme or "parrainage"
+                if prog == "affiliation":
+                    nb_actifs = (await db.execute(select(func.count(Referral.id)).where(
+                        Referral.referrer_id == parrain.id, Referral.statut == "actif"))).scalar() or 0
+                    montant = _palier_affiliation(nb_actifs)["montant"]
+                    parrain.solde_commission = (parrain.solde_commission or 0) + montant
+                    invitation.recompense_type = "commission"
+                    invitation.recompense_valeur = montant
+                elif prog == "ambassadeur":
+                    parrain.solde_commission = (parrain.solde_commission or 0) + AMBASSADEUR_MONTANT
+                    invitation.recompense_type = "commission"
+                    invitation.recompense_valeur = AMBASSADEUR_MONTANT
+                else:  # parrainage classique → 1 mois offert
+                    parrain.mois_offerts_dus = (parrain.mois_offerts_dus or 0) + 1
+                    invitation.recompense_type = "mois_offert"
+                    invitation.recompense_valeur = 1
             await db.commit()
     except Exception as e:  # noqa: BLE001
         await db.rollback()
@@ -883,9 +1000,22 @@ async def admin_changer_plan(user_id: str, body: AdminPlanIn, db: AsyncSession =
     return {"ok": True, "plan": profil.plan, "fin": a.fin.isoformat() if a.fin else None, "fondateur": a.fondateur}
 
 
+@api.post("/accueil/choix")
+async def accueil_choix(body: dict, db: AsyncSession = Depends(get_db)):
+    """Public — enregistre le choix fait sur l'écran de présentation
+    (« Oui, je veux ça » vs « Pas encore ») pour mesurer l'accueil."""
+    val = str((body or {}).get("choix", "")).strip().lower()
+    choix = "oui" if val in ("oui", "yes", "1", "true") else "pas_encore"
+    db.add(AccueilChoix(choix=choix))
+    await db.commit()
+    return {"ok": True, "choix": choix}
+
+
 @api.get("/admin/vue-ensemble")
 async def admin_vue_ensemble(db: AsyncSession = Depends(get_db), _role=Depends(exiger_role("admin"))):
     total = (await db.execute(select(func.count()).select_from(User))).scalar_one()
+    accueil_oui = (await db.execute(select(func.count()).select_from(AccueilChoix).where(AccueilChoix.choix == "oui"))).scalar_one()
+    accueil_non = (await db.execute(select(func.count()).select_from(AccueilChoix).where(AccueilChoix.choix == "pas_encore"))).scalar_one()
     par_role = {}
     for r in ("client", "vendeur", "admin"):
         c = (await db.execute(select(func.count()).select_from(User).where(User.role == r))).scalar_one()
@@ -909,7 +1039,10 @@ async def admin_vue_ensemble(db: AsyncSession = Depends(get_db), _role=Depends(e
     # c'est la seule ligne qui compte. Plus de mrr_ht fictif (division par 1,2 non pertinente).
     inscrits_7j = (await db.execute(select(func.count()).select_from(User).where(
         User.created_at >= datetime.now(timezone.utc) - timedelta(days=7)))).scalar_one()
+    _acc_total = accueil_oui + accueil_non
     return {"utilisateurs_total": total, "par_role": par_role, "inscrits_7j": inscrits_7j,
+            "accueil": {"oui": accueil_oui, "pas_encore": accueil_non, "total": _acc_total,
+                        "taux_oui": round(100 * accueil_oui / _acc_total) if _acc_total else 0},
             "abonnements": {"par_offre": par_offre, "essais_en_cours": essais, "resilies_en_cours": resilies,
                             "fondateurs": fondateurs, "mrr_ttc": round(mrr_ttc, 2),
                             "payants": sum(v for k, v in par_offre.items()) - essais}}
@@ -923,7 +1056,13 @@ NOTIF_CATALOGUE = [
     {"cle": "decision_en_attente", "label": "Décision en attente", "desc": "Le Copilote attend un feu vert"},
     {"cle": "swot_mensuel", "label": "Analyse SWOT mensuelle", "desc": "Rapport SWOT régénéré par l'IA chaque mois"},
     {"cle": "revue_hebdo", "label": "Revue hebdo du vendredi", "desc": "Invitation à boucler la semaine"},
-    {"cle": "credits_faibles", "label": "Crédits presque épuisés", "desc": "Alerte quand le solde de crédits passe sous le seuil"},
+    {"cle": "recompense_parrainage", "label": "Récompense de parrainage", "desc": "Un filleul s'est abonné — ta récompense est créditée"},
+    {"cle": "rappel_vision", "label": "Rappel Vision Board", "desc": "Revoir sa vision deux fois par semaine pour ne pas lâcher le cap"},
+    {"cle": "lettre_futur", "label": "Lettre à ton futur moi", "desc": "Ta lettre scellée arrive à sa date d'ouverture"},
+    {"cle": "serie_rituels", "label": "Série de rituels en danger", "desc": "Rappel si aucun rituel fait hier — ne pas briser la série"},
+    {"cle": "jalon_90j", "label": "Cap à 90 jours", "desc": "Compte à rebours et jalons proches de tes objectifs"},
+    {"cle": "idees_en_attente", "label": "Idées à trier", "desc": "Ta boîte à idées se remplit — un tri de 5 minutes"},
+    {"cle": "victoire_hebdo", "label": "Victoire de la semaine", "desc": "Célébrer au moins une victoire chaque vendredi"},
 ]
 
 
@@ -971,7 +1110,7 @@ async def parrainage_inviter(body: dict, db: AsyncSession = Depends(get_db)):
     existe = (await db.execute(select(Referral).where(Referral.referrer_id == uid, Referral.referred_email == email))).scalar_one_or_none()
     if existe:
         raise HTTPException(409, "Cette personne est déjà dans tes filleuls.")
-    r = Referral(referrer_id=uid, referred_email=email, bonus_credits=50)
+    r = Referral(referrer_id=uid, referred_email=email)
     db.add(r)
     await db.commit()
     return {"ok": True, "email": email, "statut": "en_attente"}
@@ -981,7 +1120,7 @@ async def parrainage_inviter(body: dict, db: AsyncSession = Depends(get_db)):
 async def parrainage_mes_filleuls(db: AsyncSession = Depends(get_db)):
     uid = _uid()
     rows = list((await db.execute(select(Referral).where(Referral.referrer_id == uid).order_by(Referral.created_at.desc()))).scalars())
-    return {"items": [{"email": r.referred_email, "statut": r.statut, "bonus_credits": r.bonus_credits, "depuis": r.created_at.isoformat()} for r in rows]}
+    return {"items": [{"email": r.referred_email, "statut": r.statut, "recompense_type": r.recompense_type, "recompense_valeur": r.recompense_valeur, "depuis": r.created_at.isoformat()} for r in rows]}
 
 
 @api.get("/admin/parrainage")
@@ -990,8 +1129,122 @@ async def admin_parrainage(db: AsyncSession = Depends(get_db), _role=Depends(exi
     total_actifs = sum(1 for r in rows if r.statut == "actif")
     return {
         "total": len(rows), "actifs": total_actifs,
-        "items": [{"id": r.id, "parrain_id": r.referrer_id, "email_filleul": r.referred_email, "statut": r.statut, "bonus_credits": r.bonus_credits, "depuis": r.created_at.isoformat()} for r in rows],
+        "items": [{"id": r.id, "parrain_id": r.referrer_id, "email_filleul": r.referred_email, "statut": r.statut, "recompense_type": r.recompense_type, "recompense_valeur": r.recompense_valeur, "depuis": r.created_at.isoformat()} for r in rows],
     }
+
+
+# ─────────────── Programmes partenaires ───────────────
+@api.get("/programmes")
+async def lister_programmes():
+    """Catalogue public des 3 programmes + paliers d'affiliation."""
+    return {"programmes": list(PROGRAMMES.values()), "paliers_affiliation": AFFILIATION_PALIERS}
+
+
+@api.get("/programmes/mon-programme")
+async def mon_programme(db: AsyncSession = Depends(get_db)):
+    uid = _uid()
+    if uid == DEMO_USER_ID:
+        raise HTTPException(403, "Connecte-toi pour accéder à ton espace partenaire.")
+    user = (await db.execute(select(User).where(User.id == uid))).scalar_one_or_none()
+    if not user:
+        raise HTTPException(404, "Utilisateur introuvable.")
+    # Génère le code de parrainage s'il n'existe pas encore.
+    if not user.code_parrainage:
+        user.code_parrainage = _generer_code_parrainage(uid)
+        await db.commit()
+    filleuls = list((await db.execute(select(Referral).where(Referral.referrer_id == uid).order_by(Referral.created_at.desc()))).scalars())
+    nb_actifs = sum(1 for r in filleuls if r.statut == "actif")
+    prog = user.programme or "parrainage"
+    palier = _palier_affiliation(nb_actifs) if prog == "affiliation" else None
+    return {
+        "programme": prog,
+        "programme_infos": PROGRAMMES.get(prog, PROGRAMMES["parrainage"]),
+        "programme_demande": user.programme_demande,
+        "code_parrainage": user.code_parrainage,
+        "solde_commission": round(user.solde_commission or 0, 2),
+        "mois_offerts_dus": user.mois_offerts_dus or 0,
+        "nb_filleuls": len(filleuls),
+        "nb_filleuls_actifs": nb_actifs,
+        "palier": palier,
+        "paliers": AFFILIATION_PALIERS,
+        "filleuls": [{"email": r.referred_email, "statut": r.statut, "recompense_type": r.recompense_type, "recompense_valeur": r.recompense_valeur, "depuis": r.created_at.isoformat()} for r in filleuls],
+    }
+
+
+@api.post("/programmes/demander")
+async def demander_programme(body: dict, db: AsyncSession = Depends(get_db)):
+    """L'utilisateur demande à rejoindre Ambassadeur ou Affiliation (validation admin)."""
+    uid = _uid()
+    if uid == DEMO_USER_ID:
+        raise HTTPException(403, "Connecte-toi pour faire une demande.")
+    cible = (body.get("programme") or "").strip().lower()
+    if cible not in ("ambassadeur", "affiliation"):
+        raise HTTPException(422, "Programme invalide (ambassadeur ou affiliation).")
+    user = (await db.execute(select(User).where(User.id == uid))).scalar_one_or_none()
+    if not user:
+        raise HTTPException(404, "Utilisateur introuvable.")
+    if user.programme == cible:
+        raise HTTPException(409, "Tu es déjà dans ce programme.")
+    user.programme_demande = cible
+    await db.commit()
+    return {"ok": True, "programme_demande": cible}
+
+
+@api.get("/admin/programmes")
+async def admin_programmes(db: AsyncSession = Depends(get_db), _role=Depends(exiger_role("admin"))):
+    """Vue admin : partenaires, demandes en attente, commissions dues."""
+    users = list((await db.execute(select(User))).scalars())
+    referrals = list((await db.execute(select(Referral))).scalars())
+    actifs_par_parrain: dict = {}
+    for r in referrals:
+        if r.statut == "actif":
+            actifs_par_parrain[r.referrer_id] = actifs_par_parrain.get(r.referrer_id, 0) + 1
+    partenaires = []
+    demandes = []
+    for u in users:
+        prog = u.programme or "parrainage"
+        info = {
+            "id": u.id, "email": u.email, "programme": prog,
+            "programme_demande": u.programme_demande,
+            "solde_commission": round(u.solde_commission or 0, 2),
+            "mois_offerts_dus": u.mois_offerts_dus or 0,
+            "filleuls_actifs": actifs_par_parrain.get(u.id, 0),
+        }
+        if prog in ("ambassadeur", "affiliation"):
+            partenaires.append(info)
+        if u.programme_demande:
+            demandes.append(info)
+    return {"partenaires": partenaires, "demandes": demandes}
+
+
+@api.post("/admin/programmes/{user_id}/valider")
+async def admin_valider_programme(user_id: str, body: dict, db: AsyncSession = Depends(get_db), _role=Depends(exiger_role("admin"))):
+    """Admin valide/change le programme d'un utilisateur."""
+    cible = (body.get("programme") or "").strip().lower()
+    if cible not in PROGRAMMES:
+        raise HTTPException(422, "Programme invalide.")
+    user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
+    if not user:
+        raise HTTPException(404, "Utilisateur introuvable.")
+    user.programme = cible
+    user.programme_demande = None
+    if not user.code_parrainage:
+        user.code_parrainage = _generer_code_parrainage(user.id)
+    await db.commit()
+    return {"id": user.id, "email": user.email, "programme": user.programme}
+
+
+@api.post("/admin/programmes/{user_id}/payer")
+async def admin_payer_commission(user_id: str, db: AsyncSession = Depends(get_db), _role=Depends(exiger_role("admin"))):
+    """Admin marque la commission comme versée → remet le solde à 0."""
+    user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
+    if not user:
+        raise HTTPException(404, "Utilisateur introuvable.")
+    montant = round(user.solde_commission or 0, 2)
+    user.solde_commission = 0.0
+    await db.commit()
+    return {"id": user.id, "email": user.email, "montant_verse": montant, "solde_commission": 0.0}
+
 
 
 @api.post("/admin/codes-promo")
@@ -1003,7 +1256,7 @@ async def creer_code_promo(body: dict, db: AsyncSession = Depends(get_db), _role
     existe = (await db.execute(select(PromoCode).where(PromoCode.code == code))).scalar_one_or_none()
     if existe:
         raise HTTPException(409, "Ce code existe déjà.")
-    p = PromoCode(code=code, type=body.get("type") or "credits", value=valeur, max_uses=int(body.get("max_uses") or 100))
+    p = PromoCode(code=code, type=body.get("type") or "mois_offert", value=valeur, max_uses=int(body.get("max_uses") or 100))
     db.add(p)
     await db.commit()
     await db.refresh(p)
@@ -1035,7 +1288,7 @@ async def supprimer_code_promo(promo_id: str, db: AsyncSession = Depends(get_db)
 
 @api.post("/codes-promo/appliquer")
 async def appliquer_code_promo(body: dict, db: AsyncSession = Depends(get_db)):
-    """Côté utilisateur : saisir un code, recevoir les crédits si valide."""
+    """Côté utilisateur : saisir un code, recevoir des mois offerts si valide."""
     uid = _uid()
     if uid == DEMO_USER_ID:
         raise HTTPException(403, "Connecte-toi pour utiliser un code promo.")
@@ -1048,10 +1301,10 @@ async def appliquer_code_promo(body: dict, db: AsyncSession = Depends(get_db)):
     if p.expires_at and p.expires_at < datetime.now(timezone.utc):
         raise HTTPException(410, "Ce code a expiré.")
     user = (await db.execute(select(User).where(User.id == uid))).scalar_one_or_none()
-    user.credits = (user.credits or 0) + p.value
+    user.mois_offerts_dus = (user.mois_offerts_dus or 0) + p.value
     p.current_uses += 1
     await db.commit()
-    return {"ok": True, "credits_ajoutes": p.value, "credits_total": user.credits}
+    return {"ok": True, "mois_offerts": p.value, "mois_offerts_total": user.mois_offerts_dus}
 
 
 
@@ -1368,13 +1621,19 @@ async def suggerer_decisions(db: AsyncSession = Depends(get_db)):
 
 _ECO_FR = "https://www.lemonde.fr/economie/rss_full.xml"
 _ECO_AFRIQUE = "https://www.lemonde.fr/afrique-economie/rss_full.xml"
+# Actualités OFFICIELLES pour les entreprises (URSSAF, impôts, baux, RH…) —
+# flux Service-Public Entreprendre (ex service-public.fr, .gouv.fr depuis oct. 2025).
+_LEGAL_FR = "https://www.service-public.gouv.fr/abonnements/rss/actu-actu-pro.rss"
+# OHADA : droit des affaires harmonisé — officiel pour les 17 États membres,
+# dont le Cameroun, le Sénégal, la Côte d'Ivoire et le Congo (RDC).
+_LEGAL_OHADA = "https://www.ohada.org/feed/"
 MARCHES = {
-    "france": {"label": "France", "pays": "https://www.lemonde.fr/economie-francaise/rss_full.xml", "eco": _ECO_FR},
-    "senegal": {"label": "Sénégal", "pays": "https://www.lemonde.fr/senegal/rss_full.xml", "eco": _ECO_AFRIQUE},
-    "cote_ivoire": {"label": "Côte d'Ivoire", "pays": "https://www.lemonde.fr/cote-d-ivoire/rss_full.xml", "eco": _ECO_AFRIQUE},
-    "cameroun": {"label": "Cameroun", "pays": "https://www.lemonde.fr/cameroun/rss_full.xml", "eco": _ECO_AFRIQUE},
-    "maroc": {"label": "Maroc", "pays": "https://www.lemonde.fr/maroc/rss_full.xml", "eco": _ECO_AFRIQUE},
-    "belgique": {"label": "Belgique", "pays": "https://www.lemonde.fr/belgique/rss_full.xml", "eco": _ECO_FR},
+    "france": {"label": "France", "pays": "https://www.lemonde.fr/economie-francaise/rss_full.xml", "eco": _ECO_FR, "legal": _LEGAL_FR, "legal_label": "service-public.gouv.fr"},
+    "senegal": {"label": "Sénégal", "pays": "https://www.lemonde.fr/senegal/rss_full.xml", "eco": _ECO_AFRIQUE, "legal": _LEGAL_OHADA, "legal_label": "ohada.org"},
+    "cote_ivoire": {"label": "Côte d'Ivoire", "pays": "https://www.lemonde.fr/cote-d-ivoire/rss_full.xml", "eco": _ECO_AFRIQUE, "legal": _LEGAL_OHADA, "legal_label": "ohada.org"},
+    "cameroun": {"label": "Cameroun", "pays": "https://www.lemonde.fr/cameroun/rss_full.xml", "eco": _ECO_AFRIQUE, "legal": _LEGAL_OHADA, "legal_label": "ohada.org"},
+    "congo_rdc": {"label": "Congo (RDC)", "pays": "https://www.lemonde.fr/afrique/rss_full.xml", "eco": _ECO_AFRIQUE, "legal": _LEGAL_OHADA, "legal_label": "ohada.org"},
+    "belgique": {"label": "Belgique", "pays": "https://www.lemonde.fr/belgique/rss_full.xml", "eco": _ECO_FR, "legal": _LEGAL_FR, "legal_label": "service-public.gouv.fr"},
 }
 _cache_actu: dict = {}
 
@@ -1412,26 +1671,47 @@ async def actualite(marche: str = "", db: AsyncSession = Depends(get_db)):
 
     limite = 5 if energie >= 4 else 3
     cle = marche if marche in MARCHES else "france"
-    entree = _cache_actu.get(cle)
+
+    # Préférences de veille de l'utilisateur (Paramètres → Notifications) :
+    # actu_pays / actu_eco / actu_legal (tout est activé par défaut).
+    profil = await _profil(db, uid)
+    cm = profil.contexte_metier or {}
+    veut_pays = cm.get("actu_pays") is not False
+    veut_eco = cm.get("actu_eco") is not False
+    veut_legal = cm.get("actu_legal") is not False
+
+    cle_cache = f"{cle}:{int(veut_pays)}{int(veut_eco)}{int(veut_legal)}"
+    entree = _cache_actu.get(cle_cache)
     now = datetime.now(timezone.utc)
     if entree and (now - entree["a"]) < timedelta(minutes=30):
         data = dict(entree["d"])
     else:
         m = MARCHES[cle]
-        urls = [m["pays"]] + ([m["eco"]] if m["eco"] != m["pays"] else [])
+        # L'officiel (légal : URSSAF, impôts, baux, RH…) passe en premier.
+        urls = ([(m["legal"], "officiel")] if (m.get("legal") and veut_legal) else []) \
+            + ([(m["pays"], "presse")] if veut_pays else []) \
+            + ([(m["eco"], "presse")] if (veut_eco and m["eco"] != m["pays"]) else [])
+        if not urls:
+            return {"masque": False, "erreur": False, "marche": cle, "label": MARCHES[cle]["label"],
+                    "marches": marches, "articles": [], "limite": limite, "vide_pref": True}
         try:
-            listes = await asyncio.gather(*[asyncio.to_thread(_lire_flux, u) for u in urls])
+            listes = await asyncio.gather(*[asyncio.to_thread(_lire_flux, u) for u, _ in urls])
         except Exception as e:  # noqa: BLE001
             logger.warning("Actualité indisponible : %s", e)
             return {"masque": False, "erreur": True, "marche": cle, "marches": marches, "articles": []}
         vus, articles = set(), []
-        for liste in listes:
+        for (url, source), liste in zip(urls, listes):
             for a in liste:
                 if a["titre"] and a["lien"] not in vus:
                     vus.add(a["lien"])
-                    articles.append(a)
+                    articles.append({**a, "source": source, "source_label": MARCHES[cle].get("legal_label") if source == "officiel" else None})
+        # L'officiel ouvre le briefing (max 2), la presse complète :
+        # le digest reste un résumé équilibré, pas un fil administratif.
+        legaux = [a for a in articles if a["source"] == "officiel"][:2]
+        presse = [a for a in articles if a["source"] != "officiel"]
+        articles = legaux + presse
         data = {"marche": cle, "label": MARCHES[cle]["label"], "articles": articles, "genere_a": now.isoformat()}
-        _cache_actu[cle] = {"a": now, "d": data}
+        _cache_actu[cle_cache] = {"a": now, "d": data}
 
     return {"masque": False, "marche": data["marche"], "label": data.get("label"),
             "marches": marches, "articles": data["articles"][:limite], "limite": limite,
@@ -1655,11 +1935,12 @@ async def connexion_lien(body: LienIn, request: Request = None, db: AsyncSession
     lien = f"{base}/login?token={jeton}" if base.startswith("https://") else None
     envoye = False
     if lien and (EMAIL_KEY or os.environ.get("BREVO_API_KEY")):
-        html = (
-            '<table role="presentation" width="100%"><tr><td style="padding:24px;font-family:Arial,sans-serif;color:#0B1F3A">'
-            '<p>Bonjour,</p><p>Voici ton lien de connexion à Zayado. Il est valable 15 minutes et ne fonctionne qu\'une fois.</p>'
+        html = _email_wrap(
+            '<p>Bonjour,</p>'
+            '<p>Voici ton lien de connexion à Zayado. Il est valable 15 minutes et ne fonctionne qu\'une fois.</p>'
             f'<p style="margin:22px 0"><a href="{escape(lien, quote=True)}" style="background:#DEC2A3;color:#0B1F3A;padding:12px 22px;border-radius:10px;text-decoration:none;font-weight:bold">Me connecter</a></p>'
-            '<p style="font-size:12px;color:#888">Tu n\'as pas demandé ce lien ? Ignore cet email. Zayado ne demande jamais de mot de passe par email.</p></td></tr></table>'
+            '<p style="font-size:12px;color:#888">Tu n\'as pas demandé ce lien ? Ignore cet e-mail.</p>',
+            logo_url=f"{base}/logo-zayado-bleu.png",
         )
         try:
             await send_email(to=email, subject="Ton lien de connexion Zayado", html=html)
@@ -1870,16 +2151,13 @@ async def valider_par_email(decision_id: str, db: AsyncSession = Depends(get_db)
     if not d:
         raise HTTPException(status_code=404, detail="Décision introuvable.")
     subject = "Zayado — décision validée"
-    html = (
-        '<table role="presentation" width="100%"><tr><td style="padding:24px;font-family:Arial,sans-serif;color:#0B1F3A">'
+    html = _email_wrap(
         f'<p>Bonjour {escape(profil.prenom or "")},</p>'
         f'<p>Tu viens de valider cette décision dans Zayado :</p>'
         f'<p style="padding:12px 16px;background:#F4EEE4;border-radius:10px"><strong>{escape(d.titre)}</strong>'
         + (f'<br><span style="color:#555">{escape(d.note)}</span>' if d.note else "") +
         '</p>'
         '<p>Elle est maintenant marquée comme approuvée. Belle avancée, à ton rythme.</p>'
-        f'<p style="font-size:12px;color:#888">Envoyé par {escape(EMAIL_FROM_NAME)}. Nous ne demandons jamais de mot de passe par email.</p>'
-        '</td></tr></table>'
     )
     email_id = await send_email(to=profil.email, subject=subject, html=html)
     d.statut = "approuvee"
@@ -3362,7 +3640,13 @@ async def _migrer_colonnes() -> None:
         ("vision_profiles", "debut_3ans", "VARCHAR(10)"),
         ("vision_profiles", "contexte_metier", "JSON"),
         ("users", "role", "VARCHAR(20) DEFAULT 'client'"),
-        ("users", "credits", "INTEGER DEFAULT 0"),
+        ("users", "programme", "VARCHAR(20) DEFAULT 'parrainage'"),
+        ("users", "programme_demande", "VARCHAR(20)"),
+        ("users", "code_parrainage", "VARCHAR(20)"),
+        ("users", "solde_commission", "FLOAT DEFAULT 0"),
+        ("users", "mois_offerts_dus", "INTEGER DEFAULT 0"),
+        ("referrals", "recompense_type", "VARCHAR(20) DEFAULT 'mois_offert'"),
+        ("referrals", "recompense_valeur", "FLOAT DEFAULT 0"),
     ]
     for table, col, typ in ajouts:
         try:
@@ -3845,7 +4129,7 @@ async def _send_welcome_email(to_email: str) -> dict:
         "subject": "Bienvenue dans Zayado — respire, on avance ensemble.",
         "htmlContent": (
             "<div style=\"font-family: Georgia, serif; max-width: 560px; margin: 0 auto; padding: 32px; color: #0B1F3A;\">"
-            "<div style=\"font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: #DEC2A3; margin-bottom: 12px;\">Zayado</div>"
+            f"<img src=\"{EMAIL_LOGO_URL}\" alt=\"Zayado\" style=\"height:32px;width:auto;display:block;margin-bottom:18px;border:0\" />"
             "<h1 style=\"font-family: Georgia, serif; font-size: 28px; line-height: 1.15; margin: 0 0 16px;\">"
             "Bienvenue. <em style=\"color:#DEC2A3;\">On avance doucement.</em></h1>"
             "<p style=\"font-size: 15.5px; line-height: 1.6; color: #4a5568;\">"
@@ -4146,6 +4430,24 @@ install_rituels(globals())
 from emails_ia_ext import install_emails_ia  # noqa: E402
 install_emails_ia(globals())
 
+# ── Newsletters (admin, marque Zayado) : porté depuis app-main ──
+from newsletters_ext import install_newsletters  # noqa: E402
+install_newsletters(globals())
+
+# ── Connexions (coffre-fort personnel, multi-fournisseurs) : porté depuis
+# app-main, en évitant ce qui existe déjà ici en mieux (OAuth Google/Microsoft,
+# WhatsApp, Telegram) — voir l'en-tête de connexions_vault_ext.py ──
+from connexions_vault_ext import install_connexions_vault  # noqa: E402
+install_connexions_vault(globals())
+
+# ── Logs applicatifs (admin) : porté depuis app-main. Rien d'équivalent
+# n'existait ici (juste le logging Python standard, non persistant) —
+# voir l'en-tête d'app_logs_ext.py pour le détail de ce qui est automatique
+# (erreurs non interceptées, réponses 5xx) et ce qui reste à brancher
+# manuellement (auth, paiements, affiliation…) si tu veux plus de détail. ──
+from app_logs_ext import install_app_logs  # noqa: E402
+install_app_logs(globals())
+
 # ─────────────── Processus (page /app/processus) ───────────────
 # Avant : stockés dans le navigateur uniquement, avec 4 processus de démonstration
 # affichés à tout nouveau compte. Maintenant : par utilisateur, côté serveur.
@@ -4229,7 +4531,7 @@ async def creer_demande_collaborateur(body: DemandeCollaborateurIn, db: AsyncSes
         import html as _html
         sujet = ("⚠️ IMPORTANT · " if body.important else "") + (f"Collaborateur : {objet}" if objet else "Nouvelle demande Collaborateurs")
         await send_email(to=dest, subject=sujet,
-                         html=(f"<p><b>De :</b> {_html.escape(profil.prenom or '')} {_html.escape(profil.email or '')}</p>"
+                         html=_email_wrap(f"<p><b>De :</b> {_html.escape(profil.prenom or '')} {_html.escape(profil.email or '')}</p>"
                                f"<p><b>Contact indiqué :</b> {_html.escape(d.contact or '—')}</p>"
                                f"<p>{_html.escape(d.message).replace(chr(10), '<br>')}</p>"))
     except Exception:  # noqa: BLE001
@@ -4686,6 +4988,42 @@ def _reparer_schema_sync(conn) -> None:
                     logger.error("Impossible d'assouplir %s.%s : %s", table.name, nom, e)
 
 
+async def _bootstrap_admin():
+    """Amorçage admin par variables d'environnement (résout « impossible de se
+    connecter en admin » en production). Si BOOTSTRAP_ADMIN_EMAIL est défini :
+    - compte absent + BOOTSTRAP_ADMIN_PASSWORD fourni → on le crée en rôle admin ;
+    - compte présent → on force le rôle admin (et on réinitialise le mot de passe
+      si BOOTSTRAP_ADMIN_PASSWORD est fourni). Idempotent, sûr à laisser en place."""
+    email = (
+        os.environ.get("ADMIN_EMAIL")
+        or os.environ.get("admin_email")
+        or os.environ.get("BOOTSTRAP_ADMIN_EMAIL")
+        or ""
+    ).strip().lower()
+    if not email:
+        return
+    pwd = (
+        os.environ.get("ADMIN_PASSWORD")
+        or os.environ.get("admin_password")
+        or os.environ.get("BOOTSTRAP_ADMIN_PASSWORD")
+        or ""
+    )
+    async with async_session() as db:
+        u = (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
+        if u is None:
+            if not pwd:
+                logger.warning("ADMIN_EMAIL (ou BOOTSTRAP_ADMIN_EMAIL) défini mais compte absent et ADMIN_PASSWORD manquant — rien fait.")
+                return
+            db.add(User(email=email, password_hash=_hash_mdp(pwd), role="admin"))
+            logger.info("Admin bootstrap créé : %s", email)
+        else:
+            u.role = "admin"
+            if pwd:
+                u.password_hash = _hash_mdp(pwd)
+            logger.info("Admin bootstrap mis à jour (rôle admin%s) : %s", " + mot de passe" if pwd else "", email)
+        await db.commit()
+
+
 @app.on_event("startup")
 async def _startup():
     async with engine.begin() as conn:
@@ -4698,6 +5036,10 @@ async def _startup():
             logger.error("Réparation du schéma interrompue : %s", e)
     await _migrer_colonnes()
     await _seed()
+    try:
+        await _bootstrap_admin()
+    except Exception as e:  # noqa: BLE001 — ne jamais bloquer le démarrage
+        logger.error("Bootstrap admin interrompu : %s", e)
 
 
 @app.on_event("shutdown")

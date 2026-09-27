@@ -3,7 +3,7 @@ import { planNom, ESSAI } from "@/lib/plans";
 import { lancerPaiement } from "@/lib/checkout";
 import {
   User, Palette, Bell, Plug, ShieldCheck, CreditCard, Gift, Loader2, Save, Download, Cloud,
-  Search, X, Sun, Moon, Compass, Brain, Trash2, Mail, Plus, Receipt, Sparkles,
+  Search, X, Sun, Moon, Compass, Brain, Trash2, Mail, Plus, Receipt, Sparkles, Link2,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -15,8 +15,7 @@ import { oublierAbonnement } from "@/lib/acces";
 import { useI18n } from "@/i18n";
 import { Link, useNavigate } from "react-router-dom";
 import IntegrationsSection from "@/components/kairos/IntegrationsSection";
-import { Sidebar } from "@/components/kairos/Sidebar";
-import { Header } from "@/components/kairos/Header";
+import MesConnexionsSection from "@/components/kairos/MesConnexionsSection";
 
 // Paramètres en grande fenêtre modale — structure inspirée de
 // ReactZayado/SettingsModal.jsx (v13) : recherche + sections latérales.
@@ -27,8 +26,9 @@ const SECTIONS = [
   { id: "vision", label: "Vision & valeurs", Icon: Compass, mots: "vision phrase valeurs inspiration cap" },
   { id: "notifications", label: "Notifications", Icon: Bell, mots: "alerte rappel email lundi" },
   { id: "integrations", label: "Intégrations", Icon: Plug, mots: "whatsapp telegram qonto connexion drive" },
+  { id: "connexions", label: "Mes connexions", Icon: Link2, mots: "notion slack discord airtable asana trello linear github calendly hubspot brevo smtp ovh coffre-fort" },
   { id: "cloud-save", label: "Enregistrement cloud", Icon: Cloud, mots: "drive google onedrive sharepoint document automatique nuage" },
-  { id: "parrainage", label: "Parrainage", Icon: Gift, mots: "inviter filleul crédit bonus" },
+  { id: "parrainage", label: "Parrainage", Icon: Gift, mots: "inviter filleul mois offert ambassadeur affiliation programme" },
   { id: "securite", label: "Sécurité & données", Icon: ShieldCheck, mots: "export rgpd données suppression connexion email" },
   { id: "facturation", label: "Offre & factures", Icon: CreditCard, mots: "plan abonnement prix code réduction facture historique fondateur résilier prélèvement équipe coéquipier" },
 ];
@@ -51,6 +51,13 @@ function useCompletion() {
 const signalerMaj = () => window.dispatchEvent(new Event("zayado:profil-maj"));
 
 export default function Parametres() {
+  const navigate = useNavigate();
+  const fermer = () => navigate(-1);
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") fermer(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [active, setActive] = useState(() => {
     const h = (window.location.hash || "").replace("#", "");
     return SECTIONS.some((x) => x.id === h) ? h : "general";
@@ -98,52 +105,68 @@ export default function Parametres() {
   );
 
   return (
-    <div className="min-h-screen">
-      <Sidebar />
-      <div className="lg:pl-[92px]">
-        <Header title="Paramètres" subtitle="Un seul endroit pour tout régler." />
-        <main className="mx-auto max-w-[980px] px-4 py-5 sm:px-6 sm:py-8" data-testid="parametres-page">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-offwhite/60">Réglages</p>
-          <h1 className="mb-5 mt-1 font-display text-3xl font-bold sm:mb-6 sm:text-4xl">Paramètres</h1>
-          <div className="flex flex-col md:min-h-[70vh] md:flex-row md:overflow-hidden md:rounded-[22px] md:border md:border-white/[0.14] md:bg-white/[0.10] md:shadow-[0_10px_30px_rgba(0,0,0,0.18)] md:backdrop-blur-xl" data-testid="parametres-modal">
-            {/* Colonne gauche : recherche + complétion + navigation */}
-            <div className="flex w-full shrink-0 flex-col md:w-[210px] md:border-r md:border-white/[0.14]">
-              <div className="mb-2 flex items-center gap-2 rounded-[10px] md:mx-3 md:mt-3 border border-white/[0.14] bg-white/[0.06] px-2.5 py-[7px]">
-                <Search size={14} className="shrink-0 text-offwhite/50" />
-                <input value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="Rechercher un réglage…"
-                  data-testid="parametres-recherche" className="w-full bg-transparent text-[13px] text-offwhite outline-none placeholder:text-offwhite/45" />
-              </div>
-              {completion !== null && (
-                <button onClick={() => setActive("profil")} data-testid="parametres-completion"
-                  className="mb-3 flex items-center gap-2.5 rounded-[10px] border border-gold/20 md:mx-3 bg-gold/[0.06] p-2.5 text-left transition hover:bg-gold/[0.12]">
-                  <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-                    style={{ background: `conic-gradient(#DEC2A3 ${completion * 3.6}deg, rgba(255,255,255,0.14) 0deg)` }}>
-                    <span className="absolute inset-[3px] rounded-full bg-[#1b2a4d]" />
-                    <span className="relative text-[10px] font-bold text-gold">{completion}%</span>
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-[12.5px] font-semibold text-offwhite">Profil complété</span>
-                    <span className="block text-[11px] text-offwhite/55">{completion < 100 ? "Complète ton profil" : "Profil complet !"}</span>
-                  </span>
-                </button>
-              )}
-              {nav}
-            </div>
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-navy-900/70 p-3 backdrop-blur-md sm:p-6"
+      data-testid="parametres-overlay"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) fermer(); }}
+    >
+      <div
+        className="relative flex w-full max-w-[980px] flex-col overflow-hidden rounded-[22px] border border-white/[0.14] bg-[#101c38] shadow-[0_20px_60px_rgba(0,0,0,0.45)] md:max-h-[85vh] md:min-h-[70vh] md:flex-row"
+        data-testid="parametres-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Paramètres"
+      >
+        <button
+          onClick={fermer}
+          aria-label="Fermer les paramètres"
+          data-testid="parametres-fermer"
+          className="absolute right-3 top-3 z-10 rounded-full border border-white/[0.14] bg-white/[0.08] p-1.5 text-offwhite/70 transition hover:bg-white/[0.16] hover:text-offwhite"
+        >
+          <X size={16} />
+        </button>
 
-            {/* Panneau */}
-            <div className="min-w-0 flex-1 pt-4 md:p-6" data-testid={`parametres-panel-${active}`}>
-              {active === "profil" && <SectionProfil />}
-              {active === "general" && <SectionGeneral />}
-              {active === "vision" && <SectionVision />}
-              {active === "notifications" && <SectionNotifications />}
-              {active === "integrations" && <><CarteTeams /><IntegrationsSection /></>}
-              {active === "cloud-save" && <SectionCloudSave />}
-              {active === "parrainage" && <SectionParrainage />}
-              {active === "securite" && <SectionSecurite />}
-              {active === "facturation" && <SectionFacturation />}
-            </div>
+        {/* Colonne gauche : recherche + complétion + navigation */}
+        <div className="flex w-full shrink-0 flex-col overflow-y-auto md:w-[210px] md:border-r md:border-white/[0.14]">
+          <div className="px-4 pb-1 pt-4 md:px-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-offwhite/60">Réglages</p>
+            <h1 className="mt-0.5 font-display text-2xl font-bold">Paramètres</h1>
           </div>
-        </main>
+          <div className="mx-4 mb-2 mt-3 flex items-center gap-2 rounded-[10px] border border-white/[0.14] bg-white/[0.06] px-2.5 py-[7px] md:mx-3">
+            <Search size={14} className="shrink-0 text-offwhite/50" />
+            <input value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="Rechercher un réglage…"
+              data-testid="parametres-recherche" className="w-full bg-transparent text-[13px] text-offwhite outline-none placeholder:text-offwhite/45" />
+          </div>
+          {completion !== null && (
+            <button onClick={() => setActive("profil")} data-testid="parametres-completion"
+              className="mx-4 mb-3 flex items-center gap-2.5 rounded-[10px] border border-gold/20 bg-gold/[0.06] p-2.5 text-left transition hover:bg-gold/[0.12] md:mx-3">
+              <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                style={{ background: `conic-gradient(#DEC2A3 ${completion * 3.6}deg, rgba(255,255,255,0.14) 0deg)` }}>
+                <span className="absolute inset-[3px] rounded-full bg-[#1b2a4d]" />
+                <span className="relative text-[10px] font-bold text-gold">{completion}%</span>
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[12.5px] font-semibold text-offwhite">Profil complété</span>
+                <span className="block text-[11px] text-offwhite/55">{completion < 100 ? "Complète ton profil" : "Profil complet !"}</span>
+              </span>
+            </button>
+          )}
+          {nav}
+        </div>
+
+        {/* Panneau, défilable indépendamment */}
+        <div className="min-w-0 flex-1 overflow-y-auto px-4 pb-6 pt-4 md:p-6" data-testid={`parametres-panel-${active}`}>
+          {active === "profil" && <SectionProfil />}
+          {active === "general" && <SectionGeneral />}
+          {active === "vision" && <SectionVision />}
+          {active === "notifications" && <SectionNotifications />}
+          {active === "integrations" && <><CarteTeams /><IntegrationsSection /></>}
+          {active === "connexions" && <MesConnexionsSection />}
+          {active === "cloud-save" && <SectionCloudSave />}
+          {active === "parrainage" && <SectionParrainage />}
+          {active === "securite" && <SectionSecurite />}
+          {active === "facturation" && <SectionFacturation />}
+        </div>
       </div>
     </div>
   );
@@ -351,8 +374,28 @@ function SectionNotifications() {
     try { await saveProfile({ contexte_metier: suivant }); toast.success(!lundi ? "E-mail du lundi activé." : "E-mail du lundi coupé."); }
     catch { toast.error("Échec."); setCm(cm); }
   };
+  // Jour de repos (sabbat) : ce jour-là, les rappels doux de la cloche se taisent.
+  const jourRepos = typeof cm.jour_repos === "number" ? cm.jour_repos : -1;
+  const changerJourRepos = async (v) => {
+    const suivant = { ...cm, jour_repos: v };
+    setCm(suivant);
+    try { await saveProfile({ contexte_metier: suivant }); toast.success(v >= 0 ? "Jour de repos réglé — les rappels se tairont ce jour-là." : "Jour de repos retiré."); }
+    catch { toast.error("Échec."); setCm(cm); }
+  };
+  // Sources d'actualité : tout est activé par défaut, l'utilisateur choisit.
+  const srcOn = (k) => cm[k] !== false;
+  const togglerSrc = async (k) => {
+    const suivant = { ...cm, [k]: !srcOn(k) };
+    setCm(suivant);
+    try { await saveProfile({ contexte_metier: suivant }); toast.success("Réglage d'actualité enregistré."); }
+    catch { toast.error("Échec."); setCm(cm); }
+  };
+  // (Le contenu Foi n'est plus réglé ici : l'activation se fait dans
+  //  Bien-être → Parcours, là où vivent les parcours.)
+  const JOURS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
   if (!profil) return <Carte><p className="text-sm text-offwhite/50">Chargement…</p></Carte>;
   return (
+    <>
     <Carte titre="Rappels et alertes" desc={profil.email ? `Envoyés à ${profil.email}.` : "Ajoute ton e-mail dans Profil pour recevoir les e-mails."}>
       <div className="flex items-center justify-between gap-4 border-b border-white/5 pb-4">
         <div><p className="text-sm font-medium text-offwhite">Toutes les notifications</p><p className="text-xs text-offwhite/50">Interrupteur général : coupe tous les envois.</p></div>
@@ -362,8 +405,37 @@ function SectionNotifications() {
         <div><p className="text-sm font-medium text-offwhite">E-mail du lundi, 7 h</p><p className="text-xs text-offwhite/50">Ton pourquoi, ton score Vision, ton CA et tes 3 actions de la semaine.</p></div>
         <Interrupteur on={lundi} onClick={togglerLundi} testid="parametres-notif-lundi" />
       </div>
+      <div className="flex items-center justify-between gap-4 border-t border-white/5 pt-4 mt-4">
+        <div>
+          <p className="text-sm font-medium text-offwhite">Jour de repos hebdomadaire</p>
+          <p className="text-xs text-offwhite/50">Ce jour-là, les rappels doux (check-in, vision, revue, série de rituels) se taisent. Tu gardes la main, l'app se tait.</p>
+        </div>
+        <select value={jourRepos} onChange={(e) => changerJourRepos(parseInt(e.target.value, 10))}
+          className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-offwhite focus:border-gold/50 focus:outline-none"
+          data-testid="parametres-jour-repos">
+          <option value={-1}>Aucun</option>
+          {JOURS.map((j, i) => <option key={j} value={(i + 1) % 7}>{j}</option>)}
+        </select>
+      </div>
       <p className="mt-4 text-xs text-offwhite/45">L'heure de ton point du jour se règle dans Profil. Les décisions à valider arrivent aussi dans la cloche, en haut de l'écran.</p>
     </Carte>
+
+    <Carte titre="Ton actualité" desc="Choisis ce que tu reçois dans le briefing du jour (onglet Actualité du Copilote). Le pays se règle dans Profil → Marché.">      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <div><p className="text-sm font-medium text-offwhite">Légal & officiel</p><p className="text-xs text-offwhite/50">URSSAF, impôts (dates, montants), baux, RH — le flux officiel service-public.gouv.fr de ton pays. <b>Activé par défaut.</b></p></div>
+          <Interrupteur on={srcOn("actu_legal")} onClick={() => togglerSrc("actu_legal")} testid="parametres-actu-legal" />
+        </div>
+        <div className="flex items-center justify-between gap-4 border-t border-white/5 pt-4">
+          <div><p className="text-sm font-medium text-offwhite">Économie de ton pays</p><p className="text-xs text-offwhite/50">Les nouvelles économiques de ton marché.</p></div>
+          <Interrupteur on={srcOn("actu_pays")} onClick={() => togglerSrc("actu_pays")} testid="parametres-actu-pays" />
+        </div>
+        <div className="flex items-center justify-between gap-4 border-t border-white/5 pt-4">
+          <div><p className="text-sm font-medium text-offwhite">Économie générale</p><p className="text-xs text-offwhite/50">Le contexte éco plus large (France / Afrique francophone).</p></div>
+          <Interrupteur on={srcOn("actu_eco")} onClick={() => togglerSrc("actu_eco")} testid="parametres-actu-eco" />
+        </div>
+      </div>
+    </Carte>
+    </>
   );
 }
 
@@ -447,11 +519,12 @@ function SectionParrainage() {
 
   return (
     <>
-      <Carte titre="Inviter quelqu'un" desc="50 crédits offerts dès que la personne invitée crée son compte.">
+      <Carte titre="Inviter quelqu'un" desc="1 mois d'abonnement offert dès que la personne invitée s'abonne. Programmes avancés (ambassadeur, affiliation) dans l'espace Programmes.">
         <form onSubmit={inviter} className="flex gap-2">
           <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemple.fr" className={`${INPUT} flex-1`} data-testid="parametres-parrainage-email" />
           <button type="submit" disabled={envoi} className={BTN_OR} data-testid="parametres-parrainage-inviter">Inviter</button>
         </form>
+        <Link to="/programmes" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-gold hover:underline" data-testid="lien-programmes">Voir les 3 programmes (parrainage · ambassadeur · affiliation) →</Link>
       </Carte>
       <Carte titre="Mes filleuls">
         {!filleuls?.length && <p className="text-sm text-offwhite/50">Aucun filleul pour l'instant.</p>}
@@ -640,7 +713,7 @@ function SectionFacturation() {
     setEnvoi(true);
     try {
       const r = await appliquerCodePromo(code.trim());
-      toast.success(`+${r.credits_ajoutes} crédits ajoutés — total : ${r.credits_total}`);
+      toast.success(`+${r.mois_offerts} mois offert${r.mois_offerts > 1 ? "s" : ""} — total : ${r.mois_offerts_total}`);
       setCode("");
     } catch { toast.error("Code invalide, inactif ou déjà utilisé."); }
     finally { setEnvoi(false); }

@@ -51,6 +51,7 @@ def detresse(texte: str) -> bool:
 def install_mindset(g: dict) -> None:
     api, Base, get_db = g["api"], g["Base"], g["get_db"]
     _uid, new_uuid, utcnow, logger = g["_uid"], g["new_uuid"], g["utcnow"], g["logger"]
+    _profil = g["_profil"]
 
     class MindsetEntree(Base):
         __tablename__ = "mindset_entrees"
@@ -120,23 +121,35 @@ def install_mindset(g: dict) -> None:
         fait = (await db.execute(select(MindsetEntree).where(MindsetEntree.user_id == uid, MindsetEntree.jour == jour.isoformat(),
                                                              MindsetEntree.source == "carte"))).scalars().first()
         suivis = await _suivis(db, uid)
-        actif = next((_suivi_json(PAR_ID[k], s) for k, s in suivis.items() if k in PAR_ID and not s.termine_le), None)
+        foi_ok = await _foi_autorisee(db, uid)
+        actif = next((_suivi_json(PAR_ID[k], s) for k, s in suivis.items()
+                      if k in PAR_ID and not s.termine_le and (foi_ok or not PAR_ID[k].get("foi"))), None)
         sugg = await _suggestion(db, uid)
         if sugg and sugg["type"] == "parcours":
             sugg["parcours"] = _suivi_json(PAR_ID[sugg["parcours"]], suivis.get(sugg["parcours"]))
         return {"carte": carte, "carte_faite": bool(fait), "parcours_actif": actif, "suggestion": sugg}
 
+    async def _foi_autorisee(db, uid) -> bool:
+        """Le contenu Foi (TheSustain x Zayado) est OPT-IN : Zayado est ouvert à
+        tous — il n'apparaît que si l'utilisateur l'active (Paramètres →
+        Personnalisation). Jamais affiché, jamais suggéré par défaut."""
+        p = await _profil(db, uid)
+        return bool((p.contexte_metier or {}).get("parcours_foi"))
+
     @api.get("/mindset/parcours")
     async def mindset_parcours(db: AsyncSession = Depends(get_db)):
-        suivis = await _suivis(db, _uid())
-        return {"items": [_suivi_json(p, suivis.get(p["id"])) for p in PARCOURS]}
+        uid = _uid()
+        suivis = await _suivis(db, uid)
+        foi_ok = await _foi_autorisee(db, uid)
+        return {"items": [_suivi_json(p, suivis.get(p["id"])) for p in PARCOURS if foi_ok or not p.get("foi")],
+                "foi_disponible": True, "foi_active": foi_ok}
 
     @api.get("/mindset/parcours/{pid}")
     async def mindset_parcours_detail(pid: str, db: AsyncSession = Depends(get_db)):
         p = PAR_ID.get(pid)
-        if not p:
-            raise HTTPException(404, "Parcours introuvable.")
         uid = _uid()
+        if not p or (p.get("foi") and not await _foi_autorisee(db, uid)):
+            raise HTTPException(404, "Parcours introuvable.")
         s = (await _suivis(db, uid)).get(pid)
         suivi = _suivi_json(p, s)
         entrees = (await db.execute(select(MindsetEntree).where(MindsetEntree.user_id == uid, MindsetEntree.source == "parcours",
@@ -147,7 +160,8 @@ def install_mindset(g: dict) -> None:
 
     @api.post("/mindset/parcours/{pid}/demarrer")
     async def mindset_demarrer(pid: str, db: AsyncSession = Depends(get_db)):
-        if pid not in PAR_ID:
+        if pid not in PAR_ID or (PAR_ID[pid].get("foi") and not await _foi_autorisee(db, _uid())):
+            raise HTTPException(404, "Parcours introuvable.")
             raise HTTPException(404, "Parcours introuvable.")
         uid = _uid()
         s = (await _suivis(db, uid)).get(pid)
@@ -262,6 +276,67 @@ def install_mindset(g: dict) -> None:
                                        {"question": "Mon petit pas", "reponse": res["petit_pas"]}]))
         await db.commit()
         return {"detresse": False, **res}
+
+    # ── Lettre à ton futur moi : une lettre scellée jusqu'à la date choisie.
+    #    Le jour venu, la cloche de l'en-tête annonce qu'elle est prête à lire.
+    #    Rareté assumée : une seule lettre scellée à la fois.
+    class MindsetLettre(Base):
+        __tablename__ = "mindset_lettres"
+        id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
+        user_id: Mapped[str] = mapped_column(String(36), index=True)
+        texte: Mapped[str] = mapped_column(Text)
+        ouvre_le: Mapped[str] = mapped_column(String(10), index=True)   # date ISO d'ouverture
+        lue_le: Mapped[str] = mapped_column(String(10), nullable=True)
+        created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    g["MindsetLettre"] = MindsetLettre
+
+    class LettreIn(BaseModel):
+        texte: str = Field(min_length=10, max_length=4000)
+        ouvre_le: str = Field(min_length=10, max_length=10)
+
+    def _lettre_json(l: MindsetLettre) -> dict:
+        aujourd = date.today().isoformat()
+        prete = l.ouvre_le <= aujourd
+        return {"id": l.id, "ouvre_le": l.ouvre_le, "prete": prete, "lue": bool(l.lue_le),
+                "ecrite_le": l.created_at.date().isoformat(),
+                # Le texte ne sort que si la lettre est arrivée à sa date.
+                "texte": l.texte if prete else None}
+
+    @api.get("/mindset/lettres")
+    async def mindset_lettres(db: AsyncSession = Depends(get_db)):
+        rows = (await db.execute(select(MindsetLettre).where(MindsetLettre.user_id == _uid())
+                                 .order_by(MindsetLettre.ouvre_le))).scalars().all()
+        return {"items": [_lettre_json(r) for r in rows]}
+
+    @api.post("/mindset/lettres")
+    async def mindset_lettre_creer(body: LettreIn, db: AsyncSession = Depends(get_db)):
+        uid = _uid()
+        try:
+            ouverture = date.fromisoformat(body.ouvre_le)
+        except ValueError:
+            raise HTTPException(422, "Date d'ouverture invalide.")
+        if ouverture <= date.today():
+            raise HTTPException(422, "Choisis une date dans le futur — la lettre se scelle aujourd'hui.")
+        en_attente = (await db.execute(select(MindsetLettre).where(
+            MindsetLettre.user_id == uid, MindsetLettre.ouvre_le > date.today().isoformat()))).scalars().all()
+        if en_attente:
+            raise HTTPException(409, "Une lettre est déjà scellée — une seule à la fois, elle n'en aura que plus de poids.")
+        l = MindsetLettre(user_id=uid, texte=body.texte.strip(), ouvre_le=body.ouvre_le)
+        db.add(l)
+        await db.commit()
+        return {"ok": True, "lettre": _lettre_json(l)}
+
+    @api.post("/mindset/lettres/{lid}/lue")
+    async def mindset_lettre_lue(lid: str, db: AsyncSession = Depends(get_db)):
+        l = (await db.execute(select(MindsetLettre).where(MindsetLettre.id == lid, MindsetLettre.user_id == _uid()))).scalar_one_or_none()
+        if not l:
+            raise HTTPException(404, "Lettre introuvable.")
+        if l.ouvre_le > date.today().isoformat():
+            raise HTTPException(403, "Cette lettre est encore scellée — patience, elle s'ouvre bientôt.")
+        l.lue_le = date.today().isoformat()
+        await db.commit()
+        return {"ok": True}
 
     # ── Public : mini-exercice intégré dans les articles du Journal Shopify ──
     @api.get("/public/mindset/{slug}")

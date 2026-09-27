@@ -5,9 +5,10 @@ import {
   Maximize2, Minimize2, CloudCheck, Users,
 } from "lucide-react";
 import CollaborateurModal from "./CollaborateurModal";
+import { prendreOngletEnAttente, prendrePromptEnAttente, discuterAvecIA } from "./GlobalChat";
 import { useKairos } from "@/context/KairosContext";
 import {
-  streamChat, fetchPointDuJour, fetchDecisions, suggererDecisions, patchDecision, fetchActualite, enregistrerArticle, validerDecisionEmail,
+  streamChat, fetchPointDuJour, fetchDecisions, suggererDecisions, patchDecision, fetchActualite, enregistrerArticle, fetchEnregistres, validerDecisionEmail,
 } from "@/lib/kairosApi";
 import { toast } from "sonner";
 
@@ -28,7 +29,9 @@ const TABS = [
 
 export function ChatBody({ onClose, estElargi, onToggleTaille }) {
   const { user } = useKairos();
-  const [tab, setTab] = useState("chat");
+  // Onglet initial : celui demandé par openChat("actu" | "decisions" | "chat"),
+  // consommé ici — fiable même si le panneau vient tout juste de se monter.
+  const [tab, setTab] = useState(() => prendreOngletEnAttente() || "chat");
   const [cloudSync, setCloudSync] = useState(null);
   // Bouton « Collaborateur » : message important à l'équipe humaine, avec le contexte du chat.
   const [collab, setCollab] = useState(null); // null = fermé, sinon { contexte }
@@ -42,9 +45,13 @@ export function ChatBody({ onClose, estElargi, onToggleTaille }) {
   useEffect(() => {
     const ouvrir = () => setTab("actu");
     const decisions = () => setTab("decisions");
+    // « En parler à l'IA » depuis un article : bascule sur l'Assistant —
+    // le texte est consommé par ChatTab au montage (ou via l'événement si déjà monté).
+    const prompt = () => setTab("chat");
     window.addEventListener("kairos:ouvrir-actu", ouvrir);
     window.addEventListener("kairos:ouvrir-decisions", decisions);
-    return () => { window.removeEventListener("kairos:ouvrir-actu", ouvrir); window.removeEventListener("kairos:ouvrir-decisions", decisions); };
+    window.addEventListener("kairos:prompt-chat", prompt);
+    return () => { window.removeEventListener("kairos:ouvrir-actu", ouvrir); window.removeEventListener("kairos:ouvrir-decisions", decisions); window.removeEventListener("kairos:prompt-chat", prompt); };
   }, []);
 
   useEffect(() => {
@@ -125,7 +132,14 @@ function ChatTab({ firstName }) {
     contexteChat.texte = messages.slice(1).slice(-8)
       .map((m) => `${m.role === "user" ? "Moi" : "Copilote"} : ${String(m.content || "").slice(0, 600)}`).join("\n");
   }, [messages]);
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState(() => prendrePromptEnAttente() || "");
+  // Si l'onglet Assistant est déjà ouvert quand « En parler à l'IA » arrive
+  // (pas de remontage), le texte est injecté directement dans le champ.
+  useEffect(() => {
+    const injecter = (e) => { prendrePromptEnAttente(); setInput(e?.detail || ""); };
+    window.addEventListener("kairos:prompt-chat", injecter);
+    return () => window.removeEventListener("kairos:prompt-chat", injecter);
+  }, []);
   const [streaming, setStreaming] = useState(false);
   const scrollRef = useRef(null);
 
@@ -283,11 +297,13 @@ function DecisionsTab() {
 function ActuTab() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [enregistres, setEnregistres] = useState([]);
   // Corrigé : le pays/marché n'a plus à être choisi ici via des boutons —
   // c'est réglé une fois dans Paramètres (ou à l'onboarding), le chat lit
   // simplement le réglage du profil, comme le fait déjà le serveur.
   const load = async () => { setLoading(true); try { setData(await fetchActualite()); } catch { setData({ erreur: true, articles: [] }); } setLoading(false); };
-  useEffect(() => { load(); }, []);
+  const chargerEnregistres = async () => { try { const d = await fetchEnregistres(); setEnregistres(d?.articles || []); } catch { /* silencieux */ } };
+  useEffect(() => { load(); chargerEnregistres(); }, []);
 
   return (
     <div className="h-full overflow-y-auto px-4 py-4" data-testid="actu-tab">
@@ -309,20 +325,49 @@ function ActuTab() {
         <div className="space-y-2.5">
           {(data?.articles || []).map((a, i) => (
             <div key={i} className="rounded-xl border border-white/10 bg-white/5 p-3 transition-colors hover:border-gold/30" data-testid={`actu-item-${i}`}>
+              {a.source === "officiel" && (
+                <span className="mb-1.5 inline-flex items-center gap-1 rounded-full bg-gold/15 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.14em] text-gold" data-testid={`actu-officiel-${i}`}>
+                  Officiel · {a.source_label || "source officielle"}
+                </span>
+              )}
               <p className="text-sm font-medium leading-snug text-offwhite">{a.titre}</p>
               {a.resume && <p className="mt-1 line-clamp-2 text-xs text-offwhite/55">{a.resume}</p>}
               <div className="mt-2 flex items-center justify-between">
-                <a href={a.lien} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[10px] text-gold">Lire <ExternalLink className="h-3 w-3" /></a>
-                <button
-                  onClick={async () => { try { await enregistrerArticle(a.titre, a.lien); toast.success("Article enregistré"); } catch { toast.error("Enregistrement impossible."); } }}
-                  className="inline-flex items-center gap-1 rounded-full border border-white/10 px-2 py-1 text-[10px] text-offwhite/70 hover:border-gold/40 hover:text-gold"
-                  data-testid={`actu-save-${i}`}
-                >
-                  <Bookmark className="h-3 w-3" /> Enregistrer
-                </button>
+                <a href={a.lien} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[10px] text-gold" data-testid={`actu-lire-${i}`}>Lire <ExternalLink className="h-3 w-3" /></a>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => discuterAvecIA(`Parle-moi de cette actualité et de ce qu'elle change concrètement pour mon activité : « ${a.titre} » (${a.lien})`)}
+                    className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/10 px-2 py-1 text-[10px] font-medium text-gold hover:bg-gold/20"
+                    data-testid={`actu-discuter-${i}`}
+                  >
+                    <Sparkles className="h-3 w-3" /> En parler à l'IA
+                  </button>
+                  <button
+                    onClick={async () => { try { await enregistrerArticle(a.titre, a.lien); toast.success("Article enregistré"); chargerEnregistres(); } catch { toast.error("Enregistrement impossible."); } }}
+                    className="inline-flex items-center gap-1 rounded-full border border-white/10 px-2 py-1 text-[10px] text-offwhite/70 hover:border-gold/40 hover:text-gold"
+                    data-testid={`actu-save-${i}`}
+                  >
+                    <Bookmark className="h-3 w-3" /> Enregistrer
+                  </button>
+                </div>
               </div>
             </div>
           ))}
+          {(data?.articles || []).length === 0 && data?.vide_pref && (
+            <p className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-offwhite/60">
+              Toutes les sources sont coupées dans tes réglages. Réactive-en au moins une dans Paramètres → Notifications.
+            </p>
+          )}
+          {enregistres.length > 0 && (
+            <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-3" data-testid="actu-enregistres">
+              <p className="mb-2 text-[10.5px] font-semibold uppercase tracking-[0.18em] text-offwhite/50">Tes articles enregistrés</p>
+              {enregistres.map((e) => (
+                <a key={e.id} href={e.lien} target="_blank" rel="noreferrer" className="flex items-center gap-2 py-1 text-xs text-offwhite/75 hover:text-gold" data-testid={`actu-enregistre-${e.id}`}>
+                  <Bookmark className="h-3 w-3 shrink-0 text-gold" /> <span className="truncate">{e.titre}</span>
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { LayoutDashboard, Users, Store, Gift, Ticket, Video, Mail, Newspaper, CheckCircle2, AlertTriangle, CircleDashed } from "lucide-react";
+import { toast } from "sonner";
+import { LayoutDashboard, Users, Store, Gift, Ticket, Video, Mail, Newspaper, CheckCircle2, AlertTriangle, CircleDashed, Sparkles, Link2, Crown, Euro, Loader2, ScrollText } from "lucide-react";
 import { SideMenuPro } from "@/components/pro/SideMenuPro";
 import {
   fetchAdminDiagnostics,
   fetchAdminVueEnsemble, fetchAdminUtilisateurs, changerRoleUtilisateur, changerPlanUtilisateur,
   fetchModerationAttente, publierProduitVendeur, refuserProduitVendeur,
-  fetchAdminParrainage, fetchCodesPromo, creerCodePromo, basculerCodePromo, supprimerCodePromo,
+  fetchAdminParrainage, fetchAdminProgrammes, validerProgramme, payerCommission, fetchCodesPromo, creerCodePromo, basculerCodePromo, supprimerCodePromo,
   fetchHeygenAvatars, fetchHeygenVoices, heygenGenerer, heygenStatut,
   fetchAdminCommerceStats, fetchAdminCommerceOrders, changerStatutCommandeAdmin,
   fetchAdminCommerceProducts, fetchAdminCommerceVendors,
@@ -14,6 +15,9 @@ import {
 } from "@/lib/kairosApi";
 import { Bell } from "lucide-react";
 import EmailsIA from "@/components/admin/EmailsIA";
+import AdminNewsletters from "@/components/admin/AdminNewsletters";
+import AdminConnexions from "@/components/admin/AdminConnexions";
+import AdminAppLogs from "@/components/admin/AdminAppLogs";
 
 // Menu inspiré de la structure Sentriq (Vue d'ensemble / Utilisateurs / ...).
 // Le Parrainage vient de final-main/affiliate.py, les Codes promo de
@@ -34,6 +38,9 @@ const ONGLETS = [
   { key: "videos-ia", label: "Vidéos IA" },
   { key: "notifications", label: "Notifications" },
   { key: "emails-ia", label: "Emails IA" },
+  { key: "newsletters", label: "Newsletters" },
+  { key: "connexions", label: "Connexions" },
+  { key: "logs-app", label: "Logs applicatifs" },
 ];
 
 export default function Admin() {
@@ -42,7 +49,7 @@ export default function Admin() {
   const ICONS = {
     vue: <LayoutDashboard size={16} />, utilisateurs: <Users size={16} />, vendeurs: <Store size={16} />,
     parrainage: <Gift size={16} />, "codes-promo": <Ticket size={16} />, commerce: <Ticket size={16} />, catalogue: <Store size={16} />, "comptes-vendeurs": <Users size={16} />, "videos-ia": <Video size={16} />,
-    "emails-ia": <Mail size={16} />, "articles-seo": <Newspaper size={16} />, notifications: <Bell size={16} />,
+    "emails-ia": <Mail size={16} />, newsletters: <Sparkles size={16} />, connexions: <Link2 size={16} />, "logs-app": <ScrollText size={16} />, "articles-seo": <Newspaper size={16} />, notifications: <Bell size={16} />,
   };
   const menuItems = ONGLETS.map((o) => ({ key: o.key, label: o.label, icon: ICONS[o.key] }));
 
@@ -74,6 +81,9 @@ export default function Admin() {
         {onglet === "videos-ia" && <VideosIA />}
         {onglet === "notifications" && <NotificationsAdmin />}
         {onglet === "emails-ia" && <EmailsIA />}
+        {onglet === "newsletters" && <AdminNewsletters />}
+        {onglet === "connexions" && <AdminConnexions />}
+        {onglet === "logs-app" && <AdminAppLogs />}
         {onglet === "articles-seo" && <AVenir label="Articles SEO" description="Génération d'articles SEO par IA — même remarque : référence Sentriq disponible, pas encore de route serveur ici." />}
       </div>
       </div>
@@ -249,6 +259,15 @@ function VueEnsemble() {
             <span key={k} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm">{NOMS_OFFRES[k]} <b className="ml-1 text-gold">{ab.par_offre?.[k] || 0}</b></span>
           ))}
           <span className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-offwhite/60">Vendeurs {donnees.par_role.vendeur} · Admins {donnees.par_role.admin}</span>
+        </div>
+      </Carte>
+      <Carte>
+        <p className="mb-1 font-semibold">Accueil — écran de présentation</p>
+        <p className="mb-3 text-[12.5px] text-offwhite/55">Combien de nouveaux visiteurs cliquent « Oui, je veux ça » plutôt que « Pas encore ».</p>
+        <div className="grid grid-cols-3 gap-3" data-testid="admin-accueil">
+          <Kpi label="« Oui, je veux ça »" valeur={donnees.accueil?.oui ?? 0} />
+          <Kpi label="« Pas encore »" valeur={donnees.accueil?.pas_encore ?? 0} />
+          <Kpi label="Taux d'adhésion" valeur={`${donnees.accueil?.taux_oui ?? 0} %`} note={`${donnees.accueil?.total ?? 0} clics`} or />
         </div>
       </Carte>
       <Branchements />
@@ -430,7 +449,7 @@ function Parrainage() {
         <div className="overflow-x-auto"><table className="w-full min-w-[560px] text-sm">
           <thead>
             <tr className="text-left text-offwhite/50 border-b border-white/10">
-              <th className="pb-2">Filleul</th><th className="pb-2">Statut</th><th className="pb-2">Bonus</th><th className="pb-2">Depuis</th>
+              <th className="pb-2">Filleul</th><th className="pb-2">Statut</th><th className="pb-2">Récompense</th><th className="pb-2">Depuis</th>
             </tr>
           </thead>
           <tbody>
@@ -438,14 +457,108 @@ function Parrainage() {
               <tr key={r.id} className="border-b border-white/5">
                 <td className="py-2.5">{r.email_filleul}</td>
                 <td className="py-2.5"><span className={`px-2 py-0.5 rounded-full text-xs ${r.statut === "actif" ? "bg-gold/15 text-gold" : "bg-white/10"}`}>{r.statut}</span></td>
-                <td className="py-2.5">{r.bonus_credits} crédits</td>
+                <td className="py-2.5">{r.recompense_type === "commission" ? `${r.recompense_valeur} €` : `${r.recompense_valeur} mois offert${r.recompense_valeur > 1 ? "s" : ""}`}</td>
                 <td className="py-2.5 text-offwhite/50">{new Date(r.depuis).toLocaleDateString("fr-FR")}</td>
               </tr>
             ))}
           </tbody>
         </table></div>
       </Carte>
+      <Partenaires />
     </div>
+  );
+}
+
+// Partenaires (ambassadeur/affiliation) : demandes à valider + commissions dues.
+// Ports depuis app-main/backend/routes/affiliate.py (admin/affiliates, admin/create) —
+// mais le backend Zayado a déjà /admin/programmes, /admin/programmes/{id}/valider et
+// /admin/programmes/{id}/payer (solde_commission), plus mature que app-main sur ce
+// point (commissions intégrées au même solde que le parrainage classique). Il ne
+// manquait que cette vue admin pour les consommer — rien côté serveur à porter.
+function Partenaires() {
+  const [donnees, setDonnees] = useState(null);
+  const [erreur, setErreur] = useState(null);
+  const [enCours, setEnCours] = useState(null);
+
+  const charger = () => fetchAdminProgrammes().then(setDonnees).catch(() => setErreur("Accès refusé ou erreur serveur."));
+  useEffect(() => { charger(); }, []);
+
+  const valider = async (id, programme) => {
+    setEnCours(id);
+    try { await validerProgramme(id, programme); toast.success("Programme validé."); charger(); }
+    catch { toast.error("Échec de la validation."); }
+    finally { setEnCours(null); }
+  };
+
+  const payer = async (id) => {
+    setEnCours(id);
+    try { const r = await payerCommission(id); toast.success(`${r.montant_verse.toFixed(2)} € marqués comme versés.`); charger(); }
+    catch { toast.error("Échec du paiement."); }
+    finally { setEnCours(null); }
+  };
+
+  if (erreur) return <Carte><p className="text-red-400 text-sm">{erreur}</p></Carte>;
+  if (!donnees) return <Carte><p className="text-offwhite/50 text-sm">Chargement…</p></Carte>;
+
+  return (
+    <>
+      {donnees.demandes.length > 0 && (
+        <Carte>
+          <p className="text-offwhite/50 text-xs uppercase tracking-wide mb-3">Demandes en attente</p>
+          <div className="space-y-2">
+            {donnees.demandes.map((d) => (
+              <div key={d.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/[0.03] px-3 py-2.5">
+                <div className="min-w-0">
+                  <p className="truncate text-sm">{d.email}</p>
+                  <p className="text-xs text-offwhite/50">Demande : {d.programme_demande}</p>
+                </div>
+                <button
+                  onClick={() => valider(d.id, d.programme_demande)}
+                  disabled={enCours === d.id}
+                  data-testid={`admin-valider-programme-${d.id}`}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-gold/15 px-3 py-1.5 text-xs font-semibold text-gold hover:bg-gold/25 disabled:opacity-50"
+                >
+                  {enCours === d.id ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />} Valider
+                </button>
+              </div>
+            ))}
+          </div>
+        </Carte>
+      )}
+      <Carte>
+        <p className="text-offwhite/50 text-xs uppercase tracking-wide mb-3">Partenaires (ambassadeur · affiliation)</p>
+        {donnees.partenaires.length === 0 && <p className="text-sm text-offwhite/50">Aucun partenaire pour l'instant.</p>}
+        <div className="overflow-x-auto"><table className="w-full min-w-[620px] text-sm">
+          <thead>
+            <tr className="text-left text-offwhite/50 border-b border-white/10">
+              <th className="pb-2">Email</th><th className="pb-2">Programme</th><th className="pb-2">Filleuls actifs</th><th className="pb-2">Commission due</th><th className="pb-2"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {donnees.partenaires.map((p) => (
+              <tr key={p.id} className="border-b border-white/5">
+                <td className="py-2.5">{p.email}</td>
+                <td className="py-2.5"><span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-xs">{p.programme === "affiliation" ? <Crown size={11} /> : <Sparkles size={11} />} {p.programme}</span></td>
+                <td className="py-2.5">{p.filleuls_actifs}</td>
+                <td className="py-2.5 flex items-center gap-1"><Euro size={13} className="text-offwhite/50" /> {p.solde_commission.toFixed(2)}</td>
+                <td className="py-2.5 text-right">
+                  {p.solde_commission > 0 && (
+                    <button
+                      onClick={() => payer(p.id)}
+                      disabled={enCours === p.id}
+                      data-testid={`admin-payer-commission-${p.id}`}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-xs font-semibold hover:bg-white/10 disabled:opacity-50"
+                    >
+                      {enCours === p.id ? <Loader2 size={13} className="animate-spin" /> : null} Marquer payé
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table></div>
+      </Carte>
+    </>
   );
 }
 
@@ -524,7 +637,7 @@ function CodesPromo() {
       <Carte>
         <form onSubmit={creer} className="flex gap-2 flex-wrap">
           <input value={nouveauCode.code} onChange={(e) => setNouveauCode((c) => ({ ...c, code: e.target.value }))} placeholder="CODE" className="bg-white/5 border border-white/15 rounded-xl px-3 py-2 text-sm w-32" data-testid="promo-code-input" />
-          <input value={nouveauCode.value} onChange={(e) => setNouveauCode((c) => ({ ...c, value: e.target.value }))} placeholder="Crédits" type="number" className="bg-white/5 border border-white/15 rounded-xl px-3 py-2 text-sm w-28" data-testid="promo-value-input" />
+          <input value={nouveauCode.value} onChange={(e) => setNouveauCode((c) => ({ ...c, value: e.target.value }))} placeholder="Mois offerts" type="number" className="bg-white/5 border border-white/15 rounded-xl px-3 py-2 text-sm w-28" data-testid="promo-value-input" />
           <input value={nouveauCode.max_uses} onChange={(e) => setNouveauCode((c) => ({ ...c, max_uses: e.target.value }))} placeholder="Max usages" type="number" className="bg-white/5 border border-white/15 rounded-xl px-3 py-2 text-sm w-28" data-testid="promo-maxuses-input" />
           <button type="submit" className="px-4 py-2 rounded-xl bg-gold/15 text-gold text-sm font-semibold" data-testid="promo-create-btn">Créer</button>
         </form>
@@ -537,7 +650,7 @@ function CodesPromo() {
               {items.map((p) => (
                 <tr key={p.id} className="border-b border-white/5">
                   <td className="py-2.5 font-mono">{p.code}</td>
-                  <td className="py-2.5">{p.value} crédits</td>
+                  <td className="py-2.5">{p.value} mois</td>
                   <td className="py-2.5">{p.current_uses}/{p.max_uses}</td>
                   <td className="py-2.5"><span className={`px-2 py-0.5 rounded-full text-xs ${p.active ? "bg-gold/15 text-gold" : "bg-white/10"}`}>{p.active ? "actif" : "inactif"}</span></td>
                   <td className="py-2.5 flex gap-2">

@@ -22,14 +22,37 @@ textarea:-webkit-autofill {
   transition: background-color 9999s ease-in-out 0s;
 }
 
+/* Champs du thème sombre : fond translucide + bord clair lumineux (comme la
+   barre de la maquette), halo doré au focus. Les thèmes clairs (crème / pro /
+   clair) redéfinissent leurs champs plus bas dans ce fichier. */
+input.bg-white\/5, textarea.bg-white\/5, select.bg-white\/5,
+input.bg-white\/8, textarea.bg-white\/8,
+input.bg-white\/\[0\.08\], textarea.bg-white\/\[0\.08\] {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.24);
+  box-shadow: 0 0 18px rgba(222, 194, 163, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease;
+}
+input.bg-white\/5:focus, textarea.bg-white\/5:focus, select.bg-white\/5:focus,
+input.bg-white\/8:focus, textarea.bg-white\/8:focus,
+input.bg-white\/\[0\.08\]:focus, textarea.bg-white\/\[0\.08\]:focus {
+  border-color: rgba(222, 194, 163, 0.65);
+  box-shadow: 0 0 0 3px rgba(222, 194, 163, 0.18), 0 0 26px rgba(222, 194, 163, 0.22);
+  outline: none;
+}
+
+/* Voile des modales/tiroirs : navy profond translucide, jamais noir. */
+
+
 @layer base {
     :root {
-  /* Fond Zayado = exactement le ciel de final-main (App.css .sky-bg), partout : app, accueil, admin. */
+  /* Fond Zayado : navy profond partout — jamais de noir pur (le bas de page
+     tirait vers le noir et « coupait » l'ambiance). */
   --fond-zayado:
-    radial-gradient(ellipse at 20% 10%, rgba(45, 81, 150, 0.45) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 8%, rgba(30, 60, 110, 0.35) 0%, transparent 55%),
-    radial-gradient(ellipse at 50% 90%, rgba(5, 8, 20, 0.95) 0%, transparent 60%),
-    linear-gradient(180deg, #172c5c 0%, #101f47 30%, #0a1230 60%, #05081a 100%);
+    radial-gradient(ellipse at 20% 10%, rgba(52, 88, 158, 0.45) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 8%, rgba(36, 68, 122, 0.35) 0%, transparent 55%),
+    radial-gradient(ellipse at 50% 90%, rgba(13, 24, 56, 0.9) 0%, transparent 60%),
+    linear-gradient(180deg, #294174 0%, #12224a 30%, #0b1a3d 60%, #0a1230 100%);
         --background: 222 59% 14%;
         --foreground: 222 60% 96%;
         --card: 222 50% 18%;
@@ -84,12 +107,23 @@ textarea:-webkit-autofill {
 
 @layer components {
     .glass {
-        /* Verre de final 13 : blanc translucide + flou, bord fin clair. */
+        /* Verre Zayado : blanc translucide + flou, bord clair lumineux avec un
+           halo doux (comme la barre de recherche de la maquette). */
         background: rgba(255, 255, 255, 0.10);
-        border: 1px solid rgba(255, 255, 255, 0.14);
+        border: 1px solid rgba(255, 255, 255, 0.22);
         backdrop-filter: blur(18px);
         -webkit-backdrop-filter: blur(18px);
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+        box-shadow:
+          0 10px 30px rgba(2, 8, 26, 0.28),
+          0 0 26px rgba(222, 194, 163, 0.10),
+          inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    }
+    .glass:hover {
+        border-color: rgba(255, 255, 255, 0.30);
+        box-shadow:
+          0 14px 36px rgba(2, 8, 26, 0.32),
+          0 0 34px rgba(222, 194, 163, 0.16),
+          inset 0 1px 0 rgba(255, 255, 255, 0.20);
     }
     /* Fenêtres (modales, menus, tiroirs, chat) : verre BLANC translucide,
        comme les cartes — plus de navy opaque « d'un autre bleu ». Une fine
@@ -288,8 +322,8 @@ textarea:-webkit-autofill {
    bien sur fond clair). */
 body.theme-clair {
     background:
-        radial-gradient(ellipse 70% 50% at 15% 0%, rgba(222,194,163, 0.20), transparent 62%),
-        linear-gradient(135deg, #F7F2E9 0%, #F1EADB 60%, #EAE1D0 100%);
+        radial-gradient(ellipse 70% 50% at 15% 0%, rgba(222,194,163, 0.14), transparent 62%),
+        linear-gradient(135deg, #F8F8F6 0%, #F3F3F1 60%, #ECECEA 100%);
     color: #1F2A44;
 }
 body.theme-clair .text-offwhite { color: #1F2A44 !important; }
@@ -301,19 +335,19 @@ body.theme-clair .text-offwhite\/45, body.theme-clair .text-offwhite\/40, body.t
 body.theme-clair .text-gold { color: #8A5A1E !important; }
 body.theme-clair .glass {
     background: #FFFFFF !important;
-    border: 1px solid #E7DCC9 !important;
+    border: 1px solid #E8E6E1 !important;
     box-shadow: 0 2px 14px -6px rgba(31, 42, 68, 0.10) !important;
 }
 body.theme-clair .glass-strong {
-    background: linear-gradient(180deg, rgba(255,255,255,0.97), rgba(247,242,233,0.97)) !important;
-    border: 1px solid #E7DCC9 !important;
+    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(250,250,248,0.98)) !important;
+    border: 1px solid #E8E6E1 !important;
     color: #1F2A44 !important;
 }
-body.theme-clair .bg-white\/5, body.theme-clair .bg-white\/10 { background: #F4EDE1 !important; }
+body.theme-clair .bg-white\/5, body.theme-clair .bg-white\/10 { background: #FFFFFF !important; box-shadow: 0 1px 8px -4px rgba(31, 42, 68, 0.08); }
 body.theme-clair .bg-white\/\[0\.02\], body.theme-clair .bg-white\/\[0\.03\], body.theme-clair .bg-white\/\[0\.04\], body.theme-clair .bg-white\/\[0\.07\] { background: #FFFFFF !important; }
-body.theme-clair .border-white\/10, body.theme-clair .border-white\/12, body.theme-clair .border-white\/15, body.theme-clair .border-white\/20, body.theme-clair .border-white\/25, body.theme-clair .border-white\/8 { border-color: #E7DCC9 !important; }
+body.theme-clair .border-white\/10, body.theme-clair .border-white\/12, body.theme-clair .border-white\/15, body.theme-clair .border-white\/20, body.theme-clair .border-white\/25, body.theme-clair .border-white\/8 { border-color: #E8E6E1 !important; }
 body.theme-clair .bg-gold\/10, body.theme-clair .bg-gold\/15 { background: rgba(217, 169, 78, 0.16) !important; }
-body.theme-clair .bg-navy-900\/50, body.theme-clair .bg-navy-900\/70 { background: rgba(247, 242, 233, 0.85) !important; }
+body.theme-clair .bg-navy-900\/50, body.theme-clair .bg-navy-900\/70 { background: rgba(248, 248, 246, 0.85) !important; }
 body.theme-clair .text-navy-900 { color: #1F2A44 !important; }
 body.theme-clair input, body.theme-clair select, body.theme-clair textarea { color: #1F2A44; }
 /* Le fond aurora navy est masqué en thème clair — le dégradé crème du body prend le relais. */
@@ -368,3 +402,21 @@ body.theme-clair .aurora-bg { display: none; }
 .pro-clair .entete-navy { background: rgba(255, 255, 255, 0.82) !important; border-color: #dbe4f3 !important; }
 .pro-clair .entete-navy .text-offwhite { color: #16213d !important; }
 .pro-clair table thead tr { color: #5b6b8c; }
+
+/* Chat en thème clair : panneau blanc assorti (au lieu du navy) */
+body.theme-clair .chat-zayado {
+  background: linear-gradient(180deg, #FFFFFF 0%, #F7F7F5 100%);
+  color: #1F2A44;
+  border-left: 1px solid #E8E6E1;
+  box-shadow: -18px 0 50px rgba(31, 42, 68, 0.12);
+}
+body.theme-clair .chat-zayado .chat-msg-ia { background: #F3F3F1; border: 1px solid #E8E6E1; color: #1F2A44; }
+body.theme-clair .chat-zayado .chat-badge { background: linear-gradient(135deg, #F1E2CC, #DEC2A3); color: #0f1b3a; }
+
+/* Fenêtres (modales, menus, chat) en thème clair : verre blanc, texte navy */
+body.theme-clair .fenetre {
+    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(250,250,248,0.98)) !important;
+    border: 1px solid #E8E6E1 !important;
+    color: #1F2A44 !important;
+    box-shadow: 0 24px 60px rgba(31, 42, 68, 0.18) !important;
+}

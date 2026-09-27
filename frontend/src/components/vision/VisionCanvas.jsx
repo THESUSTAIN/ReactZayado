@@ -137,7 +137,7 @@ function AiDocModal({ open, onClose, onGenerated }) {
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#060a18]/70 backdrop-blur-sm p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#0b1a3d]/70 backdrop-blur-sm p-4" onClick={onClose}>
       <div className="sf sf-menu relative w-full max-w-lg p-6" onClick={(e) => e.stopPropagation()} data-testid="vision-ai-doc-modal">
         <button onClick={onClose} className="sf-btn absolute right-3 top-3" data-testid="vision-ai-doc-close"><X size={16} /></button>
         <p className="sf-title" style={{ fontSize: 18 }}>{t("vision.aiDoc.title")}</p>
@@ -1256,7 +1256,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
             <img src={card.image} alt="" draggable={false} className="w-full rounded-[14px] object-cover" style={{ height: inWall ? 260 : Math.max(120, (card.h || 300) - (tv(card.title, lang) ? 60 : 24)) }} />
             {tv(card.title, lang) && <p className="sf-title px-1 pt-3">{tv(card.title, lang)}</p>}
             {isEditing && (
-              <div className="absolute inset-0 flex flex-col justify-start gap-2 overflow-y-auto bg-black/85 p-4" onPointerDown={(e) => e.stopPropagation()} onWheel={(e) => e.stopPropagation()}>
+              <div className="absolute inset-0 flex flex-col justify-start gap-2 overflow-y-auto bg-[#0b1a3d]/90 p-4" onPointerDown={(e) => e.stopPropagation()} onWheel={(e) => e.stopPropagation()}>
                 <div className="flex items-center gap-2">
                   <input placeholder={t("vision.unsplash.search")} data-testid="vision-unsplash-query" onKeyDown={(e) => e.key === "Enter" && doUnsplash(e.target.value)} className="sf-field" />
                   {unsplash.loading && <Loader2 size={15} className="animate-spin text-white" />}
@@ -1816,7 +1816,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
       {/* ── Modèles de départ ── */}
       {tplOpen && (
         <>
-          <div className="fixed inset-0 z-[60] bg-[#060a18]/70 backdrop-blur-sm" onClick={() => setTplOpen(false)} data-testid="vision-templates-overlay" />
+          <div className="fixed inset-0 z-[60] bg-[#0b1a3d]/70 backdrop-blur-sm" onClick={() => setTplOpen(false)} data-testid="vision-templates-overlay" />
           <div className="sf sf-menu fixed left-1/2 top-1/2 z-[61] max-h-[80vh] w-[min(94vw,640px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto p-6" data-testid="vision-templates-panel">
             <div className="mb-4 flex items-start justify-between">
               <div>
@@ -1992,7 +1992,7 @@ function ShareDialog({ board, onClose }) {
   const copy = () => navigator.clipboard?.writeText(url).then(() => toast.success("Lien copié")).catch(() => {});
   const setOpt = (k) => { const next = { ...opts, [k]: !opts[k] }; setOpts(next); if (state?.active) save(next); };
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#060a18]/70 backdrop-blur-sm p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#0b1a3d]/70 backdrop-blur-sm p-4" onClick={onClose}>
       <div className="sf sf-menu relative w-full max-w-md p-6" onClick={(e) => e.stopPropagation()} data-testid="vision-share-dialog">
         <button onClick={onClose} className="sf-btn absolute right-3 top-3"><X size={16} /></button>
         <p className="sf-title" style={{ fontSize: 18 }}>Partager en lecture seule</p>
