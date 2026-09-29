@@ -818,6 +818,9 @@ async def _contexte(db: AsyncSession, uid: str) -> str:
             lignes.append(f"Ce qui le/la différencie : {cm['approche']}")
     if objectifs:
         lignes.append("Objectifs actifs : " + " | ".join(f"{o.titre} ({o.progression}%)" for o in objectifs))
+    # Objectif 3 ans (carte du cockpit) : l'IA disait « aucun objectif » alors qu'il était posé.
+    if profil and getattr(profil, "objectif_3ans", None):
+        lignes.append(f"Objectif à 3 ans : {profil.objectif_3ans}" + (f" (échéance {profil.echeance_3ans})" if getattr(profil, "echeance_3ans", None) else ""))
     if checkins:
         c = checkins[0]
         details = [f"énergie {c.energie}/5"] + [f"{nom} {val}/5" for nom, val in (("stress", c.stress), ("sommeil", c.sommeil), ("charge", c.charge)) if val]
@@ -1838,7 +1841,9 @@ async def point_du_jour(db: AsyncSession = Depends(get_db)):
         "Rédige le point du jour en 4 lignes maximum, sans titre ni puce : "
         "1) l'état d'énergie et ce qu'il implique, 2) la priorité la plus utile aujourd'hui et "
         "pourquoi elle sert un objectif, 3) une micro-action de repli si la journée déraille, "
-        "4) un rappel d'une victoire récente. Sois factuelle, pas de slogan."
+        "4) un rappel d'une victoire récente. Sois factuelle, pas de slogan. "
+        "N'utilise que des échelles sur 5 (jamais sur 10). Ne pose AUCUNE question : si une donnée "
+        "manque, propose simplement l'action qui la complète (ex. « fais ton check-in »)."
     )
     try:
         client = _client_llm(f"point-{uid}-{datetime.now(timezone.utc):%Y%m%d}", f"{SYSTEM_PROMPT}\n\n--- Contexte ---\n{contexte}")
