@@ -43,7 +43,7 @@ export default function Cockpit() {
       <Sidebar />
       <ChatPanel />
 
-      <div className="lg:pl-[92px] xl:pr-[360px]">
+      <div className="lg:pl-[92px] xl:pr-[var(--chat-w,360px)] transition-[padding] duration-200">
         <Header />
 
         <main className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 lg:pb-12">
@@ -268,13 +268,14 @@ export default function Cockpit() {
 }
 
 function PointDuJourCard({ modeInfo }) {
+  const { aCheckin } = useKairos();
   const [texte, setTexte] = useState("");
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     let on = true;
     fetchPointDuJour().then((d) => { if (on) { setTexte(d.texte || modeInfo.banner); setLoading(false); } }).catch(() => { if (on) { setTexte(modeInfo.banner); setLoading(false); } });
     return () => { on = false; };
-  }, [modeInfo.banner]);
+  }, [modeInfo.banner, aCheckin]);  // recalculé après le check-in (avant : « aucun check-in » restait affiché)
   // Le point arrive en texte libre (4 lignes en mode IA, un paragraphe en mode
   // dégradé) : on le découpe en segments pour une lecture en un coup d'œil,
   // chaque ligne avec son repère — fini le pavé.
