@@ -1,22 +1,67 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr" class="dark">
   <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="icon" href="/favicon.ico" sizes="any" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#07090E" />
-    <meta
-      name="description"
-      content="Cockpit IA Zayado — Le cockpit qui pilote votre prospection, votre vision et votre énergie. L'IA prépare, vous décidez."
-    />
-    <title>Cockpit IA Zayado — Pilotez votre prospection</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" href="%PUBLIC_URL%/favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#14243F" />
+    <!-- Appli : jamais indexée (le référencement se fait sur la boutique
+         Shopify zayado.net, pour éviter le contenu en double). Les balises de
+         partage (og:/twitter:) restent pour de beaux aperçus de lien. -->
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <meta name="description" content="Le cockpit IA des indépendants : de vrais prospects chaque matin, ton chiffre d'affaires suivi, tes priorités triées. Dès 15 €, ou Solo 2 mois pour 1 €." />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Zayado" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta property="og:title" content="Zayado — Plus de clients, moins de charge mentale" />
+    <meta property="og:description" content="Le cockpit IA des indépendants : de vrais prospects chaque matin, ton chiffre d'affaires suivi, tes priorités triées. Dès 15 €, ou Solo 2 mois pour 1 €." />
+    <meta property="og:url" content="https://app.zayado.net/" />
+    <meta property="og:image" content="https://app.zayado.net/og-zayado.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Zayado — Plus de clients, moins de charge mentale" />
+    <meta name="twitter:description" content="Le cockpit IA des indépendants : de vrais prospects chaque matin, ton chiffre d'affaires suivi, tes priorités triées. Dès 15 €, ou Solo 2 mois pour 1 €." />
+    <meta name="twitter:image" content="https://app.zayado.net/og-zayado.png" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "name": "Zayado",
+            "legalName": "SAS TheSustain",
+            "url": "https://app.zayado.net/",
+            "logo": "https://app.zayado.net/logo512.png",
+            "email": "contact@zayado.net"
+          },
+          {
+            "@type": "SoftwareApplication",
+            "name": "Zayado",
+            "applicationCategory": "BusinessApplication",
+            "operatingSystem": "Web",
+            "inLanguage": "fr",
+            "url": "https://app.zayado.net/",
+            "description": "Cockpit IA pour indépendants : prospects chaque matin, chiffre d'affaires suivi, priorités du jour et charge mentale allégée.",
+            "offers": [
+              { "@type": "Offer", "name": "Rêveur", "price": "15", "priceCurrency": "EUR", "priceSpecification": { "@type": "UnitPriceSpecification", "price": "15", "priceCurrency": "EUR", "unitText": "mois", "valueAddedTaxIncluded": true } },
+              { "@type": "Offer", "name": "Solo", "price": "29", "priceCurrency": "EUR", "priceSpecification": { "@type": "UnitPriceSpecification", "price": "29", "priceCurrency": "EUR", "unitText": "mois", "valueAddedTaxIncluded": false } },
+              { "@type": "Offer", "name": "Pro", "price": "69", "priceCurrency": "EUR", "priceSpecification": { "@type": "UnitPriceSpecification", "price": "69", "priceCurrency": "EUR", "unitText": "mois", "valueAddedTaxIncluded": false } },
+              { "@type": "Offer", "name": "Équipe", "price": "149", "priceCurrency": "EUR", "priceSpecification": { "@type": "UnitPriceSpecification", "price": "149", "priceCurrency": "EUR", "unitText": "mois", "valueAddedTaxIncluded": false } }
+            ]
+          }
+        ]
+      }
+    </script>
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/apple-touch-icon.png" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Zayado — Plus de clients, moins de charge mentale</title>
   </head>
   <body>
+    <noscript>Vous devez activer JavaScript pour utiliser cette application.</noscript>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

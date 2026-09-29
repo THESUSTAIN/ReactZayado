@@ -11,6 +11,12 @@
 .border-white\/8 { border-color: rgb(255 255 255 / 0.08); }
 .border-white\/12 { border-color: rgb(255 255 255 / 0.12); }
 
+/* Aperçu d'auto-complétion Chrome (survol d'une suggestion) : fond bleu clair
+   imposé par le navigateur + notre texte clair = saisie invisible sur /login.
+   color-scheme: dark fait passer Chrome sur ses couleurs sombres (texte lisible). */
+input.text-offwhite, textarea.text-offwhite, input.bg-white\/8, input.bg-white\/5 { color-scheme: dark; }
+.theme-creme input, .pro-clair input, body.theme-clair input { color-scheme: light; }
+
 /* Chrome peint les champs auto-complétés en blanc : on garde le thème navy. */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
