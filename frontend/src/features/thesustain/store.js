@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { fetchFoiEtat, getToken, saveFoiEtat } from "@/lib/kairosApi";
 
-// Flag d'activation de « Ma Foi » — 100% localStorage, aucun endpoint backend.
+// Flag d'activation de « Ma Foi » (préférence d'affichage, par navigateur).
 export const MA_FOI_KEY = "zayado_ma_foi";
 
 export function getMaFoiActive() {
@@ -14,20 +15,48 @@ export function setMaFoiActive(v) {
   } catch (e) { /* stockage indisponible */ }
 }
 
-// Hook d'état persisté dans localStorage (préfixe zayado_mafoi_).
+// Données personnelles du module : désormais enregistrées sur le COMPTE
+// (avant : uniquement dans ce navigateur — perdues sur un autre appareil).
+// Un seul chargement serveur partagé par tous les hooks de la page.
+let _etatServeur = null;
+const chargerEtat = () => {
+  if (!getToken()) return Promise.resolve({});
+  if (!_etatServeur) _etatServeur = fetchFoiEtat().catch(() => { _etatServeur = null; return {}; });
+  return _etatServeur;
+};
+
 export function useLocal(key, initial) {
   const full = `zayado_mafoi_${key}`;
   const [val, setVal] = useState(initial);
+  const pret = useRef(false);
+  const minuteur = useRef(null);
   useEffect(() => {
-    try {
-      const s = localStorage.getItem(full);
-      if (s !== null) setVal(JSON.parse(s));
-    } catch (e) { /* ignore */ }
+    let vivant = true;
+    chargerEtat().then((etat) => {
+      if (!vivant) return;
+      if (etat && Object.prototype.hasOwnProperty.call(etat, key) && etat[key] !== null) {
+        setVal(etat[key]);
+      } else {
+        // Reprise unique de ce qui était stocké dans le navigateur avant.
+        try {
+          const s = localStorage.getItem(full);
+          if (s !== null) { const v = JSON.parse(s); setVal(v); saveFoiEtat(key, v).catch(() => {}); }
+        } catch (e) { /* ignore */ }
+      }
+      pret.current = true;
+    });
+    return () => { vivant = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
+    if (!pret.current) return undefined;
     try { localStorage.setItem(full, JSON.stringify(val)); } catch (e) { /* ignore */ }
-  }, [full, val]);
+    clearTimeout(minuteur.current);
+    minuteur.current = setTimeout(() => {
+      saveFoiEtat(key, val).then(() => { if (_etatServeur) _etatServeur.then((e) => { if (e) e[key] = val; }); }).catch(() => {});
+    }, 600);
+    return () => clearTimeout(minuteur.current);
+  }, [full, key, val]);
   return [val, setVal];
 }
 

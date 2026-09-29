@@ -3,7 +3,7 @@ import { planNom, ESSAI } from "@/lib/plans";
 import { lancerPaiement } from "@/lib/checkout";
 import {
   User, Palette, Bell, Plug, ShieldCheck, CreditCard, Gift, Loader2, Save, Download, Cloud,
-  Search, X, Sun, Moon, Compass, Brain, Trash2, Mail, Plus, Receipt, Sparkles, Link2,
+  Search, X, Sun, Moon, Compass, Brain, Trash2, Mail, Plus, Receipt, Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -15,7 +15,6 @@ import { oublierAbonnement } from "@/lib/acces";
 import { useI18n } from "@/i18n";
 import { Link, useNavigate } from "react-router-dom";
 import IntegrationsSection from "@/components/kairos/IntegrationsSection";
-import MesConnexionsSection from "@/components/kairos/MesConnexionsSection";
 
 // Paramètres en grande fenêtre modale — structure inspirée de
 // ReactZayado/SettingsModal.jsx (v13) : recherche + sections latérales.
@@ -26,7 +25,6 @@ const SECTIONS = [
   { id: "vision", label: "Vision & valeurs", Icon: Compass, mots: "vision phrase valeurs inspiration cap" },
   { id: "notifications", label: "Notifications", Icon: Bell, mots: "alerte rappel email lundi" },
   { id: "integrations", label: "Intégrations", Icon: Plug, mots: "whatsapp telegram qonto connexion drive" },
-  { id: "connexions", label: "Mes connexions", Icon: Link2, mots: "notion slack discord airtable asana trello linear github calendly hubspot brevo smtp ovh coffre-fort" },
   { id: "cloud-save", label: "Enregistrement cloud", Icon: Cloud, mots: "drive google onedrive sharepoint document automatique nuage" },
   { id: "parrainage", label: "Parrainage", Icon: Gift, mots: "inviter filleul mois offert ambassadeur affiliation programme" },
   { id: "securite", label: "Sécurité & données", Icon: ShieldCheck, mots: "export rgpd données suppression connexion email" },
@@ -161,7 +159,6 @@ export default function Parametres() {
           {active === "vision" && <SectionVision />}
           {active === "notifications" && <SectionNotifications />}
           {active === "integrations" && <><CarteTeams /><IntegrationsSection /></>}
-          {active === "connexions" && <MesConnexionsSection />}
           {active === "cloud-save" && <SectionCloudSave />}
           {active === "parrainage" && <SectionParrainage />}
           {active === "securite" && <SectionSecurite />}
@@ -392,6 +389,14 @@ function SectionNotifications() {
   };
   // (Le contenu Foi n'est plus réglé ici : l'activation se fait dans
   //  Bien-être → Parcours, là où vivent les parcours.)
+  // Rythme de l'alerte actualité dans la cloche (demandé par le Copilote au 1er login, modifiable ici).
+  const rythme = cm.actu_rythme || "quotidien";
+  const changerRythme = async (v) => {
+    const suivant = { ...cm, actu_rythme: v };
+    setCm(suivant);
+    try { await saveProfile({ contexte_metier: suivant }); toast.success("Rythme d'alerte enregistré."); }
+    catch { toast.error("Échec."); setCm(cm); }
+  };
   const JOURS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
   if (!profil) return <Carte><p className="text-sm text-offwhite/50">Chargement…</p></Carte>;
   return (
@@ -421,6 +426,16 @@ function SectionNotifications() {
     </Carte>
 
     <Carte titre="Ton actualité" desc="Choisis ce que tu reçois dans le briefing du jour (onglet Actualité du Copilote). Le pays se règle dans Profil → Marché.">      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-4 border-b border-white/5 pb-4">
+          <div><p className="text-sm font-medium text-offwhite">Alerte dans la cloche</p><p className="text-xs text-offwhite/50">À quel rythme la cloche te signale une nouvelle actualité.</p></div>
+          <select value={rythme} onChange={(e) => changerRythme(e.target.value)}
+            className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-offwhite focus:border-gold/50 focus:outline-none"
+            data-testid="parametres-actu-rythme">
+            <option value="quotidien">Chaque jour</option>
+            <option value="lundi">Le lundi uniquement</option>
+            <option value="jamais">Jamais</option>
+          </select>
+        </div>
         <div className="flex items-center justify-between gap-4">
           <div><p className="text-sm font-medium text-offwhite">Légal & officiel</p><p className="text-xs text-offwhite/50">URSSAF, impôts (dates, montants), baux, RH — le flux officiel service-public.gouv.fr de ton pays. <b>Activé par défaut.</b></p></div>
           <Interrupteur on={srcOn("actu_legal")} onClick={() => togglerSrc("actu_legal")} testid="parametres-actu-legal" />

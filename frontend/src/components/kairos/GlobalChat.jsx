@@ -62,6 +62,7 @@ export default function GlobalChat() {
       <aside
         className={`chat-zayado fixed right-0 top-0 z-[60] flex h-[100dvh] w-full flex-col transition-transform duration-300 sm:w-[420px] ${open ? "translate-x-0" : "translate-x-full"}`}
         aria-hidden={!open}
+        style={open ? undefined : { boxShadow: "none" }}
         data-testid="global-chat"
       >
         {open && <ChatBody onClose={() => setOpen(false)} />}

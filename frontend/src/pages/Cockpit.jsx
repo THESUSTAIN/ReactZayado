@@ -23,7 +23,7 @@ import { fetchPointDuJour, fetchSerie } from "@/lib/kairosApi";
 import {
   BatteryMedium, Check, Trophy, Target, Sparkles, TrendingUp,
   Scale, ChevronRight, Sun, Leaf, Zap, FileText, Users, Footprints, CheckSquare,
-  Flame,
+  Flame, LifeBuoy,
 } from "lucide-react";
 
 export default function Cockpit() {
@@ -102,7 +102,7 @@ export default function Cockpit() {
 
                 <GlassCard data-testid="balance-card">
                   <p className="mb-2 text-center font-display text-base font-semibold text-offwhite">Équilibre vie pro / perso</p>
-                  {aCheckin ? (
+                  {aCheckin && balance ? (
                     <BalanceDial pro={balance.pro} perso={balance.perso} />
                   ) : (
                     <div className="flex h-full flex-col items-center justify-center py-2 text-center" data-testid="balance-empty">
@@ -275,6 +275,17 @@ function PointDuJourCard({ modeInfo }) {
     fetchPointDuJour().then((d) => { if (on) { setTexte(d.texte || modeInfo.banner); setLoading(false); } }).catch(() => { if (on) { setTexte(modeInfo.banner); setLoading(false); } });
     return () => { on = false; };
   }, [modeInfo.banner]);
+  // Le point arrive en texte libre (4 lignes en mode IA, un paragraphe en mode
+  // dégradé) : on le découpe en segments pour une lecture en un coup d'œil,
+  // chaque ligne avec son repère — fini le pavé.
+  const lignes = (texte || "").split(/\n+/).map((l) => l.replace(/^[-•*\d.)\s]+/, "").trim()).filter(Boolean);
+  const segments = lignes.length > 1 ? lignes.slice(0, 4) : (texte || "").split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean).slice(0, 4);
+  const REPERES = [
+    { Icon: Zap, label: "Énergie" },
+    { Icon: Target, label: "Priorité" },
+    { Icon: LifeBuoy, label: "Plan B" },
+    { Icon: Trophy, label: "Victoire" },
+  ];
   return (
     <GlassCard className="mb-5 animate-fade-up" style={{ animationDelay: "120ms", borderColor: `${modeInfo.color}55` }} data-testid="point-du-jour-card">
       <div className="flex items-start gap-3">
@@ -283,9 +294,28 @@ function PointDuJourCard({ modeInfo }) {
         </div>
         <div className="flex-1">
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-gold">Ton point du jour</p>
-          <p className="whitespace-pre-wrap font-display text-[15.5px] font-medium leading-8 text-offwhite" data-testid="point-du-jour-texte">
-            {loading ? "Zayado prépare ton point du jour…" : texte}
-          </p>
+          {loading ? (
+            <p className="font-display text-[15.5px] font-medium leading-8 text-offwhite" data-testid="point-du-jour-texte">Zayado prépare ton point du jour…</p>
+          ) : segments.length <= 1 ? (
+            <p className="whitespace-pre-wrap font-display text-[15.5px] font-medium leading-8 text-offwhite" data-testid="point-du-jour-texte">{texte}</p>
+          ) : (
+            <ul className="space-y-2.5" data-testid="point-du-jour-texte">
+              {segments.map((s, i) => {
+                const R = REPERES[i] || REPERES[REPERES.length - 1];
+                return (
+                  <li key={i} className="flex items-start gap-3">
+                    <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: `${modeInfo.color}1a` }}>
+                      <R.Icon className="h-3.5 w-3.5" style={{ color: modeInfo.color }} />
+                    </span>
+                    <p className="min-w-0 text-[14px] leading-relaxed text-offwhite">
+                      <span className="mr-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-offwhite/45">{R.label}</span>
+                      {s}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
       </div>
     </GlassCard>

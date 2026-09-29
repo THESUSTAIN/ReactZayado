@@ -1,20 +1,64 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   BookOpen, HandHeart, Compass, Users, ShieldCheck, Sparkles, ArrowLeft, ArrowRight,
   ArrowUpRight, Heart, Plus, Check, Wind, Quote, MessageCircle, Send, Bot, CalendarClock,
-  Star, ChevronRight, Target, Moon, Feather, Cloud, ScrollText,
+  Star, ChevronRight, Target, Moon, Feather, Cloud, ScrollText, Trash2, Loader2,
 } from "lucide-react";
+import { fetchFoiPosts, publierFoiPost, soutenirFoiPost, repondreFoiPost, supprimerFoiPost, supprimerFoiReponse } from "@/lib/kairosApi";
 import {
-  modules, sagesse, prayerWallSeed, prayerPrompts, parcours, valeursBibliques,
-  buildDiscernementSynthese, cercleCategories, cercleSeed, THESUSTAIN_URL,
+  modules, sagesse, prayerPrompts, parcours, valeursBibliques,
+  buildDiscernementSynthese, cercleCategories, THESUSTAIN_URL,
   dechargePrompts, dechargeVersets, psaumes, sabbat, association, versetsLecture,
 } from "./thesustainData";
 import { useLocal, uid, setMaFoiActive } from "./store";
 import { AideMemoire } from "./MemoireAide";
 
 const ICONS = { sagesse: BookOpen, priere: HandHeart, parcours: Compass, discernement: ShieldCheck, cercle: Users, repos: Moon, lecture: ScrollText };
-const openSustain = () => { toast("Prototype : ouverture de TheSustain."); window.open(THESUSTAIN_URL, "_blank"); };
+const openSustain = () => { window.open(THESUSTAIN_URL, "_blank", "noopener"); };
+
+// Date relative lisible (« à l'instant », « il y a 2 h », « hier »…).
+const ilYa = (iso) => {
+  if (!iso) return "";
+  const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (m < 1) return "à l'instant";
+  if (m < 60) return `il y a ${m} min`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `il y a ${h} h`;
+  if (h < 48) return "hier";
+  return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+};
+
+// Publications PARTAGÉES entre les membres (Mur de prière, Cercle) — vraies
+// données serveur. Avant : faux membres pré-remplis, visibles de soi seul.
+function useFoiPosts(espace, categorie) {
+  const [items, setItems] = useState(null);
+  const charger = useCallback(() => {
+    fetchFoiPosts(espace, categorie).then((d) => setItems(d.items || [])).catch(() => setItems([]));
+  }, [espace, categorie]);
+  useEffect(() => { charger(); }, [charger]);
+  const maj = (post) => setItems((l) => (l || []).map((p) => (p.id === post.id ? post : p)));
+  const publier = async (texte, extra = {}) => {
+    try { const p = await publierFoiPost({ espace, texte, ...extra }); setItems((l) => [p, ...(l || [])]); return true; }
+    catch (e) { toast.error(e.message || "Publication impossible."); return false; }
+  };
+  const soutenir = async (id) => {
+    try { const r = await soutenirFoiPost(id); setItems((l) => (l || []).map((p) => (p.id === id ? { ...p, count: r.count, mine_support: r.mine_support } : p))); }
+    catch { toast.error("Action impossible pour le moment."); }
+  };
+  const repondre = async (id, texte, genre) => {
+    try { maj(await repondreFoiPost(id, texte, genre)); return true; } catch { toast.error("Réponse impossible."); return false; }
+  };
+  const supprimer = async (id) => {
+    if (!window.confirm("Supprimer cette publication ?")) return;
+    try { await supprimerFoiPost(id); setItems((l) => (l || []).filter((p) => p.id !== id)); } catch { toast.error("Suppression impossible."); }
+  };
+  const supprimerReponse = async (postId, repId) => {
+    try { await supprimerFoiReponse(repId); setItems((l) => (l || []).map((p) => (p.id === postId ? { ...p, replies: p.replies.filter((r) => r.id !== repId) } : p))); }
+    catch { toast.error("Suppression impossible."); }
+  };
+  return { items, publier, soutenir, repondre, supprimer, supprimerReponse };
+}
 
 const Card = ({ className = "", children }) => (
   <div className={`rounded-2xl border border-white/10 bg-white/[0.04] ${className}`}>{children}</div>
@@ -227,7 +271,8 @@ function Priere() {
   const [personal, setPersonal] = useLocal("priere_personal", "");
   const [intentions, setIntentions] = useLocal("priere_intentions", []);
   const [saved, setSaved] = useLocal("priere_saved", []);
-  const [wall, setWall] = useLocal("priere_wall", prayerWallSeed);
+  const mur = useFoiPosts("mur");
+  const [anonyme, setAnonyme] = useState(false);
   const [decharges, setDecharges] = useLocal("priere_decharges", []);
   const [newInt, setNewInt] = useState("");
   const [wallText, setWallText] = useState("");
@@ -235,8 +280,7 @@ function Priere() {
 
   const addIntention = () => { if (!newInt.trim()) return; setIntentions([{ id: uid("int"), text: newInt.trim() }, ...intentions]); setNewInt(""); };
   const savePrayer = () => { if (!personal.trim()) return; setSaved([{ id: uid("pr"), text: personal.trim(), date: new Date().toLocaleDateString("fr-FR") }, ...saved]); toast.success("Prière enregistrée."); };
-  const postWall = () => { if (!wallText.trim()) return; setWall([{ id: uid("pw"), author: "Vous", text: wallText.trim(), prayingCount: 0, iPrayed: false, time: "à l'instant" }, ...wall]); setWallText(""); toast.success("Publié sur le mur de prière."); };
-  const prayFor = (id) => setWall(wall.map((p) => p.id === id ? { ...p, iPrayed: !p.iPrayed, prayingCount: p.prayingCount + (p.iPrayed ? -1 : 1) } : p));
+  const postWall = async () => { if (!wallText.trim()) return; if (await mur.publier(wallText.trim(), { anonyme })) { setWallText(""); toast.success("Publié sur le mur de prière."); } };
   const deposer = () => { if (!dechargeText.trim()) return; const v = dechargeVersets[Math.floor(Math.random() * dechargeVersets.length)]; setDecharges([{ id: uid("dc"), text: dechargeText.trim(), remis: false, verset: v }, ...decharges]); setDechargeText(""); };
   const remettre = (id) => { setDecharges(decharges.map((x) => x.id === id ? { ...x, remis: true } : x)); toast.success("Remis entre les mains de Dieu 🙏"); };
 
@@ -267,14 +311,25 @@ function Priere() {
 
       {tab === "mur" && (
         <div>
-          <Card className="mb-4 p-5"><Textarea value={wallText} onChange={(e) => setWallText(e.target.value)} placeholder="Priez pour mon lancement d'entreprise cette semaine…" className="min-h-20" /><div className="mt-2 flex justify-end"><GoldBtn onClick={postWall}><Send className="h-4 w-4" /> Publier</GoldBtn></div></Card>
-          <div className="space-y-3">{wall.map((p) => (
+          <Card className="mb-4 p-5">
+            <Textarea value={wallText} onChange={(e) => setWallText(e.target.value)} placeholder="Priez pour mon lancement d'entreprise cette semaine…" className="min-h-20" />
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+              <label className="inline-flex items-center gap-2 text-xs text-offwhite/60"><input type="checkbox" checked={anonyme} onChange={(e) => setAnonyme(e.target.checked)} data-testid="mafoi-mur-anonyme" /> Publier anonymement</label>
+              <GoldBtn onClick={postWall}><Send className="h-4 w-4" /> Publier</GoldBtn>
+            </div>
+          </Card>
+          {mur.items === null && <div className="flex items-center gap-2 text-sm text-offwhite/55"><Loader2 className="h-4 w-4 animate-spin" /> Chargement du mur…</div>}
+          {mur.items?.length === 0 && <Card className="p-6 text-center text-sm text-offwhite/60" data-testid="mafoi-mur-vide">Le mur est encore vide. Sois le premier à confier une intention : les membres pourront prier pour toi.</Card>}
+          <div className="space-y-3">{(mur.items || []).map((p) => (
             <Card key={p.id} className="p-5">
-              <div className="text-sm font-medium text-offwhite">{p.author} <span className="text-[11px] font-normal text-offwhite/40">· {p.time}</span></div>
-              <p className="mt-1.5 text-sm leading-relaxed text-offwhite/80">{p.text}</p>
+              <div className="flex items-start justify-between gap-2">
+                <div className="text-sm font-medium text-offwhite">{p.mine ? `${p.author} (toi)` : p.author} <span className="text-[11px] font-normal text-offwhite/40">· {ilYa(p.created_at)}</span></div>
+                {p.can_delete && <button onClick={() => mur.supprimer(p.id)} className="text-offwhite/40 hover:text-rose-300" aria-label="Supprimer"><Trash2 className="h-4 w-4" /></button>}
+              </div>
+              <p className="mt-1.5 whitespace-pre-line text-sm leading-relaxed text-offwhite/80">{p.text}</p>
               <div className="mt-3 flex items-center gap-3">
-                <button onClick={() => prayFor(p.id)} className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm ${p.iPrayed ? "bg-gold text-navy-900" : "border border-white/15 bg-white/5 text-offwhite hover:bg-white/10"}`}><HandHeart className="h-4 w-4" /> {p.iPrayed ? "Je prie pour toi ✓" : "Je prie pour toi"}</button>
-                <span className="text-xs text-offwhite/45">{p.prayingCount} personne(s) prient</span>
+                <button onClick={() => mur.soutenir(p.id)} className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm ${p.mine_support ? "bg-gold text-navy-900" : "border border-white/15 bg-white/5 text-offwhite hover:bg-white/10"}`}><HandHeart className="h-4 w-4" /> {p.mine_support ? "Je prie pour toi ✓" : "Je prie pour toi"}</button>
+                <span className="text-xs text-offwhite/45">{p.count} personne{p.count > 1 ? "s" : ""} prie{p.count > 1 ? "nt" : ""}</span>
               </div>
             </Card>
           ))}</div>
@@ -416,16 +471,18 @@ function Discernement() {
 
 /* ─── CERCLE ─── */
 function Cercle() {
-  const [posts, setPosts] = useLocal("cercle_posts", cercleSeed);
   const [cat, setCat] = useState("all");
+  const cercle = useFoiPosts("cercle", cat);
+  const posts = cercle.items || [];
   const [text, setText] = useState("");
   const [postCat, setPostCat] = useState("foi-travail");
+  const [anonyme, setAnonyme] = useState(false);
   const [replyOpen, setReplyOpen] = useState({});
   const [replyText, setReplyText] = useState({});
-  const filtered = cat === "all" ? posts : posts.filter((p) => p.category === cat);
-  const publish = () => { if (!text.trim()) return; setPosts([{ id: uid("c"), category: postCat, author: "Vous", text: text.trim(), time: "à l'instant", encouragements: 0, iEncouraged: false, replies: [], aiSuggestion: null }, ...posts]); setText(""); toast.success("Message publié dans le Cercle."); };
-  const encourage = (id) => setPosts(posts.map((p) => p.id === id ? { ...p, iEncouraged: !p.iEncouraged, encouragements: p.encouragements + (p.iEncouraged ? -1 : 1) } : p));
-  const sendReply = (id) => { const t = (replyText[id] || "").trim(); if (!t) return; setPosts(posts.map((p) => p.id === id ? { ...p, replies: [...p.replies, { id: uid("r"), author: "Vous", text: t, kind: "encouragement" }] } : p)); setReplyText({ ...replyText, [id]: "" }); };
+  const filtered = posts;
+  const publish = async () => { if (!text.trim()) return; if (await cercle.publier(text.trim(), { categorie: postCat, anonyme })) { setText(""); toast.success("Message publié dans le Cercle."); } };
+  const encourage = (id) => cercle.soutenir(id);
+  const sendReply = async (id) => { const t = (replyText[id] || "").trim(); if (!t) return; if (await cercle.repondre(id, t)) setReplyText({ ...replyText, [id]: "" }); };
   const catOf = (id) => cercleCategories.find((c) => c.id === id);
 
   return (
@@ -443,23 +500,25 @@ function Cercle() {
         <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Partagez une situation, une question, un témoignage…" className="min-h-20" />
         <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap gap-1.5">{cercleCategories.map((c) => <button key={c.id} onClick={() => setPostCat(c.id)} className={`rounded-full border px-2.5 py-1 text-xs ${postCat === c.id ? "border-gold/40 bg-gold/15 text-gold" : "border-white/10 bg-white/[0.03] text-offwhite/60"}`}>{c.emoji} {c.label}</button>)}</div>
-          <GoldBtn onClick={publish}><Send className="h-4 w-4" /> Publier</GoldBtn>
+          <div className="flex items-center gap-3">
+            <label className="inline-flex items-center gap-1.5 text-xs text-offwhite/60"><input type="checkbox" checked={anonyme} onChange={(e) => setAnonyme(e.target.checked)} /> Anonyme</label>
+            <GoldBtn onClick={publish}><Send className="h-4 w-4" /> Publier</GoldBtn>
+          </div>
         </div>
       </Card>
+      {cercle.items === null && <div className="flex items-center gap-2 text-sm text-offwhite/55"><Loader2 className="h-4 w-4 animate-spin" /> Chargement du Cercle…</div>}
+      {cercle.items?.length === 0 && <Card className="p-6 text-center text-sm text-offwhite/60" data-testid="mafoi-cercle-vide">Aucun message ici pour l'instant. Lance la conversation : une question, un témoignage, une demande d'entraide.</Card>}
       <div className="space-y-3">{filtered.map((p) => { const c = catOf(p.category); return (
         <Card key={p.id} className="p-5">
-          <div className="mb-2 flex items-center gap-2"><span className="rounded-full border border-white/15 px-2 py-0.5 text-[10px] text-offwhite/60">{c?.emoji} {c?.label}</span><span className="text-[11px] text-offwhite/45">{p.author} · {p.time}</span></div>
+          <div className="mb-2 flex items-center gap-2"><span className="rounded-full border border-white/15 px-2 py-0.5 text-[10px] text-offwhite/60">{c?.emoji} {c?.label}</span><span className="text-[11px] text-offwhite/45">{p.mine ? `${p.author} (toi)` : p.author} · {ilYa(p.created_at)}</span>{p.can_delete && <button onClick={() => cercle.supprimer(p.id)} className="ml-auto text-offwhite/40 hover:text-rose-300" aria-label="Supprimer"><Trash2 className="h-4 w-4" /></button>}</div>
           <p className="text-sm leading-relaxed text-offwhite/90">{p.text}</p>
           <div className="mt-3 flex items-center gap-3">
-            <button onClick={() => encourage(p.id)} className={`inline-flex items-center gap-1.5 text-sm ${p.iEncouraged ? "text-gold" : "text-offwhite/55 hover:text-offwhite"}`}><Heart className={`h-4 w-4 ${p.iEncouraged ? "fill-current" : ""}`} /> {p.encouragements}</button>
+            <button onClick={() => encourage(p.id)} className={`inline-flex items-center gap-1.5 text-sm ${p.mine_support ? "text-gold" : "text-offwhite/55 hover:text-offwhite"}`}><Heart className={`h-4 w-4 ${p.mine_support ? "fill-current" : ""}`} /> {p.count}</button>
             <button onClick={() => setReplyOpen({ ...replyOpen, [p.id]: !replyOpen[p.id] })} className="inline-flex items-center gap-1.5 text-sm text-offwhite/55 hover:text-offwhite"><MessageCircle className="h-4 w-4" /> Répondre {p.replies.length > 0 && `(${p.replies.length})`}</button>
           </div>
-          {p.aiSuggestion && (
-            <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-gold/25 bg-gold/[0.06] p-3"><Bot className="mt-0.5 h-4 w-4 shrink-0 text-gold" /><div className="text-sm"><p className="text-offwhite/85">{p.aiSuggestion}</p><button onClick={() => toast("Prototype : ouverture de MyExtension AI.")} className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-gold hover:text-gold-hover">→ Analyser avec MyExtension AI <ArrowUpRight className="h-3 w-3" /></button></div></div>
-          )}
           {(p.replies.length > 0 || replyOpen[p.id]) && (
             <div className="mt-3 space-y-2 border-l-2 border-white/10 pl-3">
-              {p.replies.map((r) => <div key={r.id} className="text-sm"><span className="font-medium text-offwhite">{r.author}</span><span className="ml-2 rounded-full border border-white/15 px-1.5 py-0.5 text-[9px] text-offwhite/55">{r.kind}</span><p className="mt-0.5 text-offwhite/75">{r.text}</p></div>)}
+              {p.replies.map((r) => <div key={r.id} className="text-sm"><span className="font-medium text-offwhite">{r.mine ? `${r.author} (toi)` : r.author}</span>{r.can_delete && <button onClick={() => cercle.supprimerReponse(p.id, r.id)} className="ml-2 text-offwhite/35 hover:text-rose-300" aria-label="Supprimer la réponse"><Trash2 className="inline h-3 w-3" /></button>}<span className="ml-2 rounded-full border border-white/15 px-1.5 py-0.5 text-[9px] text-offwhite/55">{r.kind}</span><p className="mt-0.5 text-offwhite/75">{r.text}</p></div>)}
               {replyOpen[p.id] && <div className="flex gap-2 pt-1"><Input value={replyText[p.id] || ""} onChange={(e) => setReplyText({ ...replyText, [p.id]: e.target.value })} onKeyDown={(e) => e.key === "Enter" && sendReply(p.id)} placeholder="Encourager, prier, partager…" /><GoldBtn onClick={() => sendReply(p.id)}><Send className="h-4 w-4" /></GoldBtn></div>}
             </div>
           )}

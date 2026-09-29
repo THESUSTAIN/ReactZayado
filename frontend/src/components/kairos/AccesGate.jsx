@@ -15,11 +15,12 @@ export default function AccesGate() {
   const navigate = useNavigate();
   useEffect(() => {
     if (!pathname.startsWith("/app") || !getToken()) return;
-    // Ma Foi suit désormais la même règle d'accès que le reste de /app :
-    // offre active requise (voir lib/acces.js). Le futur critère "SSO connecté"
-    // sera ajouté ici une fois le module Connexions (OAuth) porté depuis app-main.
+    // Ma Foi suit la même règle d'accès que le reste de /app (offre active),
+    // SAUF pour un membre TheSustain connecté par SSO (a.thesustain).
     chargerAbonnement().then((a) => {
       if (a.acces === "aucun") {
+        // Membre TheSustain (connecté par SSO) : Ma Foi reste ouverte sans offre Zayado.
+        if (a.thesustain && pathname.startsWith("/app/ma-foi")) return;
         fetchState()
           .then((s) => navigate(s?.onboarded ? "/activer" : "/onboarding", { replace: true }))
           .catch(() => navigate("/activer", { replace: true }));

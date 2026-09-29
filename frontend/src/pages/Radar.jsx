@@ -148,7 +148,7 @@ function blipPosition(op, i) {
   return { x: 50 + Math.cos(angle) * 41 * rf, y: 50 + Math.sin(angle) * 41 * rf };
 }
 
-// Vrai prospect (Apollo) : identité, liens directs et suivi du contact.
+// Vrai prospect : identité, liens directs et suivi du contact.
 function FicheProspect({ p, message }) {
   const [statut, setStatut] = useState(p.statut || "nouveau");
   const changer = async (v) => {
@@ -477,12 +477,16 @@ export default function Radar() {
                               >
                                 {React.createElement(meta.icon, { size: 20 })}
                               </span>
-                              <div className="text-center">
-                                <p className="font-display text-2xl font-extrabold text-gold" data-testid={`radar-op-score-${i}`}>
-                                  {op.score}
-                                </p>
-                                <p className="text-[9px] uppercase tracking-[0.2em] text-offwhite/45">score</p>
-                              </div>
+                              {op.score != null ? (
+                                <div className="text-center">
+                                  <p className="font-display text-2xl font-extrabold text-gold" data-testid={`radar-op-score-${i}`}>
+                                    {op.score}
+                                  </p>
+                                  <p className="text-[9px] uppercase tracking-[0.2em] text-offwhite/45">score</p>
+                                </div>
+                              ) : (
+                                <p className="text-center text-[9px] uppercase tracking-[0.2em] text-offwhite/45" data-testid={`radar-op-piste-${i}`}>piste</p>
+                              )}
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="text-[10px] uppercase tracking-[0.22em] text-offwhite/50">

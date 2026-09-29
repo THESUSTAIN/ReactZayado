@@ -269,7 +269,7 @@ export function useVisionLive(override) {
 export const LIVE_SOURCES = [
   { id: "score",       label: "Score « Vision réalisée »", route: "/app/actions?tab=objectifs" },
   { id: "alertes",     label: "À surveiller (alertes)",    route: "/app" },
-  { id: "vision",      label: "Ma vision & mon pourquoi",  route: "/onboarding" },
+  { id: "vision",      label: "Ma vision & mon pourquoi",  route: "/parametres#vision" },
   { id: "objectifs",   label: "Objectifs du trimestre",    route: "/app/actions?tab=objectifs" },
   { id: "trajectoire", label: "Trajectoire (Q1 → Vision)", route: "/app/vision?view=roadmap" },
   { id: "actions",     label: "Actions (cases à cocher)",  route: "/app/actions" },

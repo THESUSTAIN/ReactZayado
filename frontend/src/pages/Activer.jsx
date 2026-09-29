@@ -50,6 +50,11 @@ export default function Activer() {
           <img src="/logo.png" alt="Zayado" className="h-10 w-10 object-contain" />
           <button onClick={() => { setToken(null); navigate("/login"); }} className="inline-flex items-center gap-1.5 text-[12.5px] text-offwhite/60 hover:text-offwhite"><LogOut size={14} /> Se déconnecter</button>
         </div>
+        {abo?.thesustain && (
+          <button onClick={() => navigate("/app/ma-foi")} className="mt-6 inline-flex items-center gap-2 rounded-full border border-gold/40 px-4 py-2 text-[13px] font-semibold text-gold hover:bg-gold/10" data-testid="activer-mafoi">
+            Membre TheSustain : ouvrir Ma Foi <ArrowRight size={14} />
+          </button>
+        )}
         <p className="mt-10 inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-gold" data-testid="activer-badge">
           <span className="h-2 w-2 rounded-full bg-gold" /> Ton plan est prêt
         </p>

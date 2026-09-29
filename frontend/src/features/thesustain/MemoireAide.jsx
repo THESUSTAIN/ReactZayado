@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Brain, Workflow, Music2, Puzzle, Sparkles, RefreshCw, Check, Loader2, Play, MapPin, Film, Pencil, RotateCcw, Eye, EyeOff } from "lucide-react";
 import { useLocal } from "./store";
@@ -51,7 +51,7 @@ const TABS = [
   { id: "carte", label: "Carte mentale", Icon: Workflow },
   { id: "palais", label: "Palais de mémoire", Icon: MapPin },
   { id: "histoire", label: "Histoire en chaîne", Icon: Film },
-  { id: "musique", label: "Musique IA", Icon: Music2 },
+  { id: "musique", label: "Écoute", Icon: Music2 },
   { id: "quiz", label: "Texte à trous", Icon: Puzzle },
   { id: "mnemo", label: "Mnémotechnique", Icon: Sparkles },
 ];
@@ -222,43 +222,45 @@ function HistoireChaine({ verset }) {
   );
 }
 
-/* ─── Musique IA (Mammoth) — prototype d'appel, à brancher côté serveur ─── */
+/* ─── Écoute du verset ───
+   Avant : un faux bouton « Générer une musique » (minuteur + toast « Musique
+   générée ») sans aucun son. Remplacé par une vraie lecture vocale du verset
+   (synthèse vocale du navigateur, en français), répétable et ralentie. */
 function MusiqueIA({ verset }) {
-  const [statut, setStatut] = useState("idle"); // idle | generation | prete
-  const generer = () => {
-    setStatut("generation");
-    // TODO (Lot suivant) : brancher sur l'API Mammoth AI côté backend
-    // (POST /api/foi/musique-verset avec { texte, ref }) puis remplacer
-    // ce minuteur par la vraie réponse (URL audio).
-    setTimeout(() => { setStatut("prete"); toast.success("Musique générée pour ce verset."); }, 1400);
+  const dispo = typeof window !== "undefined" && "speechSynthesis" in window;
+  const [lecture, setLecture] = useState(false);
+  const [lent, setLent] = useState(true);
+  useEffect(() => () => { try { window.speechSynthesis.cancel(); } catch { /* */ } }, []);
+  const ecouter = () => {
+    if (!dispo) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(`${verset.text}. ${verset.ref}.`);
+    u.lang = "fr-FR"; u.rate = lent ? 0.8 : 1;
+    const voix = window.speechSynthesis.getVoices().find((v) => v.lang?.startsWith("fr"));
+    if (voix) u.voice = voix;
+    u.onend = () => setLecture(false); u.onerror = () => setLecture(false);
+    setLecture(true);
+    window.speechSynthesis.speak(u);
   };
+  const stop = () => { window.speechSynthesis.cancel(); setLecture(false); };
+  if (!dispo) return <p className="text-xs text-offwhite/55">La lecture vocale n'est pas disponible sur ce navigateur.</p>;
   return (
     <div>
-      <p className="mb-3 text-xs text-offwhite/55">Une courte mélodie chantant ce verset, pour le retenir en l'écoutant plutôt qu'en le relisant.</p>
-      {statut === "idle" && (
-        <button onClick={generer} className="inline-flex items-center gap-2 rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-navy-900 hover:bg-gold-hover" data-testid="mafoi-musique-generer">
-          <Music2 className="h-4 w-4" /> Générer une musique de ce verset
-        </button>
-      )}
-      {statut === "generation" && (
-        <div className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm text-offwhite/70">
-          <Loader2 className="h-4 w-4 animate-spin" /> Composition en cours…
-        </div>
-      )}
-      {statut === "prete" && (
-        <div className="rounded-xl border border-gold/25 bg-gold/[0.06] p-3">
-          <div className="flex items-center gap-3">
-            <button className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gold text-navy-900" aria-label="Écouter" data-testid="mafoi-musique-play">
-              <Play className="h-4 w-4" />
-            </button>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-offwhite">Chant — {verset.ref}</p>
-              <p className="text-[11px] text-offwhite/50">Prototype — le lecteur audio réel arrivera avec le branchement Mammoth AI.</p>
-            </div>
-          </div>
-          <button onClick={() => setStatut("idle")} className="mt-2 inline-flex items-center gap-1.5 text-xs text-offwhite/50 hover:text-offwhite"><RefreshCw className="h-3 w-3" /> Régénérer</button>
-        </div>
-      )}
+      <p className="mb-3 text-xs text-offwhite/55">Écoute le verset à voix haute, autant de fois que nécessaire, pour le retenir en l'entendant plutôt qu'en le relisant.</p>
+      <div className="flex flex-wrap items-center gap-2">
+        {!lecture ? (
+          <button onClick={ecouter} className="inline-flex items-center gap-2 rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-navy-900 hover:bg-gold-hover" data-testid="mafoi-musique-generer">
+            <Play className="h-4 w-4" /> Écouter {verset.ref}
+          </button>
+        ) : (
+          <button onClick={stop} className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm text-offwhite" data-testid="mafoi-musique-stop">
+            <Loader2 className="h-4 w-4 animate-spin" /> Lecture… (arrêter)
+          </button>
+        )}
+        <label className="inline-flex items-center gap-1.5 text-xs text-offwhite/60">
+          <input type="checkbox" checked={lent} onChange={(e) => setLent(e.target.checked)} /> Lecture lente
+        </label>
+      </div>
     </div>
   );
 }

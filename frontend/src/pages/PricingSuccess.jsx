@@ -38,10 +38,10 @@ export default function PricingSuccess() {
         <p className="mx-auto mt-4 max-w-sm text-[14px] text-white/60">
           Ton abonnement <b className="text-white">{cycle}</b> est actif. Ton reçu arrive par email dans quelques minutes.
         </p>
-        <button onClick={() => navigate("/onboarding")}
+        <button onClick={() => navigate("/app")}
           className="mt-8 inline-flex items-center gap-2 rounded-xl px-6 py-3 text-[13px] font-semibold uppercase tracking-[0.14em] text-[#0f1b3a]"
           style={{ background: GOLD, boxShadow: "0 8px 24px -6px rgba(222,194,163,0.6)" }}>
-          <Sparkles size={15} /> Commencer mon onboarding <ArrowRight size={14} />
+          <Sparkles size={15} /> Ouvrir mon cockpit <ArrowRight size={14} />
         </button>
       </motion.div>
     </div>

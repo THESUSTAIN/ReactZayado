@@ -36,15 +36,16 @@ from sqlalchemy.orm import Mapped, mapped_column
 log = logging.getLogger("kairos.emails_ia")
 
 # ── Identité de l'entreprise (une seule source, modifiable par variables d'env) ──
-MARQUE = os.environ.get("EMAILS_IA_MARQUE", "DeepShield")
-SITE_URL = os.environ.get("EMAILS_IA_SITE_URL", "https://sentriq.me").rstrip("/")
+MARQUE = os.environ.get("EMAILS_IA_MARQUE", "Zayado")
+SITE_URL = os.environ.get("EMAILS_IA_SITE_URL", "https://app.zayado.net").rstrip("/")
 EDITEUR = os.environ.get("EMAILS_IA_EDITEUR", "Zayado")
 CONTEXTE = os.environ.get(
     "EMAILS_IA_CONTEXTE",
-    "outil d'analyse par IA qui détecte les deepfakes et les arnaques : photos, vidéos, "
-    "audio, emails et liens. Chaque analyse donne un verdict (authentique, suspect ou faux) "
-    "et un score sur 100, avec des conseils concrets. Public : particuliers, familles, "
-    "seniors, petites entreprises.",
+    "copilote IA des indépendants et freelances : chaque matin, de vrais prospects "
+    "(Radar), le chiffre d'affaires suivi, les priorités triées (Plan d'action), et le "
+    "bien-être du dirigeant (énergie, pauses guidées, mindset). Offres : Rêveur, Solo, "
+    "Pro, Équipe, Entreprise. Promesse : plus de clients, moins de charge mentale. "
+    "Ton : bienveillant, concret, tutoiement, jamais de jargon.",
 )
 MAX_DEST = 50
 
@@ -244,6 +245,9 @@ def install_emails_ia(g: dict) -> None:
         ton: str = "professionnel et chaleureux"
         email_recu: Optional[dict] = None                     # {expediteur, sujet, corps}
         apercu_par_email: bool = True
+        # Mode « auto » (comme la console Sentriq/DeepShield) : l'IA rédige ET envoie
+        # tout de suite, sans étape de validation. Désactivé par défaut.
+        envoi_direct: bool = False
 
     @api.post("/admin/emails-ia/brouillon")
     async def creer_brouillon(body: BrouillonIn, db=Depends(get_db), _r=Depends(exiger_role("admin"))):
@@ -263,10 +267,62 @@ def install_emails_ia(g: dict) -> None:
                            destinataires=json.dumps(dest))
         db.add(d)
         await db.commit()
+        if body.envoi_direct:
+            try:
+                res = await _envoyer(db, d)
+            except HTTPException as e:
+                d.statut = "echec"
+                d.resultat = json.dumps({"envoyes": [], "echecs": [{"email": "*", "erreur": str(e.detail)[:200]}]})
+                await db.commit()
+                res = {"envoyes": 0, "echecs": [{"email": "*", "erreur": str(e.detail)}]}
+            out = _json_out(d)
+            out["envoi"] = res
+            return out
         alerte = await _apercu_admin(db, d) if body.apercu_par_email else None
         out = _json_out(d)
         out["alerte_apercu"] = alerte   # non bloquant mais VISIBLE (l'ancienne version échouait en silence)
         return out
+
+    class BrouillonMaj(BaseModel):
+        sujet: Optional[str] = Field(default=None, max_length=200)
+        html: Optional[str] = Field(default=None, max_length=60000)
+        destinataires: Any = None
+
+    @api.put("/admin/emails-ia/{brouillon_id}")
+    async def modifier_brouillon(brouillon_id: str, body: BrouillonMaj, db=Depends(get_db), _r=Depends(exiger_role("admin"))):
+        """Retouche du brouillon avant validation (objet, contenu, destinataires)."""
+        d = (await db.execute(select(EmailBrouillon).where(EmailBrouillon.id == brouillon_id,
+                                                           EmailBrouillon.owner_id == _uid()))).scalar_one_or_none()
+        if not d or d.statut != "brouillon":
+            raise HTTPException(404, "Aucun brouillon modifiable.")
+        sujet = body.sujet.strip() if body.sujet is not None else d.sujet
+        html = body.html if body.html is not None else d.html
+        try:
+            _assert_safe_email(sujet, html)
+        except ValueError as e:
+            raise HTTPException(422, f"Refusé par les garde-fous anti-phishing : {e}")
+        if body.destinataires is not None:
+            dest = normaliser_destinataires(body.destinataires)
+            if not dest or len(dest) > MAX_DEST:
+                raise HTTPException(422, f"Entre 1 et {MAX_DEST} adresses valides.")
+            d.destinataires = json.dumps(dest)
+        d.sujet, d.html = sujet[:200], html
+        d.texte = re.sub(r"<[^>]+>", "", html)
+        await db.commit()
+        return _json_out(d)
+
+    @api.post("/admin/emails-ia/{brouillon_id}/dupliquer")
+    async def dupliquer_brouillon(brouillon_id: str, db=Depends(get_db), _r=Depends(exiger_role("admin"))):
+        """Repart d'un email déjà envoyé / échoué / annulé (nouveau brouillon à valider)."""
+        d = (await db.execute(select(EmailBrouillon).where(EmailBrouillon.id == brouillon_id,
+                                                           EmailBrouillon.owner_id == _uid()))).scalar_one_or_none()
+        if not d:
+            raise HTTPException(404, "Email introuvable.")
+        n = EmailBrouillon(owner_id=_uid(), sujet=d.sujet, html=d.html, texte=d.texte, intention=d.intention,
+                           analyse=d.analyse, destinataires=d.destinataires)
+        db.add(n)
+        await db.commit()
+        return _json_out(n)
 
     @api.get("/admin/emails-ia")
     async def lister_brouillons(db=Depends(get_db), _r=Depends(exiger_role("admin"))):

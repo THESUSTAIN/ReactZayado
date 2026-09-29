@@ -310,7 +310,7 @@ def install_radar_signaux(g: dict) -> None:
         if not mutations:
             return None
         stats = stats_dvf(mutations)
-        stats.update({"commune": geo.get("nom"), "depuis": annee_min, "source": "DVF (Cerema, données publiques)"})
+        stats.update({"commune": geo.get("nom"), "depuis": annee_min, "source": "Données publiques de l'État"})
         offre = str(cm.get("offre") or "").strip().rstrip(".")
         nom = cm.get("entreprise") or "Votre agence"
         prix = []
@@ -416,8 +416,11 @@ def install_radar_signaux(g: dict) -> None:
                             "lien": "/app/actions?tab=objectifs"})
         if particuliers and not zone:
             a_faire.append({"cle": "zone", "texte": "Indique ta ville pour activer Google, la pub et les ventes.", "lien": None})
-        sortie = {"clientele": clientele, "zone": cm.get("zone"), "objectifs": nb_obj, "sources": sources, "a_faire": a_faire}
+        # Les branchements (Apollo, DataForSEO, Mammouth…) ne regardent que l'équipe :
+        # un utilisateur ne reçoit que ce qu'il peut faire lui-même (a_faire).
+        sortie = {"clientele": clientele, "zone": cm.get("zone"), "objectifs": nb_obj, "a_faire": a_faire}
         if admin:
+            sortie["sources"] = sources
             manquantes = []
             if not (os.environ.get("APOLLO_API_KEY") or "").strip():
                 manquantes.append("APOLLO_API_KEY")

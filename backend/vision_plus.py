@@ -24,7 +24,7 @@ from typing import Optional
 
 from fastapi import Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import Boolean, DateTime, String, UniqueConstraint, select
+from sqlalchemy import Boolean, DateTime, String, Text, UniqueConstraint, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -229,6 +229,291 @@ def install_vision_plus(g: dict) -> None:
             "masque": {"finances": bool(s.hide_finances), "energie": bool(s.hide_energie)},
         }
 
+    # ══════════════ 2b. Commentaires sur le lien public ══════════════
+    # Un visiteur (sans compte) commente le board partagé ; le propriétaire est
+    # notifié par e-mail si ses réglages l'autorisent (Brevo quand configuré).
+
+    class VisionComment(Base):
+        __tablename__ = "vision_comments"
+        id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
+        token: Mapped[str] = mapped_column(String(64), index=True)  # lien de partage visé
+        auteur: Mapped[str] = mapped_column(String(80), default="Visiteur")
+        texte: Mapped[str] = mapped_column(Text)
+        lu: Mapped[bool] = mapped_column(Boolean, default=False)
+        created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    class CommentIn(BaseModel):
+        auteur: str = ""
+        texte: str
+
+    def _comment_json(c):
+        return {"id": c.id, "auteur": c.auteur, "texte": c.texte,
+                "date": c.created_at.isoformat() if c.created_at else None, "lu": bool(c.lu)}
+
+    async def _share_par_token(db, token):
+        if len(token) < 20:
+            return None
+        return (await db.execute(select(VisionShare).where(VisionShare.token == token))).scalar_one_or_none()
+
+    @api.get("/public/vision/{token}/commentaires")
+    async def lire_commentaires(token: str, db: AsyncSession = Depends(get_db)):
+        if await _share_par_token(db, token) is None:
+            raise HTTPException(404, "Lien invalide ou révoqué.")
+        rows = (await db.execute(select(VisionComment).where(VisionComment.token == token)
+                                 .order_by(VisionComment.created_at))).scalars()
+        return {"commentaires": [_comment_json(c) for c in rows]}
+
+    @api.post("/public/vision/{token}/commentaires")
+    async def poster_commentaire(token: str, body: CommentIn, db: AsyncSession = Depends(get_db)):
+        s = await _share_par_token(db, token)
+        if not s:
+            raise HTTPException(404, "Lien invalide ou révoqué.")
+        texte = (body.texte or "").strip()[:1000]
+        if not texte:
+            raise HTTPException(422, "Commentaire vide.")
+        auteur = (body.auteur or "").strip()[:80] or "Visiteur"
+        c = VisionComment(token=token, auteur=auteur, texte=texte)
+        db.add(c)
+        await db.commit()
+        await db.refresh(c)
+        # Notification propriétaire : e-mail si activé dans ses réglages.
+        # L'échec d'envoi ne doit JAMAIS bloquer l'enregistrement du commentaire.
+        try:
+            User_ = g.get("User")
+            envoyer = g.get("send_email")
+            profil = (await db.execute(select(VisionProfile).where(VisionProfile.user_id == s.user_id))).scalar_one_or_none()
+            notif_ok = bool(profil.notifications) if profil and profil.notifications is not None else True
+            owner = (await db.execute(select(User_).where(User_.id == s.user_id))).scalar_one_or_none() if User_ else None
+            if notif_ok and owner and owner.email and envoyer:
+                await envoyer(
+                    to=owner.email,
+                    subject=f"Nouveau commentaire de {escape(auteur)} sur ton Vision Board",
+                    html=(f"<p><b>{escape(auteur)}</b> a commenté ton Vision Board :</p>"
+                          f"<blockquote style='border-left:3px solid #DEC2A3;padding-left:12px'>{escape(texte)}</blockquote>"
+                          f"<p><a href='https://app.zayado.net/app/vision'>Ouvrir mon board pour répondre</a></p>"),
+                )
+        except Exception as e:  # noqa: BLE001
+            log.warning("Notif e-mail commentaire non envoyée : %s", e)
+        return _comment_json(c)
+
+    @api.get("/vision/commentaires")
+    async def mes_commentaires(db: AsyncSession = Depends(get_db)):
+        uid = _uid()
+        tokens = (await db.execute(select(VisionShare).where(VisionShare.user_id == uid))).scalars().all()
+        tok = [t.token for t in tokens]
+        if not tok:
+            return {"commentaires": [], "non_lus": 0}
+        rows = list((await db.execute(select(VisionComment).where(VisionComment.token.in_(tok))
+                                 .order_by(VisionComment.created_at.desc()).limit(50))).scalars())
+        board_par_token = {t.token: t.board for t in tokens}
+        return {"commentaires": [{**_comment_json(c), "board": board_par_token.get(c.token, "")} for c in rows],
+                "non_lus": sum(1 for c in rows if not c.lu)}
+
+    @api.post("/vision/commentaires/lus")
+    async def commentaires_lus(db: AsyncSession = Depends(get_db)):
+        uid = _uid()
+        tokens = [t.token for t in (await db.execute(select(VisionShare).where(VisionShare.user_id == uid))).scalars().all()]
+        if tokens:
+            await db.execute(update(VisionComment).where(VisionComment.token.in_(tokens)).values(lu=True))
+            await db.commit()
+        return {"ok": True}
+
+    # ══════════════ 2c. Invitations avec édition (collaborateurs) ══════════════
+    # Le lien public reste en lecture seule. Ici : invitation NOMMÉE par e-mail
+    # qui donne la modification du board à un compte existant.
+
+    class VisionBoardCollab(Base):
+        __tablename__ = "vision_board_collabs"
+        __table_args__ = (UniqueConstraint("owner_id", "board", "email", name="uq_collab_board_email"),)
+        id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
+        owner_id: Mapped[str] = mapped_column(String(36), index=True)
+        board: Mapped[str] = mapped_column(String(40))
+        email: Mapped[str] = mapped_column(String(255), index=True)
+        role: Mapped[str] = mapped_column(String(20), default="editeur")
+        # Qui a envoyé l'invitation : le propriétaire, ou un éditeur invité qui
+        # re-partage (NULL = propriétaire, anciennes lignes comprises).
+        invite_par: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+        created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    g["VisionBoardCollab"] = VisionBoardCollab
+    VisionBoardSpace = g["VisionBoardSpace"]
+    BoardIn = g["BoardIn"]
+    User_ = g["User"]
+
+    class InviteIn(BaseModel):
+        email: str
+
+    async def _collab_board(db, uid, cle, owner: Optional[str] = None):
+        """Retourne la collaboration si ce board est partagé avec moi (édition).
+        `owner` départage deux boards de même clé partagés par deux personnes
+        différentes (avant : erreur 500 « plusieurs résultats »)."""
+        me = (await db.execute(select(User_).where(User_.id == uid))).scalar_one_or_none()
+        if not me:
+            return None
+        q = select(VisionBoardCollab).where(VisionBoardCollab.email == (me.email or "").lower(), VisionBoardCollab.board == cle)
+        if owner:
+            q = q.where(VisionBoardCollab.owner_id == owner)
+        return (await db.execute(q.order_by(VisionBoardCollab.created_at))).scalars().first()
+
+    async def _prevenir_invite(db, email: str, cle: str, owner_id: str, par_uid: str):
+        """E-mail d'invitation (best effort : un échec d'envoi ne bloque jamais l'invitation)."""
+        try:
+            envoyer = g.get("send_email")
+            if not envoyer:
+                return
+            row = (await db.execute(select(VisionBoardSpace).where(
+                VisionBoardSpace.user_id == owner_id, VisionBoardSpace.cle == cle))).scalar_one_or_none()
+            prof = (await db.execute(select(VisionProfile).where(VisionProfile.user_id == par_uid))).scalar_one_or_none()
+            qui = escape((prof.prenom if prof else "") or "Un membre Zayado")
+            nom = escape((row.nom if row else "") or "Vision Board")
+            base = os.environ.get("FRONTEND_PUBLIC_URL", "https://app.zayado.net").rstrip("/")
+            await envoyer(to=email, subject=f"{qui} t'invite à modifier le board « {nom} »",
+                          html=(f"<p><b>{qui}</b> t'a invité·e à modifier le Vision Board <b>{nom}</b>.</p>"
+                                f"<p><a href='{base}/app/vision'>Ouvrir Zayado</a> → Vision → « Partagés avec moi ».</p>"
+                                "<p style='color:#667'>Pas encore de compte ? Crée-le avec cette adresse e-mail : le board apparaîtra automatiquement.</p>"))
+        except Exception as e:  # noqa: BLE001
+            log.warning("E-mail d'invitation board non envoyé : %s", e)
+
+    @api.post("/vision/boards/{cle}/inviter")
+    async def inviter_board(cle: str, body: InviteIn, db: AsyncSession = Depends(get_db)):
+        uid = _uid()
+        row = await _board_courant(db, uid, cle)
+        if row is None or row.cle != cle:
+            raise HTTPException(404, "Board introuvable.")
+        email = (body.email or "").strip().lower()
+        if not email or "@" not in email:
+            raise HTTPException(422, "E-mail invalide.")
+        c = (await db.execute(select(VisionBoardCollab).where(
+            VisionBoardCollab.owner_id == uid, VisionBoardCollab.board == cle,
+            VisionBoardCollab.email == email))).scalar_one_or_none()
+        if not c:
+            db.add(VisionBoardCollab(owner_id=uid, board=cle, email=email))
+            await db.commit()
+            await _prevenir_invite(db, email, cle, uid, uid)
+        return {"ok": True, "email": email, "role": "editeur"}
+
+    @api.get("/vision/boards/{cle}/invitations")
+    async def lister_invitations(cle: str, db: AsyncSession = Depends(get_db)):
+        rows = list((await db.execute(select(VisionBoardCollab).where(
+            VisionBoardCollab.owner_id == _uid(), VisionBoardCollab.board == cle))).scalars())
+        return {"invitations": [{"email": c.email, "role": c.role, "invite_par": await _email_de(db, c.invite_par)} for c in rows]}
+
+    async def _email_de(db, uid_):
+        if not uid_:
+            return None
+        u = await db.get(User_, uid_)
+        return u.email if u else None
+
+    @api.delete("/vision/boards/{cle}/inviter/{email}")
+    async def retirer_invitation(cle: str, email: str, db: AsyncSession = Depends(get_db)):
+        c = (await db.execute(select(VisionBoardCollab).where(
+            VisionBoardCollab.owner_id == _uid(), VisionBoardCollab.board == cle,
+            VisionBoardCollab.email == email.strip().lower()))).scalar_one_or_none()
+        if c:
+            await db.delete(c)
+            await db.commit()
+        return {"ok": True}
+
+    @api.get("/vision/partages")
+    async def boards_partages_avec_moi(db: AsyncSession = Depends(get_db)):
+        uid = _uid()
+        me = (await db.execute(select(User_).where(User_.id == uid))).scalar_one_or_none()
+        if not me:
+            return {"boards": []}
+        colls = (await db.execute(select(VisionBoardCollab).where(VisionBoardCollab.email == me.email))).scalars().all()
+        sortie = []
+        for c in colls:
+            row = (await db.execute(select(VisionBoardSpace).where(
+                VisionBoardSpace.user_id == c.owner_id, VisionBoardSpace.cle == c.board))).scalar_one_or_none()
+            if not row:
+                continue
+            prof = (await db.execute(select(VisionProfile).where(VisionProfile.user_id == c.owner_id))).scalar_one_or_none()
+            sortie.append({"key": row.cle, "nom": row.nom, "emoji": row.emoji or "🧭",
+                           "count": len(row.cards or []), "role": c.role, "owner": c.owner_id,
+                           "peut_partager": c.role == "editeur",
+                           "proprietaire": (prof.prenom if prof else "") or ""})
+        return {"boards": sortie}
+
+    @api.get("/vision/partages/{cle}")
+    async def lire_board_partage(cle: str, owner: Optional[str] = None, db: AsyncSession = Depends(get_db)):
+        c = await _collab_board(db, _uid(), cle, owner)
+        if not c:
+            raise HTTPException(403, "Ce board ne t'est pas partagé.")
+        row = (await db.execute(select(VisionBoardSpace).where(
+            VisionBoardSpace.user_id == c.owner_id, VisionBoardSpace.cle == cle))).scalar_one_or_none()
+        if not row:
+            raise HTTPException(404, "Board introuvable.")
+        return {"key": row.cle, "nom": row.nom, "emoji": row.emoji or "🧭", "cards": row.cards or [], "role": c.role,
+                "owner": c.owner_id, "peut_partager": c.role == "editeur"}
+
+    # ── Re-partage par un éditeur invité ──
+    # Un éditeur peut à son tour inviter d'autres éditeurs sur le même board.
+    # Le lien PUBLIC (lecture seule) reste réservé au propriétaire. L'éditeur
+    # ne peut retirer que les personnes qu'il a lui-même invitées.
+    @api.get("/vision/partages/{cle}/invitations")
+    async def invitations_board_partage(cle: str, owner: Optional[str] = None, db: AsyncSession = Depends(get_db)):
+        uid = _uid()
+        c = await _collab_board(db, uid, cle, owner)
+        if not c:
+            raise HTTPException(403, "Ce board ne t'est pas partagé.")
+        rows = list((await db.execute(select(VisionBoardCollab).where(
+            VisionBoardCollab.owner_id == c.owner_id, VisionBoardCollab.board == cle))).scalars())
+        return {"invitations": [{"email": r.email, "role": r.role, "invite_par": await _email_de(db, r.invite_par),
+                                 "retirable": r.invite_par == uid} for r in rows],
+                "peut_partager": c.role == "editeur"}
+
+    @api.post("/vision/partages/{cle}/inviter")
+    async def reinviter_board_partage(cle: str, body: InviteIn, owner: Optional[str] = None, db: AsyncSession = Depends(get_db)):
+        uid = _uid()
+        c = await _collab_board(db, uid, cle, owner)
+        if not c:
+            raise HTTPException(403, "Ce board ne t'est pas partagé.")
+        if c.role != "editeur":
+            raise HTTPException(403, "Seul un éditeur peut inviter d'autres personnes.")
+        email = (body.email or "").strip().lower()
+        if not email or "@" not in email:
+            raise HTTPException(422, "E-mail invalide.")
+        proprio = await db.get(User_, c.owner_id)
+        if proprio and (proprio.email or "").lower() == email:
+            return {"ok": True, "email": email, "role": "proprietaire"}
+        existe = (await db.execute(select(VisionBoardCollab).where(
+            VisionBoardCollab.owner_id == c.owner_id, VisionBoardCollab.board == cle,
+            VisionBoardCollab.email == email))).scalar_one_or_none()
+        if not existe:
+            db.add(VisionBoardCollab(owner_id=c.owner_id, board=cle, email=email, role="editeur", invite_par=uid))
+            await db.commit()
+            await _prevenir_invite(db, email, cle, c.owner_id, uid)
+        return {"ok": True, "email": email, "role": "editeur"}
+
+    @api.delete("/vision/partages/{cle}/inviter/{email}")
+    async def retirer_reinvitation(cle: str, email: str, owner: Optional[str] = None, db: AsyncSession = Depends(get_db)):
+        uid = _uid()
+        c = await _collab_board(db, uid, cle, owner)
+        if not c:
+            raise HTTPException(403, "Ce board ne t'est pas partagé.")
+        r = (await db.execute(select(VisionBoardCollab).where(
+            VisionBoardCollab.owner_id == c.owner_id, VisionBoardCollab.board == cle,
+            VisionBoardCollab.email == email.strip().lower()))).scalar_one_or_none()
+        if r:
+            if r.invite_par != uid:
+                raise HTTPException(403, "Tu ne peux retirer que les personnes que tu as invitées.")
+            await db.delete(r)
+            await db.commit()
+        return {"ok": True}
+
+    @api.put("/vision/partages/{cle}")
+    async def sauver_board_partage(cle: str, body: BoardIn, owner: Optional[str] = None, db: AsyncSession = Depends(get_db)):
+        c = await _collab_board(db, _uid(), cle, owner)
+        if not c:
+            raise HTTPException(403, "Ce board ne t'est pas partagé.")
+        row = (await db.execute(select(VisionBoardSpace).where(
+            VisionBoardSpace.user_id == c.owner_id, VisionBoardSpace.cle == cle))).scalar_one_or_none()
+        if not row:
+            raise HTTPException(404, "Board introuvable.")
+        row.cards = body.cards
+        await db.commit()
+        return {"ok": True, "count": len(body.cards)}
+
     # ══════════════ 3. E-mail du lundi ══════════════
 
     class VisionWeeklyMail(Base):
@@ -310,3 +595,4 @@ def install_vision_plus(g: dict) -> None:
 
     g["tour_lundi"] = tour_lundi
     g["envoyer_lundi_pour"] = envoyer_lundi_pour
+    g["VisionShare"] = VisionShare  # exposé pour le seed auto des boards propriétaire

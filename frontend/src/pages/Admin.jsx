@@ -1,23 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { toast } from "sonner";
-import { LayoutDashboard, Users, Store, Gift, Ticket, Video, Mail, Newspaper, CheckCircle2, AlertTriangle, CircleDashed, Sparkles, Link2, Crown, Euro, Loader2, ScrollText } from "lucide-react";
+import { LayoutDashboard, Users, Store, Gift, Ticket, Video, Mail, Newspaper, CheckCircle2, AlertTriangle, CircleDashed, Images } from "lucide-react";
+import CarrouselLoginAdmin from "@/components/admin/CarrouselLoginAdmin";
 import { SideMenuPro } from "@/components/pro/SideMenuPro";
 import {
   fetchAdminDiagnostics,
-  fetchAdminVueEnsemble, fetchAdminUtilisateurs, changerRoleUtilisateur, changerPlanUtilisateur,
+  fetchAdminVueEnsemble,
   fetchModerationAttente, publierProduitVendeur, refuserProduitVendeur,
-  fetchAdminParrainage, fetchAdminProgrammes, validerProgramme, payerCommission, fetchCodesPromo, creerCodePromo, basculerCodePromo, supprimerCodePromo,
+  fetchCodesPromo, creerCodePromo, basculerCodePromo, supprimerCodePromo,
   fetchHeygenAvatars, fetchHeygenVoices, heygenGenerer, heygenStatut,
   fetchAdminCommerceStats, fetchAdminCommerceOrders, changerStatutCommandeAdmin,
-  fetchAdminCommerceProducts, fetchAdminCommerceVendors,
   fetchDemandesCollaborateur, fetchCompteDemo, transfererCompteDemo,
   fetchAdminNotifications,
 } from "@/lib/kairosApi";
 import { Bell } from "lucide-react";
 import EmailsIA from "@/components/admin/EmailsIA";
-import AdminNewsletters from "@/components/admin/AdminNewsletters";
-import AdminConnexions from "@/components/admin/AdminConnexions";
-import AdminAppLogs from "@/components/admin/AdminAppLogs";
+import { Utilisateurs, ComptesVendeurs, CatalogueAdmin, Parrainage } from "@/components/admin/AdminGestion";
+import { useThemePro } from "@/lib/themePro";
 
 // Menu inspiré de la structure Sentriq (Vue d'ensemble / Utilisateurs / ...).
 // Le Parrainage vient de final-main/affiliate.py, les Codes promo de
@@ -38,23 +36,22 @@ const ONGLETS = [
   { key: "videos-ia", label: "Vidéos IA" },
   { key: "notifications", label: "Notifications" },
   { key: "emails-ia", label: "Emails IA" },
-  { key: "newsletters", label: "Newsletters" },
-  { key: "connexions", label: "Connexions" },
-  { key: "logs-app", label: "Logs applicatifs" },
+  { key: "carrousel", label: "Carrousel login" },
 ];
 
 export default function Admin() {
   const [onglet, setOnglet] = useState("vue");
+  const [theme] = useThemePro();
 
   const ICONS = {
     vue: <LayoutDashboard size={16} />, utilisateurs: <Users size={16} />, vendeurs: <Store size={16} />,
     parrainage: <Gift size={16} />, "codes-promo": <Ticket size={16} />, commerce: <Ticket size={16} />, catalogue: <Store size={16} />, "comptes-vendeurs": <Users size={16} />, "videos-ia": <Video size={16} />,
-    "emails-ia": <Mail size={16} />, newsletters: <Sparkles size={16} />, connexions: <Link2 size={16} />, "logs-app": <ScrollText size={16} />, "articles-seo": <Newspaper size={16} />, notifications: <Bell size={16} />,
+    "emails-ia": <Mail size={16} />, "articles-seo": <Newspaper size={16} />, notifications: <Bell size={16} />, carrousel: <Images size={16} />,
   };
   const menuItems = ONGLETS.map((o) => ({ key: o.key, label: o.label, icon: ICONS[o.key] }));
 
   return (
-    <div className="min-h-screen text-offwhite">
+    <div className={`min-h-screen text-offwhite ${theme === "clair" ? "pro-clair pro-cours" : "pro-sombre"}`} data-testid="admin-root">
       <SideMenuPro
         titre="Console Admin"
         sousTitre="Zayado — pilotage plateforme"
@@ -63,7 +60,7 @@ export default function Admin() {
         onChange={setOnglet}
         retour={null}
       />
-      <div className="min-w-0 px-4 py-5 sm:px-6 lg:ml-[248px] lg:px-10 lg:py-8">
+      <div className="min-w-0 px-4 py-5 sm:px-6 lg:ml-[288px] lg:px-10 lg:py-8">
       <h1 className="font-serif text-2xl font-bold">{ONGLETS.find((o) => o.key === onglet)?.label || "Admin"}</h1>
       <p className="text-offwhite/55 text-sm mt-1">Réservé aux comptes avec le rôle admin — vérifié côté serveur.</p>
 
@@ -81,9 +78,7 @@ export default function Admin() {
         {onglet === "videos-ia" && <VideosIA />}
         {onglet === "notifications" && <NotificationsAdmin />}
         {onglet === "emails-ia" && <EmailsIA />}
-        {onglet === "newsletters" && <AdminNewsletters />}
-        {onglet === "connexions" && <AdminConnexions />}
-        {onglet === "logs-app" && <AdminAppLogs />}
+        {onglet === "carrousel" && <CarrouselLoginAdmin />}
         {onglet === "articles-seo" && <AVenir label="Articles SEO" description="Génération d'articles SEO par IA — même remarque : référence Sentriq disponible, pas encore de route serveur ici." />}
       </div>
       </div>
@@ -285,110 +280,6 @@ function CommandesMollie() {
   return <div className="space-y-4"><div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4"><Carte><p className="text-xs uppercase tracking-wide text-offwhite/50">Commandes</p><p className="mt-1 text-3xl font-bold">{stats?.total ?? "—"}</p></Carte><Carte><p className="text-xs uppercase tracking-wide text-offwhite/50">Payées</p><p className="mt-1 text-3xl font-bold text-gold">{stats?.paid ?? "—"}</p></Carte><Carte><p className="text-xs uppercase tracking-wide text-offwhite/50">Filtre</p><select value={status} onChange={(e) => setStatus(e.target.value)} className="mt-2 rounded-lg border border-white/15 bg-navy-800 px-2 py-1 text-sm"><option value="">Tous les statuts</option>{["pending", "paid", "failed", "canceled", "expired", "refunded"].map((s) => <option key={s}>{s}</option>)}</select></Carte></div>{error && <Carte><p className="text-sm text-red-400">{error}</p></Carte>}<Carte><div className="overflow-x-auto"><table className="w-full min-w-[760px] text-sm"><thead><tr className="border-b border-white/10 text-left text-offwhite/50"><th className="pb-2">Date</th><th className="pb-2">Client</th><th className="pb-2">Commande</th><th className="pb-2">Montant</th><th className="pb-2">Statut</th><th className="pb-2">Action</th></tr></thead><tbody>{data?.items?.map((o) => <tr key={o.id} className="border-b border-white/5"><td className="py-2.5 text-offwhite/55">{o.created_at ? new Date(o.created_at).toLocaleDateString("fr-FR") : "—"}</td><td className="py-2.5">{o.email}</td><td className="py-2.5"><span className="text-xs text-offwhite/50">{o.kind}</span><br />{o.title}</td><td className="py-2.5">{o.amount} {o.currency}</td><td className="py-2.5"><span className="rounded-full bg-white/10 px-2 py-1 text-xs">{o.status}</span></td><td className="py-2.5"><select value={o.status} onChange={(e) => update(o.id, e.target.value)} className="rounded-lg border border-white/15 bg-navy-800 px-2 py-1 text-xs">{["pending", "paid", "failed", "canceled", "expired", "refunded"].map((s) => <option key={s}>{s}</option>)}</select></td></tr>)}{data && !data.items.length && <tr><td colSpan={6} className="py-6 text-center text-offwhite/50">Aucune commande.</td></tr>}</tbody></table></div></Carte></div>;
 }
 
-function CatalogueAdmin() {
-  const [items, setItems] = useState(null); const [error, setError] = useState("");
-  useEffect(() => { fetchAdminCommerceProducts().then((d) => setItems(d.items)).catch((e) => setError(e.message)); }, []);
-  if (error) return <Carte><p className="text-sm text-red-400">{error}</p></Carte>;
-  if (!items) return <Carte><p className="text-sm text-offwhite/50">Chargement…</p></Carte>;
-  return <Carte><div className="overflow-x-auto"><table className="w-full min-w-[700px] text-sm"><thead><tr className="border-b border-white/10 text-left text-offwhite/50"><th className="pb-2">Produit</th><th className="pb-2">Vendeur</th><th className="pb-2">Prix</th><th className="pb-2">Statut</th><th className="pb-2">Shopify</th></tr></thead><tbody>{items.map((p) => <tr key={p.id} className="border-b border-white/5"><td className="py-2.5">{p.title}<br /><span className="text-[10px] text-offwhite/40">{p.id}</span></td><td className="py-2.5">{p.vendor}<br /><span className="text-xs text-offwhite/45">{p.vendor_email || "—"}</span></td><td className="py-2.5">{p.price} €</td><td className="py-2.5"><span className="rounded-full bg-white/10 px-2 py-1 text-xs">{p.status}</span></td><td className="py-2.5 text-xs text-offwhite/55">{p.shopify_id || "Non synchronisé"}</td></tr>)}{!items.length && <tr><td colSpan={5} className="py-6 text-center text-offwhite/50">Aucun produit.</td></tr>}</tbody></table></div></Carte>;
-}
-
-function ComptesVendeurs() {
-  const [items, setItems] = useState(null); const [error, setError] = useState("");
-  useEffect(() => { fetchAdminCommerceVendors().then((d) => setItems(d.items)).catch((e) => setError(e.message)); }, []);
-  if (error) return <Carte><p className="text-sm text-red-400">{error}</p></Carte>;
-  if (!items) return <Carte><p className="text-sm text-offwhite/50">Chargement…</p></Carte>;
-  return <Carte><div className="overflow-x-auto"><table className="w-full min-w-[820px] text-sm"><thead><tr className="border-b border-white/10 text-left text-offwhite/50"><th className="pb-2">Email</th><th className="pb-2">Boutique</th><th className="pb-2">Rôle</th><th className="pb-2">Produits</th></tr></thead><tbody>{items.map((v) => <tr key={v.id} className="border-b border-white/5"><td className="py-2.5">{v.email}</td><td className="py-2.5">{v.shop || "—"}</td><td className="py-2.5"><span className="rounded-full bg-white/10 px-2 py-1 text-xs">{v.role}</span></td><td className="py-2.5">{v.products}</td></tr>)}</tbody></table></div></Carte>;
-}
-
-function Utilisateurs() {
-  const [items, setItems] = useState([]);
-  const [chargement, setChargement] = useState(true);
-  const [erreur, setErreur] = useState(null);
-
-  const charger = () => {
-    setChargement(true);
-    fetchAdminUtilisateurs().then((d) => setItems(d.items)).catch(() => setErreur("Accès refusé ou erreur serveur.")).finally(() => setChargement(false));
-  };
-  useEffect(() => { charger(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const changerRole = async (id, role) => {
-    try { await changerRoleUtilisateur(id, role); charger(); }
-    catch { setErreur("Échec du changement de rôle."); }
-  };
-  const changerPlan = async (u, plan) => {
-    if (plan === u.plan) return;
-    let fondateur = false;
-    let jours = 31;
-    if (plan !== "essentielle") {
-      const saisie = window.prompt(`Accès ${plan} pour ${u.email} : combien de jours ?`, "31");
-      if (saisie === null) return;
-      jours = parseInt(saisie, 10) || 31;
-      fondateur = window.confirm("Lui garantir le tarif fondateur à ses renouvellements ?");
-    }
-    try { await changerPlanUtilisateur(u.id, plan, jours, fondateur); charger(); }
-    catch { setErreur("Échec du changement d'offre."); }
-  };
-
-  if (erreur) return <Carte><p className="text-red-400 text-sm">{erreur}</p></Carte>;
-  if (chargement) return <Carte><p className="text-offwhite/50 text-sm">Chargement…</p></Carte>;
-
-  return (
-    <Carte>
-      <div className="overflow-x-auto"><table className="w-full min-w-[560px] text-sm">
-        <thead>
-          <tr className="text-left text-offwhite/50 border-b border-white/10">
-            <th className="pb-2">Email</th><th className="pb-2">Rôle</th><th className="pb-2">Offre</th><th className="pb-2">Abonnement</th><th className="pb-2">Inscrit le</th><th className="pb-2">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((u) => (
-            <tr key={u.id} className="border-b border-white/5">
-              <td className="py-2.5">{u.email}</td>
-              <td className="py-2.5"><span className="px-2 py-0.5 rounded-full bg-white/10 text-xs">{u.role}</span></td>
-              <td className="py-2.5">
-                <select value={u.plan || "essentielle"} onChange={(e) => changerPlan(u, e.target.value)}
-                  data-testid={`admin-plan-select-${u.id}`}
-                  className="bg-navy-800 border border-white/15 rounded-lg text-xs px-2 py-1">
-                  <option value="essentielle">Aucune offre</option>
-                  <option value="reveur">Rêveur</option>
-                  <option value="serenite">Solo</option>
-                  <option value="pro">Pro</option>
-                  <option value="business">Équipe</option>
-                  <option value="entreprise">Entreprise</option>
-                </select>
-              </td>
-              <td className="py-2.5 text-xs" data-testid={`admin-abo-${u.id}`}>
-                {u.abonnement && u.abonnement.etat !== "aucun" ? (
-                  <>
-                    <span className={`rounded-full px-2 py-0.5 ${{ actif: "bg-emerald-400/15 text-emerald-300", essai: "bg-gold/15 text-gold", resilie: "bg-amber-300/15 text-amber-200", expire: "bg-white/10 text-offwhite/50" }[u.abonnement.etat]}`}>
-                      {{ actif: "Actif", essai: "Essai", resilie: "Résilié", expire: "Expiré" }[u.abonnement.etat]}
-                    </span>
-                    <span className="ml-1.5 text-offwhite/55">{u.abonnement.fin ? `→ ${new Date(u.abonnement.fin).toLocaleDateString("fr-FR")}` : ""}{u.abonnement.prelevement_auto ? " · auto" : ""}{u.abonnement.fondateur ? " · fondateur" : ""}{u.abonnement.plan_suivant ? ` · puis ${NOMS_OFFRES[u.abonnement.plan_suivant] || u.abonnement.plan_suivant}` : ""}</span>
-                  </>
-                ) : <span className="text-offwhite/35">—</span>}
-              </td>
-              <td className="py-2.5 text-offwhite/50">{new Date(u.inscrit_le).toLocaleDateString("fr-FR")}</td>
-              <td className="py-2.5">
-                <select
-                  value={u.role}
-                  onChange={(e) => changerRole(u.id, e.target.value)}
-                  data-testid={`admin-role-select-${u.id}`}
-                  className="bg-navy-800 border border-white/15 rounded-lg text-xs px-2 py-1"
-                >
-                  <option value="client">client</option>
-                  <option value="vendeur">vendeur</option>
-                  <option value="admin">admin</option>
-                </select>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table></div>
-    </Carte>
-  );
-}
-
 function ModerationVendeurs() {
   const [items, setItems] = useState([]);
   const [chargement, setChargement] = useState(true);
@@ -428,137 +319,6 @@ function ModerationVendeurs() {
         </Carte>
       ))}
     </div>
-  );
-}
-
-function Parrainage() {
-  const [donnees, setDonnees] = useState(null);
-  const [erreur, setErreur] = useState(null);
-  useEffect(() => {
-    fetchAdminParrainage().then(setDonnees).catch(() => setErreur("Accès refusé ou erreur serveur."));
-  }, []);
-  if (erreur) return <Carte><p className="text-red-400 text-sm">{erreur}</p></Carte>;
-  if (!donnees) return <Carte><p className="text-offwhite/50 text-sm">Chargement…</p></Carte>;
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <Carte><p className="text-offwhite/50 text-xs uppercase tracking-wide">Parrainages totaux</p><p className="text-3xl font-bold mt-1">{donnees.total}</p></Carte>
-        <Carte><p className="text-offwhite/50 text-xs uppercase tracking-wide">Actifs (bonus versé)</p><p className="text-3xl font-bold mt-1">{donnees.actifs}</p></Carte>
-      </div>
-      <Carte>
-        <div className="overflow-x-auto"><table className="w-full min-w-[560px] text-sm">
-          <thead>
-            <tr className="text-left text-offwhite/50 border-b border-white/10">
-              <th className="pb-2">Filleul</th><th className="pb-2">Statut</th><th className="pb-2">Récompense</th><th className="pb-2">Depuis</th>
-            </tr>
-          </thead>
-          <tbody>
-            {donnees.items.map((r) => (
-              <tr key={r.id} className="border-b border-white/5">
-                <td className="py-2.5">{r.email_filleul}</td>
-                <td className="py-2.5"><span className={`px-2 py-0.5 rounded-full text-xs ${r.statut === "actif" ? "bg-gold/15 text-gold" : "bg-white/10"}`}>{r.statut}</span></td>
-                <td className="py-2.5">{r.recompense_type === "commission" ? `${r.recompense_valeur} €` : `${r.recompense_valeur} mois offert${r.recompense_valeur > 1 ? "s" : ""}`}</td>
-                <td className="py-2.5 text-offwhite/50">{new Date(r.depuis).toLocaleDateString("fr-FR")}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table></div>
-      </Carte>
-      <Partenaires />
-    </div>
-  );
-}
-
-// Partenaires (ambassadeur/affiliation) : demandes à valider + commissions dues.
-// Ports depuis app-main/backend/routes/affiliate.py (admin/affiliates, admin/create) —
-// mais le backend Zayado a déjà /admin/programmes, /admin/programmes/{id}/valider et
-// /admin/programmes/{id}/payer (solde_commission), plus mature que app-main sur ce
-// point (commissions intégrées au même solde que le parrainage classique). Il ne
-// manquait que cette vue admin pour les consommer — rien côté serveur à porter.
-function Partenaires() {
-  const [donnees, setDonnees] = useState(null);
-  const [erreur, setErreur] = useState(null);
-  const [enCours, setEnCours] = useState(null);
-
-  const charger = () => fetchAdminProgrammes().then(setDonnees).catch(() => setErreur("Accès refusé ou erreur serveur."));
-  useEffect(() => { charger(); }, []);
-
-  const valider = async (id, programme) => {
-    setEnCours(id);
-    try { await validerProgramme(id, programme); toast.success("Programme validé."); charger(); }
-    catch { toast.error("Échec de la validation."); }
-    finally { setEnCours(null); }
-  };
-
-  const payer = async (id) => {
-    setEnCours(id);
-    try { const r = await payerCommission(id); toast.success(`${r.montant_verse.toFixed(2)} € marqués comme versés.`); charger(); }
-    catch { toast.error("Échec du paiement."); }
-    finally { setEnCours(null); }
-  };
-
-  if (erreur) return <Carte><p className="text-red-400 text-sm">{erreur}</p></Carte>;
-  if (!donnees) return <Carte><p className="text-offwhite/50 text-sm">Chargement…</p></Carte>;
-
-  return (
-    <>
-      {donnees.demandes.length > 0 && (
-        <Carte>
-          <p className="text-offwhite/50 text-xs uppercase tracking-wide mb-3">Demandes en attente</p>
-          <div className="space-y-2">
-            {donnees.demandes.map((d) => (
-              <div key={d.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/[0.03] px-3 py-2.5">
-                <div className="min-w-0">
-                  <p className="truncate text-sm">{d.email}</p>
-                  <p className="text-xs text-offwhite/50">Demande : {d.programme_demande}</p>
-                </div>
-                <button
-                  onClick={() => valider(d.id, d.programme_demande)}
-                  disabled={enCours === d.id}
-                  data-testid={`admin-valider-programme-${d.id}`}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-gold/15 px-3 py-1.5 text-xs font-semibold text-gold hover:bg-gold/25 disabled:opacity-50"
-                >
-                  {enCours === d.id ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />} Valider
-                </button>
-              </div>
-            ))}
-          </div>
-        </Carte>
-      )}
-      <Carte>
-        <p className="text-offwhite/50 text-xs uppercase tracking-wide mb-3">Partenaires (ambassadeur · affiliation)</p>
-        {donnees.partenaires.length === 0 && <p className="text-sm text-offwhite/50">Aucun partenaire pour l'instant.</p>}
-        <div className="overflow-x-auto"><table className="w-full min-w-[620px] text-sm">
-          <thead>
-            <tr className="text-left text-offwhite/50 border-b border-white/10">
-              <th className="pb-2">Email</th><th className="pb-2">Programme</th><th className="pb-2">Filleuls actifs</th><th className="pb-2">Commission due</th><th className="pb-2"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {donnees.partenaires.map((p) => (
-              <tr key={p.id} className="border-b border-white/5">
-                <td className="py-2.5">{p.email}</td>
-                <td className="py-2.5"><span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-xs">{p.programme === "affiliation" ? <Crown size={11} /> : <Sparkles size={11} />} {p.programme}</span></td>
-                <td className="py-2.5">{p.filleuls_actifs}</td>
-                <td className="py-2.5 flex items-center gap-1"><Euro size={13} className="text-offwhite/50" /> {p.solde_commission.toFixed(2)}</td>
-                <td className="py-2.5 text-right">
-                  {p.solde_commission > 0 && (
-                    <button
-                      onClick={() => payer(p.id)}
-                      disabled={enCours === p.id}
-                      data-testid={`admin-payer-commission-${p.id}`}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-xs font-semibold hover:bg-white/10 disabled:opacity-50"
-                    >
-                      {enCours === p.id ? <Loader2 size={13} className="animate-spin" /> : null} Marquer payé
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table></div>
-      </Carte>
-    </>
   );
 }
 

@@ -2,11 +2,11 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { Mail, ArrowRight, Loader2, Eye, ShieldCheck, Server, Lock, RotateCcw } from "lucide-react";
+import { Mail, ArrowRight, Loader2, Eye, ShieldCheck, Server, Lock, RotateCcw, HeartHandshake } from "lucide-react";
 import { GlassCard } from "@/components/kairos/GlassCard";
 import {
   fetchConnexionOptions, demanderLien, entrerApercu, connexionDemo, oauthStart, oauthEchange, verifierLien, setToken, fetchState,
-  connexionMdp, inscriptionMdp, getToken,
+  connexionMdp, inscriptionMdp, getToken, fetchLoginCarousel, mediaUrl,
 } from "@/lib/kairosApi";
 
 // Zayado ouvert dans un onglet Microsoft Teams (ou toute iframe) : les pages de
@@ -30,13 +30,96 @@ function MicrosoftIcon() {
 
 const PREVIEW = typeof window !== "undefined" && /(preview\.emergentagent\.com|localhost|127\.0\.0\.1)/i.test(window.location.hostname);
 
+// Carrousel de présentation (panneau gauche du login) — images de marque validées.
+const SLIDES_LOGIN = [
+  { img: "https://images.unsplash.com/photo-1526916027372-0c0852cef5d3?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzV8MHwxfHNlYXJjaHw0fHxtZWRpdGF0aW9uJTIwZW50cmVwcmVuZXVyJTIwY2FsbSUyMGZvY3VzJTIwcmVmbGVjdGlvbnxlbnwwfHx8fDE3OTA0NzUwOTd8MA&ixlib=rb-4.1.0&q=85",
+    titre: "Pilote ton activité avec clarté", texte: "Priorités, chiffre d'affaires et décisions — rassemblés au même endroit, chaque matin." },
+  { img: "https://images.unsplash.com/photo-1781905136236-b6fbd49a45e8?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODl8MHwxfHNlYXJjaHwzfHxwZWFjZWZ1bCUyMG5hdHVyZSUyMHNhbmN0dWFyeSUyMHNlcmVuZSUyMGxhbmRzY2FwZXxlbnwwfHx8fDE3OTA0NzUwOTd8MA&ixlib=rb-4.1.0&q=85",
+    titre: "Ton bien-être d'abord", texte: "Un copilote qui s'adapte à ton énergie réelle, jamais l'inverse." },
+  { img: "https://images.unsplash.com/photo-1786294972879-8c8511aa0ab6?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODl8MHwxfHNlYXJjaHw0fHxwZWFjZWZ1bCUyMG5hdHVyZSUyMHNhbmN0dWFyeSUyMHNlcmVuZSUyMGxhbmRzY2FwZXxlbnwwfHx8fDE3OTA0NzUwOTd8MA&ixlib=rb-4.1.0&q=85",
+    titre: "Entreprends avec sens", texte: "Vision, valeurs et équilibre — ta vie ne tient pas dans un tableur." },
+];
+
+const OAUTH_LABELS = { google: "Google", microsoft: "Microsoft", thesustain: "TheSustain" };
+
+// Bandeau mobile : 1re slide de la config admin (image ou vidéo), repli local sinon.
+function BanniereMobile() {
+  const [slide, setSlide] = useState(null);
+  useEffect(() => {
+    fetchLoginCarousel()
+      .then((d) => { if (Array.isArray(d?.slides) && d.slides.length) setSlide(d.slides[0]); })
+      .catch(() => {});
+  }, []);
+  const src = slide ? mediaUrl(slide.src) : SLIDES_LOGIN[0].img;
+  const titre = slide?.titre || "Entreprendre avec sens, clarté et équilibre.";
+  return (
+    <div className="relative mb-4 h-36 overflow-hidden rounded-3xl lg:hidden" data-testid="login-carousel-mobile">
+      {slide?.type === "video"
+        ? <video src={src} autoPlay muted loop playsInline aria-hidden className="h-full w-full object-cover" />
+        : <img src={src} alt="" aria-hidden className="h-full w-full object-cover" />}
+      <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(13,24,56,0.25), rgba(13,24,56,0.75))" }} />
+      <p className="absolute bottom-3 left-4 right-4 font-display text-lg font-bold text-white">{titre}</p>
+    </div>
+  );
+}
+
+// Voile selon le réglage admin (léger / moyen / fort).
+const VOILES = {
+  leger: "linear-gradient(180deg, rgba(13,24,56,0.35) 0%, rgba(13,24,56,0.12) 40%, rgba(13,24,56,0.62) 100%)",
+  moyen: "linear-gradient(180deg, rgba(13,24,56,0.55) 0%, rgba(13,24,56,0.22) 40%, rgba(13,24,56,0.85) 100%)",
+  fort: "linear-gradient(180deg, rgba(13,24,56,0.72) 0%, rgba(13,24,56,0.45) 40%, rgba(13,24,56,0.93) 100%)",
+};
+
+function CarouselLogin() {
+  const [i, setI] = useState(0);
+  // Slides pilotées par l'admin (Contenu → Carrousel login) ; repli local si l'API ne répond pas.
+  const [slides, setSlides] = useState(SLIDES_LOGIN);
+  useEffect(() => {
+    fetchLoginCarousel()
+      .then((d) => { if (Array.isArray(d?.slides) && d.slides.length) setSlides(d.slides); })
+      .catch(() => {});
+  }, []);
+  useEffect(() => {
+    const t = setInterval(() => setI((v) => (v + 1) % slides.length), 5000);
+    return () => clearInterval(t);
+  }, [slides.length]);
+  const s = slides[i % slides.length];
+  const st = s.style || {};
+  const centre = st.position === "centre";
+  return (
+    <div className="relative hidden w-[46%] shrink-0 overflow-hidden lg:block" data-testid="login-carousel">
+      {slides.map((sl, idx) => (
+        sl.type === "video" ? (
+          <video key={idx} src={mediaUrl(sl.src)} autoPlay muted loop playsInline aria-hidden
+            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 ${idx === i % slides.length ? "opacity-100" : "opacity-0"}`} />
+        ) : (
+          <img key={idx} src={mediaUrl(sl.src || sl.img)} alt="" aria-hidden
+            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 ${idx === i % slides.length ? "opacity-100" : "opacity-0"}`} />
+        )
+      ))}
+      <div className="absolute inset-0" style={{ background: VOILES[st.voile] || VOILES.moyen }} />
+      <img src="/logo-zayado-blanc.png" alt="Zayado" className="absolute left-8 top-8 h-10 w-auto object-contain" />
+      <div className={`absolute inset-x-8 ${centre ? "top-1/2 -translate-y-1/2" : "bottom-10"}`}>
+        <p className={`font-display font-bold text-white ${st.taille === "grand" ? "text-4xl xl:text-5xl" : "text-3xl xl:text-4xl"}`} data-testid="login-carousel-titre">{s.titre}</p>
+        <p className="mt-3 max-w-md text-sm leading-relaxed text-white/85" data-testid="login-carousel-texte">{s.description || s.texte}</p>
+        <div className="mt-6 flex gap-2">
+          {slides.map((_, idx) => (
+            <button key={idx} onClick={() => setI(idx)} aria-label={`Présentation ${idx + 1}`} data-testid={`login-carousel-dot-${idx}`}
+              className={`h-1.5 rounded-full transition-all ${idx === i % slides.length ? "w-8 bg-[#DEC2A3]" : "w-3 bg-white/40 hover:bg-white/60"}`} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [lienDirect, setLienDirect] = useState(null);
-  const [options, setOptions] = useState({ apercu_actif: false, google: false, microsoft: false });
+  const [options, setOptions] = useState({ apercu_actif: false, google: false, microsoft: false, thesustain: false });
   const [redirecting, setRedirecting] = useState(null);
 
   const [verification, setVerification] = useState(false);
@@ -101,8 +184,16 @@ export default function Login() {
       return;
     }
     if (!code) return;
-    const provider = state.startsWith("microsoft") ? "microsoft" : state.startsWith("google") ? "google" : null;
+    const provider = state.startsWith("microsoft") ? "microsoft" : state.startsWith("thesustain") ? "thesustain" : state.startsWith("google") ? "google" : null;
     if (!provider) return;
+    // Anti-CSRF : le « state » revenu doit être celui que CE navigateur a envoyé.
+    let attendu = null;
+    try { attendu = localStorage.getItem("zayado_oauth_state"); localStorage.removeItem("zayado_oauth_state"); } catch { /* stockage indisponible */ }
+    if (attendu && attendu !== state) {
+      window.history.replaceState({}, "", "/login");
+      toast.error("Retour de connexion invalide. Relance la connexion.");
+      return;
+    }
     setVerification(true);
     window.history.replaceState({}, "", "/login");
     oauthEchange(provider, code, `${window.location.origin}/login`, state)
@@ -118,7 +209,7 @@ export default function Login() {
       })
       .catch(() => {
         setVerification(false);
-        toast.error(`Connexion ${provider === "google" ? "Google" : "Microsoft"} impossible. Réessaie, ou utilise ton email.`);
+        toast.error(`Connexion ${OAUTH_LABELS[provider] || provider} impossible. Réessaie, ou utilise ton email.`);
       });
   }, []);
 
@@ -153,6 +244,7 @@ export default function Login() {
     try {
       const res = await oauthStart(provider, `${window.location.origin}/login`);
       if (res?.configured && res.authorization_url) {
+        try { localStorage.setItem("zayado_oauth_state", new URL(res.authorization_url).searchParams.get("state") || ""); } catch { /* */ }
         if (DANS_TEAMS) {
           const w = window.open(res.authorization_url, "zayado-auth", "width=520,height=720");
           if (!w) { toast.error("Autorise les fenêtres pop-up, ou connecte-toi avec ton e-mail et ton mot de passe."); return; }
@@ -215,7 +307,7 @@ export default function Login() {
   };
 
   return (
-    <div className="zayado-blue flex min-h-screen items-center justify-center px-4 py-10">
+    <div className="zayado-blue flex min-h-screen">
       {redirecting && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-navy-900/80 backdrop-blur-sm" data-testid="login-oauth-overlay">
           <Loader2 size={32} className="animate-spin text-gold" />
@@ -223,7 +315,13 @@ export default function Login() {
         </div>
       )}
 
+      {/* Panneau gauche : présentation en carrousel (desktop) */}
+      <CarouselLogin />
+
+      <div className="flex flex-1 items-center justify-center px-4 py-10">
       <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-md">
+        {/* Bandeau image compact (mobile : le carrousel latéral est masqué) */}
+        <BanniereMobile />
         <GlassCard data-testid="login-card">
           <div className="mb-6 text-center">
             <img src="/logo-zayado-blanc.png" alt="Zayado" className="mx-auto mb-3 h-12 w-auto object-contain" />
@@ -243,6 +341,16 @@ export default function Login() {
               <MicrosoftIcon /> Microsoft
             </button>
           </div>
+
+          {/* SSO TheSustain (partenaire) : bouton prêt — actif dès que les accès OAuth sont branchés */}
+          <button onClick={() => doOauth("thesustain", "TheSustain")} data-testid="login-thesustain-btn"
+            className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-xl border border-gold/30 bg-gold/10 px-3 py-2.5 text-sm font-semibold text-gold transition hover:bg-gold/20">
+            <HeartHandshake size={17} /> Continuer avec TheSustain
+            {!options.thesustain && <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-offwhite/60">bientôt</span>}
+          </button>
+          <p className="mt-1.5 text-center text-[10.5px] leading-relaxed text-offwhite/45" data-testid="login-thesustain-note">
+            TheSustain est la plateforme partenaire de Zayado — un espace « sens & valeurs » ouvert à tous, chrétiens comme simples curieux.
+          </p>
 
           <div className="my-4 flex items-center gap-3 text-[11px] uppercase tracking-[0.2em] text-offwhite/40">
             <span className="h-px flex-1 bg-white/10" /> ou par email <span className="h-px flex-1 bg-white/10" />
@@ -350,6 +458,7 @@ export default function Login() {
           <span className="inline-flex items-center gap-1.5"><Lock size={12} /> HTTPS</span>
         </div>
       </motion.div>
+      </div>
     </div>
   );
 }

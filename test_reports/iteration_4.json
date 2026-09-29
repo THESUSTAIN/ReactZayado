@@ -1,0 +1,27 @@
+{
+  "summary": "E2E validation of the two changes: (1) legal chat (Copilote juridique) with structured 4-part local fallback, official source cards, CGU mention, Copy button and 'Question juridique' shortcut; (2) onboarding presentation screen removed (opens directly on step 0 'Bienvenue'). All 6 scenarios PASS.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "ChatAssistant.jsx copierReponse() : le texte de la réponse et les URLs des sources sont bien copiés (format '• titre — url'), bon UX Kandbaz-like.",
+    "Onboarding.jsx : la présentation a bien été supprimée (aucun composant onboarding-presentation dans le DOM). L'étape 0 s'affiche directement, l'image d'en-tête (onboarding-header-image) reste présente.",
+    "ChatAssistant.jsx propage correctement l'événement SSE onSources → attache sources+flag juridique au dernier message assistant. La mention CGU et le bloc chat-sources n'apparaissent QUE pour les réponses juridiques (vérifié : question non-juridique n'ajoute NI mention NI sources)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (validated indirectly via SSE flow)", "frontend": "100% (6/6 scenarios)"},
+  "test_credentials": "test.pro@zayado.net / Test!2026, test.essentielle@zayado.net / Test!2026",
+  "seed_data_creation": "None.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Selectors confirmed: ai-shortcut-juridique, chat-input, chat-send-btn, chat-copy-{i}, chat-juridique-mention, chat-sources, chat-source-{k}, chat-msg-assistant, ai-shortcut-next. Onboarding: onboarding-step-0, onboarding-header-image, onboarding-presentation (absent - expected). Login via login-mode-mdp → login-mdp-email/password → login-mdp-submit. Grant clipboard-read/write permissions to test copy. IA en repli local (pas de clé Mammouth) : réponse juridique locale structurée en 4 parties, sources envoyées via SSE séparé — comportement attendu.",
+  "detailed_results": {
+    "S1_shortcut_juridique": "PASS — ai-shortcut-juridique cliqué → prompt auto-envoyé → réponse assistant avec chat-copy-2, chat-juridique-mention (mention CGU présente), chat-sources contenant 2 liens : chat-source-0 → https://entreprendre.service-public.fr, chat-source-1 → https://www.legifrance.gouv.fr. Clic sur chat-source-0 ouvre un nouvel onglet vers https://entreprendre.service-public.gouv.fr/ (domaine officiel).",
+    "S2_tva_question": "PASS — Question 'Dois-je facturer la TVA en micro-entreprise ?' → réponse contient sources thématiques TVA : https://www.impots.gouv.fr/professionnel/la-tva ET https://entreprendre.service-public.fr/vosdroits/F21746 (pas seulement génériques).",
+    "S3_non_juridique": "PASS — 'Je me sens à plat aujourd'hui' → nouvelle réponse assistant SANS chat-juridique-mention ajouté et SANS nouveau bloc chat-sources (compteurs inchangés : mentions 2→2, blocs sources 2→2). Le bouton chat-copy est bien ajouté (compteur +1).",
+    "S4_copy": "PASS — Toast 'Réponse copiée.' affiché. Presse-papier contient la réponse structurée en 4 parties (861 chars) + URLs des sources au format '• Entreprendre — fiches officielles pour les indépendants — https://entreprendre.service-public.fr' et '• Légifrance — les codes et lois en vigueur — https://www.legifrance.gouv.fr'.",
+    "S5_onboarding_essentielle": "PASS — /onboarding s'ouvre directement sur onboarding-step-0 'Bienvenue dans l'univers Zayado', aucun élément onboarding-presentation dans le DOM, onboarding-header-image présent avec titre 'Quelques minutes pour poser tes fondations.'. Le stepper affiche toutes les étapes dont 'Sens & Foi' (visible dans la barre de progression).",
+    "S6_non_regression_next": "PASS — ai-shortcut-next → nouveau message assistant ajouté (compteur assistant 4→5), pas d'erreur console autre que 401 initial (attendu avant login)."
+  }
+}

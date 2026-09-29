@@ -84,21 +84,18 @@ android-sdk/
 # overlay black-box crash/user-report dumps — session data, never history
 **/.emergent/recordings/
 frontend/node_modules/.cache/default-development/0.pack
-frontend/node_modules/.cache/default-development/2.pack
 frontend/node_modules/.cache/default-development/3.pack
+frontend/node_modules/.cache/default-development/5.pack
+frontend/node_modules/.cache/default-development/4.pack
 frontend/node_modules/.cache/default-development/6.pack
-frontend/node_modules/.cache/default-development/7.pack
 .env
 .env.*
 *.env
 credentials.json
 *.key
 .credentials
-
-# Lanceur preview Emergent (NON déployé sur Railway)
-/package.json
-/yarn.lock
-/start-zayado.sh
-/.next
-frontend/node_modules/.cache/default-development/2.pack_
-frontend/node_modules/.cache/default-development/1.pack
+frontend/node_modules/.cache/default-development/15.pack
+frontend/node_modules/.cache/default-development/14.pack
+frontend/node_modules/.cache/default-development/8.pack
+frontend/node_modules/.cache/default-development/11.pack
+frontend/node_modules/.cache/default-development/12.pack

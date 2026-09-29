@@ -7,6 +7,10 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useKairos } from "@/context/KairosContext";
+
+// Cache des indicateurs de la cloche (partagé entre les montages du Header,
+// qui change à chaque page) — évite que le compteur « saute ».
+let _notifCache = null;
 import { EnergyCheckin } from "./EnergyCheckin";
 import { getToken } from "@/lib/kairosApi";
 import { LanguageSwitcher } from "./LanguageSwitcher";
@@ -140,36 +144,48 @@ export function Header() {
   // Notifications réelles : actualité du jour non lue, décisions en attente,
   // check-in manquant, rappel Vision Board, revue hebdo, série de rituels en
   // danger, lettre au futur moi arrivée à sa date.
-  const [actuNonVue, setActuNonVue] = useState(false);
-  const [decisionsEnAttente, setDecisionsEnAttente] = useState(0);
-  const [lettrePrete, setLettrePrete] = useState(null);
-  const [serieEnDanger, setSerieEnDanger] = useState(false);
-  const [visionDue, setVisionDue] = useState(false);
-  const [revueDue, setRevueDue] = useState(false);
+  // Cache module : le Header se remonte à chaque page — sans lui, le compteur
+  // repartait de zéro et « sautait ». Le badge ne s'affiche qu'une fois les
+  // sources chargées (ou depuis le cache).
+  const [actuNonVue, setActuNonVue] = useState(() => _notifCache?.actuNonVue ?? false);
+  const [decisionsEnAttente, setDecisionsEnAttente] = useState(() => _notifCache?.decisionsEnAttente ?? 0);
+  const [lettrePrete, setLettrePrete] = useState(() => _notifCache?.lettrePrete ?? null);
+  const [serieEnDanger, setSerieEnDanger] = useState(() => _notifCache?.serieEnDanger ?? false);
+  const [visionDue, setVisionDue] = useState(() => _notifCache?.visionDue ?? false);
+  const [revueDue, setRevueDue] = useState(() => _notifCache?.revueDue ?? false);
+  const [notifChargees, setNotifChargees] = useState(() => !!_notifCache);
   useEffect(() => {
+    let on = true;
     const aujourdHui = new Date().toISOString().slice(0, 10);
-    fetchActualite().then((d) => {
-      const aDuContenu = !d?.masque && !d?.erreur && (d?.articles?.length || 0) > 0;
-      setActuNonVue(aDuContenu && localStorage.getItem("actualite_vue_le") !== aujourdHui);
-    }).catch(() => {});
-    fetchDecisions().then((d) => {
-      setDecisionsEnAttente((d?.decisions || []).filter((x) => x.statut === "proposee").length);
-    }).catch(() => {});
-    // Lettre scellée arrivée à sa date d'ouverture.
-    fetchLettres().then((d) => {
-      setLettrePrete((d?.items || []).find((l) => l.prete && !l.lue) || null);
-    }).catch(() => {});
-    // Série de rituels en danger : une série existe mais rien n'est fait aujourd'hui.
-    fetchRituels().then((d) => {
-      setSerieEnDanger((d?.serie?.jours || 0) > 1 && (d?.faits || []).length === 0);
-    }).catch(() => {});
-    // Rappel Vision Board : revoir sa vision au moins deux fois par semaine.
-    const visionVue = localStorage.getItem("vision_vue_le");
-    setVisionDue(!visionVue || (Date.now() - new Date(visionVue).getTime()) > 3 * 24 * 3600 * 1000);
-    // Revue hebdo : à partir de vendredi, tant que la semaine n'est pas bouclée.
-    const jour = new Date().getDay();
-    const semaine = (() => { const d = new Date(); const t = new Date(d.getFullYear(), 0, 1); return `${d.getFullYear()}-S${Math.ceil((((d - t) / 86400000) + 1) / 7)}`; })();
-    setRevueDue(jour >= 5 && localStorage.getItem("revue_faite_semaine") !== semaine);
+    Promise.allSettled([fetchActualite(), fetchDecisions(), fetchLettres(), fetchRituels()]).then(([actu, dec, lettres, rituels]) => {
+      if (!on) return;
+      const d1 = actu.status === "fulfilled" ? actu.value : null;
+      const aDuContenu = !!(d1 && !d1.masque && !d1.erreur && (d1.articles?.length || 0) > 0);
+      const visionVue = localStorage.getItem("vision_vue_le");
+      const jour = new Date().getDay();
+      const d = new Date();
+      const t = new Date(d.getFullYear(), 0, 1);
+      const semaine = `${d.getFullYear()}-S${Math.ceil((((d - t) / 86400000) + 1) / 7)}`;
+      const rythmeActu = d1?.rythme || "quotidien";
+      const actuJourOk = rythmeActu === "jamais" ? false : rythmeActu === "lundi" ? jour === 1 : true;
+      const nouvelles = {
+        actuNonVue: actuJourOk && aDuContenu && localStorage.getItem("actualite_vue_le") !== aujourdHui,
+        decisionsEnAttente: dec.status === "fulfilled" ? (dec.value?.decisions || []).filter((x) => x.statut === "proposee").length : 0,
+        lettrePrete: lettres.status === "fulfilled" ? (lettres.value?.items || []).find((l) => l.prete && !l.lue) || null : null,
+        serieEnDanger: rituels.status === "fulfilled" ? (rituels.value?.serie?.jours || 0) > 1 && (rituels.value?.faits || []).length === 0 : false,
+        visionDue: !visionVue || (Date.now() - new Date(visionVue).getTime()) > 3 * 24 * 3600 * 1000,
+        revueDue: jour >= 5 && localStorage.getItem("revue_faite_semaine") !== semaine,
+      };
+      _notifCache = nouvelles;
+      setActuNonVue(nouvelles.actuNonVue);
+      setDecisionsEnAttente(nouvelles.decisionsEnAttente);
+      setLettrePrete(nouvelles.lettrePrete);
+      setSerieEnDanger(nouvelles.serieEnDanger);
+      setVisionDue(nouvelles.visionDue);
+      setRevueDue(nouvelles.revueDue);
+      setNotifChargees(true);
+    });
+    return () => { on = false; };
   }, []);
   const notifCount = enRepos
     ? (actuNonVue ? 1 : 0) + decisionsEnAttente + (lettrePrete ? 1 : 0)
@@ -240,10 +256,8 @@ export function Header() {
         </button>
 
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="relative hidden rounded-xl border border-white/10 bg-white/5 p-2 text-offwhite/70 transition-colors hover:bg-white/10 sm:block" title="Messages de tes clients" aria-label="Messages de tes clients" data-testid="header-mail">
-              <Mail className="h-[18px] w-[18px]" />
-            </button>
+          <DropdownMenuTrigger className="relative hidden rounded-xl border border-white/10 bg-white/5 p-2 text-offwhite/70 transition-colors hover:bg-white/10 sm:block" title="Messages de tes clients" aria-label="Messages de tes clients" data-testid="header-mail">
+            <Mail className="h-[18px] w-[18px]" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="glass-strong w-80 border-white/10 text-offwhite">
             <DropdownMenuGroup><DropdownMenuLabel className="text-xs uppercase tracking-[0.2em] text-gold">Messages clients</DropdownMenuLabel></DropdownMenuGroup>
@@ -255,10 +269,8 @@ export function Header() {
         </DropdownMenu>
 
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="hidden rounded-xl border border-white/10 bg-white/5 p-2 text-offwhite/70 transition-colors hover:bg-white/10 sm:block" title={t("header.ecosystem")} aria-label={t("header.ecosystem")} data-testid="header-ecosystem">
-              <Grid3x3 className="h-[18px] w-[18px]" />
-            </button>
+          <DropdownMenuTrigger className="hidden rounded-xl border border-white/10 bg-white/5 p-2 text-offwhite/70 transition-colors hover:bg-white/10 sm:block" title={t("header.ecosystem")} aria-label={t("header.ecosystem")} data-testid="header-ecosystem">
+            <Grid3x3 className="h-[18px] w-[18px]" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="glass-strong w-64 border-white/10 text-offwhite">
             <DropdownMenuGroup><DropdownMenuLabel className="text-xs uppercase tracking-[0.2em] text-gold">Modules Zayado</DropdownMenuLabel></DropdownMenuGroup>
@@ -283,13 +295,11 @@ export function Header() {
         </button>
 
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="relative rounded-xl border border-white/10 bg-white/5 p-2 text-offwhite/70 transition-colors hover:bg-white/10" title={t("header.notifications")} aria-label={t("header.notifications")} data-testid="header-bell">
-              <Bell className="h-[18px] w-[18px]" />
-              {notifCount > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-alert px-1 text-[9px] font-bold text-white" data-testid="bell-badge">{notifCount}</span>
-              )}
-            </button>
+          <DropdownMenuTrigger className="relative rounded-xl border border-white/10 bg-white/5 p-2 text-offwhite/70 transition-colors hover:bg-white/10" title={t("header.notifications")} aria-label={t("header.notifications")} data-testid="header-bell">
+            <Bell className="h-[18px] w-[18px]" />
+            {notifChargees && notifCount > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-alert px-1 text-[9px] font-bold text-white" data-testid="bell-badge">{notifCount}</span>
+            )}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="glass-strong w-80 border-white/10 text-offwhite">
             <DropdownMenuGroup><DropdownMenuLabel className="text-xs uppercase tracking-[0.2em] text-gold">Notifications</DropdownMenuLabel></DropdownMenuGroup>
@@ -382,20 +392,18 @@ export function Header() {
         </DropdownMenu>
 
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="ml-1 flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 py-1 pl-1 pr-2 transition-colors hover:bg-white/10 sm:pr-3" data-testid="header-profile" aria-label="Menu du profil">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-gold to-gold-hover font-display text-sm font-bold text-navy-900">
-                {(user.firstName || "Z")[0]}
-              </div>
-              <div className="hidden text-left leading-tight sm:block">
-                <div className="text-xs font-semibold text-offwhite">{user.firstName}</div>
-                <div className="text-[10px]" style={{ color: modeInfo.color }}>{modeInfo.label}</div>
-              </div>
-              <ChevronDown className="hidden h-3.5 w-3.5 text-offwhite/50 sm:block" />
-            </button>
+          <DropdownMenuTrigger className="ml-1 flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 py-1 pl-1 pr-2 transition-colors hover:bg-white/10 sm:pr-3" data-testid="header-profile" aria-label="Menu du profil">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-gold to-gold-hover font-display text-sm font-bold text-navy-900">
+              {(user.firstName || "Z")[0]}
+            </div>
+            <div className="hidden text-left leading-tight sm:block">
+              <div className="text-xs font-semibold text-offwhite">{user.firstName}</div>
+              <div className="text-[10px]" style={{ color: modeInfo.color }}>{modeInfo.label}</div>
+            </div>
+            <ChevronDown className="hidden h-3.5 w-3.5 text-offwhite/50 sm:block" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="glass-strong w-56 border-white/10 text-offwhite">
-            <DropdownMenuLabel className="text-xs uppercase tracking-[0.2em] text-gold">{user.firstName || "Mon compte"}</DropdownMenuLabel>
+            <DropdownMenuGroup><DropdownMenuLabel className="text-xs uppercase tracking-[0.2em] text-gold">{user.firstName || "Mon compte"}</DropdownMenuLabel></DropdownMenuGroup>
             <DropdownMenuSeparator className="bg-white/10" />
             <DropdownMenuItem onClick={() => navigate("/parametres")} className="cursor-pointer gap-2 focus:bg-white/10 focus:text-offwhite" data-testid="profile-settings">
               <Settings className="h-4 w-4 text-gold" /> Paramètres

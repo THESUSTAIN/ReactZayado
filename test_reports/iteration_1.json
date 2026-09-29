@@ -1,0 +1,35 @@
+{
+  "summary": "Frontend-only regression on Zayado covering the 5 P0/P1 flows: shared vision board editing by guest (polezayado), owner cross-check (test.pro), news 'Enregistrer' button, news card auto-summary, bell stability across navigation, actu rythme onboarding for test.solo, and non-regression for test.pro. All 7 scenarios passed.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Header (all app pages)", "issues": ["Console: React DOM nesting warning — <button> nested inside <button> in DropdownMenu wrapping data-testid=header-mail. Not blocking but produces hydration warning."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "(Optional) Fix DOM nesting warning: DropdownMenuTrigger asChild + inner <button> results in <button> descendant of <button> around header-mail. Use a <span>/<div> as inner trigger or remove asChild."
+  ],
+  "critical_code_review_comments": [
+    "VisionCanvas.jsx is ~2200 lines — consider splitting into card renderers, tools rail, and topbar for maintainability.",
+    "Header.jsx nests <button> inside DropdownMenuTrigger asChild, generating hydration warnings on every page load."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (not tested)", "frontend": "100% (7/7 flows)"},
+  "test_credentials": "polezayado@gmail.com / Zyd2026SecureJWTkey! (guest editor), test.pro@zayado.net / Test!2026 (board owner), test.solo@zayado.net / Test!2026 (no actu_rythme set — reset to quotidien after test).",
+  "seed_data_creation": "Added one card text 'MODIF_TEST_1790689815' on the first card of the shared 'marketing-communication' board (persisted). Rythme actu for test.solo was set to 'lundi' during test then reset to 'quotidien' at end (clean).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All 5 fixes work end-to-end in the UI. Verified selectors: vision-partages-moi, vision-board-partage-marketing-communication, vision-partage-badge (visible), vision-board-switcher (correctly hidden in shared mode), vision-save-status (title='Enregistré' after edit, no error toast), actu-save-0 (toast + actu-enregistres appears), actu-item-1 (auto-sends prompt, chat-msg-user + chat-msg-assistant appear without pressing send), bell-badge stays at '2' on /app and /actions (hidden on /app/vision because vision has its own header — this is by design, not blinking), actu-rythme-question + actu-rythme-lundi visible for test.solo and save is confirmed in /parametres → Notifications (parametres-actu-rythme select). Non-regression: test.pro shows 'Bonjour, Pro' cockpit and does NOT show actu-rythme-question. Minor: DOM nesting warning around header-mail dropdown trigger (button inside button).",
+  "detailed_results": {
+    "P0_shared_board_edit": "PASS — badge visible, switcher hidden, 10 real cards rendered, edit textarea filled with MODIF_TEST_*, save-status title='Enregistré', no error toast, text persists after guest reload.",
+    "P0bis_owner_cross_check": "PASS — test.pro opens 'Marketing & Communication' board and sees MODIF_TEST_1790689815 on the first card (screenshot captured).",
+    "P1_actu_save": "PASS — clicking actu-save-0 shows success toast 'Article enregistré' and actu-enregistres section becomes visible.",
+    "P1_actu_click_auto_summary": "PASS — clicking actu-item-1 auto-switches to Assistant tab and sends the summary prompt automatically: 1 chat-msg-user + 2 chat-msg-assistant appear (assistant replied with local fallback since MAMMOUTH_API_KEY is absent — expected).",
+    "P1_bell_stable": "PASS — bell-badge='2' on /app, hidden on /app/vision (vision page has its own header), '2' on /app/actions, '2' back on /app. No flickering.",
+    "P1_actu_rythme_onboarding": "PASS — test.solo sees actu-rythme-question with 3 buttons, clicking actu-rythme-lundi produces a confirmation assistant message; /parametres → Notifications shows parametres-actu-rythme='lundi'; reset to 'quotidien' → toast 'Rythme d'alerte enregistré.'",
+    "Non_regression_test_pro": "PASS — 'Bonjour, Pro' greeting visible in cockpit with energy gauge; actu-rythme-question NOT visible (préférence déjà réglée)."
+  }
+}

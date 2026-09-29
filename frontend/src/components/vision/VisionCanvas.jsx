@@ -2,16 +2,18 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSta
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  Plus, Minus, MousePointer2, Hand, Loader2, Check, AlertTriangle, X, Send,
+  Plus, Minus, MousePointer2, Hand, Loader2, Check, AlertTriangle, X, Send, MessageSquare,
   Type, Image as ImageIcon, ListChecks, Palette, FileText,
   LayoutTemplate, Quote, FileDown, ArrowRight, Wand2, RefreshCw, Maximize2, Heart,
   Undo2, Redo2, Spline, PenTool, Trash2, LayoutGrid, Columns3, Table2, Video, Heading1,
   Activity, ChevronLeft, ChevronRight, Presentation, Download, RotateCcw, StickyNote,
-  Pencil, Pin, PinOff, Share2, Map as MapIcon, Copy, Filter, BookOpen, Search, Files, Upload, MoreHorizontal, Sparkles,
+  Pencil, Pin, PinOff, Share2, Map as MapIcon, Copy, Filter, BookOpen, Search, Files, Upload, MoreHorizontal, Sparkles, UserPlus,
 } from "lucide-react";
 import {
   fetchBoard, saveBoard, fetchStarterTemplates, generateAiDoc, generateBoard, fetchInspire, searchUnsplash,
-  fetchShare, saveShare, revokeShare, saveGeneratedDocument,
+  fetchShare, saveShare, revokeShare, saveGeneratedDocument, fetchVisionCommentaires, marquerCommentairesLus,
+  fetchBoardPartage, saveBoardPartage, inviterBoard, fetchInvitations, retirerInvitation,
+  fetchInvitationsPartage, inviterBoardPartage, retirerInvitationPartage,
 } from "@/lib/kairosApi";
 import { useI18n } from "@/i18n";
 import {
@@ -200,9 +202,13 @@ const PALIER_KEY = "kairos_vision_palier";
  * @param initialItems cartes fournies (lecture seule)
  * @param liveData     données live fournies (lecture seule)
  */
-export function VisionCanvas({ readOnly = false, initialItems = null, liveData = null } = {}) {
+export function VisionCanvas({ readOnly = false, initialItems = null, liveData = null, partage = false, owner } = {}) {
   const { t, lang } = useI18n();
   const navigate = useNavigate();
+  // Mode « board partagé avec moi » : lecture/écriture via les endpoints de
+  // collaboration (le board appartient à un autre compte).
+  const chargerBoard = partage ? (k) => fetchBoardPartage(k, owner) : fetchBoard;
+  const sauverBoard = partage ? (cards, k) => saveBoardPartage(cards, k, owner) : saveBoard;
   const live = useVisionLive(readOnly ? (liveData || {}) : undefined);
   const isSmall = useIsSmall();
   // Mobile : vue « liste » (un mur par écran) ou vue « carte » (le board entier, lignes et carte mentale comprises).
@@ -219,6 +225,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
     } catch (_) { return "perso"; }
   });
   const [items, setItems] = useState([]);
+  const [partageInfo, setPartageInfo] = useState(null); // { nom, emoji } du board partagé (badge topbar)
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
@@ -250,6 +257,18 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
   const [unsplash, setUnsplash] = useState({ q: "", results: [], loading: false });
   const [showMinimap, setShowMinimap] = useState(() => { try { return localStorage.getItem(MINIMAP_KEY) === "1"; } catch (_) { return false; } });
   const [shareOpen, setShareOpen] = useState(false);
+  const [commentairesOpen, setCommentairesOpen] = useState(false);
+  const [commentaires, setCommentaires] = useState([]);
+  const [nonLus, setNonLus] = useState(0);
+  useEffect(() => {
+    if (readOnly || partage) return;
+    fetchVisionCommentaires().then((d) => { setCommentaires(d.commentaires || []); setNonLus(d.non_lus || 0); }).catch(() => {});
+  }, [readOnly, partage]);
+  const ouvrirCommentaires = () => {
+    setCommentairesOpen(true);
+    fetchVisionCommentaires().then((d) => { setCommentaires(d.commentaires || []); setNonLus(d.non_lus || 0); }).catch(() => {});
+    if (nonLus > 0) marquerCommentairesLus().then(() => setNonLus(0)).catch(() => {});
+  };
   const [onboardHidden, setOnboardHidden] = useState(() => { try { return localStorage.getItem(ONBOARD_KEY) === "1"; } catch (_) { return false; } });
   const [mobileWall, setMobileWall] = useState(0);
   const [docsOpen, setDocsOpen] = useState(false);
@@ -292,8 +311,9 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
     skipSaveRef.current = true;
     needScrollRef.current = true;
     stableRef.current = null; pastRef.current = []; futureRef.current = [];
-    fetchBoard(key)
+    chargerBoard(key)
       .then((r) => {
+        if (partage) setPartageInfo({ nom: r.nom || "", emoji: r.emoji || "🧭", owner: r.owner, peutPartager: !!r.peut_partager });
         let cards = Array.isArray(r.cards) ? r.cards : [];
         const migrated = migrateLocalLayout(key, cards);
         if (migrated !== cards) skipSaveRef.current = false; // sauvegarder tout de suite la reprise
@@ -308,6 +328,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
   useEffect(() => { loadBoard(boardKey); }, [boardKey, loadBoard]);
 
   const switchBoard = (key) => {
+    if (partage) return; // board partagé : la clé vient de l'URL, jamais du sélecteur (sinon PUT /partages/perso → 403)
     if (key === boardKey) return;
     try { localStorage.setItem(BOARD_STORAGE, key); } catch (_) {}
     setStyleMenuId(null); setEditingId(null); setSelectedId(null);
@@ -321,7 +342,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
     if (draggingId) return;
     setSaving(true);
     const id = setTimeout(() => {
-      saveBoard(items, boardKey).then(() => setSaveError(false)).catch(() => setSaveError(true)).finally(() => setSaving(false));
+      sauverBoard(items, boardKey).then(() => setSaveError(false)).catch(() => setSaveError(true)).finally(() => setSaving(false));
     }, 700);
     return () => clearTimeout(id);
   }, [items, loaded, boardKey, draggingId, readOnly]);
@@ -1598,7 +1619,36 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
         </div>
       )}
       {!readOnly && <AiDocModal open={aiDocOpen} onClose={() => setAiDocOpen(false)} onGenerated={handleAiDocGenerated} />}
-      {shareOpen && <ShareDialog board={boardKey} onClose={() => setShareOpen(false)} />}
+      {shareOpen && (partage
+        ? <GuestShareDialog board={boardKey} owner={owner || partageInfo?.owner} nom={partageInfo?.nom} onClose={() => setShareOpen(false)} />
+        : <ShareDialog board={boardKey} onClose={() => setShareOpen(false)} />)}
+
+      {commentairesOpen && (
+        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 sm:items-center sm:p-4" onClick={() => setCommentairesOpen(false)} data-testid="vision-comments-modal">
+          <div className="sf-chrome flex max-h-[85dvh] w-full flex-col rounded-t-2xl border p-4 sm:max-w-md sm:rounded-2xl" style={{ borderColor: "var(--sf-chrome-border)" }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <p className="sf-title" style={{ fontSize: 16 }}>Commentaires reçus</p>
+              <button className="sf-btn" onClick={() => setCommentairesOpen(false)} data-testid="vision-comments-close" aria-label="Fermer"><X size={15} /></button>
+            </div>
+            <div className="mt-3 min-h-[80px] flex-1 space-y-2 overflow-y-auto" data-testid="vision-comments-list">
+              {commentaires.length === 0 && (
+                <p className="sf-small py-6 text-center">Aucun commentaire pour le moment. Partage ton board (icône Partager) pour recevoir des retours.</p>
+              )}
+              {commentaires.map((c) => (
+                <div key={c.id} className="rounded-xl border p-3" style={{ borderColor: "var(--sf-line)", background: "var(--sf-card)" }} data-testid={`vision-comment-${c.id}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[12.5px] font-semibold" style={{ color: "var(--sf-text)" }}>{c.auteur}</span>
+                    <span className="text-[10.5px]" style={{ color: "var(--sf-muted)" }}>
+                      {c.date ? new Date(c.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : ""}{c.board ? ` · board ${c.board}` : ""}
+                    </span>
+                  </div>
+                  <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed" style={{ color: "var(--sf-text-2)" }}>{c.texte}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Rail d'outils (gauche, ordinateur) ── */}
       {!readOnly && !isSmall && (
@@ -1657,7 +1707,15 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
                 : <Check size={14} className="text-emerald-400" />}
             </span>
           )}
-          {!readOnly && <><span className="mx-0.5 h-5 w-px" style={{ background: "var(--sf-line)" }} /><BoardSwitcher current={boardKey} onSwitch={switchBoard} /></>}
+          {!readOnly && !partage && <><span className="mx-0.5 h-5 w-px" style={{ background: "var(--sf-line)" }} /><BoardSwitcher current={boardKey} onSwitch={switchBoard} /></>}
+          {!readOnly && partage && (
+            <span data-testid="vision-partage-badge" title="Board partagé avec toi (édition)"
+              className="flex h-8 items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 text-xs font-semibold text-offwhite/85">
+              <UserPlus size={12} className="text-gold" />
+              <span>{partageInfo?.emoji || "🧭"}</span>
+              <span className="max-w-[110px] truncate">{partageInfo?.nom || "Board partagé"}</span>
+            </span>
+          )}
           {!readOnly && !isSmall && (
             <>
               <span className="mx-1 h-5 w-px" style={{ background: "var(--sf-line)" }} />
@@ -1692,7 +1750,16 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
               <button onClick={handleVisionBook} className="sf-menu-item" data-testid="vision-export-book"><span className="sf-mi-ico"><BookOpen size={15} /></span>Vision Book (PDF, un mur par page)</button>
             </Popover>
           </div>
-          {!readOnly && <button onClick={() => setShareOpen(true)} className="sf-btn" title="Partager en lecture seule" data-testid="vision-share"><Share2 size={15} /></button>}
+          {!readOnly && !partage && (
+            <button onClick={ouvrirCommentaires} className="sf-btn relative" title="Commentaires reçus sur tes boards partagés" data-testid="vision-comments">
+              <MessageSquare size={15} />
+              {nonLus > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold" style={{ background: "#e11d48", color: "#fff" }} data-testid="vision-comments-badge">{nonLus}</span>
+              )}
+            </button>
+          )}
+          {!readOnly && !partage && <button onClick={() => setShareOpen(true)} className="sf-btn" title="Partager en lecture seule" data-testid="vision-share"><Share2 size={15} /></button>}
+          {!readOnly && partage && partageInfo?.peutPartager && <button onClick={() => setShareOpen(true)} className="sf-btn" title="Inviter d'autres éditeurs" data-testid="vision-share-invite"><UserPlus size={15} /></button>}
           {!isSmall && <button onClick={startPresent} className="sf-btn sf-btn-primary ml-1 h-8" data-testid="vision-present"><Presentation size={15} /> <span className="hidden lg:inline">Présenter</span></button>}
         </div>
       </div>
@@ -1710,7 +1777,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
           <p className="sf-small mt-1" style={{ fontSize: 14 }}>Tes murs se remplissent tout seuls avec tes vraies données.</p>
           <ol className="mt-4 space-y-2">
             {[
-              ["1", "Écris ta vision et ton pourquoi", "/onboarding"],
+              ["1", "Écris ta vision et ton pourquoi", "/parametres#vision"],
               ["2", "Fixe 3 objectifs pour ce trimestre", "/app/actions?tab=objectifs"],
               ["3", "Ajoute ta première action de 15 minutes", "/app/actions"],
             ].map(([n, label, route]) => (
@@ -1991,6 +2058,23 @@ function ShareDialog({ board, onClose }) {
   };
   const copy = () => navigator.clipboard?.writeText(url).then(() => toast.success("Lien copié")).catch(() => {});
   const setOpt = (k) => { const next = { ...opts, [k]: !opts[k] }; setOpts(next); if (state?.active) save(next); };
+  // Invitations avec droits d'ÉDITION (le lien public ci-dessus reste lecture seule).
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [invitations, setInvitations] = useState([]);
+  useEffect(() => { fetchInvitations(board).then((d) => setInvitations(d.invitations || [])).catch(() => {}); }, [board]);
+  const inviter = async () => {
+    const email = inviteEmail.trim().toLowerCase();
+    if (!email || !email.includes("@")) { toast.error("Entre un e-mail valide."); return; }
+    setBusy(true);
+    try {
+      await inviterBoard(board, email);
+      const d = await fetchInvitations(board);
+      setInvitations(d.invitations || []);
+      setInviteEmail("");
+      toast.success(`${email} peut maintenant modifier ce board.`);
+    } catch { toast.error("Invitation impossible pour le moment."); }
+    finally { setBusy(false); }
+  };
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#0b1a3d]/70 backdrop-blur-sm p-4" onClick={onClose}>
       <div className="sf sf-menu relative w-full max-w-md p-6" onClick={(e) => e.stopPropagation()} data-testid="vision-share-dialog">
@@ -2019,6 +2103,74 @@ function ShareDialog({ board, onClose }) {
           <button onClick={() => save()} disabled={busy} className="sf-btn sf-btn-primary mt-4 h-10 w-full" data-testid="vision-share-create">
             {busy ? <Loader2 size={15} className="animate-spin" /> : <Share2 size={15} />} Créer le lien de partage
           </button>
+        )}
+
+        <div className="mt-5 border-t pt-4" style={{ borderColor: "var(--sf-line)" }}>
+          <p className="sf-title" style={{ fontSize: 15 }}>Inviter un collaborateur</p>
+          <p className="sf-small mt-1" style={{ fontSize: 13 }}>Il pourra <b>modifier</b> ce board depuis son compte Zayado (section « Partagés avec moi »).</p>
+          <div className="mt-2 flex items-center gap-2">
+            <input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} type="email" placeholder="email@exemple.com" className="sf-field" data-testid="vision-invite-email" />
+            <button onClick={inviter} disabled={busy} className="sf-btn sf-btn-primary shrink-0" style={{ height: 36 }} data-testid="vision-invite-submit"><UserPlus size={14} /> Inviter</button>
+          </div>
+          {invitations.length > 0 && (
+            <ul className="mt-2 space-y-1" data-testid="vision-invite-list">
+              {invitations.map((inv) => (
+                <li key={inv.email} className="flex items-center justify-between rounded-lg px-2 py-1.5 text-[13px]" style={{ background: "var(--sf-card)" }}>
+                  <span className="truncate">{inv.email} <span className="sf-small">· édition{inv.invite_par ? ` · invité par ${inv.invite_par}` : ""}</span></span>
+                  <button onClick={async () => { await retirerInvitation(board, inv.email).catch(() => {}); setInvitations((p) => p.filter((x) => x.email !== inv.email)); }} className="sf-small shrink-0 hover:underline" style={{ color: "#F87171", fontSize: 12 }}>retirer</button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* Re-partage par un éditeur invité : il peut inviter d'autres éditeurs
+   (pas de lien public : il reste réservé au propriétaire du board). */
+function GuestShareDialog({ board, owner, nom, onClose }) {
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [invitations, setInvitations] = useState(null);
+  const charger = useCallback(() => {
+    fetchInvitationsPartage(board, owner).then((d) => setInvitations(d.invitations || [])).catch(() => setInvitations([]));
+  }, [board, owner]);
+  useEffect(() => { charger(); }, [charger]);
+  const inviter = async () => {
+    const e = email.trim().toLowerCase();
+    if (!e || !e.includes("@")) { toast.error("Entre un e-mail valide."); return; }
+    setBusy(true);
+    try { await inviterBoardPartage(board, e, owner); setEmail(""); charger(); toast.success(`${e} peut maintenant modifier ce board.`); }
+    catch { toast.error("Invitation impossible pour le moment."); }
+    finally { setBusy(false); }
+  };
+  const retirer = async (e) => {
+    try { await retirerInvitationPartage(board, e, owner); setInvitations((l) => (l || []).filter((x) => x.email !== e)); }
+    catch { toast.error("Tu ne peux retirer que les personnes que tu as invitées."); }
+  };
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#0b1a3d]/70 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="sf sf-menu relative w-full max-w-md p-6" onClick={(e) => e.stopPropagation()} data-testid="vision-guest-share-dialog">
+        <button onClick={onClose} className="sf-btn absolute right-3 top-3"><X size={16} /></button>
+        <p className="sf-title" style={{ fontSize: 18 }}>Inviter sur « {nom || "ce board"} »</p>
+        <p className="sf-small mt-1" style={{ fontSize: 13 }}>Tu es éditeur : tu peux inviter d'autres personnes à <b>modifier</b> ce board. Le lien public en lecture seule reste géré par son propriétaire.</p>
+        <div className="mt-3 flex items-center gap-2">
+          <input value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === "Enter" && inviter()} type="email" placeholder="email@exemple.com" className="sf-field" data-testid="vision-guest-invite-email" />
+          <button onClick={inviter} disabled={busy} className="sf-btn sf-btn-primary shrink-0" style={{ height: 36 }} data-testid="vision-guest-invite-submit">{busy ? <Loader2 size={14} className="animate-spin" /> : <UserPlus size={14} />} Inviter</button>
+        </div>
+        {invitations === null ? (
+          <div className="sf-small mt-3 flex items-center gap-2"><Loader2 size={14} className="animate-spin" /> Chargement…</div>
+        ) : invitations.length > 0 && (
+          <ul className="mt-3 space-y-1" data-testid="vision-guest-invite-list">
+            {invitations.map((inv) => (
+              <li key={inv.email} className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-[13px]" style={{ background: "var(--sf-card)" }}>
+                <span className="min-w-0 truncate">{inv.email} <span className="sf-small">· édition{inv.invite_par ? ` · invité par ${inv.invite_par}` : ""}</span></span>
+                {inv.retirable && <button onClick={() => retirer(inv.email)} className="sf-small shrink-0 hover:underline" style={{ color: "#F87171", fontSize: 12 }}>retirer</button>}
+              </li>
+            ))}
+          </ul>
         )}
       </div>
     </div>

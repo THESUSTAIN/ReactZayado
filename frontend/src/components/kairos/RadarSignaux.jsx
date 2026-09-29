@@ -71,7 +71,7 @@ function Recherches({ r }) {
         <Search size={16} className="text-gold" />
         <p className="font-display text-lg font-semibold">Ce que tes futurs clients tapent sur Google</p>
         <span className={`ml-auto rounded-full px-2.5 py-0.5 text-[10.5px] font-semibold ${reels ? "bg-emerald-400/15 text-emerald-300" : "bg-white/10 text-offwhite/60"}`}>
-          {reels ? `Volumes Google réels · ${r.perimetre || "France"}` : "Suggestions IA · volumes non activés"}
+          {reels ? `Volumes mensuels · ${r.perimetre || "France"}` : "Pistes de recherche"}
         </span>
       </div>
       <div className="overflow-x-auto">
@@ -96,7 +96,7 @@ function Recherches({ r }) {
           </tbody>
         </table>
       </div>
-      {!reels && <p className="mt-3 flex items-start gap-1.5 text-[11.5px] text-offwhite/50"><Info size={13} className="mt-0.5 shrink-0" /> Les volumes réels s'affichent dès que l'équipe Zayado a activé la source de données Google.</p>}
+      {!reels && <p className="mt-3 flex items-start gap-1.5 text-[11.5px] text-offwhite/50"><Info size={13} className="mt-0.5 shrink-0" /> Les expressions que tes clients sont susceptibles de chercher. Utilise-les dans ta fiche Google et tes annonces.</p>}
     </GlassCard>
   );
 }
@@ -218,7 +218,8 @@ function Ventes({ d }) {
   );
 }
 
-// « Sources du Radar » : ce qui est branché, ce qui ne l'est pas, et pourquoi.
+// « Sources du Radar » : état des branchements — réservé aux admins
+// (le backend n'envoie `sources` qu'à un compte admin).
 function Sources({ d }) {
   const navigate = useNavigate();
   const icone = (s) => s.actif ? <CheckCircle2 size={16} className="text-emerald-300" />
@@ -226,7 +227,7 @@ function Sources({ d }) {
     : <CircleDashed size={16} className="text-gold" />;
   return (
     <GlassCard className="mb-5" data-testid="radar-sources">
-      <p className="mb-3 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-offwhite/60"><Info size={13} /> Ce qui alimente ton Radar</p>
+      <p className="mb-3 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-offwhite/60"><Info size={13} /> Admin · branchements du Radar (invisible pour les utilisateurs)</p>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {d.sources.map((s) => (
           <div key={s.cle} data-testid={`radar-source-${s.cle}`} data-etat={s.etat}
@@ -259,7 +260,23 @@ function Sources({ d }) {
   );
 }
 
-// « Mes contacts » : les personnes trouvées par Apollo, avec leur suivi.
+// Étapes à faire côté utilisateur (sans aucun détail technique).
+function AFaire({ items }) {
+  const navigate = useNavigate();
+  if (!items?.length) return null;
+  return (
+    <div className="mb-5 space-y-2" data-testid="radar-afaire">
+      {items.map((a) => (
+        <div key={a.cle} className="flex flex-wrap items-center gap-3 rounded-xl border border-gold/30 bg-gold/10 px-4 py-2.5 text-[13px] text-offwhite/85" data-testid={`radar-afaire-${a.cle}`}>
+          <span className="min-w-0 flex-1">{a.texte}</span>
+          {a.lien && <button onClick={() => navigate(a.lien)} className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-gold hover:underline">Y aller <ArrowRight size={13} /></button>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// « Mes contacts » : les personnes trouvées pour l'utilisateur, avec leur suivi.
 const STATUTS = [["nouveau", "À contacter"], ["contacte", "Contacté"], ["en_discussion", "En discussion"], ["signe", "Signé"], ["ecarte", "Écarté"]];
 function Contacts() {
   const [items, setItems] = useState(null);
@@ -273,7 +290,7 @@ function Contacts() {
       <div className="mb-3 flex items-center gap-2">
         <Users size={16} className="text-gold" />
         <p className="font-display text-lg font-semibold">Mes contacts trouvés</p>
-        <span className="ml-auto text-[11.5px] text-offwhite/55">{items.length} au total · source Apollo</span>
+        <span className="ml-auto text-[11.5px] text-offwhite/55">{items.length} au total</span>
       </div>
       <div className="divide-y divide-white/[0.08]">
         {items.slice(0, 30).map((p) => (
@@ -312,7 +329,7 @@ export default function RadarSignaux({ onChange }) {
   return (
     <div data-testid="radar-signaux">
       <Reglages sig={sig} onSaved={apres} />
-      {src?.sources && <Sources d={src} />}
+      {src?.sources ? <Sources d={src} /> : <AFaire items={src?.a_faire} />}
       <Contacts />
       {!src && sig.manque?.includes("zone") && sig.clientele !== "b2b" && (
         <p className="mb-5 rounded-xl border border-gold/30 bg-gold/10 px-4 py-3 text-[13px] text-offwhite/85">Indique ta ville ci-dessus : les recherches Google, la pub et les ventes seront calculées autour de chez toi.</p>

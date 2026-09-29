@@ -1,0 +1,37 @@
+{
+  "summary": "Frontend-only regression on Zayado covering the 7 scenarios of the request: Login carousel desktop (dots + auto-rotate every 6s), Login mobile banner, TheSustain 'bientôt' button + toast + password login non-regression, Admin desktop floating sidebar, Admin mobile burger→drawer→nav, Vendeur floating sidebar, and Onboarding 'Sens & Foi' step (partner phrase, 3 choices, disabled Continue, TheSustainInfo modal, then step 8 'Ton offre'). All 7 scenarios PASSED.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Header (all app pages)", "issues": ["Console: DOM nesting warning — <button> nested in <button> around data-testid=header-mail (DropdownMenuTrigger asChild + inner <button>). Non-blocking, already reported in iteration_1."]},
+      {"screen": "Header DropdownMenu trigger", "issues": ["Console: React does not recognize the `asChild` prop on a DOM element (spelled lowercase `aschild`). Same root cause as the nesting warning — DropdownMenuTrigger forwarding asChild to a native <button>."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "(Optional) Fix DropdownMenuTrigger asChild wrapping around header-mail to remove DOM-nesting + asChild-prop console warnings.",
+    "(Nit) In Admin/Vendeur, document.documentElement carries class 'dark' while the pro page is visually LIGHT (crème). Rendering is correct because .pro-clair.pro-cours overrides, but leaving the global 'dark' class on <html> when the pro pages are in light mode is confusing for anyone inspecting. Cosmetic."
+  ],
+  "critical_code_review_comments": [
+    "Onboarding.jsx is 623 lines with all steps inline — consider extracting each step block into small components for maintainability, especially now that step 7 (Sens & Foi) adds significant JSX.",
+    "The header 'button-in-button' hydration warning has now been present across iterations 1 and 2 — should be prioritized as it fires on every page load."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (not tested)", "frontend": "100% (7/7 scenarios)"},
+  "test_credentials": "admin@zayado.net / Zyd2026SecureJWTkey! (admin+vendeur), test.pro@zayado.net / Test!2026 (pro client), test.essentielle@zayado.net / Test!2026 (used for onboarding — has no active subscription so login redirects to /activer, but /onboarding is accessible directly).",
+  "seed_data_creation": "None — no data persisted (stopped at step 8 'Ton offre' before saving, as requested).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Selectors verified: login-carousel (desktop only), login-carousel-mobile (mobile only), login-carousel-dot-0/1/2, login-thesustain-btn (text 'Continuer avec TheSustain\\nBIENTÔT'), login-thesustain-note, login-mode-mdp / login-mdp-email / login-mdp-password / login-mdp-submit. Admin/Vendeur: side-menu-pro is a FLOATING panel (bbox x=12, y=12, w=264, h=876), pro-menu-user shows initials + 'Administrateur', pro-theme + pro-menu-logout at the bottom, pro-menu-utilisateurs/vendeurs/produits/profil/moderation/retour all clickable. Mobile <=~768px: side-menu-pro is hidden and pro-menu-burger opens pro-menu-drawer; the drawer contains a second copy of pro-menu-vendeurs (strict-mode collision → scope with drawer locator). Onboarding: from /onboarding, click onboarding-presentation-later to skip the intro; steps 0→7 are Bienvenue/Identité/Activité/Cap financier/Vision/Objectifs/Valeurs/Sens&Foi; step 3 (Cap financier) can be bypassed with onboarding-skip; step 7 exposes onboarding-foi-membre / onboarding-foi-decouverte / onboarding-foi-non; picking 'decouverte' opens the thesustain-info modal (closes with Escape); before any choice onboarding-next is disabled — after any choice it is enabled → clicking it lands on onboarding-step-8 ('TON OFFRE / Choisis ton rythme'). Test.pro login → /app (password login non-regression OK). Auto-rotation of the login carousel occurs every ~6s (verified changing from slide 3 → slide 2 after 7.5s wait).",
+  "detailed_results": {
+    "S1_login_desktop_carousel": "PASS — login-carousel visible on 1366px, initial title 'Pilote ton activité avec clarté' present, 3 dots visible, click dot-2 changes title to 'Entreprends avec sens' and after 7.5s wait it auto-rotates to next slide ('Ton bien-être d'abord').",
+    "S2_login_mobile_banner": "PASS — on 375px viewport, desktop carousel hidden (is_visible=False) and login-carousel-mobile is present and visible above the login card.",
+    "S3_thesustain_and_password_regression": "PASS — login-thesustain-btn visible with text including 'BIENTÔT' badge; login-thesustain-note visible with 'plateforme partenaire de Zayado'; clicking the button surfaces the 'pas encore disponible' toast/message; test.pro@zayado.net / Test!2026 logs in and lands on /app (non-regression OK).",
+    "S4_admin_desktop": "PASS — side-menu-pro floating (bbox x=12, y=12, detached from left edge), navy gradient, gold active tab. pro-menu-user visible with 'A / Admin / Administrateur'; pro-theme and pro-menu-logout visible. Clicking pro-menu-utilisateurs shows the Utilisateurs page (table listing rendered on cream background with dark text — readable). Toggling pro-theme switches to dark mode and toggling again returns to light — both states render without contrast issues.",
+    "S5_admin_mobile": "PASS — 375px: side-menu-pro hidden, pro-menu-burger visible; clicking burger opens pro-menu-drawer with all tabs; clicking pro-menu-vendeurs (scoped inside the drawer) navigates and closes the drawer.",
+    "S6_vendeur_desktop": "PASS — /espace-vendeur shows same floating sidebar; pro-menu-produits, pro-menu-profil, pro-menu-moderation and pro-menu-retour all visible and clickable; content rendered on cream with dark text (screenshot captured).",
+    "S7_onboarding_sens_foi": "PASS — logged in as test.essentielle, went to /onboarding, clicked 'Passer' on presentation, header image visible; progressed through steps 0→6 filling required fields (prenom 'Test', activité type 'Coaching business', vision 'Ma vision de test', objectif, valeur chip). At step 7 onboarding-sens-foi visible with partner phrase 'plateforme partenaire de Zayado'; the 3 choices onboarding-foi-membre / onboarding-foi-decouverte / onboarding-foi-non all visible; onboarding-next initially disabled; clicking onboarding-foi-decouverte opens thesustain-info modal (closes with Escape); onboarding-next becomes enabled and clicking it lands on onboarding-step-8 'TON OFFRE / Choisis ton rythme'. Stopped there as instructed (no payment)."
+  }
+}

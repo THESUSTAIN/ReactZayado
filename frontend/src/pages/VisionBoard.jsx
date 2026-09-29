@@ -14,16 +14,21 @@ export default function VisionBoard() {
   const navigate = useNavigate();
   const view = params.get("view") || "hub";
   // Même entrée sur PC et mobile (l'ancienne page mobile à photos d'illustration est retirée).
+  // Vue canvas : PLEIN ÉCRAN partout (comme sur mobile) — rail latéral masqué,
+  // le board occupe tout le viewport sous l'en-tête.
+  const pleinEcran = view === "canvas";
   const goView = (v, opts = {}) => setParams(v === "hub" ? {} : { view: v, ...(opts.ia ? { ia: "1" } : {}) });
   const ouvrirBoard = (b) => {
-    try { localStorage.setItem("kairos_board_key", b.key); } catch { /* stockage indisponible */ }
-    setParams({ view: "canvas", board: b.key });
+    if (!b.partage) {
+      try { localStorage.setItem("kairos_board_key", b.key); } catch { /* stockage indisponible */ }
+    }
+    setParams({ view: "canvas", board: b.key, ...(b.partage ? { partage: "1", ...(b.owner ? { owner: b.owner } : {}) } : {}) });
   };
 
   return (
-    <div className="min-h-screen">
+    <div className={pleinEcran ? "vision-plein-ecran min-h-screen" : "min-h-screen"}>
       <Sidebar />
-      <div className={view === "canvas" ? "flex h-[100dvh] flex-col overflow-hidden md:block md:h-auto md:overflow-visible lg:pl-[92px]" : "lg:pl-[92px]"}>
+      <div className={pleinEcran ? "flex h-[100dvh] flex-col overflow-hidden" : "lg:pl-[92px]"}>
         <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-white/5 bg-[#0b1a3d]/60 px-4 py-3 backdrop-blur-xl sm:px-6">
           {view !== "hub" && (
             <button
@@ -51,9 +56,9 @@ export default function VisionBoard() {
           </button>
         </header>
 
-        <main className={view === "canvas" ? "min-h-0 flex-1 md:px-6 md:pb-24 md:pt-5" : "px-4 pb-24 pt-5 sm:px-6"} data-testid={`vision-view-${view}`}>
+        <main className={pleinEcran ? "min-h-0 flex-1" : "px-4 pb-24 pt-5 sm:px-6"} data-testid={`vision-view-${view}`}>
           {view === "hub" && <VisionHub onOpen={goView} onOpenBoard={ouvrirBoard} />}
-          {view === "canvas" && <VisionCanvas />}
+          {view === "canvas" && <VisionCanvas partage={params.get("partage") === "1"} owner={params.get("owner") || undefined} />}
           {view === "wheel" && <BalanceWheel />}
           {view === "roadmap" && <Navigate to="/app/actions?tab=objectifs" replace />}
         </main>

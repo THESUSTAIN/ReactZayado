@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import MindsetAujourdhui from "@/components/mindset/MindsetAujourdhui";
 import MindsetParcours from "@/components/mindset/MindsetParcours";
 import MindsetCarnet from "@/components/mindset/MindsetCarnet";
@@ -11,15 +11,22 @@ import { AMBIANCES_SON, jouerAmbiance, arreterAmbiance } from "@/lib/ambiance";
 import {
   Heart, Battery, Activity, Moon, Wind, Coffee, BookOpen, Music,
   Sparkles, ChevronRight, Plus, Check, Waves, Cloud, Leaf, Play,
-  TrendingUp, Zap, Calendar, ArrowRight, Circle, CheckCircle2, Flame, Volume2, Square,
+  TrendingUp, Zap, Flame, Volume2, Square, Smile, PenLine, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useKairos } from "@/context/KairosContext";
 import { EnergyCheckin } from "@/components/kairos/EnergyCheckin";
-import { fetchState, completerCheckin, fetchRituels, basculerRituel, fetchCourbeEnergie } from "@/lib/kairosApi";
+import { fetchState, completerCheckin, fetchRituels, basculerRituel, fetchCourbeEnergie, fetchWheel, saveProfile } from "@/lib/kairosApi";
 
 const GOLD = "#DEC2A3";
 const MOOD_FACES = ["😞", "🙁", "😐", "🙂", "😊"];
+
+// Couleurs de la variante CLAIRE : celles du thème clair existant (theme-clair),
+// la maquette ne sert que de gabarit de forme, pas de palette.
+const L_NAVY = "#1F2A44";
+const L_MUTED = "rgba(31,42,68,0.55)";
+const L_FAINT = "rgba(31,42,68,0.45)";
+const L_GOLD = "#8A5A1E";
 
 // Palette apaisée (retour Marie Esther : le vert fluo piquait les yeux) —
 // sauge douce, bleu ardoise, terracotta feutré, beige doré.
@@ -40,7 +47,7 @@ const RITUALS = [
 ];
 
 export default function BienEtre() {
-  const { user, trend, aCheckin, energy } = useKairos();
+  const { aCheckin, energy } = useKairos();
   // Mesures réelles du jour (serveur). null = pas encore mesuré — « — », jamais un faux chiffre.
   const [vitals, setVitals] = useState(null);
   const [checked, setChecked] = useState({});  // ritual id → true (enregistré côté serveur)
@@ -52,7 +59,8 @@ export default function BienEtre() {
   const [breathingOpen, setBreathingOpen] = useState(false);
   // Onglets (dans l'URL : ?tab=parcours&p=oser-vendre — utilisable depuis le Radar ou le cockpit)
   const [params, setParams] = useSearchParams();
-  const onglet = ["aujourdhui", "parcours", "carnet", "sens"].includes(params.get("tab")) ? params.get("tab") : "aujourdhui";
+  const brut = params.get("tab") === "sens" ? "outils" : params.get("tab");
+  const onglet = ["aujourdhui", "rituels", "parcours", "outils", "carnet"].includes(brut) ? brut : "aujourdhui";
   const parcoursOuvert = params.get("p") || null;
   const allerA = (tab, p = null) => { setParams(p ? { tab, p } : { tab }); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
@@ -75,10 +83,12 @@ export default function BienEtre() {
     setSerie(d.serie);
   }).catch(() => {});
 
+  const chargerCourbe = () => fetchCourbeEnergie().then(setCourbe).catch(() => setCourbe({ semaine: [] }));
+
   useEffect(() => {
     chargerVitals();
     chargerRituels();
-    fetchCourbeEnergie().then(setCourbe).catch(() => setCourbe({ semaine: [] }));
+    chargerCourbe();
     try { localStorage.removeItem("kairos_vitals"); } catch { /* stockage indisponible */ }
   }, [energy?.score]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -114,165 +124,168 @@ export default function BienEtre() {
   const totalRituals = RITUALS.length;
   const avgEnergy = history.length ? (history.reduce((s, v) => s + v, 0) / history.length).toFixed(1) : null;
 
+  const suggestion = vitals?.stress >= 4
+    ? "Ton stress est haut : une vraie pause respiration maintenant"
+    : vitals?.energy != null && vitals.energy <= 2
+      ? "Énergie basse : allège ta fin de journée et protège une pause"
+      : "Une pause courte cet après-midi garde ton énergie stable";
+
+  // Onglets alignés sur la maquette. Les anciens liens (?tab=sens) restent valables.
+  const ONGLETS = [["aujourdhui", "Aujourd'hui"], ["rituels", "Rituels"], ["parcours", "Parcours"], ["outils", "Outils"], ["carnet", "Carnet"]];
+
   return (
-    <div className="min-h-screen">
+    <div className="be-page min-h-screen" data-testid="page-bienetre">
       <Sidebar />
-      <div className="lg:pl-[92px]">
+      {/* Thème crème limité au contenu : la barre latérale garde son style. */}
+      <div className="be-clair theme-creme lg:pl-[92px]">
         <Header title="Bien-être & Mindset" subtitle="Prendre soin de toi, et de ton état d'esprit d'entrepreneur." />
 
-        <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-offwhite/60">Bien-être & Mindset</p>
-          <h1 className="mt-1 font-display text-3xl font-bold sm:text-4xl">Prendre soin de toi</h1>
-          <nav className="-mx-4 mb-7 mt-5 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0" data-testid="bienetre-onglets">
-            {[["aujourdhui", "Aujourd'hui"], ["parcours", "Parcours"], ["carnet", "Mon carnet"], ["sens", "Sens & équilibre"]].map(([k, l]) => (
-              <button key={k} onClick={() => allerA(k)} data-testid={`bienetre-onglet-${k}`}
-                className={`shrink-0 rounded-full px-5 py-2.5 text-[13.5px] font-semibold transition ${onglet === k ? "bg-gradient-to-b from-[#F1E2CC] to-[#DEC2A3] text-navy-900" : "border border-white/20 bg-white/[0.05] text-offwhite/75 hover:bg-white/10"}`}>
+        <main className="mx-auto max-w-5xl px-4 pb-28 pt-4 sm:px-6 sm:pt-6 lg:pb-12">
+          {/* Titre (maquette) — pas de bandeau image : le contenu passe d'abord. */}
+          <div className="text-center">
+            <p className="font-display text-[20px] font-medium" style={{ color: L_NAVY }}>Zayado</p>
+            <h1 className="font-display text-[34px] font-semibold leading-tight sm:text-[44px]" style={{ color: L_NAVY }} data-testid="bienetre-titre">Bien-être &amp; Mindset</h1>
+          </div>
+
+          <nav className="be-tabs mt-6" data-testid="bienetre-onglets">
+            {ONGLETS.map(([k, l]) => (
+              <button key={k} onClick={() => allerA(k)} data-testid={`bienetre-onglet-${k}`} data-actif={onglet === k ? "true" : "false"} className="be-tab">
                 {l}
               </button>
             ))}
           </nav>
 
-          {onglet === "parcours" && <MindsetParcours ouvert={parcoursOuvert} onOuvrir={(id) => allerA("parcours", id)} />}
-          {onglet === "carnet" && <MindsetCarnet />}
-          {onglet === "sens" && <SensEquilibre />}
-          {onglet === "aujourdhui" && (<>
-          <MindsetAujourdhui onOuvrirParcours={(id) => allerA("parcours", id)} onOuvrirCarnet={() => allerA("carnet")} />
+          <div className="mt-5">
+            {onglet === "parcours" && <MindsetParcours ouvert={parcoursOuvert} onOuvrir={(id) => allerA("parcours", id)} />}
+            {onglet === "carnet" && <MindsetCarnet />}
 
-          {/* 4 vitals cards */}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {Object.entries(VITALS_LABEL).map(([key, v]) => {
-              const val = vitals?.[key] ?? null;
-              const good = val !== null && (v.reverse ? val <= 2 : val >= 4);
-              return (
-                <button key={key} onClick={() => ouvrirVital(key)}
-                  className="group relative overflow-hidden rounded-[18px] border border-white/10 bg-white/10 backdrop-blur-xl p-5 text-left shadow-[0_16px_36px_-24px_rgba(3,10,24,0.95)] transition duration-200 hover:-translate-y-0.5 hover:border-white/25 hover:bg-[#1b3a67]"
-                  data-testid={`vital-${key}`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl ring-1 ring-white/10" style={{ background: `${v.color}22` }}>
-                      <v.icon size={17} style={{ color: v.color }} />
-                    </div>
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/50">{v.label}</span>
-                  </div>
-                  <div className="mt-4 flex items-baseline gap-1">
-                    <span className="font-display text-[44px] font-semibold leading-none tracking-tight">{val ?? "—"}</span>
-                    {val !== null && <span className="text-[13px] text-white/50">/ 5</span>}
-                  </div>
-                  <div className="mt-3 flex gap-0.5">
-                    {[1, 2, 3, 4, 5].map((n) => (
-                      <div key={n} className="h-1.5 flex-1 rounded-full transition"
-                        style={{ background: val !== null && n <= val ? v.color : "rgba(255,255,255,0.08)" }} />
-                    ))}
-                  </div>
-                  {key === "energy" && <div className="mt-3 flex gap-1.5" aria-label="Échelle d’humeur"><span className="text-sm">😞</span>{MOOD_FACES.slice(1, 4).map((face) => <span key={face} className="text-sm opacity-75">{face}</span>)}<span className="text-sm">😊</span></div>}
-                  <div className="mt-2.5 flex items-center gap-1 text-[11px]" style={{ color: good ? "#7A9E7E" : "rgba(255,255,255,0.5)" }}>
-                    {val === null ? <>À mesurer — touche pour renseigner</> : good ? <><Sparkles size={11} /> {v.reverse ? "Bas, c'est bien" : "En forme"}</> : <>{v.desc}</>}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Rituels doux du jour — Pro checklist */}
-          <section className="mt-8">
-            <div className="mb-4 flex items-end justify-between">
-              <div>
-                <h2 className="font-display text-[20px] font-semibold sm:text-[22px]">Tes rituels doux du jour</h2>
-                <p className="mt-1 text-[13px] text-white/55">Coche celui qui t'a fait du bien : chaque jour avec un geste pour toi (rituel, check-in ou exercice) prolonge ta série.</p>
-              </div>
-              <div className="text-right">
-                <div className="text-[10px] uppercase tracking-widest text-white/45">Aujourd'hui</div>
-                <div className="font-display text-[18px] font-semibold" style={{ color: GOLD }}>{doneCount} / {totalRituals}</div>
-                {serie && (
-                  <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-gold/10 px-2 py-0.5 text-[11px] font-semibold text-gold" data-testid="bienetre-serie">
-                    <Flame size={12} /> {serie.jours} jour{serie.jours > 1 ? "s" : ""} de suite{serie.record > serie.jours ? ` · record ${serie.record}` : ""}
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
-              <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-white/5">
-                <span className="block h-full transition-all duration-500" style={{ width: `${Math.min(100, (doneCount / totalRituals) * 100)}%`, background: `linear-gradient(90deg, ${GOLD}, ${GOLD}aa)` }} />
-              </div>
-              <div className="grid gap-2 md:grid-cols-3">
-                {RITUALS.map((r) => {
-                  const done = !!checked[r.id];
-                  return (
-                    <div key={r.id} className={`group flex items-start gap-3 rounded-xl border p-4 transition ${done ? "border-emerald-500/30 bg-emerald-500/[0.06]" : "border-white/10 bg-white/[0.03] hover:border-white/25"}`}>
-                      <button onClick={() => toggleRitual(r.id)} data-testid={`rituel-${r.id}`}
-                        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 transition ${done ? "border-emerald-500 bg-emerald-500" : "border-white/25 bg-transparent hover:border-white/50"}`}>
-                        {done && <Check size={13} className="text-navy-900" strokeWidth={3} />}
-                      </button>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <r.icon size={15} style={{ color: done ? "#a3e635" : GOLD }} />
-                          <h3 className={`text-[13.5px] font-semibold ${done ? "text-emerald-100 line-through decoration-emerald-500/40" : "text-white"}`}>{r.title}</h3>
-                        </div>
-                        <p className="mt-1 text-[11.5px] text-white/55">{r.desc}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </section>
-
-          {/* Une seule séance : protocole + ambiance sonore + durée au même endroit */}
-          <SeanceDuMoment vitals={vitals} onLancer={setSeance} />
-
-          {/* Layout 2 cols: 14 jours + Insight */}
-          <div className="mt-6 grid gap-4 lg:grid-cols-[2fr_1fr]">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="font-display text-[15px] font-semibold">7 derniers jours</h3>
-                {avgEnergy && (
-                  <div className="flex items-center gap-3 text-[11px] text-white/55">
-                    <div className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: GOLD }} /> Moy. {avgEnergy}/5</div>
-                  </div>
-                )}
-              </div>
-              {history.length === 0 ? (
-                <div className="flex h-40 flex-col items-center justify-center text-center" data-testid="bienetre-history-empty">
-                  <TrendingUp size={18} className="text-gold" />
-                  <p className="mt-2 max-w-xs text-xs leading-relaxed text-white/55">Aucune mesure pour l'instant — ta courbe d'énergie se dessine ici après tes premiers check-ins.</p>
+            {onglet === "aujourdhui" && (
+              <div className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <EnergieCard vitals={vitals} mood={energy?.mood} aCheckin={aCheckin} onVital={ouvrirVital} onCheckin={() => setEnergieOpen(true)} />
+                  <RoueCard />
                 </div>
-              ) : (
-              <div className="relative">
-                <svg viewBox="0 0 400 140" className="w-full h-40">
-                  <defs>
-                    <linearGradient id="ge" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="0%" stopColor={GOLD} stopOpacity="0.5" />
-                      <stop offset="100%" stopColor={GOLD} stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <line key={n} x1="0" x2="400" y1={140 - n * 26} y2={140 - n * 26} stroke="rgba(255,255,255,0.05)" strokeDasharray="2 4" />
-                  ))}
-                  {(() => {
-                    const pts = semaine.map((j, i) => (j.energie != null ? [(i * 60) + 20, 140 - j.energie * 26] : null)).filter(Boolean);
-                    const line = pts.map(([x, y]) => `${x},${y}`).join(" ");
-                    const area = pts.length ? `M${pts[0][0]},140 L${line.replace(/ /g, " L")} L${pts[pts.length - 1][0]},140 Z` : "";
-                    const creux = courbe?.analyse?.creux?.jour?.slice(0, 3);
+
+                <div className="be-suggestion" data-testid="bienetre-suggestion">
+                  <div className="min-w-0">
+                    <p className="font-display text-[20px] font-semibold" style={{ color: L_NAVY }}>Suggestion du moment</p>
+                    <p className="mt-0.5 text-[13px]" style={{ color: L_MUTED }}>{suggestion}</p>
+                  </div>
+                  <button onClick={() => setSeance({ protocole: vitals?.stress >= 4 ? "coherence" : "box", ambiance: "aucune", duree: 3 })} className="be-btn-navy" data-testid="bienetre-bloquer-creneau">
+                    Bloquer un créneau
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 sm:gap-4">
+                  <button onClick={() => setSeance({ protocole: "4-7-8", ambiance: "aucune", duree: 3 })} className="be-raccourci" data-testid="bienetre-mini-respiration">
+                    <Wind size={22} /> <span>Respiration guidée</span>
+                  </button>
+                  <button onClick={() => allerA("carnet")} className="be-raccourci" data-testid="bienetre-mini-journal">
+                    <BookOpen size={22} /> <span>Journal</span>
+                  </button>
+                  <IntentionDuJour />
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <section className="be-card" data-testid="bienetre-rituels-apercu">
+                    <div className="flex items-start justify-between gap-2">
+                      <h2 className="font-display text-[22px] font-semibold" style={{ color: L_NAVY }}>Tes rituels doux du jour</h2>
+                      {serie?.jours > 0 && (
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: "rgba(217,169,78,0.16)", color: L_GOLD }} data-testid="bienetre-serie">
+                          <Flame size={12} /> {serie.jours} j
+                        </span>
+                      )}
+                    </div>
+                    <ul className="mt-3 divide-y" style={{ borderColor: "#EDE7DC" }}>
+                      {RITUALS.slice(0, 4).map((r) => {
+                        const done = !!checked[r.id];
+                        return (
+                          <li key={r.id} className="border-[#EDE7DC]">
+                            <button onClick={() => toggleRitual(r.id)} className="flex w-full items-center gap-3 py-2.5 text-left" data-testid={`rituel-${r.id}`}>
+                              <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] border-2 transition ${done ? "border-[#1F2A44] bg-[#1F2A44]" : "border-[#D9CBB3] bg-white"}`}>
+                                {done && <Check size={12} className="text-white" strokeWidth={3} />}
+                              </span>
+                              <span className={`text-[15px] ${done ? "line-through opacity-60" : ""}`} style={{ color: L_NAVY }}>{r.title}</span>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    <button onClick={() => allerA("rituels")} className="mt-2 text-[12.5px] font-semibold underline underline-offset-4" style={{ color: L_GOLD }}>
+                      Tous les rituels · {doneCount}/{totalRituals} aujourd'hui
+                    </button>
+                  </section>
+                  <SeanceCompacte vitals={vitals} onLancer={setSeance} />
+                </div>
+
+                <MindsetAujourdhui onOuvrirParcours={(id) => allerA("parcours", id)} onOuvrirCarnet={() => allerA("carnet")} />
+              </div>
+            )}
+
+            {onglet === "rituels" && (
+              <section className="be-card" data-testid="bienetre-rituels">
+                <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+                  <div>
+                    <h2 className="font-display text-[22px] font-semibold" style={{ color: L_NAVY }}>Tes rituels doux</h2>
+                    <p className="mt-1 text-[13px]" style={{ color: L_MUTED }}>Coche celui qui t'a fait du bien : chaque jour avec un geste pour toi (rituel, check-in ou exercice) prolonge ta série.</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-display text-[20px] font-semibold" style={{ color: L_GOLD }}>{doneCount} / {totalRituals}</div>
+                    {serie && <div className="text-[11.5px]" style={{ color: L_MUTED }}>{serie.jours} jour{serie.jours > 1 ? "s" : ""} de suite{serie.record > serie.jours ? ` · record ${serie.record}` : ""}</div>}
+                  </div>
+                </div>
+                <div className="grid gap-2.5 md:grid-cols-2">
+                  {RITUALS.map((r) => {
+                    const done = !!checked[r.id];
                     return (
-                      <>
-                        {semaine.map((j, i) => (j.jour === creux ? <rect key={`c${i}`} x={(i * 60) - 5} y="0" width="50" height="140" rx="8" fill="rgba(185,82,78,0.12)" /> : null))}
-                        {area && <path d={area} fill="url(#ge)" />}
-                        <polyline points={line} fill="none" stroke={GOLD} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        {pts.map(([x, y], i) => <circle key={i} cx={x} cy={y} r="4" fill={GOLD} />)}
-                      </>
+                      <button key={r.id} onClick={() => toggleRitual(r.id)} data-testid={`rituel-liste-${r.id}`}
+                        className={`flex items-start gap-3 rounded-2xl border p-4 text-left transition ${done ? "border-[#1F2A44]/30 bg-[#F4EFE6]" : "border-[#EDE7DC] bg-white hover:border-[#D9CBB3]"}`}>
+                        <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] border-2 ${done ? "border-[#1F2A44] bg-[#1F2A44]" : "border-[#D9CBB3]"}`}>
+                          {done && <Check size={12} className="text-white" strokeWidth={3} />}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="flex items-center gap-2 text-[14.5px] font-semibold" style={{ color: L_NAVY }}><r.icon size={15} style={{ color: L_GOLD }} /> {r.title}</span>
+                          <span className="mt-0.5 block text-[12.5px]" style={{ color: L_MUTED }}>{r.desc}</span>
+                        </span>
+                      </button>
                     );
-                  })()}
-                </svg>
-                <div className="mt-2 flex justify-between px-4 text-[10px] text-white/40">
-                  {semaine.map((j) => <span key={j.date} className={j.jour === courbe?.analyse?.creux?.jour?.slice(0, 3) ? "text-rose-300" : ""}>{j.jour}</span>)}
+                  })}
                 </div>
+              </section>
+            )}
+
+            {onglet === "outils" && (
+              <div className="space-y-5">
+                <div className="be-seance-dark rounded-[22px]">
+                  <SeanceDuMoment vitals={vitals} onLancer={setSeance} />
+                </div>
+                <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+                  <section className="be-card" data-testid="bienetre-courbe">
+                    <div className="mb-3 flex items-center justify-between">
+                      <h3 className="font-display text-[18px] font-semibold" style={{ color: L_NAVY }}>7 derniers jours</h3>
+                      {avgEnergy && <span className="text-[12px]" style={{ color: L_MUTED }}>Moyenne {avgEnergy}/5</span>}
+                    </div>
+                    {history.length === 0 ? (
+                      <p className="py-10 text-center text-[13px]" style={{ color: L_MUTED }} data-testid="bienetre-history-empty">Ta courbe d'énergie se dessine ici après tes premiers check-ins.</p>
+                    ) : (
+                      <div className="flex h-40 items-end justify-between gap-2">
+                        {semaine.map((j) => (
+                          <div key={j.date} className="flex flex-1 flex-col items-center gap-2">
+                            <div className="flex h-32 w-full items-end justify-center">
+                              <span className="w-full max-w-[26px] rounded-full" style={{ height: j.energie != null ? `${(j.energie / 5) * 100}%` : "0%", background: j.jour === courbe?.analyse?.creux?.jour?.slice(0, 3) ? "#C98B84" : L_NAVY }} title={j.energie != null ? `${j.energie}/5` : "non mesuré"} />
+                            </div>
+                            <span className="text-[10.5px] capitalize" style={{ color: L_MUTED }}>{j.jour}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                  <InsightDuJour history={history} vitals={vitals} analyse={courbe?.analyse} onCheckin={() => setEnergieOpen(true)} onRespirer={() => setBreathingOpen(true)} />
+                </div>
+                <SensEquilibre />
               </div>
-              )}
-            </div>
-
-            <InsightDuJour history={history} vitals={vitals} analyse={courbe?.analyse} onCheckin={() => setEnergieOpen(true)} onRespirer={() => setBreathingOpen(true)} />
+            )}
           </div>
-
-          </>)}
         </main>
       </div>
 
@@ -285,8 +298,156 @@ export default function BienEtre() {
       {breathingOpen && <BreathingSession onClose={() => setBreathingOpen(false)} onTermine={seanceTerminee} />}
       {seance && <BreathingSession autoStart defaultCycle={seance.protocole} durationMin={seance.duree} ambiance={seance.ambiance}
         onClose={() => setSeance(null)} onTermine={seanceTerminee} />}
-      <EnergyCheckin open={energieOpen} onClose={() => { setEnergieOpen(false); setTimeout(chargerVitals, 800); }} />
+      <EnergyCheckin open={energieOpen} onClose={() => { setEnergieOpen(false); setTimeout(() => { chargerVitals(); chargerCourbe(); }, 800); }} />
     </div>
+  );
+}
+
+/* ── Maquette « Bien-être & Mindset » : cartes du jour (données réelles) ── */
+const MOOD_SCORE = { "épuisé": 1, "fatigué": 2, neutre: 3, "aligné": 4, rayonnant: 5 };
+
+function Anneau({ valeur }) {
+  const r = 58, c = 2 * Math.PI * r;
+  const pct = valeur != null ? valeur / 5 : 0;
+  return (
+    <svg viewBox="0 0 140 140" className="h-[140px] w-[140px] shrink-0" aria-hidden="true">
+      <circle cx="70" cy="70" r={r} fill="none" stroke="#F1EADF" strokeWidth="11" />
+      <circle cx="70" cy="70" r={r} fill="none" stroke="#D9BE93" strokeWidth="11" strokeLinecap="round"
+        strokeDasharray={`${c * pct} ${c}`} transform="rotate(-90 70 70)" style={{ transition: "stroke-dasharray .6s ease" }} />
+      <text x="70" y="70" textAnchor="middle" dominantBaseline="central" fontFamily="inherit" fontSize="34" fontWeight="600" fill={L_NAVY} className="font-display">
+        {valeur != null ? `${valeur}/5` : "—"}
+      </text>
+    </svg>
+  );
+}
+
+function EnergieCard({ vitals, mood, aCheckin, onVital, onCheckin }) {
+  const humeur = aCheckin && vitals?.energy != null ? MOOD_SCORE[mood] ?? null : null;
+  const tuiles = [
+    { k: "sleep", label: "Sommeil", Icon: Moon, val: vitals?.sleep },
+    { k: "stress", label: "Stress", Icon: Activity, val: vitals?.stress },
+    { k: "energy", label: "Humeur", Icon: Smile, val: humeur },
+    { k: "energy", label: "Énergie", Icon: Zap, val: vitals?.energy },
+  ];
+  return (
+    <section className="be-card" data-testid="bienetre-energie-card">
+      <h2 className="font-display text-[22px] font-semibold" style={{ color: L_NAVY }}>Ton énergie</h2>
+      {vitals?.energy == null ? (
+        <div className="flex flex-col items-center py-6 text-center" data-testid="bienetre-energie-vide">
+          <Anneau valeur={null} />
+          <p className="mt-3 max-w-[260px] text-[13px]" style={{ color: L_MUTED }}>Ton énergie s'affiche ici après ton check-in du jour — 30 secondes.</p>
+          <button onClick={onCheckin} className="be-btn-navy mt-4" data-testid="bienetre-checkin-cta">Faire mon check-in</button>
+        </div>
+      ) : (
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-5 sm:flex-nowrap sm:justify-between">
+          <button onClick={onCheckin} aria-label="Refaire mon check-in énergie" data-testid="bienetre-energie-anneau"><Anneau valeur={vitals.energy} /></button>
+          <div className="grid grid-cols-2 gap-2.5">
+            {tuiles.map((t) => (
+              <button key={t.label} onClick={() => onVital(t.k)} className="be-tuile" data-testid={`vital-${t.label.toLowerCase()}`}>
+                <t.Icon size={17} style={{ color: L_NAVY }} />
+                <span className="text-[11.5px]" style={{ color: L_MUTED }}>{t.label}</span>
+                <span className="text-[15px] font-semibold" style={{ color: L_NAVY }}>{t.val != null ? `${t.val}/5` : "—"}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** Roue de l'équilibre : les VRAIS piliers de l'utilisateur (Vision › Roue), en radar. */
+function RoueCard() {
+  const [piliers, setPiliers] = useState(null);
+  useEffect(() => { fetchWheel().then((r) => setPiliers(Array.isArray(r?.pillars) ? r.pillars : [])).catch(() => setPiliers([])); }, []);
+  const n = piliers?.length || 0;
+  const S = 260, C = S / 2, R = 78;
+  const pt = (i, r) => { const a = (Math.PI * 2 * i) / n - Math.PI / 2; return [C + r * Math.cos(a), C + r * Math.sin(a)]; };
+  return (
+    <section className="be-card" data-testid="bienetre-roue">
+      <h2 className="font-display text-[22px] font-semibold" style={{ color: L_NAVY }}>Ta roue de l'équilibre</h2>
+      {piliers === null ? (
+        <div className="flex h-[220px] items-center justify-center"><Loader2 className="animate-spin" size={18} style={{ color: L_GOLD }} /></div>
+      ) : n < 3 ? (
+        <p className="py-10 text-center text-[13px]" style={{ color: L_MUTED }}>Note tes piliers de vie pour voir ta roue.</p>
+      ) : (
+        <Link to="/app/vision?view=wheel" className="mt-1 block" title="Modifier ma roue" data-testid="bienetre-roue-lien">
+          <svg viewBox={`0 0 ${S} ${S}`} className="mx-auto h-[230px] w-full max-w-[300px]">
+            {[0.25, 0.5, 0.75, 1].map((f) => (
+              <polygon key={f} points={piliers.map((_, i) => pt(i, R * f).join(",")).join(" ")} fill="none" stroke="#E7DFD2" strokeWidth="1" />
+            ))}
+            {piliers.map((p, i) => {
+              const v = Math.max(0.06, (Number(p.score) || 0) / 100);
+              const a = pt(i, R * v), b = pt(i + 1, R * Math.max(0.06, (Number(piliers[(i + 1) % n].score) || 0) / 100));
+              return <polygon key={`w${i}`} points={`${C},${C} ${a.join(",")} ${b.join(",")}`} fill={p.color || "#D9BE93"} fillOpacity="0.45" stroke={p.color || "#D9BE93"} strokeWidth="1" />;
+            })}
+            {piliers.map((p, i) => {
+              const [x, y] = pt(i, R + 22);
+              return <text key={`t${i}`} x={x} y={y} textAnchor={Math.abs(x - C) < 8 ? "middle" : x > C ? "start" : "end"} dominantBaseline="middle" fontSize="10" fill={L_NAVY}>{p.name}</text>;
+            })}
+          </svg>
+        </Link>
+      )}
+    </section>
+  );
+}
+
+/** Intention du jour : enregistrée sur le compte (profil), pas dans le navigateur. */
+function IntentionDuJour() {
+  const auj = new Date().toISOString().slice(0, 10);
+  const [texte, setTexte] = useState("");
+  const [edition, setEdition] = useState(false);
+  useEffect(() => {
+    fetchState().then((d) => {
+      const cm = d?.vision?.contexte_metier || {};
+      if (cm.intention_jour_date === auj) setTexte(cm.intention_jour || "");
+    }).catch(() => {});
+  }, [auj]);
+  const enregistrer = async () => {
+    setEdition(false);
+    try { await saveProfile({ contexte_metier: { intention_jour: texte.trim().slice(0, 200), intention_jour_date: auj } }); if (texte.trim()) toast.success("Intention posée pour aujourd'hui."); }
+    catch { toast.error("Enregistrement impossible."); }
+  };
+  if (edition) {
+    return (
+      <div className="be-raccourci !justify-start" data-testid="bienetre-mini-intention">
+        <input autoFocus value={texte} onChange={(e) => setTexte(e.target.value)} onKeyDown={(e) => e.key === "Enter" && enregistrer()} onBlur={enregistrer}
+          placeholder="Aujourd'hui, je…" maxLength={200} className="w-full rounded-lg border border-[#E2D5BE] bg-white px-2 py-1.5 text-[13px]" data-testid="bienetre-intention-input" />
+      </div>
+    );
+  }
+  return (
+    <button onClick={() => setEdition(true)} className="be-raccourci" data-testid="bienetre-mini-intention">
+      <PenLine size={22} />
+      {texte ? <span className="line-clamp-2 font-hand text-[19px] leading-tight">{texte}</span> : <span>Intention du jour</span>}
+    </button>
+  );
+}
+
+/** Séance du moment — version compacte (carte navy de la maquette). */
+function SeanceCompacte({ vitals, onLancer }) {
+  const conseil = vitals?.stress >= 4 ? "coherence" : vitals?.energy != null && vitals.energy <= 2 ? "4-7-8" : "box";
+  const [proto, setProto] = useState(conseil);
+  useEffect(() => { setProto(conseil); }, [conseil]);
+  return (
+    <section className="flex flex-col items-center justify-center rounded-[22px] px-6 py-7 text-center" style={{ background: "#1C2746" }} data-testid="seance-du-moment">
+      <h2 className="font-display text-[22px] font-semibold" style={{ color: "#F6F1E9" }}>Séance du moment</h2>
+      <div className="mt-4 flex flex-wrap justify-center gap-2">
+        {[["4-7-8", "4-7-8"], ["coherence", "Cohérence"], ["box", "Box"]].map(([id, l]) => (
+          <button key={id} onClick={() => setProto(id)} data-testid={`seance-protocole-${id}`}
+            className="rounded-full border px-4 py-1.5 text-[14px] transition"
+            style={proto === id ? { borderColor: "#D9BE93", background: "rgba(217,190,147,0.18)", color: "#F6F1E9" } : { borderColor: "rgba(246,241,233,0.35)", color: "rgba(246,241,233,0.8)" }}>
+            {l}
+          </button>
+        ))}
+      </div>
+      <p className="mt-2 text-[11.5px]" style={{ color: "rgba(246,241,233,0.55)" }}>{PROTOCOLES[proto]?.desc}</p>
+      <button onClick={() => onLancer({ protocole: proto, ambiance: "aucune", duree: proto === "coherence" ? 5 : 3 })} data-testid="seance-lancer"
+        className="mt-5 flex h-[76px] w-[76px] items-center justify-center rounded-full text-[15px] font-semibold"
+        style={{ background: "#D9BE93", color: "#1C2746", boxShadow: "0 0 0 8px rgba(246,241,233,0.12)" }}>
+        Start
+      </button>
+    </section>
   );
 }
 
@@ -308,7 +469,7 @@ function SeanceDuMoment({ vitals, onLancer }) {
   const choix = (actif) => `rounded-xl border px-3 py-2 text-left transition ${actif ? "border-[#DEC2A3] bg-[#DEC2A3]/12" : "border-white/10 bg-white/[0.03] hover:border-white/25"}`;
   const raison = { coherence: "ton stress est élevé", "4-7-8": "ton énergie est basse", refuge: "la journée se termine", box: "pour rester concentré" }[conseil];
   return (
-    <section className="mt-6 relative overflow-hidden rounded-2xl border border-white/12 p-5 sm:p-7" data-testid="seance-du-moment"
+    <section className="mt-6 lg:mt-0 relative overflow-hidden rounded-2xl border border-white/12 p-5 sm:p-7" data-testid="seance-du-moment"
       style={{ background: "linear-gradient(135deg, rgba(96,165,250,0.14), rgba(147,197,253,0.08), rgba(56,178,172,0.09))" }}>
       <div className="flex items-center gap-2">
         <Wind size={16} style={{ color: GOLD }} />
@@ -412,7 +573,7 @@ function CheckinModal({ focus, vitals, onSave, onClose }) {
   const v = VITALS_LABEL[tab];
   const [choix, setChoix] = useState(null);
   return (
-    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-[#0b1a3d]/70 backdrop-blur-sm p-4 backdrop-blur-sm sm:items-center" onClick={onClose}>
+    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-[#0b1a3d]/70 backdrop-blur-sm p-4 sm:items-center" onClick={onClose}>
       <div className="fenetre w-full max-w-md rounded-t-2xl p-6 sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-5 flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl" style={{ background: `${v.color}22` }}>

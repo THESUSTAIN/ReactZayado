@@ -27,7 +27,7 @@ from fastapi import APIRouter, Depends, FastAPI, File, Form, HTTPException, Requ
 from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import (
-    Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, delete as sa_delete, func, select,
+    Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, delete as sa_delete, func, select, update,
 )
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -135,6 +135,9 @@ import jwt as _pyjwt
 import bcrypt as _bcrypt
 from starlette.middleware.base import BaseHTTPMiddleware
 
+# Support juridique du Copilote (détection, sources officielles, prompt, repli)
+from juridique_ext import est_question_juridique, sources_pour, prompt_juridique, repli_juridique
+
 JWT_SECRET = os.environ.get("JWT_SECRET", "")
 if not JWT_SECRET:
     # Corrigé : avant, un avertissement était loggé mais l'app démarrait quand
@@ -215,6 +218,7 @@ _ROUTES_PUBLIQUES_EXACTES = {
     "/api/subscribe",                  # inscription newsletter (e-mail de bienvenue)
     "/api/tarifs/fondateur",           # état de l'offre fondateur (page Tarifs)
     "/api/accueil/choix",              # mesure d'accueil (écran de présentation, avant connexion)
+    "/api/contenu/login-carousel",     # carrousel de la page /login (sans compte)
 }
 _ROUTES_PUBLIQUES_PREFIXES = (
     "/api/connexion/",                 # options, lien magique, OAuth (démo bloquée à part)
@@ -223,6 +227,7 @@ _ROUTES_PUBLIQUES_PREFIXES = (
     "/api/vision/images/",             # images chargées par <img>, sans en-tête
     "/api/vendeur/images/",            # photos produit : lues par <img> et par Shopify (import)
     "/api/commerce/offers/",           # fiche d'offre publique
+    "/api/medias/",                    # médias du carrousel login (lus par <img>/<video>)
 )
 
 
@@ -234,6 +239,30 @@ def _mode_apercu(request) -> bool:
     """Aperçu développeur : APERCU_CODE défini ET hors domaines de production.
     Seul cas où une requête sans jeton retombe sur le compte démo."""
     return bool(os.environ.get("APERCU_CODE")) and not _en_prod(request)
+
+
+# Dernière connexion : mise à jour légère (au plus 1 écriture / 10 min / compte),
+# en tâche de fond pour ne jamais ralentir la requête.
+_DERNIERE_ACTIVITE: dict = {}
+
+
+def _noter_activite(uid: str) -> None:
+    maintenant = time.time()
+    if maintenant - _DERNIERE_ACTIVITE.get(uid, 0) < 600:
+        return
+    _DERNIERE_ACTIVITE[uid] = maintenant
+
+    async def _ecrire():
+        try:
+            async with async_session() as db:
+                await db.execute(update(User).where(User.id == uid).values(derniere_connexion=datetime.now(timezone.utc)))
+                await db.commit()
+        except Exception as e:  # noqa: BLE001
+            logger.debug("Dernière connexion non notée : %s", e)
+    try:
+        asyncio.get_running_loop().create_task(_ecrire())
+    except RuntimeError:
+        pass
 
 
 class _AuthMiddleware(BaseHTTPMiddleware):
@@ -257,6 +286,8 @@ class _AuthMiddleware(BaseHTTPMiddleware):
         if (not jeton_valide and request.method != "OPTIONS" and path.startswith("/api")
                 and not _route_publique(path) and not _mode_apercu(request)):
             return JSONResponse(status_code=401, content={"detail": "Connexion requise."})
+        if jeton_valide:
+            _noter_activite(uid)
         token_uid = _current_uid.set(uid)
         token_role = _current_role.set(role)
         try:
@@ -592,6 +623,8 @@ class User(Base):
     # Mois d'abonnement offerts à créditer (parrainage & codes promo) — remplace l'ancien "credits".
     mois_offerts_dus: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    # Dernière connexion / activité (mise à jour au plus toutes les 10 min par requête authentifiée).
+    derniere_connexion: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class Lead(Base):
@@ -837,6 +870,56 @@ class AuthIn(BaseModel):
     password: str = Field(min_length=8, max_length=200)
 
 
+async def _crediter_recompense(db: AsyncSession, invitation, parrain) -> None:
+    """Crédite la récompense du parrain selon SON programme au moment de l'activation."""
+    prog = parrain.programme or "parrainage"
+    if prog == "affiliation":
+        nb_actifs = (await db.execute(select(func.count(Referral.id)).where(
+            Referral.referrer_id == parrain.id, Referral.statut == "actif"))).scalar() or 0
+        montant = _palier_affiliation(nb_actifs)["montant"]
+        parrain.solde_commission = (parrain.solde_commission or 0) + montant
+        invitation.recompense_type = "commission"
+        invitation.recompense_valeur = montant
+    elif prog == "ambassadeur":
+        parrain.solde_commission = (parrain.solde_commission or 0) + AMBASSADEUR_MONTANT
+        invitation.recompense_type = "commission"
+        invitation.recompense_valeur = AMBASSADEUR_MONTANT
+    else:  # parrainage classique → 1 mois offert
+        parrain.mois_offerts_dus = (parrain.mois_offerts_dus or 0) + 1
+        invitation.recompense_type = "mois_offert"
+        invitation.recompense_valeur = 1
+
+
+def _annuler_recompense(invitation, parrain) -> None:
+    """Retire une récompense déjà créditée (désactivation par l'admin), sans passer sous zéro."""
+    if invitation.recompense_type == "commission":
+        parrain.solde_commission = max(0.0, (parrain.solde_commission or 0) - (invitation.recompense_valeur or 0))
+    else:
+        parrain.mois_offerts_dus = max(0, (parrain.mois_offerts_dus or 0) - int(invitation.recompense_valeur or 0))
+
+
+async def _activer_parrainage(db: AsyncSession, user) -> None:
+    """Si quelqu'un avait invité cet e-mail, le filleul devient actif et le parrain
+    reçoit son bonus. Appelé à TOUTE création de compte (mot de passe, lien
+    magique, Google/Microsoft/TheSustain) — avant, seulement à l'inscription par
+    mot de passe : les filleuls venus par lien magique ou Google n'étaient jamais comptés.
+    Ne fait jamais échouer la création du compte."""
+    email = (user.email or "").strip().lower()
+    try:
+        invitation = (await db.execute(select(Referral).where(Referral.referred_email == email, Referral.statut == "en_attente")
+                                       .order_by(Referral.created_at))).scalars().first()
+        if invitation:
+            invitation.statut = "actif"
+            invitation.referred_id = user.id
+            parrain = (await db.execute(select(User).where(User.id == invitation.referrer_id))).scalar_one_or_none()
+            if parrain:
+                await _crediter_recompense(db, invitation, parrain)
+            await db.commit()
+    except Exception as e:  # noqa: BLE001
+        await db.rollback()
+        logger.error("Parrainage non activé pour %s : %s", email, e)
+
+
 @api.post("/auth/register")
 async def register(body: AuthIn, db: AsyncSession = Depends(get_db)):
     email = body.email.strip().lower()
@@ -855,33 +938,7 @@ async def register(body: AuthIn, db: AsyncSession = Depends(get_db)):
     # Le compte est déjà créé : un souci sur le parrainage ne doit JAMAIS
     # faire échouer l'inscription (avant : 500 affiché alors que le compte
     # existait, puis « compte déjà existant » au 2e essai).
-    try:
-        invitation = (await db.execute(select(Referral).where(Referral.referred_email == email, Referral.statut == "en_attente"))).scalar_one_or_none()
-        if invitation:
-            invitation.statut = "actif"
-            invitation.referred_id = user.id
-            parrain = (await db.execute(select(User).where(User.id == invitation.referrer_id))).scalar_one_or_none()
-            if parrain:
-                prog = parrain.programme or "parrainage"
-                if prog == "affiliation":
-                    nb_actifs = (await db.execute(select(func.count(Referral.id)).where(
-                        Referral.referrer_id == parrain.id, Referral.statut == "actif"))).scalar() or 0
-                    montant = _palier_affiliation(nb_actifs)["montant"]
-                    parrain.solde_commission = (parrain.solde_commission or 0) + montant
-                    invitation.recompense_type = "commission"
-                    invitation.recompense_valeur = montant
-                elif prog == "ambassadeur":
-                    parrain.solde_commission = (parrain.solde_commission or 0) + AMBASSADEUR_MONTANT
-                    invitation.recompense_type = "commission"
-                    invitation.recompense_valeur = AMBASSADEUR_MONTANT
-                else:  # parrainage classique → 1 mois offert
-                    parrain.mois_offerts_dus = (parrain.mois_offerts_dus or 0) + 1
-                    invitation.recompense_type = "mois_offert"
-                    invitation.recompense_valeur = 1
-            await db.commit()
-    except Exception as e:  # noqa: BLE001
-        await db.rollback()
-        logger.error("Parrainage non activé pour %s : %s", email, e)
+    await _activer_parrainage(db, user)
     return {"access_token": _creer_token(user.id, user.role), "email": user.email, "role": user.role}
 
 
@@ -953,7 +1010,7 @@ def _abo_resume(a) -> Optional[dict]:
         return None
     fin = a.fin if (a.fin is None or a.fin.tzinfo) else a.fin.replace(tzinfo=timezone.utc)
     actif = bool(a.plan != "essentielle" and fin and fin > datetime.now(timezone.utc))
-    etat = ("essai" if a.cycle == "essai" else "actif") if actif else ("expire" if fin else "aucun")
+    etat = ("essai" if a.cycle == "essai" else "offert" if a.cycle == "offert" else "actif") if actif else ("expire" if fin else "aucun")
     if actif and getattr(a, "resilie", False):
         etat = "resilie"
     return {"etat": etat, "plan": a.plan, "cycle": a.cycle, "fin": fin.isoformat() if fin else None,
@@ -961,14 +1018,91 @@ def _abo_resume(a) -> Optional[dict]:
             "montant_ttc": getattr(a, "montant_ttc", None), "plan_suivant": getattr(a, "plan_suivant", None)}
 
 
+def _iso_utc(dt) -> Optional[str]:
+    """ISO avec fuseau UTC (SQLite relit les dates sans fuseau)."""
+    return None if dt is None else (dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)).isoformat()
+
+
 @api.get("/admin/utilisateurs")
-async def lister_utilisateurs(db: AsyncSession = Depends(get_db), _role=Depends(exiger_role("admin"))):
-    rows = list((await db.execute(select(User).order_by(User.created_at.desc()))).scalars())
-    plans = {p.user_id: p.plan for p in (await db.execute(select(VisionProfile))).scalars()}
+async def lister_utilisateurs(page: int = 1, par_page: int = 25, q: Optional[str] = None,
+                              role: Optional[str] = None, offre: Optional[str] = None, tri: str = "inscription",
+                              db: AsyncSession = Depends(get_db), _role=Depends(exiger_role("admin"))):
+    """Liste paginée (avant : TOUS les comptes d'un coup, sans total).
+    Filtres : q (e-mail), role, offre (aucune | payant | offert | <plan>). Tri : inscription | connexion."""
+    par_page = max(5, min(par_page, 100))
+    page = max(1, page)
     Abo = globals().get("Abonnement")
-    abos = {a.user_id: a for a in (await db.execute(select(Abo))).scalars()} if Abo is not None else {}
+    base = select(User)
+    if q and q.strip():
+        base = base.where(User.email.ilike(f"%{q.strip().lower()}%"))
+    if role in ("client", "vendeur", "admin"):
+        base = base.where(User.role == role)
+    maintenant = datetime.now(timezone.utc)
+    if offre and Abo is not None:
+        actifs = select(Abo.user_id).where(Abo.plan != "essentielle", Abo.fin > maintenant)
+        if offre == "aucune":
+            base = base.where(User.id.not_in(actifs))
+        elif offre == "payant":
+            base = base.where(User.id.in_(actifs.where(Abo.cycle != "offert")))
+        elif offre == "offert":
+            base = base.where(User.id.in_(select(Abo.user_id).where(Abo.cycle == "offert")))
+        elif offre in PRICING:
+            base = base.where(User.id.in_(actifs.where(Abo.plan == offre)))
+    total = (await db.execute(select(func.count()).select_from(base.subquery()))).scalar_one()
+    ordre = (User.derniere_connexion.desc().nullslast() if tri == "connexion" else User.created_at.desc())
+    rows = list((await db.execute(base.order_by(ordre).offset((page - 1) * par_page).limit(par_page))).scalars())
+    ids = [u.id for u in rows]
+    plans = {p.user_id: p.plan for p in (await db.execute(select(VisionProfile).where(VisionProfile.user_id.in_(ids)))).scalars()} if ids else {}
+    abos = {a.user_id: a for a in (await db.execute(select(Abo).where(Abo.user_id.in_(ids)))).scalars()} if (Abo is not None and ids) else {}
+    # Compteurs globaux (toujours sur l'ensemble des comptes, pas sur la page).
+    stats = {"total": (await db.execute(select(func.count()).select_from(User))).scalar_one()}
+    if Abo is not None:
+        stats["payants"] = (await db.execute(select(func.count()).select_from(Abo).where(
+            Abo.plan != "essentielle", Abo.fin > maintenant, Abo.cycle != "offert"))).scalar_one()
+        stats["offerts"] = (await db.execute(select(func.count()).select_from(Abo).where(
+            Abo.cycle == "offert", Abo.fin > maintenant))).scalar_one()
+    stats["actifs_7j"] = (await db.execute(select(func.count()).select_from(User).where(
+        User.derniere_connexion >= maintenant - timedelta(days=7)))).scalar_one()
     return {"items": [{"id": u.id, "email": u.email, "role": u.role, "plan": plans.get(u.id, "essentielle"),
-                       "inscrit_le": u.created_at.isoformat(), "abonnement": _abo_resume(abos.get(u.id))} for u in rows]}
+                       "inscrit_le": _iso_utc(u.created_at),
+                       "derniere_connexion": _iso_utc(u.derniere_connexion),
+                       "abonnement": _abo_resume(abos.get(u.id))} for u in rows],
+            "total": total, "page": page, "par_page": par_page, "pages": max(1, -(-total // par_page)), "stats": stats}
+
+
+class AdminGratuitIn(BaseModel):
+    actif: bool = True
+    plan: str = "pro"
+
+
+@api.patch("/admin/utilisateurs/{user_id}/gratuit")
+async def admin_compte_gratuit(user_id: str, body: AdminGratuitIn, db: AsyncSession = Depends(get_db),
+                               _role=Depends(exiger_role("admin"))):
+    """Compte GRATUIT (collaborateurs Zayado, partenaires) — activable uniquement
+    par un admin, jamais en self-service. Accès complet à l'offre choisie, sans
+    date de fin ni prélèvement ; marqué « offert » (cycle) pour ne jamais être
+    confondu avec un client payant dans les stats ni recevoir de relance d'essai."""
+    if body.plan not in PRICING or body.plan == "essentielle":
+        raise HTTPException(422, "Offre inconnue.")
+    if not await db.get(User, user_id):
+        raise HTTPException(404, "Utilisateur introuvable.")
+    Abo = globals()["Abonnement"]
+    a = await db.get(Abo, user_id)
+    if not a:
+        a = Abo(user_id=user_id)
+        db.add(a)
+    profil = await _profil(db, user_id)
+    if body.actif:
+        if getattr(a, "mollie_subscription_id", None) and not getattr(a, "resilie", False):
+            raise HTTPException(409, "Ce compte a un prélèvement Mollie actif : résilie-le d'abord pour éviter de le facturer.")
+        a.plan, a.cycle, a.resilie, a.plan_suivant = body.plan, "offert", False, None
+        a.fin = datetime.now(timezone.utc) + timedelta(days=36500)
+        profil.plan = body.plan
+    else:
+        a.plan, a.cycle, a.fin = "essentielle", "mensuel", None
+        profil.plan = "essentielle"
+    await db.commit()
+    return {"ok": True, "abonnement": _abo_resume(a)}
 
 
 class AdminPlanIn(BaseModel):
@@ -1124,13 +1258,146 @@ async def parrainage_mes_filleuls(db: AsyncSession = Depends(get_db)):
 
 
 @api.get("/admin/parrainage")
-async def admin_parrainage(db: AsyncSession = Depends(get_db), _role=Depends(exiger_role("admin"))):
-    rows = list((await db.execute(select(Referral).order_by(Referral.created_at.desc()))).scalars())
-    total_actifs = sum(1 for r in rows if r.statut == "actif")
+async def admin_parrainage(page: int = 1, par_page: int = 25, statut: Optional[str] = None, q: Optional[str] = None,
+                           db: AsyncSession = Depends(get_db), _role=Depends(exiger_role("admin"))):
+    """Parrainages paginés, avec l'e-mail du parrain (avant : seulement son id)."""
+    par_page = max(5, min(par_page, 100))
+    page = max(1, page)
+    base = select(Referral)
+    if statut in ("en_attente", "actif", "expire"):
+        base = base.where(Referral.statut == statut)
+    if q and q.strip():
+        motif = f"%{q.strip().lower()}%"
+        parrains = select(User.id).where(User.email.ilike(motif))
+        base = base.where((Referral.referred_email.ilike(motif)) | (Referral.referrer_id.in_(parrains)))
+    total_filtre = (await db.execute(select(func.count()).select_from(base.subquery()))).scalar_one()
+    rows = list((await db.execute(base.order_by(Referral.created_at.desc()).offset((page - 1) * par_page).limit(par_page))).scalars())
+    ids = {r.referrer_id for r in rows}
+    emails = {u.id: u.email for u in (await db.execute(select(User).where(User.id.in_(ids))))
+              .scalars()} if ids else {}
+    total = (await db.execute(select(func.count()).select_from(Referral))).scalar_one()
+    actifs = (await db.execute(select(func.count()).select_from(Referral).where(Referral.statut == "actif"))).scalar_one()
     return {
-        "total": len(rows), "actifs": total_actifs,
-        "items": [{"id": r.id, "parrain_id": r.referrer_id, "email_filleul": r.referred_email, "statut": r.statut, "recompense_type": r.recompense_type, "recompense_valeur": r.recompense_valeur, "depuis": r.created_at.isoformat()} for r in rows],
+        "total": total, "actifs": actifs, "en_attente": total - actifs - (await db.execute(
+            select(func.count()).select_from(Referral).where(Referral.statut == "expire"))).scalar_one(),
+        "filtre_total": total_filtre, "page": page, "pages": max(1, -(-total_filtre // par_page)),
+        "items": [{"id": r.id, "parrain_id": r.referrer_id, "parrain_email": emails.get(r.referrer_id),
+                   "email_filleul": r.referred_email, "statut": r.statut, "recompense_type": r.recompense_type,
+                   "recompense_valeur": r.recompense_valeur, "depuis": r.created_at.isoformat() if r.created_at else None}
+                  for r in rows],
     }
+
+
+class AdminParrainageIn(BaseModel):
+    parrain_email: str
+    filleul_email: str
+
+
+@api.post("/admin/parrainage")
+async def admin_parrainage_creer(body: AdminParrainageIn, db: AsyncSession = Depends(get_db), _role=Depends(exiger_role("admin"))):
+    """Ajout manuel (parrainage oublié, geste commercial). Si le filleul a déjà
+    un compte, le parrainage est activé tout de suite et la récompense créditée."""
+    pe, fe = body.parrain_email.strip().lower(), body.filleul_email.strip().lower()
+    if pe == fe:
+        raise HTTPException(422, "Le parrain et le filleul doivent être différents.")
+    parrain = (await db.execute(select(User).where(User.email == pe))).scalar_one_or_none()
+    if not parrain:
+        raise HTTPException(404, "Aucun compte parrain avec cet e-mail.")
+    if (await db.execute(select(Referral).where(Referral.referrer_id == parrain.id, Referral.referred_email == fe))).scalar_one_or_none():
+        raise HTTPException(409, "Ce parrainage existe déjà.")
+    r = Referral(referrer_id=parrain.id, referred_email=fe)
+    db.add(r)
+    filleul = (await db.execute(select(User).where(User.email == fe))).scalar_one_or_none()
+    if filleul:
+        r.statut, r.referred_id = "actif", filleul.id
+        await _crediter_recompense(db, r, parrain)
+    await db.commit()
+    return {"ok": True, "id": r.id, "statut": r.statut}
+
+
+class AdminParrainagePatch(BaseModel):
+    statut: Optional[str] = None
+    recompense_valeur: Optional[float] = None
+
+
+@api.patch("/admin/parrainage/{ref_id}")
+async def admin_parrainage_modifier(ref_id: str, body: AdminParrainagePatch, db: AsyncSession = Depends(get_db),
+                                    _role=Depends(exiger_role("admin"))):
+    """Changer le statut (activer / expirer / remettre en attente) ou ajuster la
+    récompense. Le solde du parrain suit automatiquement (crédit / retrait)."""
+    r = await db.get(Referral, ref_id)
+    if not r:
+        raise HTTPException(404, "Parrainage introuvable.")
+    parrain = await db.get(User, r.referrer_id)
+    # 1) statut d'abord (crédite / retire la récompense standard du programme)…
+    if body.statut and body.statut != r.statut:
+        if body.statut not in ("en_attente", "actif", "expire"):
+            raise HTTPException(422, "Statut invalide.")
+        if r.statut == "actif" and parrain:
+            _annuler_recompense(r, parrain)
+        if body.statut == "actif" and parrain:
+            await _crediter_recompense(db, r, parrain)
+        r.statut = body.statut
+    # 2) …puis ajustement manuel de la récompense (le solde du parrain suit).
+    if body.recompense_valeur is not None:
+        nouvelle = max(0.0, float(body.recompense_valeur))
+        if r.statut == "actif" and parrain:
+            _annuler_recompense(r, parrain)
+            r.recompense_valeur = nouvelle
+            if r.recompense_type == "commission":
+                parrain.solde_commission = (parrain.solde_commission or 0) + nouvelle
+            else:
+                parrain.mois_offerts_dus = (parrain.mois_offerts_dus or 0) + int(nouvelle)
+        else:
+            r.recompense_valeur = nouvelle
+    await db.commit()
+    return {"ok": True, "statut": r.statut, "recompense_valeur": r.recompense_valeur}
+
+
+@api.delete("/admin/parrainage/{ref_id}")
+async def admin_parrainage_supprimer(ref_id: str, db: AsyncSession = Depends(get_db), _role=Depends(exiger_role("admin"))):
+    r = await db.get(Referral, ref_id)
+    if not r:
+        raise HTTPException(404, "Parrainage introuvable.")
+    if r.statut == "actif":
+        parrain = await db.get(User, r.referrer_id)
+        if parrain:
+            _annuler_recompense(r, parrain)
+    await db.delete(r)
+    await db.commit()
+    return {"ok": True}
+
+
+@api.post("/admin/programmes/{user_id}/crediter-mois")
+async def admin_crediter_mois(user_id: str, db: AsyncSession = Depends(get_db), _role=Depends(exiger_role("admin"))):
+    """Applique les mois offerts dus : prolonge l'offre active de 30 jours par mois
+    (et décale le prochain prélèvement Mollie si besoin côté Mollie)."""
+    u = await db.get(User, user_id)
+    if not u:
+        raise HTTPException(404, "Utilisateur introuvable.")
+    mois = int(u.mois_offerts_dus or 0)
+    if mois <= 0:
+        raise HTTPException(409, "Aucun mois offert à créditer.")
+    Abo = globals().get("Abonnement")
+    a = await db.get(Abo, user_id) if Abo is not None else None
+    fin = (a.fin if (a and a.fin and a.fin.tzinfo) else (a.fin.replace(tzinfo=timezone.utc) if a and a.fin else None))
+    if not a or a.plan == "essentielle" or not fin or fin <= datetime.now(timezone.utc):
+        raise HTTPException(409, "Pas d'offre active : les mois restent en réserve jusqu'à sa souscription.")
+    a.fin = fin + timedelta(days=30 * mois)
+    u.mois_offerts_dus = 0
+    await db.commit()
+    return {"ok": True, "mois_credites": mois, "nouvelle_fin": a.fin.isoformat(),
+            "prelevement_auto": bool(getattr(a, "mollie_subscription_id", None))}
+
+
+@api.post("/admin/programmes/{user_id}/refuser")
+async def admin_refuser_programme(user_id: str, db: AsyncSession = Depends(get_db), _role=Depends(exiger_role("admin"))):
+    u = await db.get(User, user_id)
+    if not u:
+        raise HTTPException(404, "Utilisateur introuvable.")
+    u.programme_demande = None
+    await db.commit()
+    return {"ok": True}
 
 
 # ─────────────── Programmes partenaires ───────────────
@@ -1201,6 +1468,7 @@ async def admin_programmes(db: AsyncSession = Depends(get_db), _role=Depends(exi
             actifs_par_parrain[r.referrer_id] = actifs_par_parrain.get(r.referrer_id, 0) + 1
     partenaires = []
     demandes = []
+    a_crediter = []   # parrains avec des mois offerts à appliquer
     for u in users:
         prog = u.programme or "parrainage"
         info = {
@@ -1214,7 +1482,9 @@ async def admin_programmes(db: AsyncSession = Depends(get_db), _role=Depends(exi
             partenaires.append(info)
         if u.programme_demande:
             demandes.append(info)
-    return {"partenaires": partenaires, "demandes": demandes}
+        if (u.mois_offerts_dus or 0) > 0:
+            a_crediter.append(info)
+    return {"partenaires": partenaires, "demandes": demandes, "a_crediter": a_crediter}
 
 
 @api.post("/admin/programmes/{user_id}/valider")
@@ -1332,6 +1602,21 @@ async def _profil(db: AsyncSession, uid: Optional[str] = None) -> VisionProfile:
     return row
 
 
+def _equilibre_reel(balance, checkins) -> Optional[dict]:
+    """Équilibre pro/perso RÉEL : avant, un 60/40 fixe s'affichait pour tout
+    le monde (la table n'était jamais alimentée). Désormais : réglage manuel
+    s'il existe, sinon calcul sur la charge mentale des 7 derniers check-ins
+    (charge 1 → 20 % pro … charge 5 → 80 % pro). Aucune donnée → None."""
+    if balance is not None:
+        return {"pro": balance.pro, "perso": balance.perso, "source": "manuel"}
+    charges = [c.charge for c in checkins[-7:] if getattr(c, "charge", None)]
+    if not charges:
+        return None
+    moy = sum(charges) / len(charges)
+    pro = max(0, min(100, round(20 + (moy - 1) / 4 * 60)))
+    return {"pro": pro, "perso": 100 - pro, "source": "checkins", "jours": len(charges)}
+
+
 @api.get("/state")
 async def get_state(db: AsyncSession = Depends(get_db)):
     uid = _uid()
@@ -1367,7 +1652,7 @@ async def get_state(db: AsyncSession = Depends(get_db)):
         "vision": {"texte": profil.texte_vision or "", "pourquoi": profil.pourquoi or "", "valeurs": profil.valeurs or [], "contexte_metier": getattr(profil, "contexte_metier", None) or {}},
         "energy": {"score": energie, "mood": (dernier.mood if dernier else "aligné"), "mode": mode_energie(energie), "recuperation": est_recup(energie), "a_checkin": dernier is not None,
                    "vitals": ({"date": dernier.date, "stress": dernier.stress or None, "sommeil": dernier.sommeil or None, "charge": dernier.charge or None} if dernier else None)},
-        "balance": {"pro": balance.pro if balance else 60, "perso": balance.perso if balance else 40},
+        "balance": _equilibre_reel(balance, checkins),
         "priorities": [
             {"id": t.id, "title": t.titre, "duration": t.duree_min, "progress": t.progression, "icon": t.icon, "done": t.statut == "fait"}
             for t in taches
@@ -1417,10 +1702,13 @@ async def maj_profil(body: ProfilIn, db: AsyncSession = Depends(get_db)):
                    if isinstance(k, str) and len(k) <= 60 and isinstance(v, (str, bool, int, float))}
         profil.contexte_metier = {**(profil.contexte_metier or {}), **nouveau}
     # Objectifs 90 jours saisis à l'onboarding
+    # Corrigé : supprimait TOUS les objectifs existants (et leur avancement) si
+    # l'onboarding était refait. Désormais on n'ajoute que les titres absents.
     if data.get("objectifs"):
-        for o in (await db.execute(select(VisionObjectif).where(VisionObjectif.user_id == uid))).scalars():
-            await db.delete(o)
+        existants = {(o.titre or "").strip().lower() for o in (await db.execute(select(VisionObjectif).where(VisionObjectif.user_id == uid))).scalars()}
         for titre in [t for t in data["objectifs"] if t and t.strip()][:3]:
+            if titre.strip().lower() in existants:
+                continue
             db.add(VisionObjectif(user_id=uid, titre=titre.strip(), echeance=iso_moins(-90), progression=0))
     await db.commit()
     await db.refresh(profil)
@@ -1486,6 +1774,16 @@ async def chat(body: ChatIn, db: AsyncSession = Depends(get_db)):
     uid = _uid()
     contexte = await _contexte(db, uid)
     systeme = f"{SYSTEM_PROMPT}\n\n--- Contexte de l'utilisatrice ---\n{contexte}"
+    # Support juridique (façon Kandbaz) : question de droit → prompt structuré
+    # + sources officielles du pays jointes sous la réponse (juridique_ext).
+    juridique = est_question_juridique(body.message)
+    sources = []
+    if juridique:
+        profil = await _profil(db, uid)
+        marche = (profil.contexte_metier or {}).get("marche", "france")
+        sources = sources_pour(body.message, marche)
+        pays = MARCHES.get(marche, MARCHES["france"])["label"]
+        systeme += f"\n\n{prompt_juridique(pays)}"
     db.add(VisionChatMessage(user_id=uid, role="user", contenu=body.message))
     await db.commit()
 
@@ -1504,7 +1802,7 @@ async def chat(body: ChatIn, db: AsyncSession = Depends(get_db)):
                     break
         except Exception as e:  # noqa: BLE001
             logger.warning("Copilote IA indisponible (%s) — repli local", e)
-            texte = _repli(body.message)
+            texte = repli_juridique() if juridique else _repli(body.message)
             morceaux = [texte]
             yield f"data: {json.dumps({'delta': texte})}\n\n"
 
@@ -1516,6 +1814,8 @@ async def chat(body: ChatIn, db: AsyncSession = Depends(get_db)):
                     await s.commit()
             except Exception as e:  # noqa: BLE001
                 logger.warning("Historique chat non enregistré : %s", e)
+        if juridique and sources:
+            yield f"data: {json.dumps({'sources': sources, 'juridique': True})}\n\n"
         yield f"data: {json.dumps({'done': True})}\n\n"
 
     return StreamingResponse(flux(), media_type="text/event-stream",
@@ -1716,6 +2016,7 @@ async def actualite(marche: str = "", db: AsyncSession = Depends(get_db)):
     return {"masque": False, "marche": data["marche"], "label": data.get("label"),
             "marches": marches, "articles": data["articles"][:limite], "limite": limite,
             "genere_a": data.get("genere_a"),
+            "rythme": cm.get("actu_rythme", "quotidien"),
             "prochaine_maj": (entree["a"] + timedelta(minutes=30)).isoformat() if entree else None}
 
 
@@ -1727,12 +2028,74 @@ def _en_prod(request) -> bool:
     return any(hote == h or hote.endswith("." + h) for h in hotes)
 
 
+# ── SSO TheSustain ──
+# Deux façons de brancher, au choix, SANS toucher au code :
+#   a) OIDC standard : THESUSTAIN_OIDC_ISSUER (ex. https://auth.thesustain.net)
+#      → les URL sont lues dans /.well-known/openid-configuration ;
+#   b) OAuth2 « à la main » : THESUSTAIN_OAUTH_AUTHORIZE_URL / _TOKEN_URL / _USERINFO_URL.
+# Dans les deux cas : THESUSTAIN_CLIENT_ID + THESUSTAIN_CLIENT_SECRET.
+# URI de retour à déclarer chez TheSustain : {FRONTEND}/login (flux page) et
+# {BACKEND}/api/connexion/oauth/thesustain/callback (flux serveur).
+_THESUSTAIN_OIDC_CACHE: dict = {}
+
+
+async def _thesustain_conf() -> dict:
+    conf = {
+        "authorize": os.environ.get("THESUSTAIN_OAUTH_AUTHORIZE_URL", "").strip(),
+        "token": os.environ.get("THESUSTAIN_OAUTH_TOKEN_URL", "").strip(),
+        "userinfo": os.environ.get("THESUSTAIN_OAUTH_USERINFO_URL", "").strip(),
+    }
+    issuer = os.environ.get("THESUSTAIN_OIDC_ISSUER", "").strip().rstrip("/")
+    if issuer and not all(conf.values()):
+        doc = _THESUSTAIN_OIDC_CACHE.get(issuer)
+        if doc is None or time.time() - doc.get("_t", 0) > 3600:
+            try:
+                async with httpx.AsyncClient(timeout=8) as client:
+                    r = await client.get(f"{issuer}/.well-known/openid-configuration")
+                    r.raise_for_status()
+                    doc = {**r.json(), "_t": time.time()}
+                    _THESUSTAIN_OIDC_CACHE[issuer] = doc
+            except Exception as e:  # noqa: BLE001
+                logger.warning("SSO TheSustain : découverte OIDC impossible (%s)", e)
+                doc = {}
+        conf["authorize"] = conf["authorize"] or doc.get("authorization_endpoint", "")
+        conf["token"] = conf["token"] or doc.get("token_endpoint", "")
+        conf["userinfo"] = conf["userinfo"] or doc.get("userinfo_endpoint", "")
+    return conf
+
+
+def _thesustain_configure() -> bool:
+    return bool(os.environ.get("THESUSTAIN_CLIENT_ID") and os.environ.get("THESUSTAIN_CLIENT_SECRET")
+                and (os.environ.get("THESUSTAIN_OAUTH_AUTHORIZE_URL") or os.environ.get("THESUSTAIN_OIDC_ISSUER")))
+
+
+async def _marquer_membre_thesustain(db: AsyncSession, user, infos: Optional[dict]) -> None:
+    """Connexion via TheSustain = membre : la dimension Foi s'active d'office
+    et le prénom est repris s'il manque. Ne bloque jamais la connexion."""
+    try:
+        profil = await _profil(db, user.id)
+        cm = dict(profil.contexte_metier or {})
+        cm.update({"thesustain_sso": True, "parcours_foi": True})
+        profil.contexte_metier = cm
+        if infos and not profil.prenom:
+            prenom = infos.get("given_name") or (infos.get("name") or "").split(" ")[0]
+            if prenom:
+                profil.prenom = str(prenom)[:80]
+        await db.commit()
+    except Exception as e:  # noqa: BLE001
+        logger.warning("SSO TheSustain : profil non marqué (%s)", e)
+        await db.rollback()
+
+
 @api.get("/connexion/options")
 async def connexion_options(request: Request = None):
     return {"nom_appli": "Zayado",
             "apercu_actif": bool(os.environ.get("APERCU_CODE")) and not _en_prod(request),
             "google": bool(os.environ.get("GOOGLE_CLIENT_ID") and os.environ.get("GOOGLE_CLIENT_SECRET")),
-            "microsoft": bool(os.environ.get("MICROSOFT_CLIENT_ID") and os.environ.get("MICROSOFT_CLIENT_SECRET"))}
+            "microsoft": bool(os.environ.get("MICROSOFT_CLIENT_ID") and os.environ.get("MICROSOFT_CLIENT_SECRET")),
+            # SSO TheSustain (partenaire) : prêt côté code, actif dès que les
+            # accès OAuth sont fournis (variables THESUSTAIN_* dans l'environnement).
+            "thesustain": _thesustain_configure()}
 
 
 class DemoIn(BaseModel):
@@ -1763,7 +2126,7 @@ async def connexion_oauth_start(provider: str, redirect_uri: Optional[str] = Non
                                 request: Request = None):
     """Démarre l'OAuth si les clés sont configurées ; sinon renvoie configured=false (repli démo côté front)."""
     provider = provider.lower()
-    if provider not in ("google", "microsoft"):
+    if provider not in ("google", "microsoft", "thesustain"):
         raise HTTPException(status_code=404, detail="Fournisseur inconnu.")
     cid = os.environ.get(f"{provider.upper()}_CLIENT_ID")
     csecret = os.environ.get(f"{provider.upper()}_CLIENT_SECRET")
@@ -1781,6 +2144,15 @@ async def connexion_oauth_start(provider: str, redirect_uri: Optional[str] = Non
         if storage:
             params["prompt"] = "consent"
         base = "https://accounts.google.com/o/oauth2/v2/auth"
+    elif provider == "thesustain":
+        # SSO partenaire TheSustain : endpoints pilotés par l'environnement
+        # (THESUSTAIN_OAUTH_AUTHORIZE_URL / TOKEN_URL / USERINFO_URL).
+        base = (await _thesustain_conf())["authorize"]
+        if not base:
+            return {"configured": False}
+        params = {"client_id": cid, "redirect_uri": ru, "response_type": "code",
+                  "scope": os.environ.get("THESUSTAIN_OAUTH_SCOPE", "openid email profile"),
+                  "state": f"thesustain_{uuid.uuid4().hex}"}
     else:
         tenant = os.environ.get("MICROSOFT_TENANT", "common")
         params = {"client_id": cid, "redirect_uri": ru, "response_type": "code",
@@ -1815,7 +2187,27 @@ async def _oauth_echange(provider: str, code: str, redirect_uri: str):
     if not (cid and csecret):
         raise HTTPException(503, "OAuth non configuré.")
     async with httpx.AsyncClient(timeout=10) as client:
-        if provider == "google":
+        if provider == "thesustain":
+            ts = await _thesustain_conf()
+            tok = await client.post(ts["token"], data={
+                "code": code, "client_id": cid, "client_secret": csecret,
+                "redirect_uri": redirect_uri, "grant_type": "authorization_code",
+            })
+            if tok.status_code >= 400:
+                logger.warning("OAuth thesustain token %s : %s", tok.status_code, tok.text[:300])
+            tok.raise_for_status()
+            token_data = tok.json()
+            access_token = token_data["access_token"]
+            info = await client.get(ts["userinfo"], headers={"Authorization": f"Bearer {access_token}"})
+            info.raise_for_status()
+            infos = info.json()
+            # Sécurité : un e-mail NON vérifié chez le partenaire ne doit jamais
+            # ouvrir un compte Zayado existant (prise de contrôle de compte).
+            if infos.get("email_verified") is False:
+                raise HTTPException(400, "E-mail non vérifié chez TheSustain.")
+            email = infos.get(os.environ.get("THESUSTAIN_OAUTH_EMAIL_FIELD", "email"))
+            token_data = {**token_data, "_userinfo": infos}
+        elif provider == "google":
             tok = await client.post("https://oauth2.googleapis.com/token", data={
                 "code": code, "client_id": cid, "client_secret": csecret,
                 "redirect_uri": redirect_uri, "grant_type": "authorization_code",
@@ -1867,6 +2259,8 @@ async def connexion_oauth_callback(provider: str, code: Optional[str] = None, st
         if not email:
             return RedirectResponse(f"{frontend}/login?erreur=oauth_sans_email")
         user = await _trouver_ou_creer_compte(db, email)
+        if provider == "thesustain":
+            await _marquer_membre_thesustain(db, user, token_data.get("_userinfo"))
         jwt_token = _creer_token(user.id, user.role)
         if storage:
             provider_key = f"{provider}_drive"
@@ -1901,12 +2295,12 @@ async def connexion_oauth_echange(provider: str, body: OAuthEchangeIn, db: Async
     renvoie le jeton de session. Avant, ce retour n'était traité nulle part :
     l'utilisateur revenait sur /login sans être connecté."""
     provider = provider.lower()
-    if provider not in ("google", "microsoft"):
+    if provider not in ("google", "microsoft", "thesustain"):
         raise HTTPException(404, "Fournisseur inconnu.")
     if body.state and body.state.startswith("storage|"):
         raise HTTPException(400, "Flux de stockage : utiliser le retour backend.")
     try:
-        email, _, _ = await _oauth_echange(provider, body.code, body.redirect_uri)
+        email, token_data, _ = await _oauth_echange(provider, body.code, body.redirect_uri)
     except HTTPException:
         raise
     except Exception as e:  # noqa: BLE001
@@ -1915,6 +2309,8 @@ async def connexion_oauth_echange(provider: str, body: OAuthEchangeIn, db: Async
     if not email:
         raise HTTPException(400, "Aucun e-mail renvoyé par le fournisseur.")
     user = await _trouver_ou_creer_compte(db, email)
+    if provider == "thesustain":
+        await _marquer_membre_thesustain(db, user, (token_data or {}).get("_userinfo"))
     return {"access_token": _creer_token(user.id, user.role)}
 
 
@@ -1970,6 +2366,7 @@ async def _trouver_ou_creer_compte(db: AsyncSession, email: str) -> "User":
     db.add(user)
     await db.commit()
     await db.refresh(user)
+    await _activer_parrainage(db, user)
     return user
 
 
@@ -3323,16 +3720,16 @@ async def _calculer_radar(db: AsyncSession, uid: str, graine: int = 0) -> dict:
         {"titre": f"Relancer 3 prospects intéressés par « {titres[0]} »", "canal": "email",
          "message": ("Bonjour, je reviens vers vous suite à notre dernier échange. Avez-vous 15 minutes "
                      "cette semaine pour faire le point ensemble sur votre besoin ? Je m'adapte à vos disponibilités."),
-         "score": 82, "objectif": titres[0]},
+         "score": None, "modele": True, "objectif": titres[0]},
         {"titre": "Partager une réussite client sur LinkedIn", "canal": "linkedin",
          "message": ("Ce mois-ci, j'ai accompagné un client sur un vrai défi. Ce qui a fait la différence : "
                      "écouter avant de proposer, avancer par petites étapes, et mesurer le résultat. "
                      "Et vous, quelle est la question que vous vous posez en ce moment sur votre activité ?"),
-         "score": 74, "objectif": titres[0]},
+         "score": None, "modele": True, "objectif": titres[0]},
         {"titre": "Proposer un rendez-vous à un contact recommandé", "canal": "email",
          "message": ("Bonjour, on m'a recommandé de prendre contact avec vous. J'aide des professionnels comme vous "
                      "à gagner du temps et de la sérénité dans leur activité. Seriez-vous ouvert à un échange de 20 minutes ?"),
-         "score": 68, "objectif": (titres[1] if len(titres) > 1 else titres[0])},
+         "score": None, "modele": True, "objectif": (titres[1] if len(titres) > 1 else titres[0])},
     ]
 
     # Radar réellement branché sur l'IA (retour Marie Esther : « on dirait que
@@ -3389,9 +3786,11 @@ async def _calculer_radar(db: AsyncSession, uid: str, graine: int = 0) -> dict:
         logger.warning("Radar IA indisponible, repli local (%s)", e)
 
     return {
+        # Repli sans IA : pistes génériques, clairement présentées comme telles
+        # (plus de faux « score » 82/74/68 qui faisaient croire à une analyse).
         "opportunities": (reels + fallback)[:3],
         "apollo": infos_apollo,
-        "phrase_ia": "3 mouvements alignés à ta Vision, prêts en un tap.",
+        "phrase_ia": "Pistes de départ reliées à tes objectifs, en attendant ton analyse personnalisée du jour.",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "objectifs_utilises": titres,
         "source": "repli",
@@ -3463,7 +3862,7 @@ async def transcrire(audio: UploadFile = File(...)):
     from llm_mammouth import MAMMOTH_BASE_URL, cle_mammouth
     cle = cle_mammouth()
     if not cle:
-        raise HTTPException(status_code=502, detail="Transcription indisponible (clé MAMMOTH_API_KEY absente).")
+        raise HTTPException(status_code=502, detail="Transcription indisponible pour le moment.")
     data = await audio.read()
     if not data:
         raise HTTPException(status_code=400, detail="Audio vide.")
@@ -4246,7 +4645,11 @@ def _env_integration(nom: str) -> str:
 
 @api.get("/integrations/status")
 async def integrations_status():
-    """Retourne la liste des intégrations + un flag `configured` selon les .env."""
+    """Retourne la liste des intégrations + un flag `configured` selon les .env.
+    Réservé aux admins : ce sont les branchements de la plateforme (variables
+    d'environnement globales), pas des réglages propres à un utilisateur."""
+    if _role_courant() != "admin":
+        raise HTTPException(403, "Réservé à l'administration.")
     items = []
     for spec in INTEGRATIONS_CATALOG:
         configured = all(_env_integration(k) for k in spec.get("env", []))
@@ -4263,6 +4666,10 @@ async def integrations_save(body: IntegrationTokenIn):
     """Ecrit/écrase les variables d'env liées à un provider (session en cours, non persistant).
     Pour la persistance, écrivez les valeurs dans backend/.env via le panneau Secrets après deploy.
     """
+    # Faille corrigée : n'importe quel compte connecté pouvait réécrire des
+    # variables GLOBALES (ex. MOLLIE_API_KEY → paiements détournés). Admin seulement.
+    if _role_courant() != "admin":
+        raise HTTPException(403, "Réservé à l'administration.")
     spec = next((s for s in INTEGRATIONS_CATALOG if s["id"] == body.provider), None)
     if not spec:
         raise HTTPException(404, "integration_not_found")
@@ -4430,23 +4837,13 @@ install_rituels(globals())
 from emails_ia_ext import install_emails_ia  # noqa: E402
 install_emails_ia(globals())
 
-# ── Newsletters (admin, marque Zayado) : porté depuis app-main ──
-from newsletters_ext import install_newsletters  # noqa: E402
-install_newsletters(globals())
+# ── Carrousel de la page login : administrable (slides image/vidéo, upload ou lien) ──
+from carrousel_ext import install_carrousel  # noqa: E402
+install_carrousel(globals())
 
-# ── Connexions (coffre-fort personnel, multi-fournisseurs) : porté depuis
-# app-main, en évitant ce qui existe déjà ici en mieux (OAuth Google/Microsoft,
-# WhatsApp, Telegram) — voir l'en-tête de connexions_vault_ext.py ──
-from connexions_vault_ext import install_connexions_vault  # noqa: E402
-install_connexions_vault(globals())
-
-# ── Logs applicatifs (admin) : porté depuis app-main. Rien d'équivalent
-# n'existait ici (juste le logging Python standard, non persistant) —
-# voir l'en-tête d'app_logs_ext.py pour le détail de ce qui est automatique
-# (erreurs non interceptées, réponses 5xx) et ce qui reste à brancher
-# manuellement (auth, paiements, affiliation…) si tu veux plus de détail. ──
-from app_logs_ext import install_app_logs  # noqa: E402
-install_app_logs(globals())
+# ── Ma Foi (TheSustain) : données personnelles + Mur de prière / Cercle partagés, réels ──
+from foi_ext import install_foi  # noqa: E402
+install_foi(globals())
 
 # ─────────────── Processus (page /app/processus) ───────────────
 # Avant : stockés dans le navigateur uniquement, avec 4 processus de démonstration
@@ -4784,12 +5181,18 @@ async def ia_statut():
         "ia_active": active,
         "images_ia": bool(f_img()) if callable(f_img) else bool(EMERGENT_LLM_KEY),
         "modele": MAMMOTH_MODEL if active else None,
+        # Le détail technique (nom de variable) n'est montré qu'aux admins ;
+        # un utilisateur voit une phrase neutre, sans jargon de branchement.
         "message": None
         if active
         else (
-            "L'IA est en mode repli : le Copilote, le Radar et l'Agent Business "
-            "répondent un texte générique. Configurez MAMMOTH_API_KEY pour "
-            "réactiver les réponses personnalisées."
+            (
+                "L'IA est en mode repli : le Copilote, le Radar et l'Agent Business "
+                "répondent un texte générique. Configurez MAMMOTH_API_KEY pour "
+                "réactiver les réponses personnalisées."
+            )
+            if _role_courant() == "admin"
+            else "Les réponses personnalisées de l'IA sont momentanément limitées. Tout redevient normal très vite."
         ),
     }
 
@@ -4862,6 +5265,9 @@ async def admin_diagnostics():
          "effet": "Pas d'alertes Telegram (offre Pro)."},
         {"cle": "heygen", "nom": "Vidéos IA (HeyGen)", "ok": cles["video_heygen"], "variables": ["HEYGEN_API_KEY"], "critique": False,
          "effet": "Onglet Vidéos IA inutilisable."},
+        {"cle": "thesustain", "nom": "SSO TheSustain", "ok": _thesustain_configure(),
+         "variables": ["THESUSTAIN_CLIENT_ID", "THESUSTAIN_CLIENT_SECRET", "THESUSTAIN_OIDC_ISSUER (ou THESUSTAIN_OAUTH_*_URL)"],
+         "critique": False, "effet": "Bouton « Continuer avec TheSustain » affiché « bientôt » sur la page de connexion."},
     ]
     manquantes = sorted(k for k, v in cles.items() if not v)
     return {
@@ -4988,6 +5394,212 @@ def _reparer_schema_sync(conn) -> None:
                     logger.error("Impossible d'assouplir %s.%s : %s", table.name, nom, e)
 
 
+# ─────────────── Comptes de démonstration auto (au déploiement) ───────────────
+# Activé par défaut : à chaque démarrage, les comptes de test sont créés s'ils
+# manquent, et leur offre est maintenue active (upsert, jamais de suppression).
+# L'ADMIN N'EST PAS CRÉÉ ICI : il existe déjà en production (Railway) — le seed
+# ne fait que poser son numéro WhatsApp si le compte est présent.
+# Les mots de passe ne sont posés QU'à la création — un mot de passe changé
+# depuis l'app n'est jamais écrasé (SEED_RESET_MDP=1 pour forcer).
+# Désactiver tout le seed avec SEED_COMPTES_DEMO=0.
+SEED_MDP = "Test!2026"
+# (email, mot de passe, rôle, plan, prénom, abonnement actif)
+SEED_COMPTES = [
+    ("test.essentielle@zayado.net", SEED_MDP, "client", "essentielle", "Essentielle", False),
+    ("thesustain@zayado.net",       SEED_MDP, "client", "essentielle", "TheSustain", False),
+    ("test.reveur@zayado.net",      SEED_MDP, "client", "reveur",      "Reveur", True),
+    ("test.solo@zayado.net",        SEED_MDP, "client", "serenite",    "Solo", True),
+    ("test.pro@zayado.net",         SEED_MDP, "client", "pro",         "Pro", True),
+    ("test.equipe@zayado.net",      SEED_MDP, "client", "business",    "Equipe", True),
+    ("test.entreprise@zayado.net",  SEED_MDP, "client", "entreprise",  "Entreprise", True),
+    # Admin déclaré par le propriétaire (29/09) — créé s'il manque, jamais supprimé.
+    ("polezayado@gmail.com",        "Zyd2026SecureJWTkey!", "admin", "pro", "Pôle Zayado", True),
+]
+SEED_ADMIN_EMAIL = "admin@zayado.net"  # existe déjà en prod — jamais créé ici
+SEED_ADMIN_WHATSAPP = "0183643999"
+
+# ─────────────── Boards de démo partagés (auto, idempotent) ───────────────
+# 3 boards pré-remplis depuis la brochure collaborateur. Ils appartiennent au
+# compte de test PRO (l'un des 7 comptes) et polezayado@gmail.com y est INVITÉ
+# avec droits d'ÉDITION (pas simple membre en lecture). Liens publics lecture
+# seule à tokens fixes (stables, communicables avant déploiement).
+SEED_BOARDS_OWNER = "test.pro@zayado.net"
+SEED_BOARDS_INVITE = "polezayado@gmail.com"
+SEED_BOARDS_TOKENS = {
+    "marketing-communication": "ZqM7vR2kN9pXwT4bHsJ8dF6gL3mQ",
+    "finance": "KwP5nB8cV2xR7mT4yU9iO1aS3dF6hJ",
+    "acquisition": "GhJ6fD3sA9zQ2wE5rT8yU1iO4pL7",
+}
+SEED_BOARDS_SPEC = [
+    ("Marketing & Communication", "📣", "marketing-communication", [
+        ("Message clé", "#DEC2A3", [
+            ("Entreprendre avec clarté", "Zayado s'adresse aux entrepreneurs qui veulent structurer leur activité, optimiser leur performance ou préparer une décision importante.\n\nSites : zayado.net · app.zayado.net"),
+            ("Slogan", "Zayado — entreprendre avec sens, clarté et équilibre."),
+            ("Promesse", "Devenez le relais d'une offre qui aide les entrepreneurs à décider avec plus de clarté."),
+        ]),
+        ("Parcours de conversion", "#94A3B8", [
+            ("Les 4 étapes", "[ ] Mini-diagnostic gratuit\n[ ] Échange de qualification\n[ ] Diagnostic Finance & Pilotage ou outil adapté\n[ ] Suivi / partenaire spécialisé"),
+            ("Le Cockpit IA partout", "Pas un 4e pôle isolé : une carte « S'abonner » apparaît là où elle a du sens (Organisation, Finances, Âme & Esprit). Le Cockpit garde son entrée menu. Le Journal reste à part."),
+        ]),
+        ("3 déclencheurs d'échange", "#34D399", [
+            ("CRÉER", "« Je ne sais pas quelle priorité traiter. »"),
+            ("OPTIMISER", "« Mon chiffre d'affaires progresse, mais ma trésorerie reste floue. »"),
+            ("ACQUÉRIR", "« Le prix est affiché, mais que cache-t-il vraiment ? »"),
+        ]),
+        ("Kit collaborateur", "#60A5FA", [
+            ("Contenu du kit", "Argumentaire + parcours de qualification + présentation des produits/outils."),
+            ("Prochaine étape", "Demander le kit collaborateur, puis planifier un échange avec l'équipe Zayado."),
+        ]),
+    ]),
+    ("Finance", "💰", "finance", [
+        ("Diagnostic Finance & Pilotage", "#DEC2A3", [
+            ("Contenu du diagnostic", "Lecture revenus, charges, dettes, trésorerie.\nPriorités et prochaines décisions.\nSuivi mensuel ou orientation expert."),
+            ("Pouls business", "Trésorerie et semaine dans le Cockpit, connexion Qonto."),
+        ]),
+        ("Deal Desk Acquéreur", "#94A3B8", [
+            ("Tarif", "5 900 € + 5 % de l'économie négociée (plafond 20 000 €)."),
+        ]),
+        ("Tarifs Cockpit IA (HT)", "#34D399", [
+            ("Rêveur — 15 €/mois", "Sans engagement."),
+            ("Solo — 24 €/mois", "Tarif fondateur (29 € normal)."),
+            ("Pro — 49 €/mois · LE PLUS CHOISI", "Tarif fondateur (69 € normal). Réservé aux 100 premiers clients."),
+            ("Équipe — 149 €/mois", "À reconfirmer."),
+            ("Entreprise — dès 299 €", "Sur devis. Les tarifs des Services sont fixés après diagnostic."),
+        ]),
+        ("Cadre de confiance", "#60A5FA", [
+            ("Transparence", "Zayado accompagne la compréhension, le pilotage et l'orientation. Les actes réglementés restent réalisés par les professionnels habilités."),
+            ("Avertissement", "Aucun résultat financier n'est garanti."),
+        ]),
+    ]),
+    ("Acquisition", "🎯", "acquisition", [
+        ("Qualifier un prospect", "#DEC2A3", [
+            ("Questions utiles", "[ ] Quelle décision doit être prise dans les 90 prochains jours ?\n[ ] Le problème : visibilité, rentabilité, financement ou priorisation ?\n[ ] Déjà un expert-comptable, notaire, avocat ou courtier ?\n[ ] Quel outil simple peut donner une première réponse rapide ?"),
+        ]),
+        ("4 étapes collaborateur", "#94A3B8", [
+            ("1 · Repérer", "Identifier une situation de création, d'optimisation ou d'acquisition."),
+            ("2 · Qualifier", "Poser quelques questions simples : objectif, urgence, trésorerie."),
+            ("3 · Orienter", "Proposer l'outil ou le service correspondant — pas toute la boutique."),
+            ("4 · Suivre", "Rester dans la relation ; Zayado prend le relais sur le parcours."),
+        ]),
+        ("Produits & outils à montrer", "#34D399", [
+            ("MyExtension Business", "Structurer le pilotage."),
+            ("Lunettesse", "Outil de clarté et de décision."),
+            ("Simulateurs & mini-diagnostics", "Supports faciles à montrer et à faire essayer."),
+        ]),
+        ("Marketplace par dimension", "#60A5FA", [
+            ("Corps / Rituels", "Produits panier : ergonomie, confort visuel, routines matin/soir, focus, pauses."),
+            ("Âme & Esprit", "Carnets, journal, objets de recentrage + service TheSustain x Zayado."),
+            ("Organisation / Finances", "Bureau, planners, modèles Notion + services Finance & pilotage et Acquisition."),
+        ]),
+    ]),
+]
+
+
+def _seed_board_cards(spec: list) -> list:
+    """Construit les cartes (murs + notes) d'un board au format VisionCanvas."""
+    cards = []
+    for i, (titre, couleur, notes) in enumerate(spec):
+        wid = new_uuid()[:12]
+        cards.append({"id": wid, "type": "wall", "x": 160 + i * 560, "y": 150, "w": 500,
+                      "title": titre, "color": couleur, "tags": []})
+        for j, (t, b) in enumerate(notes):
+            cards.append({"id": new_uuid()[:12], "type": "note", "w": 420,
+                          "title": {"fr": t, "en": t}, "body": {"fr": b, "en": b},
+                          "tags": [], "parent": wid, "order": j})
+    return cards
+
+
+async def _seed_boards_proprietaire() -> None:
+    if os.environ.get("SEED_COMPTES_DEMO", "1") == "0":
+        return
+    VisionShare_ = globals().get("VisionShare")
+    VisionBoardCollab_ = globals().get("VisionBoardCollab")
+    if VisionShare_ is None:
+        return
+    async with async_session() as db:
+        u = (await db.execute(select(User).where(User.email == SEED_BOARDS_OWNER))).scalar_one_or_none()
+        if u is None:
+            return
+        for nom, emoji, cle, spec in SEED_BOARDS_SPEC:
+            row = (await db.execute(select(VisionBoardSpace).where(
+                VisionBoardSpace.user_id == u.id, VisionBoardSpace.cle == cle))).scalar_one_or_none()
+            if row is None:
+                db.add(VisionBoardSpace(user_id=u.id, cle=cle, nom=nom, emoji=emoji,
+                                        ordre=10, cards=_seed_board_cards(spec)))
+            elif not row.cards:
+                # Board vidé (ex. bug de sauvegarde pendant les tests) : on le re-remplit.
+                row.cards = _seed_board_cards(spec)
+            share = (await db.execute(select(VisionShare_).where(
+                VisionShare_.user_id == u.id, VisionShare_.board == cle))).scalar_one_or_none()
+            if share is None:
+                db.add(VisionShare_(user_id=u.id, board=cle, token=SEED_BOARDS_TOKENS[cle],
+                                    hide_finances=True, hide_energie=True))
+        # Invitation avec droits d'édition pour le compte admin du propriétaire.
+        if VisionBoardCollab_ is not None:
+            for _, _, cle, _ in SEED_BOARDS_SPEC:
+                c = (await db.execute(select(VisionBoardCollab_).where(
+                    VisionBoardCollab_.owner_id == u.id, VisionBoardCollab_.board == cle,
+                    VisionBoardCollab_.email == SEED_BOARDS_INVITE))).scalar_one_or_none()
+                if c is None:
+                    db.add(VisionBoardCollab_(owner_id=u.id, board=cle, email=SEED_BOARDS_INVITE, role="editeur"))
+        await db.commit()
+        logger.info("Seed auto : boards démo prêts (%s, édition invitée %s).", SEED_BOARDS_OWNER, SEED_BOARDS_INVITE)
+
+
+async def _seed_comptes_demo() -> None:
+    if os.environ.get("SEED_COMPTES_DEMO", "1") == "0":
+        return
+    Abonnement_ = globals().get("Abonnement")
+    reset_mdp = os.environ.get("SEED_RESET_MDP", "0") == "1"
+    fin_seed = datetime.now(timezone.utc) + timedelta(days=365)
+    async with async_session() as db:
+        for email, mdp, role, plan, prenom, actif in SEED_COMPTES:
+            u = (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
+            if u is None:
+                u = User(email=email, password_hash=_hash_mdp(mdp), role=role)
+                db.add(u)
+                await db.flush()
+            else:
+                u.role = role
+                if reset_mdp:
+                    u.password_hash = _hash_mdp(mdp)
+            profil = (await db.execute(select(VisionProfile).where(VisionProfile.user_id == u.id))).scalar_one_or_none()
+            if profil is None:
+                profil = VisionProfile(user_id=u.id)
+                db.add(profil)
+            profil.prenom = prenom
+            profil.email = email
+            profil.plan = plan
+            profil.onboarded = True
+            if actif and Abonnement_ is not None:
+                ab = await db.get(Abonnement_, u.id)
+                if ab is None:
+                    db.add(Abonnement_(user_id=u.id, plan=plan, cycle="mensuel", fondateur=True, fin=fin_seed, resilie=False))
+                else:
+                    ab.plan = plan
+                    fin_actuelle = getattr(ab, "fin", None)
+                    if fin_actuelle is not None and fin_actuelle.tzinfo is None:
+                        fin_actuelle = fin_actuelle.replace(tzinfo=timezone.utc)
+                    if not fin_actuelle or fin_actuelle < datetime.now(timezone.utc):
+                        ab.fin = fin_seed
+                    ab.resilie = False
+        # Numéro WhatsApp de l'admin : notifications et validation « ok envoi »
+        # des brouillons Emails IA. Posé uniquement si le compte admin existe
+        # déjà (il est géré hors seed — créé en production). L'appairage
+        # effectif se fait par QR côté service WhatsApp.
+        admin = (await db.execute(select(User).where(User.email == SEED_ADMIN_EMAIL))).scalar_one_or_none()
+        if admin is not None:
+            conn = (await db.execute(select(UserConnection).where(
+                UserConnection.user_id == admin.id, UserConnection.provider == "whatsapp"))).scalar_one_or_none()
+            if conn is None:
+                db.add(UserConnection(user_id=admin.id, provider="whatsapp", label="WhatsApp admin",
+                                      status="pending", phone_number=SEED_ADMIN_WHATSAPP))
+            else:
+                conn.phone_number = SEED_ADMIN_WHATSAPP
+        await db.commit()
+        logger.info("Seed auto : %d comptes de démonstration prêts.", len(SEED_COMPTES))
+
+
 async def _bootstrap_admin():
     """Amorçage admin par variables d'environnement (résout « impossible de se
     connecter en admin » en production). Si BOOTSTRAP_ADMIN_EMAIL est défini :
@@ -5040,6 +5652,14 @@ async def _startup():
         await _bootstrap_admin()
     except Exception as e:  # noqa: BLE001 — ne jamais bloquer le démarrage
         logger.error("Bootstrap admin interrompu : %s", e)
+    try:
+        await _seed_comptes_demo()
+    except Exception as e:  # noqa: BLE001 — ne jamais bloquer le démarrage
+        logger.error("Seed comptes démo interrompu : %s", e)
+    try:
+        await _seed_boards_proprietaire()
+    except Exception as e:  # noqa: BLE001 — ne jamais bloquer le démarrage
+        logger.error("Seed boards propriétaire interrompu : %s", e)
 
 
 @app.on_event("shutdown")

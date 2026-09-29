@@ -2,13 +2,14 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   Sparkles, Send, Mic, Lightbulb, BatteryLow, Compass, X, Loader2,
   Sun, ListChecks, Newspaper, Check, Clock, XCircle, ExternalLink, RefreshCw, Mail, Bookmark,
-  Maximize2, Minimize2, CloudCheck, Users,
+  Maximize2, Minimize2, CloudCheck, Users, Scale, Copy,
 } from "lucide-react";
 import CollaborateurModal from "./CollaborateurModal";
 import { prendreOngletEnAttente, prendrePromptEnAttente, discuterAvecIA } from "./GlobalChat";
 import { useKairos } from "@/context/KairosContext";
 import {
   streamChat, fetchPointDuJour, fetchDecisions, suggererDecisions, patchDecision, fetchActualite, enregistrerArticle, fetchEnregistres, validerDecisionEmail,
+  saveProfile,
 } from "@/lib/kairosApi";
 import { toast } from "sonner";
 
@@ -19,6 +20,7 @@ const SHORTCUTS = [
   { key: "capture", icon: Lightbulb, label: "Capturer une idée", prompt: "J'ai une idée à capturer, aide-moi à la clarifier en une phrase." },
   { key: "recuperation", icon: BatteryLow, label: "Je suis à plat", prompt: "Je me sens à plat aujourd'hui. Aide-moi à alléger ma journée." },
   { key: "next", icon: Compass, label: "Que faire maintenant ?", prompt: "Compte tenu de mon énergie, que devrais-je faire maintenant ?" },
+  { key: "juridique", icon: Scale, label: "Question juridique", prompt: "J'ai une question juridique. Demande-moi ma situation, les faits utiles, les dates importantes et les documents concernés, puis réponds-moi avec les règles de droit applicables." },
 ];
 
 const TABS = [
@@ -124,22 +126,22 @@ export function ChatBody({ onClose, estElargi, onToggleTaille }) {
 }
 
 // ── Onglet Assistant (chat streaming + raccourcis) ──
+// Question de 1ère connexion : rythme de l'alerte Actualité (cloche).
+const RYTHMES_ACTU = [
+  { key: "quotidien", label: "Chaque matin", confirm: "Parfait — la cloche te signalera l'actualité chaque matin. Tu peux changer ça à tout moment dans Paramètres → Notifications." },
+  { key: "lundi", label: "Le lundi uniquement", confirm: "C'est noté — l'alerte Actualité n'arrivera que le lundi, pour démarrer la semaine. Ton briefing reste disponible ici à tout moment." },
+  { key: "jamais", label: "Jamais, je la consulterai moi-même", confirm: "Très bien — pas d'alerte. Ton briefing t'attend dans l'onglet Actualité quand tu en as envie." },
+];
+
 function ChatTab({ firstName }) {
-  const { mode } = useKairos();
+  const { mode, contexte } = useKairos();
   const accueil = `Bonjour${firstName ? ` ${firstName}` : ""}. Je suis le Copilote IA Zayado, là pour t'accompagner en douceur. Par quoi commence-t-on ?`;
   const [messages, setMessages] = useState([{ role: "assistant", content: accueil }]);
   useEffect(() => {
     contexteChat.texte = messages.slice(1).slice(-8)
       .map((m) => `${m.role === "user" ? "Moi" : "Copilote"} : ${String(m.content || "").slice(0, 600)}`).join("\n");
   }, [messages]);
-  const [input, setInput] = useState(() => prendrePromptEnAttente() || "");
-  // Si l'onglet Assistant est déjà ouvert quand « En parler à l'IA » arrive
-  // (pas de remontage), le texte est injecté directement dans le champ.
-  useEffect(() => {
-    const injecter = (e) => { prendrePromptEnAttente(); setInput(e?.detail || ""); };
-    window.addEventListener("kairos:prompt-chat", injecter);
-    return () => window.removeEventListener("kairos:prompt-chat", injecter);
-  }, []);
+  const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const scrollRef = useRef(null);
 
@@ -155,18 +157,61 @@ function ChatTab({ firstName }) {
 
   const send = async (text) => {
     const content = (text ?? input).trim();
-    if (!content || streaming) return;
+    if (!content) return;
+    if (streaming) { setInput(content); return; } // réponse en cours : le texte attend dans le champ
     setInput("");
     setMessages((m) => [...m, { role: "user", content }, { role: "assistant", content: "" }]);
     setStreaming(true);
     await streamChat({
       message: content, page: `mode:${mode}`,
       onDelta: (delta) => setMessages((m) => {
-        const c = [...m]; c[c.length - 1] = { role: "assistant", content: c[c.length - 1].content + delta }; return c;
+        const c = [...m]; c[c.length - 1] = { ...c[c.length - 1], content: c[c.length - 1].content + delta }; return c;
+      }),
+      onSources: (sources, juridique) => setMessages((m) => {
+        const c = [...m]; c[c.length - 1] = { ...c[c.length - 1], sources, juridique }; return c;
       }),
       onDone: () => setStreaming(false),
       onError: (err) => { setMessages((m) => { const c = [...m]; c[c.length - 1] = { role: "assistant", content: `Désolé, ${err}` }; return c; }); setStreaming(false); },
     });
+  };
+
+  // « Copier la réponse » (façon Kandbaz) : texte + liens des sources.
+  const copierReponse = (m) => {
+    const lignes = [m.content, ...(m.sources || []).map((s) => `• ${s.titre} — ${s.url}`)];
+    navigator.clipboard?.writeText(lignes.join("\n\n"))
+      .then(() => toast.success("Réponse copiée."))
+      .catch(() => toast.error("Copie impossible pour le moment."));
+  };
+
+  // Clic sur une actualité (« résumé IA » / « En parler à l'IA ») : la question
+  // est ENVOYÉE directement — le résumé s'affiche sans avoir à appuyer sur
+  // envoyer. Anti-doublon : au montage le prompt en attente est consommé ET
+  // l'événement « kairos:prompt-chat » arrive ~80 ms après avec le même texte.
+  const sendRef = useRef(null);
+  sendRef.current = send;
+  const dernierPromptRef = useRef(null);
+  const accueillirPrompt = (q) => {
+    if (!q) return;
+    const d = dernierPromptRef.current;
+    if (d && d.q === q && Date.now() - d.ts < 3000) return;
+    dernierPromptRef.current = { q, ts: Date.now() };
+    sendRef.current?.(q);
+  };
+  useEffect(() => {
+    accueillirPrompt(prendrePromptEnAttente());
+    const injecter = (e) => { prendrePromptEnAttente(); accueillirPrompt(e?.detail); };
+    window.addEventListener("kairos:prompt-chat", injecter);
+    return () => window.removeEventListener("kairos:prompt-chat", injecter);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 1ère connexion : le Copilote demande le rythme de l'alerte Actualité et
+  // l'enregistre lui-même (au lieu du défaut « tous les jours » silencieux).
+  const [rythmeActu, setRythmeActu] = useState(() => contexte?.actu_rythme || null);
+  useEffect(() => { if (!rythmeActu && contexte?.actu_rythme) setRythmeActu(contexte.actu_rythme); }, [contexte]); // eslint-disable-line react-hooks/exhaustive-deps
+  const choisirRythme = (r) => {
+    setRythmeActu(r.key);
+    saveProfile({ contexte_metier: { actu_rythme: r.key } }).catch(() => {});
+    setMessages((m) => [...m, { role: "user", content: r.label }, { role: "assistant", content: r.confirm }]);
   };
 
   return (
@@ -174,13 +219,53 @@ function ChatTab({ firstName }) {
       <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto px-5 py-5">
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`} data-testid={`chat-msg-${m.role}`}>
-            <div className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-              m.role === "user" ? "bg-gold text-navy-900" : "border border-white/10 bg-white/5 text-offwhite"
-            }`}>
-              {m.content || (streaming && i === messages.length - 1 ? <Loader2 className="h-4 w-4 animate-spin text-gold" /> : null)}
+            <div className={`max-w-[85%] ${m.role === "assistant" ? "space-y-2" : ""}`}>
+              <div className={`whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                m.role === "user" ? "bg-gold text-navy-900" : "border border-white/10 bg-white/5 text-offwhite"
+              }`}>
+                {m.content || (streaming && i === messages.length - 1 ? <Loader2 className="h-4 w-4 animate-spin text-gold" /> : null)}
+              </div>
+              {m.role === "assistant" && m.content && !(streaming && i === messages.length - 1) && (
+                <button onClick={() => copierReponse(m)} data-testid={`chat-copy-${i}`}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10.5px] font-medium text-offwhite/55 transition hover:border-gold/40 hover:text-gold">
+                  <Copy size={11} /> Copier la réponse
+                </button>
+              )}
+              {m.juridique && (
+                <p className="rounded-xl border border-amber-300/25 bg-amber-300/5 px-3 py-2 text-[10.5px] italic leading-relaxed text-offwhite/60" data-testid="chat-juridique-mention">
+                  IA juridique : informations générales, qui ne constituent pas une consultation juridique et peuvent être inexactes. En cas de doute, rapproche-toi d'un professionnel du droit (avocat, notaire).
+                </p>
+              )}
+              {m.sources?.length > 0 && (
+                <div className="space-y-1.5" data-testid="chat-sources">
+                  <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-gold/80">Sources officielles</p>
+                  {m.sources.map((s, k) => (
+                    <a key={k} href={s.url} target="_blank" rel="noreferrer" data-testid={`chat-source-${k}`}
+                      className="flex items-center gap-2 rounded-xl border border-gold/25 bg-gold/5 px-3 py-2 text-xs text-offwhite/85 transition hover:border-gold/50 hover:bg-gold/10">
+                      <Scale size={13} className="shrink-0 text-gold" />
+                      <span className="min-w-0 flex-1 truncate">{s.titre}</span>
+                      <span className="hidden shrink-0 text-[10px] text-offwhite/45 sm:inline">{s.organisme}</span>
+                      <ExternalLink size={12} className="shrink-0 text-gold" />
+                    </a>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ))}
+        {messages.length === 1 && !streaming && !rythmeActu && (
+          <div className="rounded-2xl border border-gold/25 bg-gold/5 p-4" data-testid="actu-rythme-question">
+            <p className="text-sm leading-relaxed text-offwhite/90">Avant de commencer : à quel rythme veux-tu que la cloche te signale <b>l'actualité de ton marché</b> ?</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {RYTHMES_ACTU.map((r) => (
+                <button key={r.key} onClick={() => choisirRythme(r)} data-testid={`actu-rythme-${r.key}`}
+                  className="rounded-full border border-gold/30 bg-gold/10 px-3 py-1.5 text-xs font-medium text-gold transition-colors hover:bg-gold/20">
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       <div className="border-t border-white/10 px-4 py-3">
         <div className="mb-3 flex flex-wrap gap-2">
@@ -323,8 +408,14 @@ function ActuTab() {
         <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-offwhite/60">Actualité momentanément indisponible.</div>
       ) : (
         <div className="space-y-2.5">
-          {(data?.articles || []).map((a, i) => (
-            <div key={i} className="rounded-xl border border-white/10 bg-white/5 p-3 transition-colors hover:border-gold/30" data-testid={`actu-item-${i}`}>
+          {(data?.articles || []).map((a, i) => {
+            const dejaSauve = enregistres.some((e) => e.titre === a.titre);
+            return (
+            <div key={i}
+              onClick={() => discuterAvecIA(`Fais-moi un résumé clair et actionnable de cette actualité, en 4 points : ce qui se passe, pourquoi c'est important, ce que ça change pour un indépendant, et ce que je devrais faire : « ${a.titre} » (${a.lien})`)}
+              className="cursor-pointer rounded-xl border border-white/10 bg-white/5 p-3 transition-colors hover:border-gold/30 hover:bg-white/[0.07]"
+              title="Cliquer pour ouvrir le résumé IA"
+              data-testid={`actu-item-${i}`}>
               {a.source === "officiel" && (
                 <span className="mb-1.5 inline-flex items-center gap-1 rounded-full bg-gold/15 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.14em] text-gold" data-testid={`actu-officiel-${i}`}>
                   Officiel · {a.source_label || "source officielle"}
@@ -333,26 +424,28 @@ function ActuTab() {
               <p className="text-sm font-medium leading-snug text-offwhite">{a.titre}</p>
               {a.resume && <p className="mt-1 line-clamp-2 text-xs text-offwhite/55">{a.resume}</p>}
               <div className="mt-2 flex items-center justify-between">
-                <a href={a.lien} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[10px] text-gold" data-testid={`actu-lire-${i}`}>Lire <ExternalLink className="h-3 w-3" /></a>
+                <a href={a.lien} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-[10px] text-gold" data-testid={`actu-lire-${i}`}>Lire <ExternalLink className="h-3 w-3" /></a>
                 <div className="flex items-center gap-1.5">
                   <button
-                    onClick={() => discuterAvecIA(`Parle-moi de cette actualité et de ce qu'elle change concrètement pour mon activité : « ${a.titre} » (${a.lien})`)}
+                    onClick={(e) => { e.stopPropagation(); discuterAvecIA(`Parle-moi de cette actualité et de ce qu'elle change concrètement pour mon activité : « ${a.titre} » (${a.lien})`); }}
                     className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/10 px-2 py-1 text-[10px] font-medium text-gold hover:bg-gold/20"
                     data-testid={`actu-discuter-${i}`}
                   >
                     <Sparkles className="h-3 w-3" /> En parler à l'IA
                   </button>
                   <button
-                    onClick={async () => { try { await enregistrerArticle(a.titre, a.lien); toast.success("Article enregistré"); chargerEnregistres(); } catch { toast.error("Enregistrement impossible."); } }}
-                    className="inline-flex items-center gap-1 rounded-full border border-white/10 px-2 py-1 text-[10px] text-offwhite/70 hover:border-gold/40 hover:text-gold"
+                    onClick={async (e) => { e.stopPropagation(); if (dejaSauve) return; try { await enregistrerArticle(a.titre, a.lien); toast.success("Article enregistré — retrouve-le dans « Tes articles enregistrés » ci-dessous."); chargerEnregistres(); } catch { toast.error("Enregistrement impossible."); } }}
+                    disabled={dejaSauve}
+                    className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] ${dejaSauve ? "border-emerald-500/40 text-emerald-300" : "border-white/10 text-offwhite/70 hover:border-gold/40 hover:text-gold"}`}
                     data-testid={`actu-save-${i}`}
                   >
-                    <Bookmark className="h-3 w-3" /> Enregistrer
+                    {dejaSauve ? <Check className="h-3 w-3" /> : <Bookmark className="h-3 w-3" />} {dejaSauve ? "Enregistré" : "Enregistrer"}
                   </button>
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
           {(data?.articles || []).length === 0 && data?.vide_pref && (
             <p className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-offwhite/60">
               Toutes les sources sont coupées dans tes réglages. Réactive-en au moins une dans Paramètres → Notifications.
@@ -375,14 +468,14 @@ function ActuTab() {
 }
 
 export function ChatPanel() {
-  // Corrigé : le panneau desktop utilisait .glass (dégradé bleu translucide),
-  // visuellement différent du fond marine plein du mobile — deux styles
-  // pour le même composant. Aligné sur le mobile pour la cohérence.
+  // Un seul design de chat partout : le panneau marine OPAQUE (.chat-zayado),
+  // comme le chat global. L'ancien fond « verre » translucide (.fenetre)
+  // laissait voir la page derrière — retiré à la demande.
   // Ajouté aussi le bouton réduire/agrandir demandé.
   const [estElargi, setEstElargi] = useState(false);
   return (
     <div
-      className={`hidden xl:flex fixed right-0 top-0 z-20 h-screen flex-col fenetre !rounded-none !border-y-0 !border-r-0 transition-[width] duration-200 ${estElargi ? "w-[640px]" : "w-[360px]"}`}
+      className={`chat-zayado hidden xl:flex fixed right-0 top-0 z-20 h-screen flex-col transition-[width] duration-200 ${estElargi ? "w-[640px]" : "w-[360px]"}`}
       data-testid="chat-panel"
     >
       <ChatBody estElargi={estElargi} onToggleTaille={() => setEstElargi((v) => !v)} />
@@ -393,7 +486,7 @@ export function ChatPanel() {
 export function ChatBubble({ open, onClose }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex flex-col fenetre !rounded-none !border-0 xl:hidden" data-testid="chat-bubble">
+    <div className="chat-zayado fixed inset-0 z-50 flex flex-col xl:hidden" data-testid="chat-bubble">
       <ChatBody onClose={onClose} />
     </div>
   );

@@ -70,7 +70,7 @@ export default function RadarWidget() {
                     <p className="mt-0.5 text-sm font-semibold text-offwhite">{op.titre}</p>
                     <p className="mt-1 line-clamp-2 text-[11.5px] italic text-offwhite/60">{op.message}</p>
                   </div>
-                  <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-bold text-gold">{op.score}</span>
+                  {op.score != null && <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-bold text-gold">{op.score}</span>}
                 </div>
                 <div className="mt-2 flex justify-end">
                   <button onClick={() => { navigator.clipboard?.writeText(op.message || ""); toast.success("Message copié"); }}

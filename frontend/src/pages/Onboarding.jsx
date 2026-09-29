@@ -8,22 +8,18 @@ import { saveProfile } from "@/lib/kairosApi";
 import { toast } from "sonner";
 import { PLANS, PLANS_LANCEMENT, PLAN_ENTREPRISE, prixFondateurMois, ESSAI } from "@/lib/plans";
 import { lancerPaiement } from "@/lib/checkout";
-import { fetchTarifsFondateur } from "@/lib/kairosApi";
-import { Sparkles, ArrowRight, ArrowLeft, Plus, X, Target, Clock, Heart, Check, Loader2, Rocket, User, Briefcase, TrendingUp } from "lucide-react";
+import { fetchTarifsFondateur, fetchState } from "@/lib/kairosApi";
+import { Sparkles, ArrowRight, ArrowLeft, Plus, X, Target, Clock, Heart, Check, Loader2, Rocket, User, Briefcase, TrendingUp, HeartHandshake } from "lucide-react";
 import { savePouls } from "@/lib/kairosApi";
-import { enregistrerChoixAccueil } from "@/lib/kairosApi";
-import { Info } from "lucide-react";
 import TheSustainInfo from "@/components/kairos/TheSustainInfo";
 
-const STEPS = ["Bienvenue", "Identité", "Activité", "Cap financier", "Vision", "Objectifs 90j", "Valeurs & rituel", "Ton offre", "C'est prêt"];
+const STEPS = ["Bienvenue", "Identité", "Activité", "Cap financier", "Vision", "Objectifs 90j", "Valeurs & rituel", "Sens & Foi", "Ton offre", "C'est prêt"];
 
-// Écran de présentation : 3 slides qui se succèdent (bien-être, pilotage IA,
-// rentabilité) avant le choix « Oui, je veux ça » / « Pas encore ».
-const SLIDES = [
-  { icon: Heart, titre: "Ton bien-être d'abord", texte: "Retrouve ton énergie et allège ta charge mentale — un matin à la fois, à ton rythme." },
-  { icon: Sparkles, titre: "Piloté par l'IA", texte: "Ton copilote trie tes priorités et t'accompagne selon ton énergie réelle, chaque jour." },
-  { icon: TrendingUp, titre: "Une activité rentable", texte: "De vrais clients à contacter et ton chiffre d'affaires suivi — sans jamais ouvrir un tableur." },
-];
+// Image d'en-tête de l'onboarding (banc au lever du soleil — marque validée).
+const IMG_ONBOARDING = "https://images.unsplash.com/photo-1522075782449-e45a34f1ddfb?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzV8MHwxfHNlYXJjaHwyfHxtZWRpdGF0aW9uJTIwZW50cmVwcmVuZXVyJTIwY2FsbSUyMGZvY3VzJTIwcmVmbGVjdGlvbnxlbnwwfHx8fDE3OTA0NzUwOTd8MA&ixlib=rb-4.1.0&q=85";
+
+// (L'écran de présentation aspirationnel a été retiré : doublon avec le
+//  carrousel de la page login, qui présente déjà le produit avant inscription.)
 
 // Offres : source unique (lib/plans.js), prix HT. 3 offres au lancement,
 // Équipe et Entreprise sur contact. Tarif fondateur affiché si l'offre est ouverte.
@@ -51,11 +47,9 @@ export default function Onboarding() {
   const [searchParams] = useSearchParams();
   const { user, setOnboardingData } = useKairos();
   const [step, setStep] = useState(0);
-  // Écran de présentation aspirationnel, montré uniquement au tout premier
-  // passage (première inscription) avant l'étape « Bienvenue ».
-  const [presentation, setPresentation] = useState(true);
-  const [slide, setSlide] = useState(0);
   const [infoSens, setInfoSens] = useState(false);
+  // Étape « Sens & Foi » : null = pas encore choisi, sinon membre | decouverte | non.
+  const [foiChoix, setFoiChoix] = useState(null);
 
   const [vision, setVision] = useState("");
   const [why, setWhy] = useState("");
@@ -69,6 +63,14 @@ export default function Onboarding() {
   const cycleParam = searchParams.get("cycle") === "annuel" ? "annuel" : "mensuel";
   const [fondateurOuvert, setFondateurOuvert] = useState(false);
   useEffect(() => { fetchTarifsFondateur().then((d) => setFondateurOuvert(!!d.ouverte)).catch(() => {}); }, []);
+  // Un seul onboarding : un compte déjà « raconté » ne repasse plus par ce
+  // parcours (liens Vision, retour de paiement, Activer…). Le refaire écrasait
+  // les objectifs existants. Pour modifier sa vision : Paramètres → Vision.
+  // ?refaire=1 garde une porte volontaire.
+  useEffect(() => {
+    if (searchParams.get("refaire") === "1") return;
+    fetchState().then((s) => { if (s?.onboarded) navigate("/app", { replace: true }); }).catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const PLANS = construirePlans(fondateurOuvert);
   // Plus d'offre gratuite : Solo (essai 2 mois pour 1 €) est proposé par défaut.
   const [plan, setPlan] = useState(["reveur", "serenite", "pro", "business", "entreprise"].includes(planParam) ? planParam : "serenite");
@@ -87,13 +89,6 @@ export default function Onboarding() {
 
   const next = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
   const back = () => setStep((s) => Math.max(s - 1, 0));
-
-  // Mesure d'accueil : on enregistre le choix (best-effort) puis on entre dans le wizard.
-  const choisir = (choix) => {
-    try { enregistrerChoixAccueil(choix); } catch (_) { /* best-effort */ }
-    try { localStorage.setItem("zayado_accueil_choix", choix); } catch (_) { /* stockage indisponible */ }
-    setPresentation(false);
-  };
 
   // « Passer » : on mémorise que l'onboarding est fait (sinon il revenait à chaque connexion)
   // et on va au Cockpit — avant, le bouton renvoyait vers « / » puis /login.
@@ -122,6 +117,8 @@ export default function Onboarding() {
           ...(activite.clientele ? { clientele: activite.clientele } : {}),
           ...(activite.zone.trim() ? { zone: activite.zone.trim() } : {}),
           plan_souhaite: plan,
+          // Étape « Sens & Foi » : dimension Foi activée (ou non) dès l'onboarding.
+          ...(foiChoix ? { parcours_foi: foiChoix === "membre" || foiChoix === "decouverte" } : {}),
         },
         onboarded: true,
       });
@@ -176,77 +173,21 @@ export default function Onboarding() {
     vision.trim().length > 0,                     // 4 Vision
     goals.some((g) => g.trim()),                  // 5 Objectifs
     values.length > 0,                            // 6 Valeurs
-    true,                                          // 7 Offre
-    true,                                          // 8 Prêt
+    foiChoix !== null,                            // 7 Sens & Foi (choix explicite attendu)
+    true,                                          // 8 Offre
+    true,                                          // 9 Prêt
   ][step];
 
   return (
     <div className="zayado-blue relative flex min-h-screen flex-col items-center justify-center px-4 py-10">
-      {/* Présentation aspirationnelle — 3 slides puis le choix (premier contact) */}
-      {presentation && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden px-6 text-center" style={{ background: "var(--fond-zayado)" }} data-testid="onboarding-presentation">
-          {/* Vidéo d'ambiance (boucle muette) + voile navy ; si la vidéo manque,
-              le poster puis le fond navy dégradé restent derrière. */}
-          <video
-            autoPlay muted loop playsInline poster="/presentation-poster.jpg"
-            className="absolute inset-0 h-full w-full object-cover"
-            aria-hidden="true"
-            data-testid="onboarding-presentation-video"
-          >
-            <source src="/presentation.mp4" type="video/mp4" />
-          </video>
-          <div className="absolute inset-0 bg-[#0b1a3d]/60" aria-hidden="true" />
-          <button onClick={() => setInfoSens(true)} data-testid="onboarding-info-sens" aria-label="En savoir plus sur l'espace Sens"
-            className="absolute right-5 top-5 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-white/25 text-offwhite/70 transition hover:border-white/50 hover:text-offwhite">
-            <Info size={16} />
-          </button>
-          <img src="/logo.png" alt="Zayado" className="relative mb-8 h-14 w-14 animate-fade-up object-contain" />
-
-          <div key={slide} className="zayado-stagger relative max-w-2xl animate-fade-up" data-testid={`onboarding-slide-${slide}`}>
-            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gold/15 ring-1 ring-gold/30">
-              {(() => { const I = SLIDES[slide].icon; return <I className="h-8 w-8 text-gold" />; })()}
-            </div>
-            <p className="font-display text-4xl font-extrabold leading-tight text-offwhite sm:text-6xl">{SLIDES[slide].titre}</p>
-            <p className="mx-auto mt-5 max-w-xl font-display text-xl font-medium leading-snug text-offwhite/85 sm:text-2xl">{SLIDES[slide].texte}</p>
-          </div>
-
-          {/* Points de progression */}
-          <div className="relative mt-10 flex items-center gap-2" data-testid="onboarding-slide-dots">
-            {SLIDES.map((_, i) => (
-              <button key={i} onClick={() => setSlide(i)} aria-label={`Slide ${i + 1}`} data-testid={`onboarding-slide-dot-${i}`}
-                className={`h-2 rounded-full transition-all ${i === slide ? "w-8 bg-gold" : "w-2 bg-white/25"}`} />
-            ))}
-          </div>
-
-          <div className="absolute bottom-10 flex w-full max-w-md items-center justify-between gap-4 px-2">
-            {slide < SLIDES.length - 1 ? (
-              <>
-                <button onClick={() => choisir("pas_encore")} data-testid="onboarding-presentation-later"
-                  className="rounded-full border border-white/25 px-6 py-3.5 text-sm font-medium text-offwhite/70 transition hover:border-white/50 hover:text-offwhite">
-                  Passer
-                </button>
-                <button onClick={() => setSlide((s) => Math.min(s + 1, SLIDES.length - 1))} data-testid="onboarding-slide-next"
-                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-b from-[#F1E2CC] to-[#DEC2A3] px-8 py-3.5 text-sm font-bold text-navy-900 shadow-[0_10px_30px_-8px_rgba(222,194,163,0.6)] transition hover:brightness-105">
-                  Suivant <ArrowRight className="h-4 w-4" />
-                </button>
-              </>
-            ) : (
-              <>
-                <button onClick={() => choisir("pas_encore")} data-testid="onboarding-presentation-later"
-                  className="rounded-full border border-white/25 px-6 py-3.5 text-sm font-medium text-offwhite/70 transition hover:border-white/50 hover:text-offwhite">
-                  Pas encore
-                </button>
-                <button onClick={() => choisir("oui")} data-testid="onboarding-presentation-yes"
-                  className="rounded-full bg-gradient-to-b from-[#F1E2CC] to-[#DEC2A3] px-8 py-3.5 text-sm font-bold text-navy-900 shadow-[0_10px_30px_-8px_rgba(222,194,163,0.6)] transition hover:brightness-105">
-                  Oui, je veux ça
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
       <TheSustainInfo open={infoSens} onClose={() => setInfoSens(false)} />
+
+      {/* Image d'en-tête (banc au lever du soleil) — souffle avant les étapes */}
+      <div className="relative mb-6 h-36 w-full max-w-xl overflow-hidden rounded-3xl sm:h-44" data-testid="onboarding-header-image">
+        <img src={IMG_ONBOARDING} alt="" aria-hidden className="h-full w-full object-cover" />
+        <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(13,24,56,0.15), rgba(13,24,56,0.65))" }} />
+        <p className="absolute bottom-3 left-5 right-5 font-display text-lg font-bold text-white sm:text-xl">Quelques minutes pour poser tes fondations.</p>
+      </div>
 
       {/* Progress */}
       <div className="mb-8 flex w-full max-w-xl items-center gap-2" data-testid="onboarding-progress">
@@ -448,6 +389,44 @@ export default function Onboarding() {
         )}
 
         {step === 7 && (
+          <div className="py-2" data-testid="onboarding-sens-foi">
+            <div className="flex items-center gap-2">
+              <HeartHandshake className="h-4 w-4 text-gold" />
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Sens & Foi</span>
+            </div>
+            <h2 className="mt-2 font-display text-2xl font-bold text-offwhite">La dimension « sens », pour toi ?</h2>
+            <p className="mt-1 text-sm leading-relaxed text-offwhite/60">
+              Zayado s'occupe de ton travail et de ton équilibre. Pour aller plus loin — sens, valeurs,
+              et pour ceux qui le souhaitent la foi — il y a <b className="text-offwhite/85">TheSustain</b>,
+              la plateforme partenaire de Zayado, dans une perspective chrétienne.
+              <b className="text-offwhite/85"> Ouverte à tous</b>, croyants comme simples curieux —
+              et tu pourras changer d'avis à tout moment (Bien-être → Parcours).
+            </p>
+            <div className="mt-4 space-y-2.5">
+              {[
+                { key: "membre", titre: "J'ai déjà un compte TheSustain", desc: "La dimension Foi est activée dans ton espace. La connexion directe (SSO) arrive très bientôt — en attendant, utilise le bouton « Continuer avec TheSustain » sur la page de connexion." },
+                { key: "decouverte", titre: "Je suis curieux·se, je découvre", desc: "La dimension Foi est activée : parcours, réflexions et lien vers TheSustain pour adhérer si ça te parle. Sans engagement, évidemment." },
+                { key: "non", titre: "Non merci, pas pour moi", desc: "Aucun contenu Foi ne sera affiché. Tu pourras l'activer plus tard si tu changes d'avis." },
+              ].map((c) => (
+                <button key={c.key} onClick={() => { setFoiChoix(c.key); if (c.key === "decouverte") setInfoSens(true); }}
+                  data-testid={`onboarding-foi-${c.key}`}
+                  className={`flex w-full items-start gap-3 rounded-2xl border p-4 text-left transition-all ${
+                    foiChoix === c.key ? "border-gold/60 bg-gold/10 ring-1 ring-gold/30" : "border-white/10 bg-white/5 hover:border-white/25"
+                  }`}>
+                  <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${foiChoix === c.key ? "border-gold bg-gold text-navy-900" : "border-white/30"}`}>
+                    {foiChoix === c.key && <Check className="h-3.5 w-3.5" />}
+                  </span>
+                  <span>
+                    <span className="block text-sm font-semibold text-offwhite">{c.titre}</span>
+                    <span className="mt-1 block text-xs leading-relaxed text-offwhite/60">{c.desc}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {step === 8 && (
           <div className="py-2">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-gold" />
@@ -486,7 +465,7 @@ export default function Onboarding() {
           </div>
         )}
 
-        {step === 8 && (
+        {step === 9 && (
           <div className="py-6 text-center" data-testid="onboarding-final">
             <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gold/15 ring-1 ring-gold/30">
               <Rocket className="h-8 w-8 text-gold" />

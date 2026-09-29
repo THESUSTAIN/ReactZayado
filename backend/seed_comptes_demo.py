@@ -25,11 +25,9 @@ MDP_ADMIN = "Admin!2026"   # mot de passe admin
 
 # (email, mot de passe, rôle, plan, prénom)
 COMPTES = [
-    # ⚠️ Vous avez DÉJÀ un compte admin (présent sur Railway) : NE PAS le dupliquer.
-    # Pour promouvoir votre admin existant, définissez la variable d'env `admin_email`
-    # (sans `admin_password` si vous voulez conserver son mot de passe actuel).
-    # Décommentez la ligne ci-dessous uniquement si vous voulez un admin de DÉMO distinct :
-    # ("admin.demo@zayado.net",       MDP_ADMIN, "admin",  "pro",         "AdminDemo"),
+    # NB : l'admin (admin@zayado.net) existe déjà en production (Railway) — il
+    # n'est volontairement PAS créé par ce script ni par le seed auto.
+    ("test.essentielle@zayado.net",  MDP,       "client", "essentielle", "Essentielle"),
     # Compte TheSustain : accès GRATUIT à la partie chrétienne « Ma Foi ».
     # Pas d'offre business payante (plan "essentielle" = aucune offre active),
     # mais Ma Foi reste accessible car elle est exemptée du paywall. « La foi ne se vend pas. »

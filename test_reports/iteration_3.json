@@ -1,0 +1,32 @@
+{
+  "summary": "E2E frontend test of the admin-driven login carousel (7 scenarios). All PASS: edit by link, style (centre/fort/grand), add+reorder+delete slide, upload PNG (served via /api/medias/<id>), video-by-link (mp4), mobile banner reflects admin config, and final restoration of the 3 original slides. Backend endpoints (public GET, admin PUT, upload, media serving) confirmed working through the UI flows.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "CarrouselLoginAdmin.jsx delete button uses no explicit window.confirm — deletion is immediate on click. Consider a confirmation for accidental delete of a slide the admin spent time filling.",
+    "Login.jsx keeps a hardcoded SLIDES_LOGIN fallback array that duplicates the backend SLIDES_DEFAUT — any future change must be mirrored in both places (drift risk).",
+    "carrousel_ext.py _normaliser_slide silently coerces invalid style values to defaults instead of raising — admin gets no feedback if they send an unknown position/voile/taille (currently frontend can't do that, but the API contract is lax)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (validated indirectly via UI end-to-end)", "frontend": "100% (7/7 scenarios)"},
+  "test_credentials": "admin@zayado.net / Zyd2026SecureJWTkey!",
+  "seed_data_creation": "None persisted — final scenario restored the 3 original slides (Pilote ton activité avec clarté / Ton bien-être d'abord / Entreprends avec sens) with default style (bas/moyen/normal). Verified on /login after restoration.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Selectors verified: pro-menu-carrousel (admin sidebar), carrousel-admin (root), carrousel-slide-{i}, carrousel-titre-{i}, carrousel-desc-{i}, carrousel-src-{i}, carrousel-type-{i} (select image/video), carrousel-mode-lien-{i}/carrousel-mode-upload-{i}, carrousel-file-{i} (hidden input — use set_input_files), carrousel-upload-{i}, carrousel-position-{i}/voile-{i}/taille-{i}, carrousel-up-{i}/down-{i}/del-{i}, carrousel-add, carrousel-save. On /login: login-carousel (desktop only, >=1024px), login-carousel-titre, login-carousel-texte, login-carousel-dot-{i}, login-carousel-mobile (mobile only, <1024px). The desktop carousel auto-rotates every 5s so screenshots should target the active slide via dot click. Upload succeeded via real Emergent objstore in ~3s and was served publicly via /api/medias/<uuid>. Video mp4 rendered as a <video> tag in the carousel. Style 'grand' toggles the title from text-3xl to text-4xl xl:text-5xl.",
+  "detailed_results": {
+    "S1_edit_by_link": "PASS — Admin login, opened Carrousel login tab, edited slide 0 title to 'Titre E2E modifié', saved, reopened /login → login-carousel-titre = 'Titre E2E modifié'.",
+    "S2_style_centre_fort_grand": "PASS — slide 0 position=centre / voile=fort / taille=grand saved; /login login-carousel-titre class contains 'text-4xl' (grand). Screenshot captured.",
+    "S3_add_reorder_delete": "PASS — 3 slides → clicked carrousel-add → 4 slides; filled slide 3 (link + 'Slide test E2E'), used carrousel-up-3 then carrousel-down-2 to reorder, saved. /login shows login-carousel-dot-3. Deleted the test slide via carrousel-del (auto-accepted dialog) and saved → back to 3 slides.",
+    "S4_upload": "PASS — carrousel-mode-upload-0 → set_input_files on carrousel-file-0 with a 400x300 PNG → '✓ fichier téléversé' indicator visible → saved → /login image src = https://wellbeing-onboard.preview.emergentagent.com/api/medias/<uuid> (real object storage).",
+    "S5_video_link": "PASS — slide 1 type=video, src=https://www.w3schools.com/html/mov_bbb.mp4, saved. On /login clicked login-carousel-dot-1 → <video> element present inside login-carousel.",
+    "S6_mobile_banner": "PASS — 375px viewport /login, login-carousel-mobile visible and its title text reflects the admin config (contained 'Titre E2E modifié' from slide 0).",
+    "S7_restoration": "PASS — restored 3 slides with original Unsplash URLs, titles, descriptions, all style bas/moyen/normal. Saved. /login final title = 'Pilote ton activité avec clarté', exactly 3 dots."
+  }
+}

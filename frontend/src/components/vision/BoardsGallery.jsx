@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Sparkles, Loader2, X, LayoutGrid } from "lucide-react";
-import { fetchBoards, createBoard } from "@/lib/kairosApi";
+import { Plus, Sparkles, Loader2, X, LayoutGrid, Users } from "lucide-react";
+import { fetchBoards, createBoard, fetchBoardsPartages } from "@/lib/kairosApi";
 
 // Galerie « Mes boards » façon Storyflow : chaque board est montré par une
 // vraie miniature de son contenu (murs, notes, images à leur place), jamais
@@ -103,8 +103,12 @@ function NouveauBoard({ onClose, onCree }) {
 
 export function BoardsGallery({ onOpenBoard, onGenerate }) {
   const [boards, setBoards] = useState(null);
+  const [partages, setPartages] = useState([]);
   const [nouveau, setNouveau] = useState(false);
-  useEffect(() => { fetchBoards().then((d) => setBoards(d.boards || [])).catch(() => setBoards([])); }, []);
+  useEffect(() => {
+    fetchBoards().then((d) => setBoards(d.boards || [])).catch(() => setBoards([]));
+    fetchBoardsPartages().then((d) => setPartages(d.boards || [])).catch(() => {});
+  }, []);
 
   return (
     <section className="mb-10" data-testid="vision-mes-boards">
@@ -139,6 +143,27 @@ export function BoardsGallery({ onOpenBoard, onGenerate }) {
           </button>
         )}
       </div>
+      {partages.length > 0 && (
+        <div className="mt-8" data-testid="vision-partages-moi">
+          <h3 className="mb-4 flex items-center gap-2 font-ui text-[13px] font-semibold text-offwhite/85">
+            <Users size={15} className="text-gold" /> Partagés avec moi
+            <span className="text-[11px] font-normal text-offwhite/50">(tu peux les modifier)</span>
+          </h3>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+            {partages.map((b) => (
+              <button key={`${b.owner || ""}-${b.key}`} onClick={() => onOpenBoard({ ...b, partage: true })} className="group min-w-0 rounded-2xl border border-gold/25 bg-gold/[0.06] p-2 text-left sm:p-2.5 transition hover:-translate-y-0.5 hover:border-gold/50 hover:bg-gold/[0.09]" data-testid={`vision-board-partage-${b.key}`}>
+                <div className="flex aspect-[16/12] items-center justify-center rounded-xl bg-white/[0.05] text-4xl">{b.emoji}</div>
+                <div className="px-1 pb-1 pt-2.5 sm:px-1.5 sm:pt-3">
+                  <p className="truncate text-[14px] font-semibold text-offwhite sm:text-[15px]">{b.nom}</p>
+                  <p className="mt-0.5 truncate text-[11.5px] text-offwhite/55 sm:text-[12px]">
+                    {b.count} élément{b.count > 1 ? "s" : ""} · partagé par {b.proprietaire || "un membre"} · édition
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {nouveau && <NouveauBoard onClose={() => setNouveau(false)} onCree={(b) => { setNouveau(false); onOpenBoard(b); }} />}
     </section>
   );

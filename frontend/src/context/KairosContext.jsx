@@ -39,7 +39,7 @@ export function KairosProvider({ children }) {
     setEnergy({ score: s.energy?.score ?? 4, mood: s.energy?.mood || "aligné" });
     setACheckin(Boolean(s.energy?.a_checkin));
     setContexte(s.vision?.contexte_metier || {});
-    setBalance(s.balance || SAFE.balance);
+    setBalance(s.balance || null);  // null = pas encore de mesure (plus de 60/40 inventé)
     setPriorities(s.priorities || []);
     if (s.goal) {
       const dl = s.goal.echeance ? Math.max(0, Math.round((new Date(s.goal.echeance) - new Date()) / 86400000)) : 0;
@@ -52,6 +52,13 @@ export function KairosProvider({ children }) {
 
   const refresh = useCallback(() => fetchState().then(hydrate).catch(() => setLoaded(true)), [hydrate]);
   useEffect(() => { refresh(); }, [refresh]);
+  // Connexion en SPA (pas de rechargement) : un nouveau token déclenche la
+  // re-hydratation — sinon prénom, préférences et contexte restaient vides.
+  useEffect(() => {
+    const onToken = () => refresh();
+    window.addEventListener("zayado:token", onToken);
+    return () => window.removeEventListener("zayado:token", onToken);
+  }, [refresh]);
 
   const mode = deriveMode(energy.score);
   const modeInfo = energyModes[mode];

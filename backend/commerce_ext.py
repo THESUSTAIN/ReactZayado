@@ -176,7 +176,11 @@ def install_commerce(g: dict) -> None:
                 await db.commit()
         essai = {"disponible": conf["actif"] and not (a and (a.essai_le or (a.plan != "essentielle" and a.fin))),
                  "prix": conf["prix"], "jours": conf["jours"], "plan": conf["plan"]}
-        base = {"plan_en_attente": attente, "essai": essai,
+        # Membre TheSustain connecté par SSO : l'espace Ma Foi lui est ouvert
+        # même sans offre Zayado (voir AccesGate côté front).
+        thesustain = bool(p is not None and isinstance(getattr(p, "contexte_metier", None), dict)
+                          and p.contexte_metier.get("thesustain_sso"))
+        base = {"plan_en_attente": attente, "essai": essai, "thesustain": thesustain,
                 "acces": "actif" if (actif or role_interne or equipe) else "aucun",
                 "en_essai": bool(actif and a.cycle == "essai"), "equipe": equipe}
         if not a:
@@ -280,7 +284,10 @@ def install_commerce(g: dict) -> None:
         payload = {
             "amount": {"currency": order.currency, "value": f"{float(order.amount):.2f}"},
             "description": f"Zayado · {order.title}"[:255],
-            "redirectUrl": f"{_frontend_url()}/mon-espace?payment=pending&order={order.id}",
+            # Abonnement SaaS : retour sur /activer, qui attend la validation Mollie puis
+            # ouvre le cockpit (avant : liste « Mon espace », sans suite logique).
+            "redirectUrl": (f"{_frontend_url()}/activer?payment=pending&order={order.id}" if order.kind == "saas"
+                            else f"{_frontend_url()}/mon-espace?payment=pending&order={order.id}"),
             "webhookUrl": f"{_frontend_url()}/api/mollie/webhook",
             "metadata": {"order_id": order.id, "kind": order.kind, "user_id": order.user_id or "", "email": order.email},
         }
@@ -501,13 +508,119 @@ def install_commerce(g: dict) -> None:
 
     @api.get("/admin/commerce/vendors")
     async def admin_commerce_vendors(db: AsyncSession = Depends(get_db), _role=Depends(exiger_role("admin"))):
-        users = list((await db.execute(select(User).where(User.role.in_(["vendeur", "admin"])).order_by(User.email))).scalars())
+        """Comptes vendeurs + ex-vendeurs ayant encore une boutique (pour pouvoir les gérer)."""
+        ids_boutique = set((await db.execute(select(VendorProfile.user_id))).scalars()) if VendorProfile else set()
+        users = list((await db.execute(select(User).where(
+            (User.role == "vendeur") | (User.id.in_(ids_boutique))).order_by(User.email))).scalars())
         result = []
         for user in users:
             products = (await db.execute(select(func.count()).select_from(VendorProduct).where(VendorProduct.user_id == user.id))).scalar_one() if VendorProduct else 0
+            publies = (await db.execute(select(func.count()).select_from(VendorProduct).where(
+                VendorProduct.user_id == user.id, VendorProduct.statut == "publie"))).scalar_one() if VendorProduct else 0
             profile = (await db.execute(select(VendorProfile).where(VendorProfile.user_id == user.id))).scalar_one_or_none() if VendorProfile else None
-            result.append({"id": user.id, "email": user.email, "role": user.role, "shop": (profile.data or {}).get("nom_boutique", "") if profile else "", "products": products})
+            data = (profile.data or {}) if profile else {}
+            result.append({"id": user.id, "email": user.email, "role": user.role,
+                           "shop": data.get("nom_boutique", ""), "products": products, "publies": publies,
+                           "suspendu": user.role != "vendeur" and user.role != "admin",
+                           "profil": {k: data.get(k, "") for k in ("nom_boutique", "description", "email_contact", "telephone", "siret", "site")}})
         return {"items": result}
+
+    # ── Gestion des comptes vendeurs par l'admin (modifier / suspendre / supprimer) ──
+    CHAMPS_PROFIL_VENDEUR = ("nom_boutique", "description", "email_contact", "telephone", "siret", "site")
+
+    @api.put("/admin/commerce/vendors/{user_id}")
+    async def admin_vendeur_modifier(user_id: str, body: dict, db: AsyncSession = Depends(get_db),
+                                     _role=Depends(exiger_role("admin"))):
+        u = await db.get(User, user_id)
+        if not u:
+            raise HTTPException(404, "Compte introuvable.")
+        profil = {k: str(v)[:500] for k, v in ((body or {}).get("profil") or {}).items() if k in CHAMPS_PROFIL_VENDEUR}
+        if profil and VendorProfile:
+            row = (await db.execute(select(VendorProfile).where(VendorProfile.user_id == user_id))).scalar_one_or_none()
+            if not row:
+                row = VendorProfile(user_id=user_id, data={})
+                db.add(row)
+            ancien_nom = (row.data or {}).get("nom_boutique")
+            row.data = {**(row.data or {}), **profil}
+            # Le nom de boutique est recopié sur chaque fiche produit : on le garde aligné.
+            if VendorProduct and profil.get("nom_boutique") and profil["nom_boutique"] != ancien_nom:
+                for p in (await db.execute(select(VendorProduct).where(VendorProduct.user_id == user_id))).scalars():
+                    p.vendeur = profil["nom_boutique"]
+        if "suspendu" in (body or {}) and u.role != "admin":
+            if body["suspendu"]:
+                u.role = "client"   # plus d'accès à l'espace vendeur ; fiches mises hors ligne
+                if VendorProduct:
+                    for p in (await db.execute(select(VendorProduct).where(VendorProduct.user_id == user_id,
+                                                                            VendorProduct.statut.in_(["publie", "en_attente"])))).scalars():
+                        p.statut, p.maj_le = "brouillon", utcnow()
+            else:
+                u.role = "vendeur"
+        await db.commit()
+        return {"ok": True, "role": u.role}
+
+    @api.delete("/admin/commerce/vendors/{user_id}")
+    async def admin_vendeur_supprimer(user_id: str, db: AsyncSession = Depends(get_db), _role=Depends(exiger_role("admin"))):
+        """Supprime le COMPTE VENDEUR (boutique + fiches produit) — pas le compte utilisateur,
+        qui redevient un simple client. Les commandes passées restent en base (comptabilité)."""
+        u = await db.get(User, user_id)
+        if not u:
+            raise HTTPException(404, "Compte introuvable.")
+        shopify = []
+        if VendorProduct:
+            for p in list((await db.execute(select(VendorProduct).where(VendorProduct.user_id == user_id))).scalars()):
+                if p.shopify_id:
+                    shopify.append(p.titre)
+                await db.delete(p)
+        if VendorProfile:
+            row = (await db.execute(select(VendorProfile).where(VendorProfile.user_id == user_id))).scalar_one_or_none()
+            if row:
+                await db.delete(row)
+        if u.role == "vendeur":
+            u.role = "client"
+        await db.commit()
+        return {"ok": True, "a_retirer_de_shopify": shopify}
+
+    class AdminProduitIn(BaseModel):
+        titre: str | None = None
+        description: str | None = None
+        prix: str | None = None
+        stock: int | None = None
+        categorie: str | None = None
+        statut: str | None = None
+
+    @api.put("/admin/commerce/products/{pid}")
+    async def admin_produit_modifier(pid: str, body: AdminProduitIn, db: AsyncSession = Depends(get_db),
+                                     _role=Depends(exiger_role("admin"))):
+        p = await db.get(VendorProduct, pid) if VendorProduct else None
+        if not p:
+            raise HTTPException(404, "Produit introuvable.")
+        if body.titre is not None and body.titre.strip():
+            p.titre = body.titre.strip()[:255]
+        if body.description is not None:
+            p.description = body.description[:20000]
+        if body.prix is not None:
+            p.prix = body.prix.strip()[:20] or "0"
+        if body.stock is not None:
+            p.stock = max(0, body.stock)
+        if body.categorie is not None:
+            p.categorie = body.categorie[:120]
+        if body.statut is not None:
+            if body.statut not in ("brouillon", "en_attente", "publie", "refuse"):
+                raise HTTPException(422, "Statut invalide.")
+            p.statut = body.statut
+        p.maj_le = utcnow()
+        await db.commit()
+        return {"ok": True, "id": p.id, "statut": p.statut}
+
+    @api.delete("/admin/commerce/products/{pid}")
+    async def admin_produit_supprimer(pid: str, db: AsyncSession = Depends(get_db), _role=Depends(exiger_role("admin"))):
+        p = await db.get(VendorProduct, pid) if VendorProduct else None
+        if not p:
+            raise HTTPException(404, "Produit introuvable.")
+        shopify = bool(p.shopify_id)
+        await db.delete(p)
+        await db.commit()
+        return {"ok": True, "a_retirer_de_shopify": shopify}
 
     logger = g.get("logger")
 

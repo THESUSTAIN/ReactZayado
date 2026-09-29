@@ -8,7 +8,13 @@ const TOKEN_KEY = "kairos_access_token";
 // vrai token JWT obtenu (lien magique / OAuth), le backend ne voyait jamais
 // que la session démo. C'est ici que ça se branche.
 export const getToken = () => { try { return localStorage.getItem(TOKEN_KEY); } catch { return null; } };
-export const setToken = (t) => { try { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); } catch { /* stockage indisponible */ } };
+export const setToken = (t) => {
+  let avant = null;
+  try { avant = localStorage.getItem(TOKEN_KEY); t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); } catch { /* stockage indisponible */ }
+  // Nouveau token posé (login) : prévient l'app pour re-hydrater le contexte
+  // sans rechargement. Jamais sur retrait (401) — sinon boucle 401 → event → refetch.
+  if (t && t !== avant) { try { window.dispatchEvent(new Event("zayado:token")); } catch { /* hors navigateur */ } }
+};
 
 function _headers(extra) {
   const token = getToken();
@@ -107,6 +113,20 @@ export const fetchEnregistres = () => jget("/copilote/enregistres");
 export const exportData = () => jget("/export");
 export const deleteData = () => jsend("/donnees", "DELETE");
 export const fetchConnexionOptions = () => jget("/connexion/options");
+
+// ── Carrousel de la page login (administrable) ──
+// URL absolue d'un média uploadé (src « /api/medias/… ») ou d'un lien externe.
+export const mediaUrl = (src) => (src || "").startsWith("/") ? `${BACKEND_URL}${src}` : (src || "");
+export const fetchLoginCarousel = () => jget("/contenu/login-carousel");
+export const saveLoginCarousel = (slides) => jsend("/admin/contenu/login-carousel", "PUT", { slides });
+export async function uploadMedia(fichier) {
+  const fd = new FormData();
+  fd.append("fichier", fichier);
+  const r = await fetch(`${API}/admin/medias`, { method: "POST", headers: _headers(), body: fd });
+  if (r.status === 401) { setToken(null); _versLogin(); }
+  if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.detail || `Upload ${r.status}`); }
+  return r.json();
+}
 export const demanderLien = (email, origin) => jsend("/connexion/lien", "POST", { email, origin });
 // Mesure d'accueil : choix « oui » / « pas_encore » sur l'écran de présentation.
 export const enregistrerChoixAccueil = (choix) => jsend("/accueil/choix", "POST", { choix });
@@ -149,6 +169,22 @@ export const fetchVictoires = () => jget("/victoires");
 export const fetchShare = (board = "perso") => jget(`/vision/share?board=${encodeURIComponent(board)}`);
 export const saveShare = (data) => jsend("/vision/share", "POST", data);
 export const revokeShare = (board = "perso") => jsend(`/vision/share?board=${encodeURIComponent(board)}`, "DELETE");
+export const fetchPublicCommentaires = (token) => jget(`/public/vision/${token}/commentaires`);
+export const posterCommentairePublic = (token, auteur, texte) => jsend(`/public/vision/${token}/commentaires`, "POST", { auteur, texte });
+export const fetchVisionCommentaires = () => jget("/vision/commentaires");
+export const marquerCommentairesLus = () => jsend("/vision/commentaires/lus", "POST");
+export const inviterBoard = (cle, email) => jsend(`/vision/boards/${encodeURIComponent(cle)}/inviter`, "POST", { email });
+export const fetchInvitations = (cle) => jget(`/vision/boards/${encodeURIComponent(cle)}/invitations`);
+export const retirerInvitation = (cle, email) => jsend(`/vision/boards/${encodeURIComponent(cle)}/inviter/${encodeURIComponent(email)}`, "DELETE");
+export const fetchBoardsPartages = () => jget("/vision/partages");
+// `owner` : identifiant du propriétaire (départage deux boards de même clé partagés par deux personnes).
+const _own = (owner) => (owner ? `?owner=${encodeURIComponent(owner)}` : "");
+export const fetchBoardPartage = (cle, owner) => jget(`/vision/partages/${encodeURIComponent(cle)}${_own(owner)}`);
+export const saveBoardPartage = (cards, cle, owner) => jsend(`/vision/partages/${encodeURIComponent(cle)}${_own(owner)}`, "PUT", { cards });
+// Re-partage par un éditeur invité (le lien public reste réservé au propriétaire).
+export const fetchInvitationsPartage = (cle, owner) => jget(`/vision/partages/${encodeURIComponent(cle)}/invitations${_own(owner)}`);
+export const inviterBoardPartage = (cle, email, owner) => jsend(`/vision/partages/${encodeURIComponent(cle)}/inviter${_own(owner)}`, "POST", { email });
+export const retirerInvitationPartage = (cle, email, owner) => jsend(`/vision/partages/${encodeURIComponent(cle)}/inviter/${encodeURIComponent(email)}${_own(owner)}`, "DELETE");
 export async function fetchPublicVision(token) {
   const r = await fetch(`${API}/public/vision/${encodeURIComponent(token)}`);
   if (!r.ok) throw new Error(`public ${r.status}`);
@@ -168,11 +204,14 @@ export const generateBoard = (prompt) => jsend("/vision/generate-board", "POST",
 export const fetchInspire = () => jsend("/vision/inspire", "POST");
 
 // ── Chat streaming (SSE, deltas JSON) ──
-export async function streamChat({ message, page, onDelta, onDone, onError }) {
+// Corrigé : le jeton JWT n'était JAMAIS envoyé — en production (hors aperçu),
+// le chat répondait 401 « Connexion requise ». onSources : liens officiels
+// joints aux réponses juridiques (support légal façon Kandbaz).
+export async function streamChat({ message, page, onDelta, onDone, onError, onSources }) {
   try {
     const resp = await fetch(`${API}/copilote/chat`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: _headers({ "Content-Type": "application/json" }),
       body: JSON.stringify({ message, page }),
     });
     if (!resp.ok || !resp.body) {
@@ -194,6 +233,7 @@ export async function streamChat({ message, page, onDelta, onDone, onError }) {
         try {
           const data = JSON.parse(line.slice(5).trim());
           if (data.delta) onDelta && onDelta(data.delta);
+          if (data.sources && onSources) onSources(data.sources, !!data.juridique);
           if (data.error) onError && onError(data.error);
           if (data.done) onDone && onDone();
         } catch (_) {}
@@ -242,7 +282,7 @@ export const saveGeneratedDocument = (title, content, provider) => jsend("/docum
 // ── Admin (accès réservé au rôle admin — vérifié côté serveur, pas ici) ──
 export const fetchAdminVueEnsemble = () => jget("/admin/vue-ensemble");
 export const fetchAdminDiagnostics = () => jget("/admin/diagnostics");
-export const fetchAdminUtilisateurs = () => jget("/admin/utilisateurs");
+export const fetchAdminUtilisateurs = (params = {}) => jget(`/admin/utilisateurs?${_qs(params)}`);
 export const changerRoleUtilisateur = (userId, role) => jsend(`/admin/utilisateurs/${userId}/role?nouveau_role=${encodeURIComponent(role)}`, "PATCH");
 export const fetchModerationAttente = () => jget("/vendeur/moderation/attente");
 export const publierProduitVendeur = (pid) => jsend(`/vendeur/moderation/${pid}/publier`, "POST");
@@ -252,7 +292,20 @@ export const fetchAdminCommerceOrders = (status = "") => jget(`/admin/commerce/o
 export const changerStatutCommandeAdmin = (id, status) => jsend(`/admin/commerce/orders/${id}/status`, "PATCH", { status });
 export const fetchAdminCommerceProducts = () => jget("/admin/commerce/products");
 export const fetchAdminCommerceVendors = () => jget("/admin/commerce/vendors");
-export const fetchAdminParrainage = () => jget("/admin/parrainage");
+const _qs = (o) => Object.entries(o || {}).filter(([, v]) => v !== undefined && v !== null && v !== "").map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&");
+export const fetchAdminParrainage = (params = {}) => jget(`/admin/parrainage?${_qs(params)}`);
+export const creerParrainageAdmin = (parrain_email, filleul_email) => jsendMsg("/admin/parrainage", "POST", { parrain_email, filleul_email });
+export const modifierParrainageAdmin = (id, data) => jsendMsg(`/admin/parrainage/${id}`, "PATCH", data);
+export const supprimerParrainageAdmin = (id) => jsendMsg(`/admin/parrainage/${id}`, "DELETE");
+export const crediterMoisAdmin = (userId) => jsendMsg(`/admin/programmes/${userId}/crediter-mois`, "POST", {});
+export const refuserProgrammeAdmin = (userId) => jsendMsg(`/admin/programmes/${userId}/refuser`, "POST", {});
+// Comptes vendeurs & catalogue (admin)
+export const modifierVendeurAdmin = (userId, data) => jsendMsg(`/admin/commerce/vendors/${userId}`, "PUT", data);
+export const supprimerVendeurAdmin = (userId) => jsendMsg(`/admin/commerce/vendors/${userId}`, "DELETE");
+export const modifierProduitAdmin = (pid, data) => jsendMsg(`/admin/commerce/products/${pid}`, "PUT", data);
+export const supprimerProduitAdmin = (pid) => jsendMsg(`/admin/commerce/products/${pid}`, "DELETE");
+// Utilisateurs (admin) : liste paginée + compte gratuit
+export const passerCompteGratuit = (userId, actif, plan = "pro") => jsendMsg(`/admin/utilisateurs/${userId}/gratuit`, "PATCH", { actif, plan });
 export const fetchAdminNotifications = () => jget("/admin/notifications");
 export const appliquerCodePromo = (code) => jsend("/codes-promo/appliquer", "POST", { code });
 export const fetchCodesPromo = () => jget("/admin/codes-promo");
@@ -260,17 +313,6 @@ export const creerCodePromo = (data) => jsend("/admin/codes-promo", "POST", data
 export const basculerCodePromo = (id, active) => jsend(`/admin/codes-promo/${id}`, "PUT", { active });
 export const supprimerCodePromo = (id) => jsend(`/admin/codes-promo/${id}`, "DELETE");
 export const fetchConnections = () => jget("/connections");
-export const fetchConnectionProviders = () => jget("/connections/providers");
-export const connecterProvider = (provider, values) => jsendMsg(`/connections/${provider}`, "POST", { values });
-export const deconnecterProvider = (provider) => jsendMsg(`/connections/${provider}`, "DELETE");
-export const fetchAdminConnexionsStats = () => jget("/admin/connections/stats");
-export const fetchAdminConnexionsListe = () => jget("/admin/connections/list");
-export const fetchAppLogs = (params = {}) => {
-  const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== "")).toString();
-  return jget(`/app-logs${qs ? `?${qs}` : ""}`);
-};
-export const fetchAppLogsSummary = () => jget("/app-logs/summary");
-export const purgerAppLogs = (days = 30) => jsendMsg(`/app-logs/purge?days=${days}`, "DELETE");
 export const fetchMesFilleuls = () => jget("/parrainage/mes-filleuls");
 export const inviterParrainage = (email) => jsend("/parrainage/inviter", "POST", { email });
 // Programmes partenaires (parrainage / ambassadeur / affiliation)
@@ -389,10 +431,15 @@ export const envoyerBrouillonEmailIA = (id) => jsendMsg(`/admin/emails-ia/${id}/
 export const annulerBrouillonEmailIA = (id) => jsendMsg(`/admin/emails-ia/${id}/annuler`, "POST", {});
 export const enregistrerCleBrevo = (data) => jsendMsg("/admin/emails-ia/cle-brevo", "POST", data);
 
-// ── Newsletters (admin, marque Zayado) — veille externe → réécriture IA → Brevo ──
-export const fetchNewsletters = (statut) => jget(`/admin/newsletters${statut ? `?statut=${statut}` : ""}`);
-export const fetchNewsletter = (id) => jget(`/admin/newsletters/${id}`);
-export const majNewsletter = (id, data) => jsendMsg(`/admin/newsletters/${id}`, "PUT", data);
-export const relancerNewsletter = (id) => jsendMsg(`/admin/newsletters/${id}/relancer`, "POST", {});
-export const rejeterNewsletter = (id) => jsendMsg(`/admin/newsletters/${id}`, "DELETE");
-export const pousserNewsletterBrevo = (id) => jsendMsg(`/admin/newsletters/${id}/pousser-brevo`, "POST", {});
+// ── Ma Foi (TheSustain) : données personnelles + Mur de prière / Cercle partagés ──
+export const fetchFoiEtat = () => jget("/foi/etat");
+export const saveFoiEtat = (cle, valeur) => jsendMsg(`/foi/etat/${encodeURIComponent(cle)}`, "PUT", { valeur });
+export const fetchFoiPosts = (espace, categorie, page = 1) =>
+  jget(`/foi/posts?espace=${encodeURIComponent(espace)}${categorie && categorie !== "all" ? `&categorie=${encodeURIComponent(categorie)}` : ""}&page=${page}`);
+export const publierFoiPost = (data) => jsendMsg("/foi/posts", "POST", data);
+export const soutenirFoiPost = (id) => jsendMsg(`/foi/posts/${id}/soutenir`, "POST", {});
+export const repondreFoiPost = (id, texte, genre = "encouragement") => jsendMsg(`/foi/posts/${id}/reponses`, "POST", { texte, genre });
+export const supprimerFoiPost = (id) => jsendMsg(`/foi/posts/${id}`, "DELETE");
+export const supprimerFoiReponse = (id) => jsendMsg(`/foi/reponses/${id}`, "DELETE");
+export const modifierBrouillonEmailIA = (id, data) => jsendMsg(`/admin/emails-ia/${id}`, "PUT", data);
+export const dupliquerEmailIA = (id) => jsendMsg(`/admin/emails-ia/${id}/dupliquer`, "POST", {});

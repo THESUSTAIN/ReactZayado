@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { GlassCard } from "@/components/kairos/GlassCard";
+import { fetchMoi } from "@/lib/kairosApi";
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL || "";
 
@@ -97,7 +98,16 @@ const INTEGRATION_HELP = {
                        { key: "WA_SERVICE_SECRET", label: "Secret partagé", placeholder: "•••" }] },
 };
 
-export default function IntegrationsSection({ onOnboardingChange }) {
+// Branchements de la PLATEFORME (variables globales) : visibles et modifiables
+// uniquement par un admin. Un utilisateur ne voit plus ces détails techniques.
+export default function IntegrationsSection(props) {
+  const [admin, setAdmin] = useState(null);
+  useEffect(() => { fetchMoi().then((m) => setAdmin(m?.role === "admin")).catch(() => setAdmin(false)); }, []);
+  if (!admin) return null;
+  return <IntegrationsAdmin {...props} />;
+}
+
+function IntegrationsAdmin({ onOnboardingChange }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openConfig, setOpenConfig] = useState(null);

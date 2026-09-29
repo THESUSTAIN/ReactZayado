@@ -1,75 +1,56 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, LogOut, Moon, Sun } from "lucide-react";
+import { ArrowLeft, LogOut, Moon, Sun, Menu, X } from "lucide-react";
 import { useThemePro } from "@/lib/themePro";
-import { getToken, setToken } from "@/lib/kairosApi";
+import { getToken, setToken, fetchMoi } from "@/lib/kairosApi";
 
-// Menu latéral pro (modèle « Victoires ») : rail navy foncé + libellés, pour la
-// console admin et l'espace vendeur — volontairement différent du rail d'icônes SaaS.
+const ROLE_LABEL = { admin: "Administrateur", vendeur: "Vendeur", client: "Client" };
+
+// Menu latéral pro — forme et couleurs exactes du modèle « Cours » (Cockpit RH) :
+// barre latérale FLOTTANTE arrondie (navy #182d5e → #0d1838), onglet actif doré
+// (#DEC2A3/#C9A96A), carte utilisateur en bas (initiales + rôle), tiroir mobile.
+// Utilisé par la console admin et l'espace vendeur.
 export function SideMenuPro({ titre, sousTitre, items, actif, onChange, retour }) {
   const navigate = useNavigate();
   const connecte = !!getToken();
   const [theme, basculerTheme] = useThemePro();
-  const FOND = "linear-gradient(180deg, #14254f 0%, #0f1d40 55%, #0b1633 100%)";
+  const [ouvert, setOuvert] = useState(false);
+  const [moi, setMoi] = useState(null);
 
-  return (
+  useEffect(() => {
+    if (connecte) fetchMoi().then(setMoi).catch(() => {});
+  }, [connecte]);
+
+  const nomAffiche = moi?.email ? moi.email.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "";
+  const initiales = nomAffiche.split(" ").map((p) => p[0]).slice(0, 2).join("") || "Z";
+  const roleLabel = ROLE_LABEL[moi?.role] || (moi?.role ? moi.role : "");
+
+  const choisir = (key) => { onChange(key); setOuvert(false); };
+  const quitter = () => { setToken(null); navigate("/login"); };
+
+  const Contenu = () => (
     <>
-    {/* Mobile / tablette : le rail latéral est masqué sous 1024 px — avant, il
-        n'y avait alors AUCUNE navigation. Bandeau d'onglets défilant à la place. */}
-    <div className="border-b border-white/10 lg:hidden" style={{ background: FOND }} data-testid="side-menu-pro-mobile">
-      <div className="flex items-center gap-2.5 px-4 pb-2 pt-3">
-        {retour && (
-          <button onClick={() => navigate(retour.to)} aria-label={retour.label} className="rounded-lg p-1.5 text-white/70 hover:bg-white/10"><ArrowLeft size={18} /></button>
-        )}
-        <img src="/logo.png" alt="Zayado" className="h-8 w-8 object-contain" />
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-display text-[14px] font-bold text-white">{titre}</p>
+      <div className="flex items-center gap-3 px-3 pb-6">
+        <img src="/logo.png" alt="Zayado" className="h-10 w-10 object-contain" />
+        <div className="min-w-0">
+          <p className="truncate font-display text-[15px] font-bold text-white">{titre}</p>
           <p className="truncate text-[10px] leading-tight text-white/45">{sousTitre}</p>
         </div>
-        <button onClick={basculerTheme} aria-label={theme === "clair" ? "Mode sombre" : "Mode clair"} className="rounded-lg p-1.5 text-white/60 hover:bg-white/10" data-testid="pro-theme-m">{theme === "clair" ? <Moon size={17} /> : <Sun size={17} />}</button>
-        {connecte && (
-          <button onClick={() => { setToken(null); navigate("/login"); }} aria-label="Se déconnecter" className="rounded-lg p-1.5 text-white/60 hover:bg-white/10"><LogOut size={17} /></button>
-        )}
-      </div>
-      <nav className="flex gap-1.5 overflow-x-auto px-4 pb-3 [scrollbar-width:none]">
-        {items.map((it) => {
-          const isActive = actif === it.key;
-          return (
-            <button key={it.key} onClick={() => onChange(it.key)} data-testid={`pro-menu-m-${it.key}`}
-              className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-[12.5px] transition ${
-                isActive ? "bg-[#DEC2A3]/20 font-semibold text-[#F1E2CC]" : "bg-white/[0.07] text-white/70"}`}>
-              <span className="flex h-4 w-4 items-center justify-center">{it.icon}</span>{it.label}
-              {it.badge != null && it.badge > 0 && <span className="rounded-full bg-[#C1272D] px-1.5 text-[10px] font-bold text-white">{it.badge}</span>}
-            </button>
-          );
-        })}
-      </nav>
-    </div>
-    <aside className="fixed left-0 top-0 z-30 hidden h-screen w-[248px] flex-col px-5 py-6 lg:flex" style={{ background: FOND, borderRight: "1px solid rgba(255,255,255,0.06)" }} data-testid="side-menu-pro">
-      <div className="flex items-center gap-3 px-1">
-        <img src="/logo.png" alt="Zayado" className="h-10 w-10 object-contain" />
-        <div>
-          <p className="font-display text-[15px] font-bold text-white">{titre}</p>
-          <p className="text-[10px] leading-tight text-white/45">{sousTitre}</p>
-        </div>
       </div>
 
-      <nav className="mt-9 flex flex-1 flex-col gap-1.5">
+      <nav className="flex-1 space-y-1 overflow-y-auto px-2">
         {items.map((it) => {
           const isActive = actif === it.key;
           return (
             <button
               key={it.key}
-              onClick={() => onChange(it.key)}
+              onClick={() => choisir(it.key)}
               data-testid={`pro-menu-${it.key}`}
-              className={`flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-left text-[13.5px] transition-all duration-200 border-l-2 ${
-                isActive
-                  ? "bg-white/[0.09] font-semibold text-white border-l-[#DEC2A3]"
-                  : "border-l-transparent text-white/60 hover:bg-white/[0.06] hover:text-white"
-              }`}
+              className="pro-nav-item"
+              data-active={isActive ? "true" : "false"}
             >
               <span className="flex h-5 w-5 items-center justify-center">{it.icon}</span>
-              <span className="flex-1">{it.label}</span>
+              <span className="flex-1 text-left text-sm">{it.label}</span>
               {it.badge != null && it.badge > 0 && (
                 <span className="rounded-full bg-[#C1272D] px-2 py-0.5 text-[10px] font-bold text-white">{it.badge}</span>
               )}
@@ -78,30 +59,75 @@ export function SideMenuPro({ titre, sousTitre, items, actif, onChange, retour }
         })}
       </nav>
 
-
-      <div className="space-y-1.5 border-t border-white/10 pt-4">
-        <button onClick={basculerTheme} data-testid="pro-theme" className="flex w-full items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm text-white/55 transition-colors hover:bg-white/[0.06] hover:text-white">
-          {theme === "clair" ? <Moon size={16} /> : <Sun size={16} />} {theme === "clair" ? "Mode sombre" : "Mode clair"}
+      <div className="mt-2 space-y-1 px-2 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+        {connecte && moi && (
+          <div className="flex items-center gap-3 px-2 py-2" data-testid="pro-menu-user">
+            <div
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-sm font-bold"
+              style={{ background: "linear-gradient(135deg,#C9A96A,#DEC2A3)", color: "#1F2A44" }}
+            >
+              {initiales}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-semibold" style={{ color: "#EDF2FF" }}>{nomAffiche}</div>
+              <div className="text-xs" style={{ color: "#DEC2A3" }}>{roleLabel}</div>
+            </div>
+          </div>
+        )}
+        <button onClick={basculerTheme} data-testid="pro-theme" className="pro-nav-item w-full">
+          {theme === "clair" ? <Moon size={18} /> : <Sun size={18} />}
+          <span className="text-sm">{theme === "clair" ? "Mode sombre" : "Mode clair"}</span>
         </button>
         {retour && (
-          <button onClick={() => navigate(retour.to)} data-testid="pro-menu-retour" className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm text-white/55 transition-colors hover:bg-white/8 hover:text-white">
-            <ArrowLeft size={16} /> {retour.label}
+          <button onClick={() => navigate(retour.to)} data-testid="pro-menu-retour" className="pro-nav-item w-full">
+            <ArrowLeft size={18} /><span className="text-sm">{retour.label}</span>
           </button>
         )}
         {connecte && (
-          <button
-            onClick={() => { setToken(null); navigate("/login"); }}
-            data-testid="pro-menu-logout"
-            className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm text-white/55 transition-colors hover:bg-white/8 hover:text-white"
-          >
-            <LogOut size={16} /> Se déconnecter
+          <button onClick={quitter} data-testid="pro-menu-logout" className="pro-nav-item w-full">
+            <LogOut size={18} /><span className="text-sm">Déconnexion</span>
           </button>
         )}
-        <p className="px-3.5 pt-2 font-serif-italic text-[11px] leading-relaxed text-white/35">
-          « Le calme est un avantage compétitif. »
-        </p>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile : en-tête compact + tiroir latéral (modèle « Cours ») */}
+      <div className="sticky top-0 z-30 flex items-center gap-2.5 border-b border-white/10 px-4 py-3 lg:hidden"
+        style={{ background: "linear-gradient(180deg,#182d5e,#0d1838)" }} data-testid="side-menu-pro-mobile">
+        <button onClick={() => setOuvert(true)} aria-label="Ouvrir le menu" data-testid="pro-menu-burger"
+          className="rounded-lg p-1.5 text-white/80 transition hover:bg-white/10">
+          <Menu size={20} />
+        </button>
+        <img src="/logo.png" alt="Zayado" className="h-8 w-8 object-contain" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-display text-[14px] font-bold text-white">{titre}</p>
+          <p className="truncate text-[10px] leading-tight text-white/45">{sousTitre}</p>
+        </div>
+      </div>
+
+      {ouvert && (
+        <div className="fixed inset-0 z-40 lg:hidden" onClick={() => setOuvert(false)} style={{ background: "rgba(0,0,0,0.5)" }} data-testid="pro-menu-overlay">
+          <aside className="pro-sidebar flex h-full w-[264px] flex-col py-6" onClick={(e) => e.stopPropagation()} data-testid="pro-menu-drawer">
+            <button onClick={() => setOuvert(false)} aria-label="Fermer le menu" data-testid="pro-menu-close"
+              className="absolute right-3 top-3 rounded-lg p-1.5 text-white/70 transition hover:bg-white/10">
+              <X size={18} />
+            </button>
+            <Contenu />
+          </aside>
+        </div>
+      )}
+
+      {/* Desktop : barre flottante arrondie, détachée du bord (modèle « Cours ») */}
+      <aside
+        className="pro-sidebar fixed left-3 top-3 z-30 hidden h-[calc(100vh-24px)] w-[264px] flex-col py-6 lg:flex"
+        style={{ borderRadius: 24 }}
+        data-testid="side-menu-pro"
+      >
+        <Contenu />
+      </aside>
     </>
   );
 }

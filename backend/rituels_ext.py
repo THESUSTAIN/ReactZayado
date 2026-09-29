@@ -131,8 +131,9 @@ def install_rituels(g: dict) -> None:
             VisionCheckin.user_id == uid, VisionCheckin.date >= (auj - timedelta(days=27)).isoformat())
             .order_by(VisionCheckin.date))).scalars())
         par_date = {r.date: r.energie for r in rows}
+        par_date_stress = {r.date: r.stress for r in rows}
         semaine = []
         for i in range(6, -1, -1):
             d = auj - timedelta(days=i)
-            semaine.append({"date": d.isoformat(), "jour": JOURS[d.weekday()][:3], "energie": par_date.get(d.isoformat())})
+            semaine.append({"date": d.isoformat(), "jour": JOURS[d.weekday()][:3], "energie": par_date.get(d.isoformat()), "stress": par_date_stress.get(d.isoformat())})
         return {"semaine": semaine, "analyse": analyse_semaine([(r.date, r.energie) for r in rows])}

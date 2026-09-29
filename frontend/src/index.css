@@ -360,7 +360,7 @@ body.theme-clair .aurora-bg { display: none; }
 
 /* Chat (Copilote / Collaborateur IA) : accordé à l'app — même navy que le ciel, or de la marque. */
 .chat-zayado {
-  background: linear-gradient(180deg, rgba(23, 44, 92, 0.97) 0%, rgba(14, 27, 62, 0.98) 55%, rgba(10, 18, 48, 0.98) 100%);
+  background: linear-gradient(180deg, #172C5C 0%, #0E1B3E 55%, #0A1230 100%);
   color: #F5F1EA;
   border-left: 1px solid rgba(255, 255, 255, 0.09);
   box-shadow: -18px 0 50px rgba(3, 8, 24, 0.45);
@@ -402,6 +402,45 @@ body.theme-clair .aurora-bg { display: none; }
 .pro-clair .entete-navy { background: rgba(255, 255, 255, 0.82) !important; border-color: #dbe4f3 !important; }
 .pro-clair .entete-navy .text-offwhite { color: #16213d !important; }
 .pro-clair table thead tr { color: #5b6b8c; }
+.pro-clair input::placeholder, .pro-clair textarea::placeholder { color: #8a97b3 !important; opacity: 1; }
+
+/* ── Espaces pro façon « Cours » (admin / vendeur) : couleurs exactes du modèle ── */
+/* Barre latérale flottante navy */
+.pro-sidebar {
+  background: linear-gradient(180deg, #182d5e 0%, #0d1838 100%);
+  border: 1px solid rgba(255,255,255,0.07);
+  box-shadow: 0 16px 34px rgba(4,13,34,.28);
+}
+.pro-nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 14px; border-radius: 12px;
+  color: rgba(237,242,255,0.72); font-weight: 500;
+  transition: all .2s ease; cursor: pointer;
+}
+.pro-nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.pro-nav-item[data-active="true"] {
+  background: linear-gradient(135deg, rgba(222,194,163,0.28), rgba(201,169,106,0.14));
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(222,194,163,0.45);
+}
+/* Fond crème + accents exacts du modèle (par-dessus les bascules .pro-clair) */
+.pro-cours {
+  background:
+    radial-gradient(ellipse 70% 50% at 15% 0%, rgba(222, 194, 163, 0.16), transparent 62%),
+    linear-gradient(135deg, #F8F8F6 0%, #F3F3F1 60%, #ECECEA 100%) !important;
+  background-attachment: fixed !important;
+  color: #1F2A44;
+}
+.pro-cours .border-white\/5, .pro-cours .border-white\/8, .pro-cours .border-white\/10, .pro-cours .border-white\/12, .pro-cours .border-white\/15, .pro-cours .border-white\/20, .pro-cours .border-white\/\[0\.14\] { border-color: #E8E6E1 !important; }
+.pro-cours .bg-white\/5, .pro-cours .bg-white\/10, .pro-cours .bg-white\/\[0\.03\], .pro-cours .bg-white\/\[0\.04\], .pro-cours .bg-white\/\[0\.05\], .pro-cours .bg-white\/\[0\.06\], .pro-cours .bg-white\/\[0\.08\], .pro-cours .glass, .pro-cours .glass-strong, .pro-cours .fenetre {
+  background: #FFFFFF !important; border-radius: 20px;
+  box-shadow: 0 2px 14px -6px rgba(31, 42, 68, 0.10);
+}
+.pro-cours .text-gold { color: #8A5A1E !important; }
+.pro-cours select, .pro-cours input, .pro-cours textarea { border-color: #E2D5BE !important; }
+.pro-cours select:focus, .pro-cours input:focus, .pro-cours textarea:focus { border-color: #C9A96A !important; box-shadow: 0 0 0 3px rgba(222,194,163,0.30) !important; }
+.pro-cours .entete-navy { background: rgba(255,255,255,0.85) !important; border-color: #E8E6E1 !important; }
+
 
 /* Chat en thème clair : panneau blanc assorti (au lieu du navy) */
 body.theme-clair .chat-zayado {
@@ -420,3 +459,132 @@ body.theme-clair .fenetre {
     color: #1F2A44 !important;
     box-shadow: 0 24px 60px rgba(31, 42, 68, 0.18) !important;
 }
+
+
+/* ── Page Bien-être « Prends soin de toi » : variante CLAIRE façon maquette.
+   La maquette prête sa FORME uniquement — les couleurs sont celles du thème
+   clair existant (body.theme-clair : fond clair de l'app, cartes blanches,
+   encre navy #1F2A44). .be-clair est posé sur la racine de la page. ── */
+.be-card {
+  background: #FFFFFF;
+  border: 1px solid #E8E6E1;
+  border-radius: 22px;
+  padding: 26px;
+  box-shadow: 0 1px 2px rgba(31, 42, 68, 0.06), 0 12px 30px -18px rgba(31, 42, 68, 0.16);
+}
+.be-mini {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  background: #F6F6F3; border: 1px solid #E8E6E1; border-radius: 18px;
+  padding: 22px 16px; transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+button.be-mini:hover { transform: translateY(-2px); box-shadow: 0 10px 22px -14px rgba(31, 42, 68, 0.25); }
+button.be-mini:hover > span:last-child { background: #1F2A44; color: #F8F8F6; }
+.be-btn-navy {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: #1F2A44; color: #F8F8F6; border-radius: 999px;
+  padding: 12px 24px; font-weight: 600; font-size: 13.5px;
+  transition: filter 0.18s ease, transform 0.18s ease;
+}
+.be-btn-navy:hover { filter: brightness(1.2); transform: translateY(-1px); }
+.be-btn-navy:focus-visible { outline: 2px solid #1F2A44; outline-offset: 3px; }
+.be-banner {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px;
+  background: rgba(217, 169, 78, 0.12); border: 1px solid rgba(217, 169, 78, 0.35);
+  border-radius: 20px; padding: 18px 24px; margin-top: 20px;
+}
+
+/* Inversion des utilitaires sombres dans les composants propres à la page
+   (theme-clair ne couvre que text-offwhite ; ceux-ci utilisent text-white). */
+.be-clair .text-white { color: #1F2A44 !important; }
+.be-clair .text-white\/90, .be-clair .text-white\/85 { color: rgba(31, 42, 68, 0.85) !important; }
+.be-clair .text-white\/70, .be-clair .text-white\/75 { color: rgba(31, 42, 68, 0.7) !important; }
+.be-clair .text-white\/60, .be-clair .text-white\/55 { color: rgba(31, 42, 68, 0.55) !important; }
+.be-clair .text-white\/50, .be-clair .text-white\/45, .be-clair .text-white\/40 { color: rgba(31, 42, 68, 0.45) !important; }
+.be-clair .bg-white\/5, .be-clair .bg-white\/10, .be-clair .bg-white\/\[0\.03\], .be-clair .bg-white\/\[0\.04\], .be-clair .bg-white\/\[0\.05\], .be-clair .bg-white\/\[0\.06\], .be-clair .bg-white\/\[0\.08\] {
+  background: #FFFFFF !important;
+  box-shadow: 0 1px 2px rgba(31, 42, 68, 0.05), 0 10px 26px rgba(31, 42, 68, 0.07);
+}
+.be-clair .border-white\/5, .be-clair .border-white\/8, .be-clair .border-white\/10, .be-clair .border-white\/12, .be-clair .border-white\/15, .be-clair .border-white\/20, .be-clair .border-white\/25 {
+  border-color: #E8E6E1 !important;
+}
+
+/* Vision Board en vue canvas : plein écran aussi sur PC (le rail latéral de
+   l'app est masqué — le board a ses propres outils et sa sortie « Cockpit »). */
+.vision-plein-ecran .side-nav { display: none !important; }
+
+.be-clair .bg-navy-900\/50, .be-clair .bg-navy-900\/70 { background: rgba(248, 248, 246, 0.9) !important; }
+.be-clair .bg-gold\/10, .be-clair .bg-gold\/15 { background: rgba(217, 169, 78, 0.16) !important; }
+.be-clair input, .be-clair select, .be-clair textarea { color: #1F2A44; }
+.be-clair .glass, .be-clair .glass-strong, .be-clair .fenetre {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 250, 248, 0.98)) !important;
+  border: 1px solid #E8E6E1 !important;
+  color: #1F2A44 !important;
+  box-shadow: 0 24px 60px rgba(31, 42, 68, 0.18) !important;
+}
+/* Bandeau du header au défilement */
+.be-clair .bg-\[\#0b1a3d\]\/60 { background: rgba(248, 248, 246, 0.88) !important; backdrop-filter: blur(14px); }
+
+/* Overlays volontairement sombres (séance de respiration immersive) : on ne
+   les inverse pas — repère .be-dark-keep posé sur leur racine. */
+.be-clair .be-dark-keep .text-white { color: #FFFFFF !important; }
+.be-clair .be-dark-keep .text-white\/90, .be-clair .be-dark-keep .text-white\/85, .be-clair .be-dark-keep .text-white\/80 { color: rgba(255, 255, 255, 0.85) !important; }
+.be-clair .be-dark-keep .text-white\/70, .be-clair .be-dark-keep .text-white\/75 { color: rgba(255, 255, 255, 0.72) !important; }
+.be-clair .be-dark-keep .text-white\/60, .be-clair .be-dark-keep .text-white\/55 { color: rgba(255, 255, 255, 0.6) !important; }
+.be-clair .be-dark-keep .text-white\/50, .be-clair .be-dark-keep .text-white\/45, .be-clair .be-dark-keep .text-white\/40 { color: rgba(255, 255, 255, 0.5) !important; }
+.be-clair .be-dark-keep .bg-white\/5, .be-clair .be-dark-keep .bg-white\/10, .be-clair .be-dark-keep .bg-white\/\[0\.05\] {
+  background: rgba(255, 255, 255, 0.08) !important; box-shadow: none !important;
+}
+.be-clair .be-dark-keep .border-white\/10, .be-clair .be-dark-keep .border-white\/12, .be-clair .be-dark-keep .border-white\/15, .be-clair .be-dark-keep .border-white\/20 {
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+/* Thème clair global : rail latéral et menu mobile LISIBLES (avant : icônes
+   navy invisibles sur fond navy quand theme-clair inversait le texte). */
+body.theme-clair .menu-island {
+  background: linear-gradient(180deg, #FFFFFF 0%, #F6F6F3 100%);
+  border: 1px solid #E8E6E1; border-left: 0;
+  box-shadow: 0 16px 34px rgba(31, 42, 68, 0.1);
+}
+body.theme-clair .menu-scoop-top { fill: #FFFFFF; }
+body.theme-clair .menu-scoop-bottom { fill: #F6F6F3; }
+body.theme-clair .menu-island .bg-white {
+  background: #1F2A44 !important; color: #FFFFFF !important;
+  box-shadow: 0 10px 22px -10px rgba(31, 42, 68, 0.55) !important;
+}
+body.theme-clair .menu-island .text-navy-900 { color: #FFFFFF !important; }
+body.theme-clair .menu-island .hover\:bg-white\/10:hover { background: rgba(31, 42, 68, 0.08) !important; }
+body.theme-clair .menu-island .bg-navy-800 { background: #1F2A44 !important; color: #F5F1EA !important; }
+
+/* Menu mobile du bas : barre claire, icônes navy (plus rien d'invisible). */
+body.theme-clair [data-testid="bottomnav"] {
+  background: rgba(248, 248, 246, 0.95) !important;
+  border-color: #E8E6E1 !important;
+  backdrop-filter: blur(14px);
+}
+
+
+/* ── Page Bien-être & Mindset (maquette crème, sept. 2026) ── */
+.be-page { background: #F4EFE6; }
+.be-page .be-card { background: #FFFFFF; border: 1px solid #EDE7DC; border-radius: 22px; padding: 24px; box-shadow: 0 1px 2px rgba(31,42,68,.05), 0 12px 30px -20px rgba(31,42,68,.18); }
+.be-tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; background: #FFFFFF; border: 1px solid #EDE7DC; border-radius: 999px; padding: 5px; box-shadow: 0 8px 22px -18px rgba(31,42,68,.3); }
+.be-tab { flex: 1 0 auto; border-radius: 999px; padding: 9px 18px; font-size: 15px; color: #1F2A44; transition: background .18s ease; white-space: nowrap; }
+.be-tab:hover { background: #F6F1E9; }
+.be-tab[data-actif="true"] { background: #E3CDA8; font-weight: 600; }
+.be-suggestion { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; background: #EFE5D5; border-radius: 18px; padding: 18px 24px; }
+.be-raccourci { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 96px; background: #FFFFFF; border: 1px solid #EDE7DC; border-radius: 18px; padding: 16px 10px; text-align: center; color: #1F2A44; font-size: 15px; box-shadow: 0 8px 22px -18px rgba(31,42,68,.3); transition: transform .18s ease, box-shadow .18s ease; }
+button.be-raccourci:hover { transform: translateY(-2px); box-shadow: 0 12px 24px -16px rgba(31,42,68,.35); }
+.be-tuile { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 78px; background: #F4EDE1; border-radius: 14px; padding: 10px 8px; transition: filter .18s ease; }
+.be-tuile:hover { filter: brightness(.97); }
+/* Séance complète (onglet Outils) : carte navy, textes clairs malgré .be-clair */
+.be-seance-dark > section { background: #1C2746 !important; border-color: transparent !important; }
+.be-clair .be-seance-dark .text-white { color: #F6F1E9 !important; }
+.be-clair .be-seance-dark .text-white\/85, .be-clair .be-seance-dark .text-white\/70 { color: rgba(246,241,233,.8) !important; }
+.be-clair .be-seance-dark .text-white\/60, .be-clair .be-seance-dark .text-white\/55, .be-clair .be-seance-dark .text-white\/50 { color: rgba(246,241,233,.6) !important; }
+.be-clair .be-seance-dark .bg-white\/\[0\.03\] { background: rgba(255,255,255,.05) !important; box-shadow: none !important; }
+.be-clair .be-seance-dark .border-white\/10, .be-clair .be-seance-dark .border-white\/15 { border-color: rgba(255,255,255,.18) !important; }
+.theme-creme .text-offwhite\/85, .theme-creme .text-offwhite\/75 { color: rgba(31, 42, 68, 0.8) !important; }
+.theme-creme .placeholder\:text-offwhite\/40::placeholder { color: rgba(31, 42, 68, 0.4) !important; }
+.be-page .theme-creme { background: transparent; }
+/* Bas de la barre latérale (langue, réglages) lisible sur le fond crème de Bien-être */
+.be-page .side-nav > button[data-testid="nav-settings"]:not(.bg-white) { color: rgba(31, 42, 68, 0.65); }
+.be-page .side-nav [data-testid="lang-switcher-icon"] { color: rgba(31, 42, 68, 0.75); background: #FFFFFF; border-color: #E2D5BE; }
