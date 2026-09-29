@@ -473,6 +473,12 @@ export function ChatPanel() {
   // laissait voir la page derrière — retiré à la demande.
   // Ajouté aussi le bouton réduire/agrandir demandé.
   const [estElargi, setEstElargi] = useState(false);
+  // Le contenu de la page se décale avec le panneau (avant : panneau élargi à
+  // 640 px par-dessus le cockpit, et les icônes de l'en-tête passaient sur le titre du chat).
+  useEffect(() => {
+    document.documentElement.style.setProperty("--chat-w", estElargi ? "640px" : "360px");
+    return () => document.documentElement.style.removeProperty("--chat-w");
+  }, [estElargi]);
   return (
     <div
       className={`chat-zayado hidden xl:flex fixed right-0 top-0 z-20 h-screen flex-col transition-[width] duration-200 ${estElargi ? "w-[640px]" : "w-[360px]"}`}

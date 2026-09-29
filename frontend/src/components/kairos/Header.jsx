@@ -398,7 +398,7 @@ export function Header() {
             </div>
             <div className="hidden text-left leading-tight sm:block">
               <div className="text-xs font-semibold text-offwhite">{user.firstName}</div>
-              <div className="text-[10px]" style={{ color: modeInfo.color }}>{modeInfo.label}</div>
+              {aCheckin ? <div className="text-[10px]" style={{ color: modeInfo.color }}>{modeInfo.label}</div> : <div className="text-[10px] text-offwhite/45">Check-in à faire</div>}
             </div>
             <ChevronDown className="hidden h-3.5 w-3.5 text-offwhite/50 sm:block" />
           </DropdownMenuTrigger>
