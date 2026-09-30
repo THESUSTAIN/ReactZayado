@@ -236,7 +236,7 @@ export async function streamChat({ message, page, onDelta, onDone, onError, onSo
       body: JSON.stringify({ message, page }),
     });
     if (!resp.ok || !resp.body) {
-      onError && onError("Réponse indisponible.");
+      onError && onError(resp.status === 402 ? "Active ton offre pour discuter avec ton Copilote (Solo : 1 mois pour 1 €)." : "Réponse indisponible.");
       return;
     }
     const reader = resp.body.getReader();
@@ -471,3 +471,7 @@ export const fetchCanaux = () => jget("/canaux");
 export const lienTelegram = () => jsendMsg("/canaux/telegram/lien", "POST", {});
 export const qrWhatsapp = () => jsendMsg("/canaux/whatsapp/qr", "POST", {});
 export const deconnecterCanal = (canal) => jsendMsg(`/canaux/${canal}`, "DELETE");
+
+// ── Diagnostic d'équilibre (page publique + app) ──
+export const saveDiagnostic = (data) => jsend("/diagnostic", "POST", data);
+export const fetchDiagnostic = () => jget("/diagnostic");

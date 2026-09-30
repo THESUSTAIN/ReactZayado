@@ -276,6 +276,9 @@ export default function Landing() {
           <Link to={START} className="mt-8 inline-flex items-center rounded-full bg-gradient-to-b from-[#F1E2CC] to-[#DEC2A3] px-8 py-3.5 text-[16px] font-semibold text-navy-900 shadow-[0_10px_30px_rgba(222,194,163,0.25)] transition hover:brightness-105" data-testid="landing-cta">
             Je me lance
           </Link>
+          <Link to="/diagnostic" className="mt-3 block text-[14px] font-medium text-offwhite/80 underline-offset-4 hover:text-gold hover:underline" data-testid="landing-diagnostic">
+            Ou fais ton diagnostic d'équilibre gratuit (3 min) →
+          </Link>
           <p className="mt-5 flex items-center justify-center gap-2 text-[13.5px] text-offwhite/80">
             <ShieldCheck size={16} className="text-offwhite/80" /> Sans engagement, résiliable en 1 clic
           </p>

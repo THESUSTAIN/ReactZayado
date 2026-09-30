@@ -7,6 +7,7 @@ import { KairosProvider } from "@/context/KairosContext";
 import { I18nProvider } from "@/i18n";
 import { AuroraBackground } from "@/components/aurora/AuroraBackground";
 import Onboarding from "@/pages/Onboarding";
+import Diagnostic from "@/pages/Diagnostic";
 import Cockpit from "@/pages/Cockpit";
 import Radar from "@/pages/Radar";
 import Actions from "@/pages/Actions";
@@ -116,6 +117,8 @@ function App() {
             <Route path="/fonctionnalites/prospection-croissance" element={<ProspectionCroissance />} />
             <Route path="/fonctionnalites/bien-etre-dirigeant" element={<BienEtreDirigeant />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/diagnostic" element={<Diagnostic />} />
+            <Route path="/app/diagnostic" element={<ProtectedRoute><Diagnostic enApp /></ProtectedRoute>} />
             {/* Lien public en lecture seule d'un Vision Board (sans compte) */}
             <Route path="/v/:token" element={<PublicVision />} />
             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />

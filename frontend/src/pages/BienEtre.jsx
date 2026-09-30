@@ -401,6 +401,9 @@ function RoueCard() {
           </svg>
         </Link>
       )}
+      <Link to="/app/diagnostic" className="mt-2 block text-center text-[13px] font-semibold underline-offset-4 hover:underline" style={{ color: L_GOLD }} data-testid="bienetre-diagnostic">
+        Faire mon diagnostic d'équilibre (3 min) →
+      </Link>
     </section>
   );
 }

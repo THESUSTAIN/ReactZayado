@@ -265,6 +265,18 @@ def _noter_activite(uid: str) -> None:
         pass
 
 
+_IA_PAYANTE = ("/api/copilote/chat", "/api/vision/ai-doc", "/api/vision/generate-board", "/api/vision/inspire",
+               "/api/revue-hebdo/synthese", "/api/radar/swot", "/api/sources/analyser", "/api/mindset/recadrer")
+
+
+def _ia_payante(request) -> bool:
+    path, m = request.url.path, request.method
+    if m == "POST" and (path in _IA_PAYANTE or (path.startswith("/api/agent-business/") and path.endswith("/tester"))):
+        return True
+    # Le Radar reste consultable (1er aperçu en fin d'onboarding), mais la relance forcée est payante.
+    return path == "/api/cockpit/radar" and request.query_params.get("refresh") in ("true", "1")
+
+
 class _AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         uid = DEMO_USER_ID
@@ -288,6 +300,18 @@ class _AuthMiddleware(BaseHTTPMiddleware):
             return JSONResponse(status_code=401, content={"detail": "Connexion requise."})
         if jeton_valide:
             _noter_activite(uid)
+            # Paywall côté serveur (avant : seulement dans l'interface) : les appels IA
+            # coûteux sont réservés aux comptes avec une offre active.
+            if _ia_payante(request) and role not in ("admin", "vendeur"):
+                f_acces = globals().get("_acces_actif")
+                if f_acces is not None:
+                    try:
+                        async with async_session() as db_acces:
+                            ok = await f_acces(db_acces, uid)
+                    except Exception:  # noqa: BLE001 — en cas de doute on ne bloque pas
+                        ok = True
+                    if not ok:
+                        return JSONResponse(status_code=402, content={"detail": "Active ton offre pour utiliser l'IA de Zayado.", "activer": "/activer"})
         token_uid = _current_uid.set(uid)
         token_role = _current_role.set(role)
         try:
@@ -826,6 +850,14 @@ async def _contexte(db: AsyncSession, uid: str) -> str:
                        "coach": "Ton souhaité : coach exigeant qui challenge (toujours respectueux)."}.get(cm_r["copilote_ton"], ""))
     if cm_r.get("outils") and cm_r["outils"] != "aucun":
         lignes.append(f"Outils déjà utilisés : {cm_r['outils']} (propose des actions compatibles, n'invente pas d'intégration).")
+    f_diag = globals().get("_diagnostic_resume_ia")
+    if f_diag:
+        try:
+            ligne_diag = await f_diag(db, uid)
+            if ligne_diag:
+                lignes.append(ligne_diag)
+        except Exception:  # noqa: BLE001
+            pass
     if cm_r.get("temps_quotidien"):
         lignes.append(f"Temps disponible pour Zayado : environ {cm_r['temps_quotidien']} min par jour (calibre les actions proposées).")
     if cm_r.get("jours_actifs"):
@@ -4896,6 +4928,14 @@ install_foi(globals())
 # ── Canaux du Copilote : Telegram (bot Zayado partagé) et WhatsApp, reliés par utilisateur ──
 from canaux_ext import install_canaux  # noqa: E402
 install_canaux(globals())
+
+# ── Diagnostic d'équilibre (pro / perso / spirituel) : page publique + app, alimente la roue ──
+from diagnostic_ext import install_diagnostic  # noqa: E402
+install_diagnostic(globals())
+
+# ── Relance « Il te reste N questions » le lendemain d'un onboarding interrompu ──
+from onboarding_ext import install_onboarding  # noqa: E402
+install_onboarding(globals())
 
 # ─────────────── Processus (page /app/processus) ───────────────
 # Avant : stockés dans le navigateur uniquement, avec 4 processus de démonstration

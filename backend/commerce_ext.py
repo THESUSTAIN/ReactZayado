@@ -140,6 +140,18 @@ def install_commerce(g: dict) -> None:
                 return m.owner_id, ab
         return None
 
+    async def acces_actif(db, uid: str) -> bool:
+        """Offre payée en cours, rôle interne (admin/vendeur) ou membre d'une équipe."""
+        a = await db.get(Abonnement, uid)
+        if _actif(a):
+            return True
+        u = await db.get(User, uid)
+        if u and u.role in ("admin", "vendeur"):
+            return True
+        return bool(await _titulaire_equipe(db, uid))
+
+    g["_acces_actif"] = acces_actif
+
     @api.get("/abonnement")
     async def mon_abonnement(db: AsyncSession = Depends(get_db)):
         uid = _uid()

@@ -1,6 +1,7 @@
+import { lireEnAttente, oublierEnAttente } from "@/lib/diagnostic";
 import React, { createContext, useContext, useMemo, useState, useCallback, useEffect } from "react";
 import { energyModes } from "@/mock/data";
-import { fetchState, postCheckin, toggleTache } from "@/lib/kairosApi";
+import { fetchState, postCheckin, toggleTache, getToken, saveDiagnostic } from "@/lib/kairosApi";
 
 const KairosContext = createContext(null);
 
@@ -35,6 +36,11 @@ export function KairosProvider({ children }) {
   const [loaded, setLoaded] = useState(false);
 
   const hydrate = useCallback((s) => {
+    // Diagnostic fait sur la page publique avant l'inscription : enregistré sur le compte dès la connexion.
+    const enAttente = lireEnAttente();
+    if (enAttente && getToken()) {
+      saveDiagnostic({ ...enAttente, source: "public" }).then(oublierEnAttente).catch(() => {});
+    }
     setUser({ firstName: s.profile?.prenom || "toi" });
     setEnergy({ score: s.energy?.score ?? 4, mood: s.energy?.mood || "aligné" });
     setACheckin(Boolean(s.energy?.a_checkin));

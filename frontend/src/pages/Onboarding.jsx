@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import * as SliderPrimitive from "@radix-ui/react-slider";
 import { useKairos } from "@/context/KairosContext";
 import { valuesLibrary } from "@/mock/data";
-import { saveProfile, savePouls, postCheckin, fetchTarifsFondateur, fetchState } from "@/lib/kairosApi";
+import { saveProfile, savePouls, postCheckin, fetchTarifsFondateur, fetchState, fetchRadar } from "@/lib/kairosApi";
 import { toast } from "sonner";
 import { PLANS, PLANS_LANCEMENT, PLAN_ENTREPRISE, prixFondateurMois, ESSAI, essaiDuree, essaiPeriode } from "@/lib/plans";
 import { lancerPaiement } from "@/lib/checkout";
@@ -53,6 +53,33 @@ const RYTHMES = [
 ];
 const JOURS = [["1", "L"], ["2", "M"], ["3", "M"], ["4", "J"], ["5", "V"], ["6", "S"], ["0", "D"]];
 const RAPPELS = [["Matin", "08:00"], ["Midi", "12:00"], ["Soir", "20:00"]];
+
+// Réponses pré-cochées selon le métier (on peut enchaîner « Continuer » sans réfléchir).
+const PRESETS = {
+  "Coaching & conseil": { clientele: "mixte", objectifs: ["Signer 3 nouveaux clients", "Publier 2 fois par semaine"], rythme: 2 },
+  "Services aux entreprises": { clientele: "b2b", objectifs: ["Signer 3 nouveaux clients", "Trouver 2 partenaires qui me recommandent"], rythme: 2 },
+  "Commerce & e-commerce": { clientele: "b2c", objectifs: ["Publier 2 fois par semaine", "Mettre de l'ordre dans mes finances"], rythme: 1 },
+  "Immobilier": { clientele: "b2c", objectifs: ["Signer 3 nouveaux clients", "Trouver 2 partenaires qui me recommandent"], rythme: 2 },
+  "Artisanat & BTP": { clientele: "mixte", objectifs: ["Trouver 2 partenaires qui me recommandent", "Mettre de l'ordre dans mes finances"], rythme: 1 },
+  "Santé & bien-être": { clientele: "b2c", objectifs: ["Signer 3 nouveaux clients", "Publier 2 fois par semaine"], rythme: 1 },
+  "Tech & digital": { clientele: "b2b", objectifs: ["Signer 3 nouveaux clients", "Lancer ma nouvelle offre"], rythme: 3 },
+  "Création & contenu": { clientele: "mixte", objectifs: ["Publier 2 fois par semaine", "Lancer ma nouvelle offre"], rythme: 2 },
+  "Restauration": { clientele: "b2c", objectifs: ["Publier 2 fois par semaine", "Mettre de l'ordre dans mes finances"], rythme: 0 },
+};
+
+// Ce que le Copilote répond selon les choix (il « écoute »).
+const PHRASES_ACTIVITE = {
+  "Coaching & conseil": { b2b: "Coaching pour des pros ? Je vais te trouver des DRH et des dirigeants à contacter.", b2c: "Coaching pour des particuliers ? Je te montrerai ce que les gens cherchent près de chez toi.", mixte: "Pros et particuliers : je chercherai des décideurs ET ce que les gens tapent sur Google." },
+  "Services aux entreprises": { _: "Je te trouverai chaque matin de vraies entreprises à contacter, avec le message prêt." },
+  "Commerce & e-commerce": { _: "Commerce ? On va travailler ta visibilité locale, tes avis et tes pubs." },
+  "Immobilier": { _: "Immobilier ? Je suivrai les ventes réelles de ta commune et les notaires à contacter." },
+  "Artisanat & BTP": { _: "Artisan ? Je te trouverai des prescripteurs : architectes, agences, syndics." },
+  "Santé & bien-être": { _: "Je t'aiderai à être trouvé·e par ceux qui cherchent déjà un praticien près de chez eux." },
+  "Tech & digital": { _: "Je repérerai les entreprises qui recrutent ou qui lèvent des fonds : elles ont des besoins." },
+  "Création & contenu": { _: "On va rendre ton travail visible, sans t'épuiser à poster tous les jours." },
+  "Restauration": { _: "On va remplir tes tables avec Google, les avis et des idées d'événements." },
+};
+const CLE_BROUILLON = "zayado_onboarding_brouillon";
 
 const fmtEur = (n) => `${n.toLocaleString("fr-FR")} €`;
 
@@ -106,6 +133,27 @@ export default function Onboarding() {
   const [values, setValues] = useState([]);
   const [moteur, setMoteur] = useState("");
   const [foiChoix, setFoiChoix] = useState(null);
+  const [rythmeTouche, setRythmeTouche] = useState(false);
+  const [retourMsg, setRetourMsg] = useState("");
+  const [pret, setPret] = useState(false); // brouillon restauré (ou absent) : on peut enregistrer
+  const [waouh, setWaouh] = useState(null); // 1re opportunité du Radar, montrée avant le paiement
+
+  // ── Reprendre là où on s'est arrêté (ce navigateur, sinon le compte) ──
+  const brouillonActuel = () => ({ i, prenom, role, activite, activiteAutre, clientele, marche, caObjectif, tranche, visions, visionAutre,
+    goals, energie, energieTouchee, rythme, rythmeTouche, jours, rappel, values, moteur, foiChoix });
+  const appliquerBrouillon = (b) => {
+    if (!b || !b.i) return false;
+    const set = { prenom: setPrenom, role: setRole, activite: setActivite, activiteAutre: setActiviteAutre, clientele: setClientele, marche: setMarche,
+      caObjectif: setCaObjectif, tranche: setTranche, visions: setVisions, visionAutre: setVisionAutre, goals: setGoals, energie: setEnergie,
+      energieTouchee: setEnergieTouchee, rythme: setRythme, rythmeTouche: setRythmeTouche, jours: setJours, rappel: setRappel, values: setValues,
+      moteur: setMoteur, foiChoix: setFoiChoix };
+    Object.entries(set).forEach(([k, f]) => { if (b[k] !== undefined && b[k] !== null) f(b[k]); });
+    const etape = Math.min(Number(b.i) || 0, ETAPES.length - 1);
+    setI(etape);
+    const reste = NB - etape;
+    setRetourMsg(`Te revoilà ! Il te reste ${reste} question${reste > 1 ? "s" : ""}, on reprend là où tu t'étais arrêté·e.`);
+    return true;
+  };
 
   const planParam = searchParams.get("plan");
   const cycleParam = searchParams.get("cycle") === "annuel" ? "annuel" : "mensuel";
@@ -113,16 +161,61 @@ export default function Onboarding() {
   useEffect(() => { fetchTarifsFondateur().then((d) => setFondateurOuvert(!!d.ouverte)).catch(() => {}); }, []);
   // Un compte déjà onboardé ne repasse plus par ce parcours (?refaire=1 pour le forcer).
   useEffect(() => {
-    if (searchParams.get("refaire") === "1") return;
-    fetchState().then((s) => { if (s?.onboarded) navigate("/app", { replace: true }); }).catch(() => {});
+    let local = null;
+    try { local = JSON.parse(localStorage.getItem(CLE_BROUILLON) || "null"); } catch { /* stockage indisponible */ }
+    fetchState().then((s) => {
+      if (s?.onboarded && searchParams.get("refaire") !== "1") { navigate("/app", { replace: true }); return; }
+      let serveur = null;
+      try { serveur = JSON.parse(s?.vision?.contexte_metier?.onboarding_brouillon || "null"); } catch { /* brouillon illisible */ }
+      appliquerBrouillon((local?.i || 0) >= (serveur?.i || 0) ? local : serveur);
+    }).catch(() => appliquerBrouillon(local)).finally(() => setPret(true));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Chaque changement d'étape est enregistré : même étape au retour, et relance du Copilote le lendemain.
+  useEffect(() => {
+    if (!pret || i === 0) return;
+    const b = JSON.stringify(brouillonActuel());
+    try { localStorage.setItem(CLE_BROUILLON, b); } catch { /* stockage indisponible */ }
+    saveProfile({ contexte_metier: { onboarding_etape: i, onboarding_total: NB, onboarding_maj: new Date().toISOString(), onboarding_brouillon: b.slice(0, 1990) } }).catch(() => {});
+  }, [i, pret]); // eslint-disable-line react-hooks/exhaustive-deps
   const LISTE_PLANS = construirePlans(fondateurOuvert);
   const [plan, setPlan] = useState(["reveur", "serenite", "pro", "business", "entreprise"].includes(planParam) ? planParam : "serenite");
   const [saving, setSaving] = useState(false);
   const [savePhase, setSavePhase] = useState(0);
   const [saveError, setSaveError] = useState("");
 
-  const suivant = () => setI((s) => Math.min(s + 1, ETAPES.length - 1));
+  const suivant = () => { setRetourMsg(""); setI((s) => Math.min(s + 1, ETAPES.length - 1)); };
+
+  // Choisir un métier pré-coche clientèle, objectifs et rythme (si pas déjà choisis).
+  const choisirActivite = (v) => {
+    setActivite(v);
+    const pr = PRESETS[v];
+    if (!pr) return;
+    if (!clientele) setClientele(pr.clientele);
+    if (!goals.length) setGoals(pr.objectifs);
+    if (!rythmeTouche) setRythme(pr.rythme);
+    if (!visions.length) setVisions(["Vivre sereinement de mon activité"]);
+  };
+
+  const reaction = (() => {
+    if (retourMsg) return retourMsg;
+    switch (etape) {
+      case "prenom": return prenom.trim() ? `Enchanté·e ${prenom.trim()} !${role ? ` ${role}, je vois le genre de journées que tu vis.` : ""}` : "";
+      case "activite": {
+        const ph = PHRASES_ACTIVITE[activite];
+        return ph ? (ph[clientele] || ph._ || ph.b2b) : activite === "Autre" && activiteAutre.trim() ? `${activiteAutre.trim()} : je m'adapte, promis.` : "";
+      }
+      case "cap": return caObjectif ? `${fmtEur(caObjectif)} par mois, c'est environ ${fmtEur(Math.round(caObjectif / 21))} par jour ouvré. On y va pas à pas.` : "";
+      case "vision": return moteur ? `« ${moteur} » : je te le rappellerai les jours difficiles.` : visions.length ? "Beau cap. On va le découper en petites étapes." : "";
+      case "objectifs": return goals.length >= 3 ? "3 objectifs, parfait : pas un de plus." : goals.length ? "J'ai pré-coché selon ton métier, change si tu veux. Moins, mais mieux." : "";
+      case "energie": return !energieTouchee ? "" : energie <= 2 ? "On y va doucement aujourd'hui, promis." : energie >= 4 ? "Belle énergie ! On va en profiter." : "Noté, je cale ta journée là-dessus.";
+      case "rythme": return `${RYTHMES[rythme].min} min, ${jours.length} jour${jours.length > 1 ? "s" : ""} par semaine : c'est tenable, et c'est ce qui compte.`;
+      case "valeurs": return values.length ? `${values[0]} en premier ? Je garde ça en tête pour mes conseils.` : "";
+      case "sens": return foiChoix === "oui" ? "Je t'ajouterai la vie spirituelle dans ton diagnostic d'équilibre." : foiChoix === "non" ? "Entendu, rien de ce côté-là." : "";
+      case "offre": return plan === ESSAI.plan ? `Bon choix : ${essaiDuree()} pour ${ESSAI.prix} € pour tout tester.` : "";
+      default: return "";
+    }
+  })();
   const retour = () => setI((s) => Math.max(s - 1, 0));
 
   // Tout passer : l'onboarding est marqué fait, on file vers l'activation.
@@ -180,8 +273,21 @@ export default function Onboarding() {
       setSaveError(error?.message || "Impossible d'enregistrer ton espace pour le moment. Vérifie ta connexion puis réessaie.");
       return;
     }
+    try { localStorage.removeItem(CLE_BROUILLON); } catch { /* stockage indisponible */ }
+    // Effet « waouh » : une première opportunité RÉELLE tirée des réponses, avant le paiement.
+    let premiere = null;
+    try {
+      const r = await Promise.race([fetchRadar(false), new Promise((_, ko) => setTimeout(() => ko(new Error("lent")), 25000))]);
+      // Jamais un modèle générique (repli sans IA) : seulement une vraie piste.
+      premiere = (r?.opportunities || []).find((o) => o && o.titre && !o.modele) || null;
+    } catch { /* pas grave : on passe directement à la suite */ }
     await new Promise((resolve) => setTimeout(resolve, Math.max(0, 1800 - (Date.now() - startedAt))));
     setOnboardingData({ vision: visionTexte.join(", "), why: moteur, goals, values, checkinHour: rappel, plan });
+    if (premiere) { setSaving(false); setWaouh(premiere); return; }
+    await allerPaiement();
+  };
+
+  const allerPaiement = async () => {
     if (["reveur", "serenite", "pro", "business"].includes(plan)) {
       if (await lancerPaiement(plan, { cycle: cycleParam, essai: plan === ESSAI.plan })) return;
     } else if (plan === "entreprise") {
@@ -266,6 +372,11 @@ export default function Onboarding() {
             </div>
             <h2 className="mt-5 font-display text-[28px] font-extrabold leading-tight text-offwhite sm:text-3xl">{TITRES[etape][0]}</h2>
             {TITRES[etape][1] && <p className="mt-2 text-[15px] text-offwhite/60">{TITRES[etape][1]}</p>}
+            {reaction && (
+              <div key={reaction} className="relative mt-4 animate-fade-up rounded-2xl rounded-tl-md border border-gold/25 bg-gold/10 px-4 py-3 text-[14px] leading-relaxed text-offwhite/90" data-testid="onboarding-reaction">
+                {reaction}
+              </div>
+            )}
           </>
         )}
 
@@ -287,7 +398,7 @@ export default function Onboarding() {
             <div className="space-y-6" data-testid="onboarding-activite">
               <div className="grid grid-cols-3 gap-2.5">
                 {[...ACTIVITES, { v: "Autre", icon: Plus }].map(({ v, icon: Icon }) => (
-                  <Tuile key={v} actif={activite === v} onClick={() => setActivite(v)} testid={`onboarding-activite-${v}`}>
+                  <Tuile key={v} actif={activite === v} onClick={() => choisirActivite(v)} testid={`onboarding-activite-${v}`}>
                     <Icon className="h-6 w-6" />
                     <span className="mt-2 text-[12.5px] font-semibold leading-tight">{v}</span>
                   </Tuile>
@@ -381,7 +492,7 @@ export default function Onboarding() {
                 </Anneau>
                 <p className="mt-4 font-display text-xl font-bold text-offwhite">{RYTHMES[rythme].mot}</p>
                 <p className="text-sm text-offwhite/55">{RYTHMES[rythme].sous}</p>
-                <GrosCurseur valeur={rythme} min={0} max={3} onChange={setRythme} testid="onboarding-rythme-curseur" />
+                <GrosCurseur valeur={rythme} min={0} max={3} onChange={(v) => { setRythme(v); setRythmeTouche(true); }} testid="onboarding-rythme-curseur" />
               </div>
               <Bloc titre="Quels jours ?">
                 <button type="button" onClick={() => setJours(jours.length === 7 ? ["1", "2", "3", "4", "5"] : JOURS.map(([k]) => k))}
@@ -518,6 +629,26 @@ export default function Onboarding() {
         </div>
       </div>
 
+      {waouh && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[#0a1230]/95 px-4 py-10 backdrop-blur-md" data-testid="onboarding-waouh">
+          <div className="mx-auto max-w-lg">
+            <div className="flex items-center gap-3"><Guide /><p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gold">Ton Radar vient de tourner</p></div>
+            <h2 className="mt-4 font-display text-[28px] font-extrabold leading-tight text-offwhite">Ta première opportunité{prenom ? `, ${prenom}` : ""} 🎯</h2>
+            <p className="mt-2 text-[15px] text-offwhite/65">Tirée de tes réponses. Chaque matin, ton cockpit t'en prépare 3 comme celle-ci, avec le message prêt à envoyer.</p>
+            <div className="mt-6 rounded-3xl border border-gold/40 bg-white/[0.06] p-5 shadow-[0_0_40px_-12px_rgba(222,194,163,0.5)]">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-offwhite/50">{waouh.canal || "email"}{waouh.objectif ? ` · pour « ${waouh.objectif} »` : ""}</p>
+              <p className="mt-1.5 font-display text-xl font-bold text-offwhite">{waouh.titre}</p>
+              {waouh.prospect && <p className="mt-1 text-sm text-offwhite/70">{[waouh.prospect.prenom, waouh.prospect.nom].filter(Boolean).join(" ")}{waouh.prospect.entreprise ? ` · ${waouh.prospect.entreprise}` : ""}</p>}
+              {waouh.message && <p className="mt-3 line-clamp-5 border-l-2 border-gold/40 pl-3 font-serif-italic text-[15px] leading-relaxed text-offwhite/75">{waouh.message}</p>}
+            </div>
+            <button onClick={allerPaiement} data-testid="onboarding-waouh-continuer"
+              className="mt-8 flex h-14 w-full items-center justify-center gap-2 rounded-full bg-[#F4EFE6] text-lg font-bold text-navy-900">
+              Activer mon cockpit <ArrowRight className="h-5 w-5" />
+            </button>
+            <p className="mt-2 text-center text-xs text-offwhite/45">{plan === ESSAI.plan ? `${essaiDuree()} pour ${ESSAI.prix} €, sans engagement.` : "Sans engagement, résiliable en 1 clic."}</p>
+          </div>
+        </div>
+      )}
       {saving && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0a1230]/90 p-5 backdrop-blur-md" data-testid="onboarding-processing">
           <div className="w-full max-w-md rounded-3xl fenetre p-7 text-center">
