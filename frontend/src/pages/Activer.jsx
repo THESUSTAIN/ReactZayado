@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Check, Loader2, LogOut, ShieldCheck } from "lucide-react";
 import { fetchAbonnement, fetchCommandes, fetchState, fetchTarifsFondateur, setToken } from "@/lib/kairosApi";
 import { lancerPaiement } from "@/lib/checkout";
-import { ESSAI, PLANS, prixFondateurMois, taxe } from "@/lib/plans";
+import { ESSAI, essaiPeriode, PLANS, prixFondateurMois, taxe } from "@/lib/plans";
 import GrilleTarifs from "@/components/pricing/GrilleTarifs";
 import { oublierAcces } from "@/components/kairos/AccesGate";
 
@@ -114,13 +114,13 @@ export default function Activer() {
         {abo && abo.essai?.disponible && (
           <div className="mt-8 rounded-[24px] border border-gold/45 bg-white/[0.10] p-6 backdrop-blur-xl sm:p-8" data-testid="activer-essai">
             <p className="inline-flex rounded-full bg-gold px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-navy-900">Essai Solo</p>
-            <p className="mt-4 font-display text-5xl font-extrabold">{ESSAI.prix} €<span className="ml-2 text-lg font-normal text-offwhite/60">les {ESSAI.mois} premiers mois</span></p>
+            <p className="mt-4 font-display text-5xl font-extrabold">{ESSAI.prix} €<span className="ml-2 text-lg font-normal text-offwhite/60">{essaiPeriode()}</span></p>
             <p className="mt-2 text-[14px] text-offwhite/70">puis {apres} € {taxe(solo)} / mois{fonda?.ouverte ? " — tarif fondateur réservé dès ton essai et garanti tant que tu restes abonné" : ""}. Le prélèvement démarre automatiquement à la fin de l'essai : tu reçois un rappel 7 jours avant et tu peux résilier en 1 clic.</p>
             <ul className="mt-5 grid gap-2 sm:grid-cols-2">
               {solo.points.slice(0, 6).map((pt) => <li key={pt} className="flex gap-2 text-[13.5px] text-offwhite/80"><Check size={15} className="mt-0.5 shrink-0 text-gold" />{pt}</li>)}
             </ul>
             <button onClick={essayer} disabled={envoi} className="mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-gradient-to-b from-[#F1E2CC] to-[#DEC2A3] px-7 text-[15px] font-semibold text-navy-900 disabled:opacity-60" data-testid="activer-essai-btn">
-              {envoi ? <Loader2 size={17} className="animate-spin" /> : null} Prendre ma place — {ESSAI.prix} € les {ESSAI.mois} premiers mois <ArrowRight size={17} />
+              {envoi ? <Loader2 size={17} className="animate-spin" /> : null} Prendre ma place — {ESSAI.prix} € {essaiPeriode()} <ArrowRight size={17} />
             </button>
             <p className="mt-3 text-[12px] text-offwhite/50">Paiement sécurisé Mollie · un essai par compte · tu préfères Pro ou Équipe ? <Link to="/pricing" className="underline hover:text-gold">Voir toutes les offres</Link></p>
           </div>

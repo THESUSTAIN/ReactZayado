@@ -378,9 +378,12 @@ def install_radar_signaux(g: dict) -> None:
         dfs = bool(os.environ.get("DATAFORSEO_LOGIN") and os.environ.get("DATAFORSEO_PASSWORD"))
         f_ap = g.get("_statut_apollo")
         apollo = await f_ap(db, uid) if f_ap else {"etat": "non_configure"}
+        f_obj = g.get("_objectifs_radar")
         VO = g.get("VisionObjectif")
         nb_obj = 0
-        if VO is not None:
+        if f_obj is not None:
+            nb_obj = len(await f_obj(db, uid))
+        elif VO is not None:
             nb_obj = (await db.execute(select(func.count()).select_from(VO).where(VO.user_id == uid))).scalar_one()
         zone = bool(cm.get("zone"))
         immo = est_immobilier(cm)
@@ -412,13 +415,24 @@ def install_radar_signaux(g: dict) -> None:
         ]
         a_faire = []
         if nb_obj == 0:
-            a_faire.append({"cle": "objectifs", "texte": "Pose au moins un objectif : le Radar s'en sert pour choisir tes opportunités.",
+            a_faire.append({"cle": "objectifs", "texte": "Pose un objectif (90 jours, 3 ans ou ta Vision) : le Radar s'en sert pour choisir tes opportunités.",
                             "lien": "/app/actions?tab=objectifs"})
         if particuliers and not zone:
             a_faire.append({"cle": "zone", "texte": "Indique ta ville pour activer Google, la pub et les ventes.", "lien": None})
         # Les branchements (Apollo, DataForSEO, Mammouth…) ne regardent que l'équipe :
         # un utilisateur ne reçoit que ce qu'il peut faire lui-même (a_faire).
-        sortie = {"clientele": clientele, "zone": cm.get("zone"), "objectifs": nb_obj, "a_faire": a_faire}
+        # Le SWOT n'est proposé que s'il a de quoi être utile (sinon on liste ce qui manque).
+        swot_manque = []
+        if nb_obj == 0:
+            swot_manque.append({"cle": "objectif", "texte": "Un objectif (90 jours, 3 ans ou ta Vision)", "lien": "/app/actions?tab=objectifs"})
+        if not (cm.get("activite_type") or cm.get("offre")):
+            swot_manque.append({"cle": "activite", "texte": "Ton activité et ce que tu vends", "lien": "/parametres#profil"})
+        if not (cm.get("cible") or str(cm.get("clientele") or "").strip()):
+            swot_manque.append({"cle": "clientele", "texte": "Ta clientèle (particuliers, pros ou les deux)", "lien": None})
+        if not cm.get("zone"):
+            swot_manque.append({"cle": "zone", "texte": "Ta ville ou ta zone", "lien": None})
+        sortie = {"swot_manque": swot_manque, "clientele": clientele, "clientele_choisie": bool(str(cm.get("clientele") or "").strip()),
+                  "zone": cm.get("zone"), "objectifs": nb_obj, "a_faire": a_faire}
         if admin:
             sortie["sources"] = sources
             manquantes = []

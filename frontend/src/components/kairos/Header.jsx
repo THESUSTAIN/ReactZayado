@@ -60,7 +60,9 @@ export function Header() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
-  const rappelCheckin = loaded && !aCheckin && !!getToken() && (location.pathname.startsWith("/app") || location.pathname === "/parametres");
+  const rappelCheckin = loaded && !aCheckin && !!getToken() && (location.pathname.startsWith("/app") || location.pathname === "/parametres")
+    // Sur « Aujourd'hui », la carte Énergie porte déjà le bouton : une seule entrée.
+    && location.pathname !== "/app";
   const [q, setQ] = useState("");
   // En-tête transparent en haut de page. Il se MASQUE quand on défile vers le
   // bas (le contenu respire) et réapparaît dès qu'on remonte, avec un léger
@@ -199,7 +201,7 @@ export function Header() {
   ];
 
   return (
-    <div className={`sticky top-0 z-30 transition-all duration-300 ${cache ? "pointer-events-none -translate-y-full opacity-0" : "translate-y-0 opacity-100"} ${defile && !cache ? "bg-[#0b1a3d]/60 backdrop-blur-xl" : "bg-transparent"}`}>
+    <div className={`sticky top-0 z-30 transition-all duration-300 ${cache ? "pointer-events-none -translate-y-full opacity-0" : "translate-y-0 opacity-100"} ${defile && !cache ? "zy-header-defile bg-[#0b1a3d]/90 backdrop-blur-xl shadow-[0_8px_24px_-12px_rgba(0,0,0,0.5)]" : "bg-transparent"}`}>
     <header
       className="flex items-center gap-2 bg-transparent px-4 py-3 sm:gap-3 sm:px-6"
       data-testid="app-header"

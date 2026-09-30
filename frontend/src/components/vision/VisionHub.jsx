@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   LayoutTemplate, PieChart, CalendarRange,
-  Compass, Palette, Network, LayoutGrid, ArrowRight, Lock, Target,
+  Network, LayoutGrid, ArrowRight, Lock, Target,
 } from "lucide-react";
 import { toast } from "sonner";
 import { fetchObjectifs } from "@/lib/kairosApi";
@@ -12,8 +12,6 @@ import { BoardsGallery } from "@/components/vision/BoardsGallery";
 
 const MODELS = [
   { id: "wheel", icon: PieChart, title: "Roue de l'équilibre", desc: "Tes piliers de vie, branchés sur tes données Bien-être.", live: true },
-  { id: "vmi", icon: Compass, title: "Vision · Mission · Identité", desc: "Clarifie ton cap, ta raison d'être et ton identité de marque.", soon: true },
-  { id: "mood", icon: Palette, title: "Moodboard Élan / Refuge", desc: "Deux ambiances pilotées par tes modes d'énergie.", soon: true },
   { id: "mindmap", icon: Network, title: "Carte mentale", desc: "Ta vision au centre, tes clients, ton offre, tes chiffres et ton énergie en branches reliées.", live: true },
   { id: "cockpit", icon: LayoutGrid, title: "Cockpit stratégique", desc: "6 murs reliés en direct : objectifs, finances, actions, énergie, idées et victoires.", live: true },
 ];
@@ -57,7 +55,7 @@ function Card({ item, onOpen, delay }) {
         <p className="mt-1 font-ui text-[13px] leading-relaxed text-offwhite/70">{item.desc}</p>
       </div>
       {clickable && (
-        <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-gold opacity-0 transition group-hover:opacity-100">
+        <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-gold opacity-80 transition group-hover:opacity-100">
           Ouvrir <ArrowRight size={13} />
         </span>
       )}
@@ -124,6 +122,11 @@ export function VisionHub({ onOpen, onOpenBoard }) {
         </h3>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {MODELS.map((item, i) => <Card key={item.title} item={item} onOpen={ouvrirModele} delay={0.12 + i * 0.05} />)}
+          {/* Modèles en préparation : regroupés en une seule carte discrète (avant : 2 cartes « Bientôt » cliquables sans effet). */}
+          <div className="flex flex-col justify-center rounded-2xl border border-dashed border-white/15 p-5 text-left" data-testid="vision-hub-a-venir">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-offwhite/50">À venir</p>
+            <p className="mt-2 text-[13px] leading-relaxed text-offwhite/65">Vision · Mission · Identité, et Moodboard Élan / Refuge.</p>
+          </div>
         </div>
       </section>
     </div>

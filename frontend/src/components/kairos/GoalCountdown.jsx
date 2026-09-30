@@ -4,8 +4,6 @@ import { Target, Pencil, Loader2, Check, X } from "lucide-react";
 import { useI18n } from "@/i18n";
 import { fetchCountdown, saveCountdown } from "@/lib/kairosApi";
 
-const pad = (n) => String(n).padStart(2, "0");
-
 /** Date par défaut : aujourd'hui + 3 ans. */
 function defaultDeadline() {
   const d = new Date();
@@ -195,7 +193,7 @@ export function GoalCountdown({ variant = "card", className = "" }) {
                 <span className="tabular-nums">{t("countdown.elapsed", { n: live.percent })}</span>
               </div>
               <p className="mt-2 text-center text-[10.5px] tabular-nums text-offwhite/35">
-                {data.echeance} · {pad(live.hours)}h{pad(live.minutes)}
+                Échéance : {new Date(`${data.echeance}T12:00:00`).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
               </p>
             </>
           )}

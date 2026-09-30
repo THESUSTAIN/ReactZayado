@@ -27,13 +27,31 @@ function _versLogin() {
   if (p.startsWith("/app") || p.startsWith("/onboarding") || p.startsWith("/parametres") || p.startsWith("/espace-vendeur") || p.startsWith("/mon-espace") || p.startsWith("/acheter")) window.location.assign("/login");
 }
 
-async function jget(path) {
+// Plusieurs widgets demandent la même ressource au chargement d'une page
+// (/state, /abonnement, /copilote/actualite…) : un même GET en cours ou tout
+// juste reçu (< 2 s) est partagé au lieu d'être rappelé. Toute écriture vide ce cache.
+const _GET_EN_COURS = new Map();
+const _GET_TTL_MS = 2000;
+async function _jgetReseau(path) {
   const r = await fetch(`${API}${path}`, { headers: _headers() });
   if (r.status === 401) { setToken(null); _versLogin(); }
   if (!r.ok) throw new Error(`GET ${path} ${r.status}`);
   return r.json();
 }
+function jget(path) {
+  const cle = `${getToken() || ""}|${path}`;
+  const e = _GET_EN_COURS.get(cle);
+  if (e && (!e.fin || Date.now() - e.fin < _GET_TTL_MS)) return e.promesse;
+  const entree = { fin: 0, promesse: null };
+  entree.promesse = _jgetReseau(path).then(
+    (d) => { entree.fin = Date.now(); return d; },
+    (err) => { _GET_EN_COURS.delete(cle); throw err; },
+  );
+  _GET_EN_COURS.set(cle, entree);
+  return entree.promesse;
+}
 async function jsend(path, method, body) {
+  _GET_EN_COURS.clear();
   const r = await fetch(`${API}${path}`, {
     method,
     headers: _headers({ "Content-Type": "application/json" }),
@@ -65,6 +83,7 @@ function _detailLisible(detail, defaut) {
 }
 
 async function _postAuth(path, email, password) {
+  _GET_EN_COURS.clear();
   const r = await fetch(`${API}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -139,6 +158,7 @@ export const oauthEchange = (provider, code, redirect_uri, state) => jsend(`/con
 
 // ── Idées ──
 async function jsendDetail(path, method, body) {
+  _GET_EN_COURS.clear();
   const r = await fetch(`${API}${path}`, {
     method, headers: { "Content-Type": "application/json" },
     body: body ? JSON.stringify(body) : undefined,
@@ -208,6 +228,7 @@ export const fetchInspire = () => jsend("/vision/inspire", "POST");
 // le chat répondait 401 « Connexion requise ». onSources : liens officiels
 // joints aux réponses juridiques (support légal façon Kandbaz).
 export async function streamChat({ message, page, onDelta, onDone, onError, onSources }) {
+  _GET_EN_COURS.clear();
   try {
     const resp = await fetch(`${API}/copilote/chat`, {
       method: "POST",
@@ -398,6 +419,7 @@ export const scellerLettre = (texte, ouvre_le) => jsendMsgCheck("/mindset/lettre
 export const marquerLettreLue = (id) => jsend(`/mindset/lettres/${id}/lue`, "POST", {});
 
 async function jsendMsgCheck(path, method, body) {
+  _GET_EN_COURS.clear();
   const r = await fetch(`${API}${path}`, {
     method,
     headers: _headers({ "Content-Type": "application/json" }),
@@ -415,6 +437,7 @@ async function jsendMsgCheck(path, method, body) {
 
 // ── Emails IA (admin) — les erreurs remontent le message du serveur (detail) ──
 async function jsendMsg(path, method, body) {
+  _GET_EN_COURS.clear();
   const r = await fetch(`${API}${path}`, {
     method,
     headers: _headers({ "Content-Type": "application/json" }),
@@ -443,3 +466,8 @@ export const supprimerFoiPost = (id) => jsendMsg(`/foi/posts/${id}`, "DELETE");
 export const supprimerFoiReponse = (id) => jsendMsg(`/foi/reponses/${id}`, "DELETE");
 export const modifierBrouillonEmailIA = (id, data) => jsendMsg(`/admin/emails-ia/${id}`, "PUT", data);
 export const dupliquerEmailIA = (id) => jsendMsg(`/admin/emails-ia/${id}/dupliquer`, "POST", {});
+// ── Canaux du Copilote (Telegram / WhatsApp, reliés par utilisateur) ──
+export const fetchCanaux = () => jget("/canaux");
+export const lienTelegram = () => jsendMsg("/canaux/telegram/lien", "POST", {});
+export const qrWhatsapp = () => jsendMsg("/canaux/whatsapp/qr", "POST", {});
+export const deconnecterCanal = (canal) => jsendMsg(`/canaux/${canal}`, "DELETE");

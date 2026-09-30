@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { fetchBoards } from "@/lib/kairosApi";
 import { useSearchParams, useNavigate, Navigate } from "react-router-dom";
 import { Sidebar } from "@/components/kairos/Sidebar";
 import { VisionHub } from "@/components/vision/VisionHub";
@@ -18,6 +19,25 @@ export default function VisionBoard() {
   // le board occupe tout le viewport sous l'en-tête.
   const pleinEcran = view === "canvas";
   const goView = (v, opts = {}) => setParams(v === "hub" ? {} : { view: v, ...(opts.ia ? { ia: "1" } : {}) });
+  // Premier accès : directement le board Perso, pré-rempli avec les vraies
+  // données (au lieu d'une galerie puis d'une fenêtre d'accueil).
+  useEffect(() => {
+    if (params.get("view")) return;
+    let deja = true;
+    try { deja = localStorage.getItem("zayado_vision_premier_acces") === "1"; localStorage.setItem("zayado_vision_premier_acces", "1"); } catch { /* */ }
+    if (!deja) setParams({ view: "canvas", board: "perso" }, { replace: true });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Nom du board ouvert dans l'en-tête (avant : « Mon Vision Board » partout).
+  const [nomBoard, setNomBoard] = useState("");
+  const cleBoard = params.get("board");
+  useEffect(() => {
+    if (view !== "canvas") return;
+    if (params.get("partage") === "1") { setNomBoard("Board partagé"); return; }
+    fetchBoards().then((d) => {
+      const cle = cleBoard || (() => { try { return localStorage.getItem("kairos_board_key"); } catch { return null; } })() || "perso";
+      setNomBoard((d.boards || []).find((b) => b.key === cle)?.nom || "");
+    }).catch(() => {});
+  }, [view, cleBoard]); // eslint-disable-line react-hooks/exhaustive-deps
   const ouvrirBoard = (b) => {
     if (!b.partage) {
       try { localStorage.setItem("kairos_board_key", b.key); } catch { /* stockage indisponible */ }
@@ -42,7 +62,7 @@ export default function VisionBoard() {
           )}
           <div className="min-w-0">
             <p className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-gold/90">Zayado · Vision</p>
-            <h1 className="truncate font-display text-[19px] font-semibold tracking-[-0.015em] text-offwhite sm:text-[21px]">{t(`vision.${view}`) || "Vision Board"}</h1>
+            <h1 className="truncate font-display text-[19px] font-semibold tracking-[-0.015em] text-offwhite sm:text-[21px]">{(view === "canvas" && nomBoard) || t(`vision.${view}`) || "Vision Board"}</h1>
           </div>
           <LanguageSwitcher className="ml-auto" />
           <button onClick={() => navigate("/app")} aria-label={t("nav.backToCockpit")} data-testid="vision-header-cockpit-m"

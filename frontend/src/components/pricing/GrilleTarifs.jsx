@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Check, ArrowRight, Loader2, Users, X, HelpCircle } from "lucide-react";
-import { PLANS, PLANS_LANCEMENT, prixMois, prixFondateurMois, dateFinFr, ESSAI, taxe } from "@/lib/plans";
+import { PLANS, PLANS_LANCEMENT, prixMois, prixFondateurMois, dateFinFr, ESSAI, essaiPeriode, taxe } from "@/lib/plans";
 import { fetchTarifsFondateur, getToken } from "@/lib/kairosApi";
 import { lancerPaiement } from "@/lib/checkout";
 import Economies from "@/components/pricing/Economies";
@@ -46,7 +46,7 @@ function Carte({ o, cycle, fondateur, embed, onPourquoi }) {
       {essai ? (
         <>
           <p className="mt-4 flex items-baseline gap-2 font-display text-4xl font-extrabold" data-testid="pricing-essai">
-            {ESSAI.prix} €<span className="text-sm font-normal text-offwhite/60">les {ESSAI.mois} premiers mois</span>
+            {ESSAI.prix} €<span className="text-sm font-normal text-offwhite/60">{essaiPeriode()}</span>
           </p>
           <p className="mt-1.5 text-[12.5px] text-offwhite/70" data-testid={`pricing-fondateur-${o.key}`}>
             puis {prixFonda != null && <span className="text-offwhite/40 line-through">{cycle === "annuel" ? `${o.annuel.toLocaleString("fr-FR")} €` : `${prixNormal} €`}</span>}{" "}

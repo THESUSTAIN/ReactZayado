@@ -1,101 +1,147 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { GlassCard } from "@/components/kairos/GlassCard";
-import { Chip } from "@/components/kairos/Chip";
+import * as SliderPrimitive from "@radix-ui/react-slider";
 import { useKairos } from "@/context/KairosContext";
 import { valuesLibrary } from "@/mock/data";
-import { saveProfile } from "@/lib/kairosApi";
+import { saveProfile, savePouls, postCheckin, fetchTarifsFondateur, fetchState } from "@/lib/kairosApi";
 import { toast } from "sonner";
-import { PLANS, PLANS_LANCEMENT, PLAN_ENTREPRISE, prixFondateurMois, ESSAI } from "@/lib/plans";
+import { PLANS, PLANS_LANCEMENT, PLAN_ENTREPRISE, prixFondateurMois, ESSAI, essaiDuree, essaiPeriode } from "@/lib/plans";
 import { lancerPaiement } from "@/lib/checkout";
-import { fetchTarifsFondateur, fetchState } from "@/lib/kairosApi";
-import { Sparkles, ArrowRight, ArrowLeft, Plus, X, Target, Clock, Heart, Check, Loader2, Rocket, User, Briefcase, TrendingUp, HeartHandshake } from "lucide-react";
-import { savePouls } from "@/lib/kairosApi";
-import TheSustainInfo from "@/components/kairos/TheSustainInfo";
+import { THESUSTAIN_URL } from "@/components/kairos/TheSustainInfo";
+import {
+  Sparkles, ArrowRight, ArrowLeft, Plus, Check, Loader2, Rocket, Briefcase, MessagesSquare, ShoppingBag,
+  Building2, Hammer, HeartPulse, Laptop, Palette, UtensilsCrossed, Flame, Zap, CalendarDays, Clock, Info, HeartHandshake,
+} from "lucide-react";
 
-const STEPS = ["Bienvenue", "Identité", "Activité", "Cap financier", "Vision", "Objectifs 90j", "Valeurs & rituel", "Sens & Foi", "Ton offre", "C'est prêt"];
+// Onboarding « jeu » : une question par écran, des choix à toucher, très peu de
+// texte à taper (seulement le prénom, et « Autre » quand aucune proposition ne va).
+// Chaque étape peut être passée. La première mesure d'énergie devient un vrai check-in.
 
-// Image d'en-tête de l'onboarding (banc au lever du soleil — marque validée).
-const IMG_ONBOARDING = "https://images.unsplash.com/photo-1522075782449-e45a34f1ddfb?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzV8MHwxfHNlYXJjaHwyfHxtZWRpdGF0aW9uJTIwZW50cmVwcmVuZXVyJTIwY2FsbSUyMGZvY3VzJTIwcmVmbGVjdGlvbnxlbnwwfHx8fDE3OTA0NzUwOTd8MA&ixlib=rb-4.1.0&q=85";
+const ETAPES = ["intro", "prenom", "activite", "cap", "vision", "objectifs", "energie", "rythme", "valeurs", "sens", "offre", "pret"];
+const NB = ETAPES.length - 1; // l'intro ne compte pas
 
-// (L'écran de présentation aspirationnel a été retiré : doublon avec le
-//  carrousel de la page login, qui présente déjà le produit avant inscription.)
+const ROLES = ["Fondateur·rice", "Indépendant·e", "Coach / consultant·e", "Commerçant·e", "Artisan", "Salarié·e avec un projet"];
+const ACTIVITES = [
+  { v: "Coaching & conseil", icon: MessagesSquare },
+  { v: "Services aux entreprises", icon: Briefcase },
+  { v: "Commerce & e-commerce", icon: ShoppingBag },
+  { v: "Immobilier", icon: Building2 },
+  { v: "Artisanat & BTP", icon: Hammer },
+  { v: "Santé & bien-être", icon: HeartPulse },
+  { v: "Tech & digital", icon: Laptop },
+  { v: "Création & contenu", icon: Palette },
+  { v: "Restauration", icon: UtensilsCrossed },
+];
+const CLIENTELES = [["b2c", "Des particuliers"], ["b2b", "Des pros"], ["mixte", "Les deux"]];
+const MARCHES = [["france", "France"], ["belgique", "Belgique"], ["senegal", "Sénégal"], ["cote_ivoire", "Côte d'Ivoire"], ["cameroun", "Cameroun"], ["maroc", "Maroc"]];
+const OBJ_CA = [1000, 3000, 5000, 10000, 20000];
+const TRANCHES = [["demarrage", "Je démarre"], ["moins_1k", "Moins de 1 000 €"], ["1k_3k", "1 000 – 3 000 €"], ["3k_10k", "3 000 – 10 000 €"], ["plus_10k", "Plus de 10 000 €"]];
+const VISIONS = ["Vivre sereinement de mon activité", "Faire grandir mon chiffre d'affaires", "Construire une équipe", "Lancer un nouveau projet", "Retrouver du temps pour moi et mes proches", "Avoir plus d'impact"];
+const MOTEURS = ["Ma liberté", "Ma famille", "La sécurité financière", "Avoir un impact", "Transmettre", "Le sens / ma foi"];
+const ENERGIES = [
+  { mot: "À plat", sous: "On y va doucement", face: "😞" },
+  { mot: "Basse", sous: "Petits pas aujourd'hui", face: "🙁" },
+  { mot: "Moyenne", sous: "Ça tient la route", face: "😐" },
+  { mot: "Bonne", sous: "Prêt·e à avancer", face: "🙂" },
+  { mot: "Au top", sous: "On en profite", face: "😊" },
+];
+const RYTHMES = [
+  { min: 5, mot: "Express", sous: "Juste l'essentiel" },
+  { min: 10, mot: "Léger", sous: "Tranquille" },
+  { min: 15, mot: "Régulier", sous: "Le bon rythme" },
+  { min: 30, mot: "Intensif", sous: "À fond" },
+];
+const JOURS = [["1", "L"], ["2", "M"], ["3", "M"], ["4", "J"], ["5", "V"], ["6", "S"], ["0", "D"]];
+const RAPPELS = [["Matin", "08:00"], ["Midi", "12:00"], ["Soir", "20:00"]];
 
-// Offres : source unique (lib/plans.js), prix HT. 3 offres au lancement,
-// Équipe et Entreprise sur contact. Tarif fondateur affiché si l'offre est ouverte.
+const fmtEur = (n) => `${n.toLocaleString("fr-FR")} €`;
+
 const construirePlans = (fondateurOuvert) => [
   ...PLANS_LANCEMENT.map((p) => {
     const fonda = fondateurOuvert ? prixFondateurMois(p, "mensuel") : null;
     const essai = p.key === ESSAI.plan;
     return {
-      key: p.key, name: essai ? `${p.nom} · 2 mois pour ${ESSAI.prix} €` : p.nom,
+      key: p.key, name: essai ? `${p.nom} · ${essaiDuree()} pour ${ESSAI.prix} €` : p.nom,
       price: essai ? `${ESSAI.prix} €` : `${fonda ?? p.mensuel} €`, old: !essai && fonda != null ? `${p.mensuel} €` : null,
-      period: essai ? `les ${ESSAI.mois} premiers mois, puis ${fonda ?? p.mensuel} € HT / mois${fonda != null ? " (tarif fondateur)" : ""}`
+      period: essai ? `${essaiPeriode()}, puis ${fonda ?? p.mensuel} € HT / mois${fonda != null ? " (tarif fondateur)" : ""}`
         : (fonda != null ? "HT / mois · tarif fondateur" : "HT / mois"),
-      features: p.points.slice(0, 4), highlight: !!p.star,
+      features: p.points.slice(0, 3), highlight: !!p.star,
     };
   }),
   ...PLANS.filter((p) => p.key === "business").map((p) => ({
     key: p.key, name: p.nom, price: `${p.mensuel} €`, old: null, period: "HT / mois · toi + 2 comptes Solo",
-    features: p.points.slice(0, 4), highlight: false,
+    features: p.points.slice(0, 3), highlight: false,
   })),
-  { key: PLAN_ENTREPRISE.key, name: "Entreprise", price: "Sur contact", period: "", features: ["Au-delà de 3 personnes", "Plusieurs agents clients", "Accompagnement dédié"], highlight: false },
+  { key: PLAN_ENTREPRISE.key, name: "Entreprise", price: "Sur contact", period: "", features: ["Au-delà de 3 personnes", "Accompagnement dédié"], highlight: false },
 ];
 
 export default function Onboarding() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, setOnboardingData } = useKairos();
-  const [step, setStep] = useState(0);
-  const [infoSens, setInfoSens] = useState(false);
-  // Étape « Sens & Foi » : null = pas encore choisi, sinon membre | decouverte | non.
+  const [i, setI] = useState(0);
+  const etape = ETAPES[i];
+
+  const [prenom, setPrenom] = useState(user.firstName && user.firstName !== "toi" ? user.firstName : "");
+  // Le prénom connu (inscription, Google…) arrive après le premier rendu : on pré-remplit.
+  useEffect(() => {
+    if (user.firstName && user.firstName !== "toi") setPrenom((p) => p || user.firstName);
+  }, [user.firstName]);
+  const [role, setRole] = useState("");
+  const [activite, setActivite] = useState("");
+  const [activiteAutre, setActiviteAutre] = useState("");
+  const [clientele, setClientele] = useState("");
+  const [marche, setMarche] = useState("france");
+  const [caObjectif, setCaObjectif] = useState(0);
+  const [tranche, setTranche] = useState("");
+  const [visions, setVisions] = useState([]);
+  const [visionAutre, setVisionAutre] = useState("");
+  const [goals, setGoals] = useState([]);
+  const [goalAutre, setGoalAutre] = useState("");
+  const [energie, setEnergie] = useState(3);
+  const [energieTouchee, setEnergieTouchee] = useState(false);
+  const [rythme, setRythme] = useState(2);
+  const [jours, setJours] = useState(["1", "2", "3", "4", "5"]);
+  const [rappel, setRappel] = useState("08:00");
+  const [values, setValues] = useState([]);
+  const [moteur, setMoteur] = useState("");
   const [foiChoix, setFoiChoix] = useState(null);
 
-  const [vision, setVision] = useState("");
-  const [why, setWhy] = useState("");
-  const [goals, setGoals] = useState([""]);
-  const [values, setValues] = useState([]);
-  const [checkinHour, setCheckinHour] = useState("08:30");
-  // Corrigé : le paramètre ?plan= de l'URL (venu de la page Tarifs) n'était
-  // jamais lu — quelqu'un choisissant "Pro" à 49€ atterrissait ici
-  // silencieusement remis sur le plan gratuit par défaut.
   const planParam = searchParams.get("plan");
   const cycleParam = searchParams.get("cycle") === "annuel" ? "annuel" : "mensuel";
   const [fondateurOuvert, setFondateurOuvert] = useState(false);
   useEffect(() => { fetchTarifsFondateur().then((d) => setFondateurOuvert(!!d.ouverte)).catch(() => {}); }, []);
-  // Un seul onboarding : un compte déjà « raconté » ne repasse plus par ce
-  // parcours (liens Vision, retour de paiement, Activer…). Le refaire écrasait
-  // les objectifs existants. Pour modifier sa vision : Paramètres → Vision.
-  // ?refaire=1 garde une porte volontaire.
+  // Un compte déjà onboardé ne repasse plus par ce parcours (?refaire=1 pour le forcer).
   useEffect(() => {
     if (searchParams.get("refaire") === "1") return;
     fetchState().then((s) => { if (s?.onboarded) navigate("/app", { replace: true }); }).catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const PLANS = construirePlans(fondateurOuvert);
-  // Plus d'offre gratuite : Solo (essai 2 mois pour 1 €) est proposé par défaut.
+  const LISTE_PLANS = construirePlans(fondateurOuvert);
   const [plan, setPlan] = useState(["reveur", "serenite", "pro", "business", "entreprise"].includes(planParam) ? planParam : "serenite");
   const [saving, setSaving] = useState(false);
   const [savePhase, setSavePhase] = useState(0);
   const [saveError, setSaveError] = useState("");
-  // Nouveau wizard 3 étapes : Identité / Activité / Cap financier
-  const [identite, setIdentite] = useState({ prenom: user.firstName || "", entreprise: "", role: "" });
-  // L'activité saisie sur la page d'accueil préremplit « ton offre ».
-  const [activite, setActivite] = useState(() => {
-    let offre = "";
-    try { offre = localStorage.getItem("zayado_idee_landing") || ""; } catch { /* stockage indisponible */ }
-    return { type: "", cible: "", offre, marche: "france", clientele: "", zone: "" };
-  });
-  const [capFin, setCapFin]     = useState({ ca_objectif: 0, ca_mensuel: 0, tresorerie: 0 });
 
-  const next = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
-  const back = () => setStep((s) => Math.max(s - 1, 0));
+  const suivant = () => setI((s) => Math.min(s + 1, ETAPES.length - 1));
+  const retour = () => setI((s) => Math.max(s - 1, 0));
 
-  // « Passer » : on mémorise que l'onboarding est fait (sinon il revenait à chaque connexion)
-  // et on va au Cockpit — avant, le bouton renvoyait vers « / » puis /login.
-  const passer = async () => {
-    try { await saveProfile({ onboarded: true, ...(identite.prenom ? { prenom: identite.prenom } : {}) }); } catch (_) { /* on laisse passer quand même */ }
+  // Tout passer : l'onboarding est marqué fait, on file vers l'activation.
+  const toutPasser = async () => {
+    try { await saveProfile({ onboarded: true, ...(prenom.trim() ? { prenom: prenom.trim() } : {}) }); } catch (_) { /* on laisse passer */ }
     navigate("/activer");
   };
+
+  const activiteFinale = activite === "Autre" ? activiteAutre.trim() : activite;
+  const visionTexte = [...visions, visionAutre.trim()].filter(Boolean);
+  const suggestionsObjectifs = [
+    ...(caObjectif ? [`Atteindre ${fmtEur(caObjectif)} de CA par mois`] : []),
+    "Signer 3 nouveaux clients",
+    "Lancer ma nouvelle offre",
+    "Publier 2 fois par semaine",
+    "Mettre de l'ordre dans mes finances",
+    "Trouver 2 partenaires qui me recommandent",
+    "Libérer une demi-journée par semaine pour moi",
+  ];
 
   const finish = async () => {
     const startedAt = Date.now();
@@ -103,51 +149,44 @@ export default function Onboarding() {
     setSaving(true);
     try {
       await saveProfile({
-        prenom: identite.prenom || user.firstName,
-        texte_vision: vision,
-        pourquoi: why,
+        prenom: prenom.trim() || (user.firstName !== "toi" ? user.firstName : undefined),
+        texte_vision: visionTexte.length ? `Dans un an : ${visionTexte.join(", ").toLowerCase()}.` : undefined,
+        pourquoi: moteur || undefined,
         valeurs: values,
-        heure_checkin: checkinHour,
+        heure_checkin: rappel,
         plan,
-        objectifs: goals.filter(Boolean),
+        objectifs: goals,
         contexte_metier: {
-          entreprise: identite.entreprise, role: identite.role,
-          activite_type: activite.type, cible: activite.cible, offre: activite.offre,
-          marche: activite.marche,
-          ...(activite.clientele ? { clientele: activite.clientele } : {}),
-          ...(activite.zone.trim() ? { zone: activite.zone.trim() } : {}),
+          role, activite_type: activiteFinale, marche,
+          ...(clientele ? { clientele } : {}),
+          ...(tranche ? { ca_tranche: tranche } : {}),
+          heure_point: rappel,
+          jours_actifs: jours.join(","),
+          temps_quotidien: RYTHMES[rythme].min,
           plan_souhaite: plan,
-          // Étape « Sens & Foi » : dimension Foi activée (ou non) dès l'onboarding.
-          ...(foiChoix ? { parcours_foi: foiChoix === "membre" || foiChoix === "decouverte" } : {}),
+          ...(foiChoix ? { parcours_foi: foiChoix === "oui" } : {}),
         },
         onboarded: true,
       });
-      // Pré-remplit le Pouls Business avec le cap financier saisi
-      if (capFin.ca_objectif || capFin.ca_mensuel || capFin.tresorerie) {
-        try { await savePouls({
-          ca_mensuel: capFin.ca_mensuel || 0,
-          ca_objectif: capFin.ca_objectif || 0,
-          tresorerie: capFin.tresorerie || 0,
-          source: "manuel",
-        }); } catch (_) {}
+      if (caObjectif) {
+        try { await savePouls({ ca_objectif: caObjectif, source: "manuel" }); } catch (_) { /* optionnel */ }
+      }
+      // L'énergie choisie ici est une vraie mesure du jour : premier check-in.
+      if (energieTouchee) {
+        try { await postCheckin({ energie }); } catch (_) { /* optionnel */ }
       }
     } catch (error) {
       setSaving(false);
       setSaveError(error?.message || "Impossible d'enregistrer ton espace pour le moment. Vérifie ta connexion puis réessaie.");
       return;
     }
-    // L’écran d’analyse doit être perceptible même lorsque l’API répond très vite.
     await new Promise((resolve) => setTimeout(resolve, Math.max(0, 1800 - (Date.now() - startedAt))));
-    setOnboardingData({ vision, why, goals: goals.filter(Boolean), values, checkinHour, plan });
-    // Offre payante : on passe par le paiement (l'offre n'est activée qu'après paiement validé).
+    setOnboardingData({ vision: visionTexte.join(", "), why: moteur, goals, values, checkinHour: rappel, plan });
     if (["reveur", "serenite", "pro", "business"].includes(plan)) {
-      // Solo : essai 2 mois pour 1 € (repli automatique sur l'offre normale si déjà utilisé).
       if (await lancerPaiement(plan, { cycle: cycleParam, essai: plan === ESSAI.plan })) return;
     } else if (plan === "entreprise") {
       toast.info("Merci ! L'équipe Zayado te contacte pour préparer ton offre Entreprise.");
     }
-    // Onboarding terminé : la page d'activation (paiement) vient maintenant,
-    // jamais avant que le projet soit raconté.
     navigate("/activer");
   };
 
@@ -157,366 +196,328 @@ export default function Onboarding() {
     return () => clearInterval(timer);
   }, [saving]);
 
-  const addGoal = () => goals.length < 3 && setGoals([...goals, ""]);
-  const updateGoal = (i, v) => setGoals(goals.map((g, idx) => (idx === i ? v : g)));
-  const removeGoal = (i) => setGoals(goals.filter((_, idx) => idx !== i));
+  const basculer = (liste, setListe, v, max) =>
+    setListe(liste.includes(v) ? liste.filter((x) => x !== v) : liste.length < max ? [...liste, v] : liste);
 
-  const toggleValue = (v) => {
-    setValues((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : prev.length < 5 ? [...prev, v] : prev));
+  const peutContinuer = {
+    prenom: prenom.trim().length > 0,
+    activite: !!activiteFinale,
+    sens: foiChoix !== null,
+  }[etape] ?? true;
+
+  const TITRES = {
+    prenom: ["Comment je dois t'appeler ?", "Je t'appellerai par ton prénom, tout le long."],
+    activite: ["Tu fais quoi, et pour qui ?", "Un tap suffit. Le Radar s'en sert pour tes opportunités."],
+    cap: ["Ton cap pour le mois", "Pour ton Pouls Business. Tu pourras tout changer."],
+    vision: ["Dans un an, tu veux…", "Choisis jusqu'à 2 réponses."],
+    objectifs: ["Tes objectifs à 90 jours", "Jusqu'à 3. Moins, mais mieux."],
+    energie: ["Comment va ton énergie, là ?", "Je cale ta journée sur ton énergie réelle."],
+    rythme: ["Combien de temps par jour ?", "Donne-moi ton rythme, je cale ton point du jour dessus."],
+    valeurs: ["Qu'est-ce qui compte pour toi ?", "Jusqu'à 5 valeurs."],
+    sens: ["Envie d'aller plus loin sur le sens ?", null],
+    offre: ["Choisis ta formule", `Solo : ${essaiDuree()} pour ${ESSAI.prix} €, puis tarif fondateur. Sans engagement.`],
+    pret: ["Ton récap", "Un coup d'œil, et je prépare ton cockpit avec ces réponses."],
   };
 
-  const canProceed = [
-    true,
-    identite.prenom.trim().length > 0,           // 1 Identité
-    activite.type.trim().length > 0,              // 2 Activité
-    true,                                          // 3 Cap financier (optionnel)
-    vision.trim().length > 0,                     // 4 Vision
-    goals.some((g) => g.trim()),                  // 5 Objectifs
-    values.length > 0,                            // 6 Valeurs
-    foiChoix !== null,                            // 7 Sens & Foi (choix explicite attendu)
-    true,                                          // 8 Offre
-    true,                                          // 9 Prêt
-  ][step];
-
   return (
-    <div className="zayado-blue relative flex min-h-screen flex-col items-center justify-center px-4 py-10">
-      <TheSustainInfo open={infoSens} onClose={() => setInfoSens(false)} />
-
-      {/* Image d'en-tête (banc au lever du soleil) — souffle avant les étapes */}
-      <div className="relative mb-6 h-36 w-full max-w-xl overflow-hidden rounded-3xl sm:h-44" data-testid="onboarding-header-image">
-        <img src={IMG_ONBOARDING} alt="" aria-hidden className="h-full w-full object-cover" />
-        <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(13,24,56,0.15), rgba(13,24,56,0.65))" }} />
-        <p className="absolute bottom-3 left-5 right-5 font-display text-lg font-bold text-white sm:text-xl">Quelques minutes pour poser tes fondations.</p>
-      </div>
-
-      {/* Progress */}
-      <div className="mb-8 flex w-full max-w-xl items-center gap-2" data-testid="onboarding-progress">
-        {STEPS.map((label, i) => (
-          <div key={label} className="flex flex-1 flex-col gap-2">
-            <div className={`h-1 rounded-full transition-all ${i <= step ? "bg-gold" : "bg-white/10"}`} />
-            <span className={`text-[10px] font-medium ${i === step ? "text-gold" : "text-offwhite/40"}`}>{label}</span>
-          </div>
-        ))}
-      </div>
-
-      <GlassCard className="w-full max-w-xl animate-fade-up" data-testid={`onboarding-step-${step}`}>
-        {step === 0 && (
-          <div className="py-4 text-center">
-            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gold/15 ring-1 ring-gold/30">
-              <Sparkles className="h-8 w-8 text-gold" />
+    <div className="zayado-blue relative flex min-h-screen flex-col items-center px-4 pb-32 pt-5" data-testid={`onboarding-step-${i}`}>
+      <div className="w-full max-w-lg">
+        {/* Barre du haut : retour · progression · passer */}
+        {etape !== "intro" && (
+          <div className="flex items-center gap-3" data-testid="onboarding-progress">
+            <button onClick={retour} aria-label="Retour" data-testid="onboarding-back"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/5 text-offwhite hover:bg-white/10">
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
+              <div className="h-full rounded-full bg-gradient-to-r from-[#F1E2CC] to-[#DEC2A3] transition-all duration-500" style={{ width: `${(i / NB) * 100}%` }} />
             </div>
-            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Bienvenue</span>
-            <h1 className="mt-3 font-display text-3xl font-extrabold text-offwhite">Bienvenue dans l'univers Zayado</h1>
-            <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-offwhite/70">
-              Ici, on transforme ta vision en action — sans jamais oublier de prendre soin de toi.
-              Quelques minutes pour poser tes fondations, à ton rythme.
-            </p>
-          </div>
-        )}
-
-        {step === 1 && (
-          <div className="py-2" data-testid="onboarding-identite">
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-gold" />
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Identité</span>
-            </div>
-            <h2 className="mt-2 font-display text-2xl font-bold text-offwhite">Comment tu t'appelles ?</h2>
-            <p className="mt-1 text-sm text-offwhite/60">Zayado te parlera avec ce prénom.</p>
-            <div className="mt-4 space-y-3">
-              <input value={identite.prenom} onChange={(e) => setIdentite({ ...identite, prenom: e.target.value })}
-                placeholder="Ton prénom" data-testid="onboarding-prenom"
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-offwhite placeholder:text-offwhite/40 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/30" />
-              <input value={identite.entreprise} onChange={(e) => setIdentite({ ...identite, entreprise: e.target.value })}
-                placeholder="Nom de ton entreprise (facultatif)" data-testid="onboarding-entreprise"
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-offwhite placeholder:text-offwhite/40 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/30" />
-              <input value={identite.role} onChange={(e) => setIdentite({ ...identite, role: e.target.value })}
-                placeholder="Ton rôle (ex. Fondateur·rice, Coach…)" data-testid="onboarding-role"
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-offwhite placeholder:text-offwhite/40 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/30" />
-            </div>
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="py-2" data-testid="onboarding-activite">
-            <div className="flex items-center gap-2">
-              <Briefcase className="h-4 w-4 text-gold" />
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Activité</span>
-            </div>
-            <h2 className="mt-2 font-display text-2xl font-bold text-offwhite">Que fais-tu, pour qui ?</h2>
-            <p className="mt-1 text-sm text-offwhite/60">Une ligne suffit — le radar s'en servira pour te proposer des opportunités alignées.</p>
-            <div className="mt-4 space-y-3">
-              <input value={activite.type} onChange={(e) => setActivite({ ...activite, type: e.target.value })}
-                placeholder="Type d'activité (ex. Coaching business, SaaS B2B…)" data-testid="onboarding-activite-type"
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-offwhite placeholder:text-offwhite/40 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/30" />
-              <input value={activite.cible} onChange={(e) => setActivite({ ...activite, cible: e.target.value })}
-                placeholder="Ta cible idéale (ex. entrepreneurs sensibles)" data-testid="onboarding-activite-cible"
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-offwhite placeholder:text-offwhite/40 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/30" />
-              <textarea value={activite.offre} onChange={(e) => setActivite({ ...activite, offre: e.target.value })}
-                placeholder="Ton offre phare (facultatif)" rows={2} data-testid="onboarding-activite-offre"
-                className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-offwhite placeholder:text-offwhite/40 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/30" />
-              <div>
-                <label className="mb-1.5 block text-xs text-offwhite/50">Tes clients sont… (le Radar s'adapte : prospects pros ou signaux locaux)</label>
-                <div className="flex flex-wrap gap-2" data-testid="onboarding-clientele">
-                  {[["b2c", "Des particuliers"], ["b2b", "Des professionnels"], ["mixte", "Les deux"]].map(([k, l]) => (
-                    <button key={k} type="button" onClick={() => setActivite({ ...activite, clientele: k })}
-                      className={`rounded-full px-4 py-2 text-[13px] font-medium transition ${activite.clientele === k ? "bg-gold text-navy-900" : "border border-white/15 bg-white/5 text-offwhite/75 hover:border-white/30"}`}
-                      data-testid={`onboarding-clientele-${k}`}>{l}</button>
-                  ))}
-                </div>
-              </div>
-              <input value={activite.zone} onChange={(e) => setActivite({ ...activite, zone: e.target.value })}
-                placeholder="Ta ville ou ton code postal (facultatif)" data-testid="onboarding-activite-zone"
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-offwhite placeholder:text-offwhite/40 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/30" />
-              <div>
-                <label className="mb-1.5 block text-xs text-offwhite/50">Ton pays / marché — pour l'actualité et le contexte économique</label>
-                <select value={activite.marche} onChange={(e) => setActivite({ ...activite, marche: e.target.value })} data-testid="onboarding-activite-marche"
-                  className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-offwhite focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/30">
-                  <option value="france">France</option>
-                  <option value="senegal">Sénégal</option>
-                  <option value="cote_ivoire">Côte d'Ivoire</option>
-                  <option value="cameroun">Cameroun</option>
-                  <option value="maroc">Maroc</option>
-                  <option value="belgique">Belgique</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {step === 3 && (
-          <div className="py-2" data-testid="onboarding-cap-financier">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-gold" />
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Cap financier</span>
-            </div>
-            <h2 className="mt-2 font-display text-2xl font-bold text-offwhite">Où en es-tu, où vas-tu ?</h2>
-            <p className="mt-1 text-sm text-offwhite/60">Ces 3 chiffres alimentent ton widget Pouls Business. Tu peux tout modifier plus tard.</p>
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <NumField label="Objectif CA mensuel (€)"  value={capFin.ca_objectif} onChange={(v) => setCapFin({ ...capFin, ca_objectif: v })} testid="onboarding-ca-objectif" />
-              <NumField label="CA du mois en cours (€)"  value={capFin.ca_mensuel}  onChange={(v) => setCapFin({ ...capFin, ca_mensuel: v })}  testid="onboarding-ca-mensuel" />
-              <NumField label="Trésorerie actuelle (€)"  value={capFin.tresorerie}  onChange={(v) => setCapFin({ ...capFin, tresorerie: v })}  testid="onboarding-tresorerie" />
-            </div>
-            <p className="mt-3 rounded-xl border border-gold/20 bg-gold/5 px-3 py-2 text-[11px] italic text-offwhite/70">
-              Astuce : dans Paramètres → Intégrations, connecte Qonto ou Pennylane pour que ces chiffres se mettent à jour tout seuls.
-            </p>
-          </div>
-        )}
-
-        {step === 4 && (
-          <div className="py-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Vision & Pourquoi</span>
-            <h2 className="mt-2 font-display text-2xl font-bold text-offwhite">Quelle est ta vision ?</h2>
-            <p className="mt-1 text-sm text-offwhite/60">En une phrase, où veux-tu être dans un an ?</p>
-            <textarea
-              value={vision} onChange={(e) => setVision(e.target.value)} rows={3}
-              placeholder="Ex : Vivre sereinement de mon activité de coaching, avec un impact réel."
-              data-testid="onboarding-vision-input"
-              className="mt-4 w-full resize-none rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-offwhite placeholder:text-offwhite/40 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/30"
-            />
-            <p className="mt-5 text-sm text-offwhite/60">Et ton « pourquoi » profond ?</p>
-            <textarea
-              value={why} onChange={(e) => setWhy(e.target.value)} rows={2}
-              placeholder="Ce qui te fait tenir même les jours difficiles…"
-              data-testid="onboarding-why-input"
-              className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-offwhite placeholder:text-offwhite/40 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/30"
-            />
-          </div>
-        )}
-
-        {step === 5 && (
-          <div className="py-2">
-            <div className="flex items-center gap-2">
-              <Target className="h-4 w-4 text-gold" />
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Objectifs · 90 jours</span>
-            </div>
-            <h2 className="mt-2 font-display text-2xl font-bold text-offwhite">Tes objectifs clés</h2>
-            <p className="mt-1 text-sm text-offwhite/60">Maximum 3. Moins, mais mieux.</p>
-            <div className="mt-4 space-y-3">
-              {goals.map((g, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gold/15 text-sm font-bold text-gold">{i + 1}</span>
-                  <input
-                    value={g} onChange={(e) => updateGoal(i, e.target.value)}
-                    placeholder="Ex : Atteindre 5 clients récurrents"
-                    data-testid={`onboarding-goal-input-${i}`}
-                    className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-offwhite placeholder:text-offwhite/40 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/30"
-                  />
-                  {goals.length > 1 && (
-                    <button onClick={() => removeGoal(i)} className="rounded-lg p-2 text-offwhite/40 hover:text-alert" data-testid={`onboarding-goal-remove-${i}`}>
-                      <X className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-            {goals.length < 3 && (
-              <button onClick={addGoal} className="btn-ghost mt-3 text-sm" data-testid="onboarding-add-goal">
-                <Plus className="h-4 w-4" /> Ajouter un objectif
+            {etape !== "pret" && (
+              <button onClick={suivant} data-testid="onboarding-passer-etape"
+                className="shrink-0 rounded-full px-3 py-1.5 text-xs font-medium text-offwhite/55 hover:bg-white/5 hover:text-offwhite">
+                Passer
               </button>
             )}
           </div>
         )}
 
-        {step === 6 && (
-          <div className="py-2">
-            <div className="flex items-center gap-2">
-              <Heart className="h-4 w-4 text-gold" />
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Valeurs & rituel</span>
+        {etape === "intro" ? (
+          <div className="flex min-h-[80vh] flex-col items-center justify-center text-center" data-testid="onboarding-intro">
+            <Guide grand />
+            <h1 className="mt-6 font-display text-3xl font-extrabold text-offwhite sm:text-4xl">Salut{prenom ? ` ${prenom}` : ""} !</h1>
+            <p className="mx-auto mt-3 max-w-sm text-[15px] leading-relaxed text-offwhite/70">
+              Je suis ton Copilote Zayado. 2 minutes, que des choix à toucher, et ton cockpit est prêt.
+            </p>
+            <div className="mt-6 flex flex-wrap justify-center gap-2 text-xs text-offwhite/60">
+              {["⚡ Ton énergie", "🎯 Tes objectifs", "📡 Ton Radar"].map((t) => <span key={t} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5">{t}</span>)}
             </div>
-            <h2 className="mt-2 font-display text-2xl font-bold text-offwhite">Qu'est-ce qui compte pour toi ?</h2>
-            <p className="mt-1 text-sm text-offwhite/60">Choisis jusqu'à 5 valeurs fondamentales.</p>
-            <div className="mt-4 flex flex-wrap gap-2" data-testid="onboarding-values">
-              {valuesLibrary.map((v) => (
-                <button key={v} onClick={() => toggleValue(v)} data-testid={`onboarding-value-${v}`}>
-                  <Chip active={values.includes(v)}>
-                    {values.includes(v) && <Check className="h-3 w-3" />} {v}
-                  </Chip>
-                </button>
-              ))}
+            <button onClick={toutPasser} data-testid="onboarding-skip" className="mt-8 text-xs text-offwhite/45 underline-offset-4 hover:text-offwhite/80 hover:underline">
+              Passer, je remplirai plus tard
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="mt-6 flex items-center gap-3">
+              <Guide />
+              <div>
+                <p className="text-[15px] font-semibold text-offwhite">Copilote Zayado</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-offwhite/45">Étape {i} / {NB}</p>
+              </div>
             </div>
+            <h2 className="mt-5 font-display text-[28px] font-extrabold leading-tight text-offwhite sm:text-3xl">{TITRES[etape][0]}</h2>
+            {TITRES[etape][1] && <p className="mt-2 text-[15px] text-offwhite/60">{TITRES[etape][1]}</p>}
+          </>
+        )}
 
-            <div className="mt-6">
-              <p className="flex items-center gap-2 text-sm text-offwhite/70">
-                <Clock className="h-4 w-4 text-gold" /> Ton heure de check-in quotidien
+        <div className="mt-6 animate-fade-up" key={etape}>
+          {etape === "prenom" && (
+            <div className="space-y-6" data-testid="onboarding-identite">
+              <input value={prenom} onChange={(e) => setPrenom(e.target.value)} placeholder="Ton prénom" autoFocus
+                data-testid="onboarding-prenom"
+                className="h-14 w-full rounded-full border border-white/15 bg-white/[0.07] px-6 text-lg font-semibold text-offwhite placeholder:text-offwhite/35 focus:border-gold/50 focus:outline-none" />
+              <Bloc titre="Tu es plutôt…">
+                <div className="flex flex-wrap gap-2">
+                  {ROLES.map((r) => <Pastille key={r} actif={role === r} onClick={() => setRole(role === r ? "" : r)}>{r}</Pastille>)}
+                </div>
+              </Bloc>
+            </div>
+          )}
+
+          {etape === "activite" && (
+            <div className="space-y-6" data-testid="onboarding-activite">
+              <div className="grid grid-cols-3 gap-2.5">
+                {[...ACTIVITES, { v: "Autre", icon: Plus }].map(({ v, icon: Icon }) => (
+                  <Tuile key={v} actif={activite === v} onClick={() => setActivite(v)} testid={`onboarding-activite-${v}`}>
+                    <Icon className="h-6 w-6" />
+                    <span className="mt-2 text-[12.5px] font-semibold leading-tight">{v}</span>
+                  </Tuile>
+                ))}
+              </div>
+              {activite === "Autre" && (
+                <Champ valeur={activiteAutre} onChange={setActiviteAutre} placeholder="Ton activité en quelques mots" testid="onboarding-activite-autre" />
+              )}
+              <Bloc titre="Tes clients sont…">
+                <div className="grid grid-cols-3 gap-2" data-testid="onboarding-clientele">
+                  {CLIENTELES.map(([k, l]) => <Pastille key={k} plein actif={clientele === k} onClick={() => setClientele(k)} testid={`onboarding-clientele-${k}`}>{l}</Pastille>)}
+                </div>
+              </Bloc>
+              <Bloc titre="Ton marché">
+                <div className="flex flex-wrap gap-2">
+                  {MARCHES.map(([k, l]) => <Pastille key={k} actif={marche === k} onClick={() => setMarche(k)}>{l}</Pastille>)}
+                </div>
+              </Bloc>
+            </div>
+          )}
+
+          {etape === "cap" && (
+            <div className="space-y-6" data-testid="onboarding-cap-financier">
+              <Bloc titre="Objectif de chiffre d'affaires par mois">
+                <div className="grid grid-cols-3 gap-2">
+                  {OBJ_CA.map((v) => <Pastille key={v} plein actif={caObjectif === v} onClick={() => setCaObjectif(caObjectif === v ? 0 : v)} testid={`onboarding-ca-${v}`}>{v >= 20000 ? "20 000 € +" : fmtEur(v)}</Pastille>)}
+                  <Pastille plein actif={caObjectif === 0} onClick={() => setCaObjectif(0)}>Pas encore</Pastille>
+                </div>
+              </Bloc>
+              <Bloc titre="Aujourd'hui, tu fais environ…">
+                <div className="space-y-2">
+                  {TRANCHES.map(([k, l]) => <Ligne key={k} actif={tranche === k} onClick={() => setTranche(k)}>{l} {k !== "demarrage" && <span className="text-offwhite/45">/ mois</span>}</Ligne>)}
+                </div>
+              </Bloc>
+            </div>
+          )}
+
+          {etape === "vision" && (
+            <div className="space-y-5" data-testid="onboarding-vision">
+              <div className="space-y-2">
+                {VISIONS.map((v) => <Ligne key={v} actif={visions.includes(v)} onClick={() => basculer(visions, setVisions, v, 2)} multi>{v}</Ligne>)}
+              </div>
+              <Champ valeur={visionAutre} onChange={setVisionAutre} placeholder="Autre (facultatif)" testid="onboarding-vision-autre" />
+              <Bloc titre="Ce qui te fait avancer">
+                <div className="flex flex-wrap gap-2">
+                  {MOTEURS.map((m) => <Pastille key={m} actif={moteur === m} onClick={() => setMoteur(moteur === m ? "" : m)}>{m}</Pastille>)}
+                </div>
+              </Bloc>
+            </div>
+          )}
+
+          {etape === "objectifs" && (
+            <div className="space-y-3" data-testid="onboarding-objectifs">
+              {[...suggestionsObjectifs, ...goals.filter((g) => !suggestionsObjectifs.includes(g))].map((g) => (
+                <Ligne key={g} actif={goals.includes(g)} onClick={() => basculer(goals, setGoals, g, 3)} multi>{g}</Ligne>
+              ))}
+              {goals.length < 3 && (
+                <form onSubmit={(e) => { e.preventDefault(); const t = goalAutre.trim(); if (t && !goals.includes(t)) setGoals([...goals, t]); setGoalAutre(""); }} className="flex gap-2">
+                  <Champ valeur={goalAutre} onChange={setGoalAutre} placeholder="Autre objectif…" testid="onboarding-goal-autre" />
+                  <button disabled={!goalAutre.trim()} className="h-12 shrink-0 rounded-full bg-white/10 px-5 text-sm font-semibold text-offwhite disabled:opacity-40">Ajouter</button>
+                </form>
+              )}
+              <p className="text-center text-xs text-offwhite/45">{goals.length} / 3 choisi{goals.length > 1 ? "s" : ""}</p>
+            </div>
+          )}
+
+          {etape === "energie" && (
+            <div className="flex flex-col items-center" data-testid="onboarding-energie">
+              <Anneau valeur={energie / 5}>
+                <span className="text-5xl">{ENERGIES[energie - 1].face}</span>
+                <span className="mt-1 font-display text-4xl font-extrabold text-gold">{energie}<span className="text-lg text-offwhite/50">/5</span></span>
+              </Anneau>
+              <p className="mt-6 font-display text-2xl font-bold text-offwhite">{ENERGIES[energie - 1].mot}</p>
+              <p className="text-offwhite/55">{ENERGIES[energie - 1].sous}</p>
+              <GrosCurseur valeur={energie} min={1} max={5} onChange={(v) => { setEnergie(v); setEnergieTouchee(true); }} testid="onboarding-energie-curseur" />
+              <div className="mt-4 grid w-full grid-cols-5 gap-2">
+                {ENERGIES.map((e, k) => (
+                  <button key={e.mot} type="button" onClick={() => { setEnergie(k + 1); setEnergieTouchee(true); }}
+                    className={`flex h-12 items-center justify-center rounded-2xl border text-2xl transition ${energie === k + 1 ? "border-gold/70 bg-gold/15" : "border-white/10 bg-white/[0.04] grayscale"}`}>{e.face}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {etape === "rythme" && (
+            <div className="space-y-7" data-testid="onboarding-rythme">
+              <div className="flex flex-col items-center">
+                <Anneau valeur={RYTHMES[rythme].min / 30} petit>
+                  <Flame className="h-6 w-6 text-gold" />
+                  <span className="font-display text-4xl font-extrabold text-gold">{RYTHMES[rythme].min}<span className="ml-1 text-base text-offwhite/50">min</span></span>
+                </Anneau>
+                <p className="mt-4 font-display text-xl font-bold text-offwhite">{RYTHMES[rythme].mot}</p>
+                <p className="text-sm text-offwhite/55">{RYTHMES[rythme].sous}</p>
+                <GrosCurseur valeur={rythme} min={0} max={3} onChange={setRythme} testid="onboarding-rythme-curseur" />
+              </div>
+              <Bloc titre="Quels jours ?">
+                <button type="button" onClick={() => setJours(jours.length === 7 ? ["1", "2", "3", "4", "5"] : JOURS.map(([k]) => k))}
+                  className={`mb-3 flex w-full items-center gap-3 rounded-3xl border p-3.5 text-left transition ${jours.length === 7 ? "border-gold/60 bg-gold/10" : "border-white/12 bg-white/[0.06]"}`}>
+                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gold/15 text-gold"><CalendarDays className="h-5 w-5" /></span>
+                  <span className="flex-1"><span className="block font-semibold text-offwhite">Tous les jours</span><span className="text-xs text-offwhite/55">Sept jours sur sept</span></span>
+                  <Rond actif={jours.length === 7} />
+                </button>
+                <div className="grid grid-cols-7 gap-1.5">
+                  {JOURS.map(([k, l]) => (
+                    <button key={k} type="button" onClick={() => basculer(jours, setJours, k, 7)} data-testid={`onboarding-jour-${k}`}
+                      className={`aspect-square rounded-full border text-base font-bold transition ${jours.includes(k) ? "border-gold bg-gold text-navy-900" : "border-white/15 bg-white/[0.05] text-offwhite"}`}>{l}</button>
+                  ))}
+                </div>
+              </Bloc>
+              <Bloc titre="Heure du rappel">
+                <div className="grid grid-cols-3 gap-2">
+                  {RAPPELS.map(([l, h]) => (
+                    <button key={h} type="button" onClick={() => setRappel(h)} data-testid={`onboarding-rappel-${h}`}
+                      className={`rounded-2xl border py-3 transition ${rappel === h ? "border-gold bg-gold text-navy-900" : "border-white/12 bg-white/[0.06] text-offwhite"}`}>
+                      <span className="block font-semibold">{l}</span><span className="text-sm opacity-70">{h}</span>
+                    </button>
+                  ))}
+                </div>
+                <label className="mt-2 flex items-center gap-3 rounded-3xl border border-white/12 bg-white/[0.06] p-3.5">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-offwhite/80"><Clock className="h-5 w-5" /></span>
+                  <span className="flex-1 font-semibold text-offwhite">Heure précise</span>
+                  <input type="time" value={rappel} onChange={(e) => e.target.value && setRappel(e.target.value)} data-testid="onboarding-checkin-time"
+                    className="rounded-xl bg-transparent text-xl font-bold text-offwhite focus:outline-none" />
+                </label>
+              </Bloc>
+            </div>
+          )}
+
+          {etape === "valeurs" && (
+            <div className="space-y-6">
+              <div className="flex flex-wrap gap-2" data-testid="onboarding-values">
+                {valuesLibrary.map((v) => (
+                  <Pastille key={v} actif={values.includes(v)} onClick={() => basculer(values, setValues, v, 5)} testid={`onboarding-value-${v}`}>
+                    {values.includes(v) && <Check className="mr-1 inline h-3.5 w-3.5" />}{v}
+                  </Pastille>
+                ))}
+              </div>
+              <p className="text-center text-xs text-offwhite/45">{values.length} / 5</p>
+            </div>
+          )}
+
+          {etape === "sens" && (
+            <div data-testid="onboarding-sens-foi">
+              <p className="text-[15px] leading-relaxed text-offwhite/70">
+                <b className="text-offwhite">TheSustain</b>, partenaire de Zayado, t'accompagne sur le sens, les valeurs et la foi (perspective chrétienne).
+                Ouvert à tous. Tu peux changer d'avis quand tu veux.
               </p>
-              <input
-                type="time" value={checkinHour} onChange={(e) => setCheckinHour(e.target.value)}
-                data-testid="onboarding-checkin-time"
-                className="mt-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-offwhite focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/30"
-              />
+              <div className="mt-5 space-y-2.5">
+                <Ligne actif={foiChoix === "non"} onClick={() => setFoiChoix("non")} testid="onboarding-foi-non">Non merci</Ligne>
+                <div className="flex items-stretch gap-2">
+                  <div className="flex-1">
+                    <Ligne actif={foiChoix === "oui"} onClick={() => setFoiChoix("oui")} testid="onboarding-foi-oui">
+                      <HeartHandshake className="mr-2 inline h-4 w-4 text-gold" />Ça m'intéresse
+                    </Ligne>
+                  </div>
+                  <a href={THESUSTAIN_URL} target="_blank" rel="noopener noreferrer" aria-label="Découvrir TheSustain" title="Découvrir TheSustain (thesustain.net)"
+                    data-testid="onboarding-foi-info"
+                    className="flex w-14 shrink-0 items-center justify-center rounded-3xl border border-white/12 bg-white/[0.06] text-gold hover:bg-white/10">
+                    <Info className="h-5 w-5" />
+                  </a>
+                </div>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {step === 7 && (
-          <div className="py-2" data-testid="onboarding-sens-foi">
-            <div className="flex items-center gap-2">
-              <HeartHandshake className="h-4 w-4 text-gold" />
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Sens & Foi</span>
-            </div>
-            <h2 className="mt-2 font-display text-2xl font-bold text-offwhite">La dimension « sens », pour toi ?</h2>
-            <p className="mt-1 text-sm leading-relaxed text-offwhite/60">
-              Zayado s'occupe de ton travail et de ton équilibre. Pour aller plus loin — sens, valeurs,
-              et pour ceux qui le souhaitent la foi — il y a <b className="text-offwhite/85">TheSustain</b>,
-              la plateforme partenaire de Zayado, dans une perspective chrétienne.
-              <b className="text-offwhite/85"> Ouverte à tous</b>, croyants comme simples curieux —
-              et tu pourras changer d'avis à tout moment (Bien-être → Parcours).
-            </p>
-            <div className="mt-4 space-y-2.5">
-              {[
-                { key: "membre", titre: "J'ai déjà un compte TheSustain", desc: "La dimension Foi est activée dans ton espace. La connexion directe (SSO) arrive très bientôt — en attendant, utilise le bouton « Continuer avec TheSustain » sur la page de connexion." },
-                { key: "decouverte", titre: "Je suis curieux·se, je découvre", desc: "La dimension Foi est activée : parcours, réflexions et lien vers TheSustain pour adhérer si ça te parle. Sans engagement, évidemment." },
-                { key: "non", titre: "Non merci, pas pour moi", desc: "Aucun contenu Foi ne sera affiché. Tu pourras l'activer plus tard si tu changes d'avis." },
-              ].map((c) => (
-                <button key={c.key} onClick={() => { setFoiChoix(c.key); if (c.key === "decouverte") setInfoSens(true); }}
-                  data-testid={`onboarding-foi-${c.key}`}
-                  className={`flex w-full items-start gap-3 rounded-2xl border p-4 text-left transition-all ${
-                    foiChoix === c.key ? "border-gold/60 bg-gold/10 ring-1 ring-gold/30" : "border-white/10 bg-white/5 hover:border-white/25"
-                  }`}>
-                  <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${foiChoix === c.key ? "border-gold bg-gold text-navy-900" : "border-white/30"}`}>
-                    {foiChoix === c.key && <Check className="h-3.5 w-3.5" />}
-                  </span>
-                  <span>
-                    <span className="block text-sm font-semibold text-offwhite">{c.titre}</span>
-                    <span className="mt-1 block text-xs leading-relaxed text-offwhite/60">{c.desc}</span>
-                  </span>
+          {etape === "offre" && (
+            <div className="space-y-2.5" data-testid="onboarding-plans">
+              {LISTE_PLANS.map((p) => (
+                <button key={p.key} onClick={() => setPlan(p.key)} data-testid={`onboarding-plan-${p.key}`}
+                  className={`flex w-full items-center gap-3 rounded-3xl border p-4 text-left transition ${plan === p.key ? "border-gold/70 bg-gold/10" : "border-white/12 bg-white/[0.06] hover:border-white/25"}`}>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-display text-base font-bold text-offwhite">
+                      {p.name} {p.highlight && <span className="ml-1 rounded-full bg-gold px-2 py-0.5 align-middle text-[10px] font-bold text-navy-900">Recommandé</span>}
+                    </p>
+                    <p className="mt-1 text-xs text-offwhite/55">{p.features.join(" · ")}</p>
+                    <p className="mt-2">
+                      {p.old && <span className="mr-1.5 text-xs text-offwhite/40 line-through">{p.old}</span>}
+                      <span className="font-display text-lg font-extrabold text-offwhite">{p.price}</span>
+                      <span className="ml-1 text-[11px] text-offwhite/50">{p.period}</span>
+                    </p>
+                  </div>
+                  <Rond actif={plan === p.key} />
                 </button>
               ))}
             </div>
-          </div>
-        )}
+          )}
 
-        {step === 8 && (
-          <div className="py-2">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-gold" />
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Ton offre</span>
-            </div>
-            <h2 className="mt-2 font-display text-2xl font-bold text-offwhite">Choisis ton rythme</h2>
-            <p className="mt-1 text-sm text-offwhite/60">Solo : 2 mois pour 1 €, puis prélèvement mensuel au tarif fondateur. Sans engagement, résiliable en 1 clic.</p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2" data-testid="onboarding-plans">
-              {PLANS.map((p) => (
-                <button
-                  key={p.key}
-                  onClick={() => setPlan(p.key)}
-                  data-testid={`onboarding-plan-${p.key}`}
-                  className={`relative flex min-h-[150px] w-full flex-col items-start rounded-2xl border p-4 text-left transition-all ${p.highlight ? "sm:col-span-2" : ""} ${
-                    plan === p.key ? "border-gold/60 bg-gold/10 ring-1 ring-gold/30" : "border-white/10 bg-white/5 hover:border-white/20"
-                  }`}
-                >
-                  <span className={`absolute right-4 top-4 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${plan === p.key ? "border-gold bg-gold text-navy-900" : "border-white/30"}`}>
-                    {plan === p.key && <Check className="h-3.5 w-3.5" />}
-                  </span>
-                  <div className="pr-8">
-                    <div className="flex items-center gap-2">
-                      <span className="font-display text-base font-bold text-offwhite">{p.name}</span>
-                      {p.highlight && <span className="rounded-full bg-gold px-2 py-0.5 text-[10px] font-bold text-navy-900">Recommandé</span>}
-                    </div>
-                    <p className="mt-2 text-xs leading-relaxed text-offwhite/60">{p.features.join(" · ")}</p>
-                  </div>
-                  <div className="mt-auto pt-4 text-left">
-                    {p.old && <span className="block text-xs text-offwhite/40 line-through">{p.old}</span>}
-                    <span className="font-display text-lg font-extrabold text-offwhite">{p.price}</span>
-                    <span className="ml-1 text-[10px] text-offwhite/50">{p.period}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {step === 9 && (
-          <div className="py-6 text-center" data-testid="onboarding-final">
-            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gold/15 ring-1 ring-gold/30">
-              <Rocket className="h-8 w-8 text-gold" />
-            </div>
-            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">C'est prêt</span>
-            <h2 className="mt-3 font-display text-2xl font-bold text-offwhite">Ton espace s'actualise avec tes infos</h2>
-            <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-offwhite/70">
-              On personnalise ton cockpit avec ta vision, tes objectifs et tes valeurs.
-              Ton Copilote IA Zayado s'appuiera dessus pour t'accompagner, à ton rythme.
-            </p>
-            <div className="mx-auto mt-6 max-w-sm space-y-2 text-left">
+          {etape === "pret" && (
+            <div className="space-y-2.5" data-testid="onboarding-final">
               {[
-                vision ? "Ta vision est enregistrée" : "Vision à compléter plus tard",
-                `${goals.filter(Boolean).length} objectif(s) à 90 jours`,
-                `${values.length} valeur(s) · check-in à ${checkinHour}`,
-                `Offre choisie : ${PLANS.find((p) => p.key === plan)?.name}`,
-              ].map((t, i) => (
-                <div key={i} className="flex items-center gap-2.5 text-sm text-offwhite/80">
-                  <Check className="h-4 w-4 shrink-0 text-gold" /> {t}
+                activiteFinale ? `Activité : ${activiteFinale}` : "Activité à compléter plus tard",
+                caObjectif ? `Objectif : ${fmtEur(caObjectif)} / mois` : "Objectif de CA à fixer plus tard",
+                `${goals.length} objectif${goals.length > 1 ? "s" : ""} à 90 jours`,
+                energieTouchee ? `Énergie du jour : ${ENERGIES[energie - 1].mot}` : "Premier check-in à faire",
+                `${RYTHMES[rythme].min} min par jour · rappel à ${rappel.replace(":", "h")}`,
+                `Formule : ${LISTE_PLANS.find((p) => p.key === plan)?.name}`,
+              ].map((t) => (
+                <div key={t} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-offwhite/85">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gold text-navy-900"><Check className="h-3.5 w-3.5" /></span> {t}
                 </div>
               ))}
             </div>
-          </div>
-        )}
-
-        <div className="mt-8 flex items-center justify-between gap-3">
-          {step > 0 ? (
-            <button onClick={back} className="btn-ghost" data-testid="onboarding-back">
-              <ArrowLeft className="h-4 w-4" /> Retour
-            </button>
-          ) : (
-            <button onClick={passer} className="btn-ghost" data-testid="onboarding-skip">Passer</button>
-          )}
-
-          {step < STEPS.length - 1 ? (
-            <button onClick={next} disabled={!canProceed} className="btn-gold disabled:opacity-40" data-testid="onboarding-next">
-              Continuer <ArrowRight className="h-4 w-4" />
-            </button>
-          ) : (
-            <button onClick={finish} disabled={saving} className="btn-gold disabled:opacity-60" data-testid="onboarding-finish">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Entrer dans Zayado <Sparkles className="h-4 w-4" /></>}
-            </button>
           )}
         </div>
+
         {saveError && (
           <div className="mt-4 rounded-xl border border-red-300/30 bg-red-500/10 px-3 py-2.5 text-sm text-red-100" role="alert" data-testid="onboarding-save-error">
             <p>{saveError}</p>
             <button onClick={finish} className="mt-2 text-xs font-semibold text-gold underline" data-testid="onboarding-retry">Réessayer l'enregistrement</button>
           </div>
         )}
-      </GlassCard>
+      </div>
+
+      {/* Gros bouton en bas, toujours au même endroit */}
+      <div className="fixed inset-x-0 bottom-0 z-20 bg-gradient-to-t from-[#0a1230] via-[#0a1230]/90 to-transparent px-4 pb-5 pt-8">
+        <div className="mx-auto max-w-lg">
+          {etape === "pret" ? (
+            <button onClick={finish} disabled={saving} data-testid="onboarding-finish"
+              className="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-[#F4EFE6] text-lg font-bold text-navy-900 shadow-lg transition hover:brightness-105 disabled:opacity-60">
+              {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <>Créer mon cockpit <Rocket className="h-5 w-5" /></>}
+            </button>
+          ) : (
+            <button onClick={suivant} disabled={!peutContinuer} data-testid="onboarding-next"
+              className="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-[#F4EFE6] text-lg font-bold text-navy-900 shadow-lg transition hover:brightness-105 disabled:opacity-40">
+              {etape === "intro" ? "C'est parti" : "Continuer"} <ArrowRight className="h-5 w-5" />
+            </button>
+          )}
+        </div>
+      </div>
+
       {saving && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0a1230]/90 p-5 backdrop-blur-md" data-testid="onboarding-processing">
           <div className="w-full max-w-md rounded-3xl fenetre p-7 text-center">
@@ -524,10 +525,9 @@ export default function Onboarding() {
               <Sparkles className="h-8 w-8 animate-pulse text-gold" />
             </div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Zayado prépare ton espace</p>
-            <h2 className="mt-3 font-display text-2xl font-bold text-offwhite">On relie tes informations</h2>
+            <h2 className="mt-3 font-display text-2xl font-bold text-offwhite">On relie tes réponses</h2>
             <p className="mt-2 text-sm text-offwhite/60">{["Lecture de ta vision…", "Structuration de tes objectifs…", "Préparation de ton cockpit…", "Dernières vérifications…"][savePhase]}</p>
             <div className="mt-6 h-2 overflow-hidden rounded-full bg-white/10"><div className="onboarding-progress-shimmer h-full rounded-full bg-gold" /></div>
-            <div className="mt-4 flex items-center justify-center gap-2 text-[11px] text-offwhite/45"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Cela prend quelques secondes</div>
           </div>
         </div>
       )}
@@ -535,14 +535,98 @@ export default function Onboarding() {
   );
 }
 
-function NumField({ label, value, onChange, testid }) {
+function Guide({ grand = false }) {
+  const t = grand ? "h-24 w-24" : "h-12 w-12";
+  return (
+    <span className={`relative flex ${t} shrink-0 items-center justify-center rounded-full border-2 border-gold/50 bg-gradient-to-b from-white/15 to-white/5 shadow-[0_0_30px_-6px_rgba(222,194,163,0.6)]`}>
+      <img src="/logo.png" alt="" className={grand ? "h-16 w-16 object-contain" : "h-8 w-8 object-contain"} />
+      <Zap className={`absolute -bottom-1 -right-1 rounded-full bg-gold p-1 text-navy-900 ${grand ? "h-7 w-7" : "h-5 w-5"}`} />
+    </span>
+  );
+}
+
+function Bloc({ titre, children }) {
   return (
     <div>
-      <label className="mb-1 block text-[11px] text-offwhite/70">{label}</label>
-      <input type="number" min={0} step={100} value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value || "0"))}
-        data-testid={testid}
-        className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-offwhite focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/30" />
+      <p className="mb-2.5 text-[12px] font-semibold uppercase tracking-[0.16em] text-offwhite/55">{titre}</p>
+      {children}
     </div>
+  );
+}
+
+function Pastille({ actif, onClick, children, plein = false, testid }) {
+  return (
+    <button type="button" onClick={onClick} data-testid={testid}
+      className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition active:scale-95 ${plein ? "w-full" : ""} ${actif ? "border-gold bg-gold text-navy-900" : "border-white/15 bg-white/[0.06] text-offwhite/85 hover:border-white/30"}`}>
+      {children}
+    </button>
+  );
+}
+
+function Tuile({ actif, onClick, children, testid }) {
+  return (
+    <button type="button" onClick={onClick} data-testid={testid}
+      className={`flex aspect-square flex-col items-center justify-center rounded-3xl border p-2 text-center transition active:scale-95 ${actif ? "border-gold bg-gold/15 text-gold ring-2 ring-gold/30" : "border-white/12 bg-white/[0.06] text-offwhite/85 hover:border-white/25"}`}>
+      {children}
+    </button>
+  );
+}
+
+function Rond({ actif }) {
+  return (
+    <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 ${actif ? "border-gold bg-gold text-navy-900" : "border-white/25"}`}>
+      {actif && <Check className="h-4 w-4" />}
+    </span>
+  );
+}
+
+function Ligne({ actif, onClick, children, multi = false, testid }) {
+  return (
+    <button type="button" onClick={onClick} data-testid={testid}
+      className={`flex w-full items-center gap-3 rounded-3xl border px-5 py-4 text-left text-[15px] font-semibold transition active:scale-[0.99] ${actif ? "border-gold/70 bg-gold/10 text-offwhite" : "border-white/12 bg-white/[0.06] text-offwhite/85 hover:border-white/25"}`}>
+      <span className="flex-1">{children}</span>
+      {multi ? (
+        <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border-2 ${actif ? "border-gold bg-gold text-navy-900" : "border-white/25"}`}>{actif && <Check className="h-3.5 w-3.5" />}</span>
+      ) : <Rond actif={actif} />}
+    </button>
+  );
+}
+
+function Champ({ valeur, onChange, placeholder, testid }) {
+  return (
+    <input value={valeur} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} data-testid={testid}
+      className="h-12 w-full rounded-full border border-white/15 bg-white/[0.06] px-5 text-[15px] text-offwhite placeholder:text-offwhite/35 focus:border-gold/50 focus:outline-none" />
+  );
+}
+
+function Anneau({ valeur, children, petit = false }) {
+  const r = 88, c = 2 * Math.PI * r;
+  return (
+    <div className={`relative ${petit ? "h-48 w-48" : "h-56 w-56"}`}>
+      <svg viewBox="0 0 200 200" className="h-full w-full -rotate-90">
+        <defs>
+          <linearGradient id="zyAnneau" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#F1E2CC" /><stop offset="100%" stopColor="#C9A66B" />
+          </linearGradient>
+        </defs>
+        <circle cx="100" cy="100" r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="14" />
+        <circle cx="100" cy="100" r={r} fill="none" stroke="url(#zyAnneau)" strokeWidth="14" strokeLinecap="round"
+          strokeDasharray={c} strokeDashoffset={c * (1 - Math.max(0.02, Math.min(1, valeur)))}
+          style={{ transition: "stroke-dashoffset 500ms cubic-bezier(.22,1,.36,1)", filter: "drop-shadow(0 0 10px rgba(222,194,163,0.45))" }} />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">{children}</div>
+    </div>
+  );
+}
+
+function GrosCurseur({ valeur, min, max, onChange, testid }) {
+  return (
+    <SliderPrimitive.Root value={[valeur]} min={min} max={max} step={1} onValueChange={(v) => onChange(v[0])} data-testid={testid}
+      className="relative mt-7 flex h-10 w-full touch-none select-none items-center">
+      <SliderPrimitive.Track className="relative h-4 w-full grow overflow-hidden rounded-full bg-white/10">
+        <SliderPrimitive.Range className="absolute h-full rounded-full bg-gradient-to-r from-[#F1E2CC] to-[#DEC2A3]" />
+      </SliderPrimitive.Track>
+      <SliderPrimitive.Thumb aria-label="Choisir" className="block h-9 w-9 rounded-full border-4 border-[#DEC2A3] bg-[#F4EFE6] shadow-[0_0_18px_rgba(222,194,163,0.6)] focus-visible:outline-none" />
+    </SliderPrimitive.Root>
   );
 }

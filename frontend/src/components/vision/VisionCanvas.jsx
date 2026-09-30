@@ -288,6 +288,9 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
   const rectsRef = useRef({});
   const skipSaveRef = useRef(false);
   const needScrollRef = useRef(true);
+  // Barres « Modèles » et « IA » : visibles à l'arrivée, repliées dès qu'on
+  // touche au board (elles masquaient les cartes du bas) — un bouton les rouvre.
+  const [barresRepliees, setBarresRepliees] = useState(false);
   const itemsRef = useRef(items);
   itemsRef.current = items;
   const zoomRef = useRef(zoom);
@@ -468,17 +471,22 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
     const el = scrollRef.current;
     const minX = vals.length ? Math.min(...vals.map((r) => r.x)) : 0;
     const minY = vals.length ? Math.min(...vals.map((r) => r.y)) : 0;
-    const ws = walls.map((w) => rectsRef.current[w.id]).filter(Boolean).sort((a, b) => a.x - b.x);
+    // Cadrage : TOUT le contenu tient à l'écran (avant : ~3 murs, le reste hors champ
+    // ou caché sous les barres du bas), dans la limite d'un zoom lisible.
+    const maxX = vals.length ? Math.max(...vals.map((r) => r.x + r.w)) : 0;
+    const maxY = vals.length ? Math.max(...vals.map((r) => r.y + r.h)) : 0;
     let z = isSmall ? 0.7 : 0.8;
-    if (ws.length && !isSmall) {
-      const last = ws[Math.min(2, ws.length - 1)];
-      const span = last.x + last.w - ws[0].x;
-      z = clampZ(Math.max(0.55, Math.min(1, (el.clientWidth - 150) / span)));
+    if (vals.length) {
+      const bas = isSmall ? 90 : 150;   // place des barres du bas
+      const zx = (el.clientWidth - (isSmall ? 32 : 120)) / Math.max(1, maxX - minX);
+      const zy = (el.clientHeight - bas - 60) / Math.max(1, maxY - minY);
+      z = clampZ(Math.max(isSmall ? 0.35 : 0.3, Math.min(1, zx, zy)));
     }
     setZoom(z);
     requestAnimationFrame(() => {
-      el.scrollLeft = Math.max(0, minX * z - (isSmall ? 16 : readOnly ? 40 : 120));
-      el.scrollTop = Math.max(0, minY * z - 70);
+      const largeur = (maxX - minX) * z, hauteur = (maxY - minY) * z;
+      el.scrollLeft = Math.max(0, minX * z - Math.max(isSmall ? 16 : 40, (el.clientWidth - largeur) / 2));
+      el.scrollTop = Math.max(0, minY * z - Math.max(60, (el.clientHeight - (isSmall ? 90 : 150) - hauteur) / 2));
     });
   }, [loaded, rects, activeItems.length, walls, readOnly]);
 
@@ -1223,7 +1231,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
           <div className="polaroid-frame relative" style={{ height: inWall ? undefined : card.h, background: frame, borderRadius: inWall ? 18 : undefined }}>
             {!inWall && <span className="push-pin red" />}
             {card.image ? (
-              <img src={card.image} alt={card.caption || ""} draggable={false} className="w-full rounded-sm object-cover" style={{ height: inWall ? 260 : (card.h || 240) - (card.caption ? 54 : 26) }} />
+              <ImageSure src={card.image} alt={card.caption || ""} className="w-full rounded-sm object-cover" style={{ height: inWall ? 260 : (card.h || 240) - (card.caption ? 54 : 26) }} />
             ) : (
               <div className="flex w-full flex-col items-center justify-center gap-2 rounded-sm bg-[#eef1f6] px-3 text-center text-[13px] text-slate-500" style={{ height: inWall ? 260 : (card.h || 240) - (card.caption ? 54 : 26) }}
                 onPointerDown={isEditing ? (e) => e.stopPropagation() : undefined}>
@@ -1274,7 +1282,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
       case "image":
         return (
           <div className="sf-card relative overflow-hidden" style={{ padding: 12 }}>
-            <img src={card.image} alt="" draggable={false} className="w-full rounded-[14px] object-cover" style={{ height: inWall ? 260 : Math.max(120, (card.h || 300) - (tv(card.title, lang) ? 60 : 24)) }} />
+            <ImageSure src={card.image} alt="" className="w-full rounded-[14px] object-cover" style={{ height: inWall ? 260 : Math.max(120, (card.h || 300) - (tv(card.title, lang) ? 60 : 24)) }} />
             {tv(card.title, lang) && <p className="sf-title px-1 pt-3">{tv(card.title, lang)}</p>}
             {isEditing && (
               <div className="absolute inset-0 flex flex-col justify-start gap-2 overflow-y-auto bg-[#0b1a3d]/90 p-4" onPointerDown={(e) => e.stopPropagation()} onWheel={(e) => e.stopPropagation()}>
@@ -1554,9 +1562,12 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
 
   const liveEmpty = live.data && !live.loading && Object.keys(live.data).length > 0
     && !live.data.state?.vision?.texte && !(Array.isArray(live.data.objectifs) && live.data.objectifs.length) && !(live.data.taches?.items || []).length;
-  const showOnboard = !readOnly && loaded && liveEmpty && !onboardHidden;
+  // Fenêtre de bienvenue : une seule fois, et seulement sur le board Perso
+  // (avant : à chaque visite et sur tous les boards).
+  const showOnboard = !readOnly && !partage && loaded && liveEmpty && !onboardHidden && boardKey === "perso";
   const toggleMinimap = () => setShowMinimap((v) => { try { localStorage.setItem(MINIMAP_KEY, v ? "0" : "1"); } catch (_) {} return !v; });
   const hideOnboard = () => { setOnboardHidden(true); try { localStorage.setItem(ONBOARD_KEY, "1"); } catch (_) {} };
+  useEffect(() => { if (showOnboard) { try { localStorage.setItem(ONBOARD_KEY, "1"); } catch (_) {} } }, [showOnboard]);
 
   /* Vue mobile : un mur par écran (+ « Libre » pour les cartes hors murs) */
   const mobileCols = [...presentWalls];
@@ -1575,7 +1586,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
   return (
     <div ref={rootRef} data-testid="vision-canvas-container"
       onDragOver={onFileDragOver} onDragLeave={onFileDragLeave} onDrop={onFileDrop}
-      className={`sf relative overflow-hidden ${presenting ? "sf-present fixed inset-0 z-[80] h-[100dvh] w-screen" : readOnly ? "h-full" : "h-full md:h-[calc(100dvh-150px)] md:rounded-2xl md:border md:border-white/10"}`}>
+      className={`sf relative overflow-hidden ${presenting ? "sf-present fixed inset-0 z-[80] h-[100dvh] w-screen" : readOnly ? "h-full" : "h-full md:rounded-2xl md:border md:border-white/10"}`}>
       {!readOnly && (
         <input ref={fileInputRef} type="file" accept="image/*" multiple hidden data-testid="vision-file-input"
           onChange={(e) => { addImageFiles(e.target.files); e.target.value = ""; setMenu(null); }} />
@@ -1652,7 +1663,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
 
       {/* ── Rail d'outils (gauche, ordinateur) ── */}
       {!readOnly && !isSmall && (
-        <div className="sf-hide-present sf-chrome absolute left-3 top-1/2 z-30 flex -translate-y-1/2 flex-col items-center gap-0.5 rounded-[18px] p-1.5" data-testid="vision-rail">
+        <div className="sf-hide-present sf-chrome absolute left-3 top-1/2 z-30 flex max-h-[calc(100%-96px)] -translate-y-1/2 flex-col items-center gap-0.5 overflow-y-auto rounded-[18px] p-1.5 [scrollbar-width:none]" data-testid="vision-rail">
           {RAIL.map((it, i) => (it.sep ? <span key={`s${i}`} className="my-1.5 h-px w-10" style={{ background: "var(--sf-line)" }} /> : (
             <button key={it.id} onClick={it.action} className="sf-tool relative" data-active={it.active ? "true" : "false"} data-testid={`vision-rail-${it.id}`} title={it.label}>
               <span className="sf-tool-ico"><it.icon size={17} /></span>
@@ -1835,7 +1846,14 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
       )}
 
       {/* ── Barre IA (bas, ordinateur) ── */}
-      {!readOnly && !isSmall && (
+      {!readOnly && !isSmall && barresRepliees && (
+        <button onClick={() => setBarresRepliees(false)} data-testid="vision-barres-ouvrir"
+          className="sf-hide-present sf-chrome absolute bottom-4 left-1/2 z-30 inline-flex -translate-x-1/2 items-center gap-2 rounded-full px-4 py-2 text-[13px] font-medium"
+          style={{ color: "var(--sf-accent)" }}>
+          <Sparkles size={15} /> Modèles &amp; IA
+        </button>
+      )}
+      {!readOnly && !isSmall && !barresRepliees && (
         <div className={`sf-hide-present absolute left-1/2 z-30 -translate-x-1/2 ${isSmall ? "bottom-3 w-[calc(100%-24px)]" : "bottom-4 w-[min(94vw,620px)]"}`} data-testid="vision-prompt-bar">
           {!isSmall && (
             <div className="sf-chrome mx-auto mb-2 flex w-fit max-w-full items-center gap-1 overflow-x-auto rounded-full p-1" data-testid="vision-template-strip" style={{ scrollbarWidth: "none" }}>
@@ -1967,6 +1985,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
 
           {/* ── Surface ── */}
           <div ref={scrollRef} onWheel={onWheelZoom}
+            onPointerDownCapture={() => { if (!barresRepliees) setBarresRepliees(true); }}
             onPointerDown={(e) => { if (e.target === e.currentTarget || e.target.dataset?.bg) onSurfacePointerDown(e); }}
             onContextMenu={(e) => { e.preventDefault(); if (!readOnly) setMode((m) => (m === "hand" ? "select" : "hand")); }}
             className={["sf-surface sf-scroll relative h-full w-full overflow-auto", mode === "hand" || readOnly ? "cursor-grab" : ""].join(" ")}
@@ -2079,7 +2098,7 @@ function ShareDialog({ board, onClose }) {
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#0b1a3d]/70 backdrop-blur-sm p-4" onClick={onClose}>
       <div className="sf sf-menu relative w-full max-w-md p-6" onClick={(e) => e.stopPropagation()} data-testid="vision-share-dialog">
         <button onClick={onClose} className="sf-btn absolute right-3 top-3"><X size={16} /></button>
-        <p className="sf-title" style={{ fontSize: 18 }}>Partager en lecture seule</p>
+        <p className="sf-title" style={{ fontSize: 18 }}>Partager ce board</p>
         <p className="sf-small mt-1" style={{ fontSize: 14 }}>Pour un coach, un associé ou un banquier : ils voient le board sans compte et ne peuvent rien modifier.</p>
         <div className="mt-4 space-y-2">
           {[["hide_finances", "Masquer les finances et le SWOT (CA, trésorerie, analyse)"], ["hide_energie", "Masquer l'énergie et la roue de l'équilibre"]].map(([k, label]) => (
@@ -2175,6 +2194,23 @@ function GuestShareDialog({ board, owner, nom, onClose }) {
       </div>
     </div>
   );
+}
+
+/* Image de carte : si le lien est cassé (ou l'image vide), un encart lisible
+   au lieu d'un grand bloc noir. */
+function ImageSure({ src, alt, className, style }) {
+  const [ko, setKo] = useState(!src);
+  useEffect(() => { setKo(!src); }, [src]);
+  if (ko) {
+    return (
+      <div className={`${className} flex flex-col items-center justify-center gap-1.5 text-center`} style={{ ...style, background: "var(--sf-card)", color: "var(--sf-muted)" }} data-testid="vision-image-ko">
+        <ImageIcon size={22} />
+        <span style={{ fontSize: 12 }}>Image indisponible — remplace-la</span>
+      </div>
+    );
+  }
+  return <img src={src} alt={alt} draggable={false} className={className} style={style}
+    onError={() => setKo(true)} onLoad={(e) => { if (e.currentTarget.naturalWidth < 2) setKo(true); }} />;
 }
 
 export { STICKY_PALETTE, stickyOf, usesPaperPalette };

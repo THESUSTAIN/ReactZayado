@@ -70,7 +70,7 @@ function App() {
   if (FLAVOR === "console") {
     return (
       <div className="App min-h-screen text-offwhite">
-        <Toaster position="top-center" theme="dark" richColors />
+        <Toaster position="top-center" offset={84} theme="dark" richColors />
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<ConsoleLogin />} />
@@ -99,7 +99,7 @@ function App() {
   return (
     <div className="App min-h-screen text-offwhite">
       <AuroraBackground />
-      <Toaster position="top-center" theme="dark" richColors />
+      <Toaster position="top-center" offset={84} theme="dark" richColors />
       <I18nProvider>
         <KairosProvider>
           <BrowserRouter>

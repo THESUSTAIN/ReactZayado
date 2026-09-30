@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion } from "framer-motion";
 import Lenis from "lenis";
 import {
   Radar as RadarGlyph, Loader2, Send, Linkedin, MessageCircle,
-  Sparkles, Copy, RefreshCw, Compass, ArrowLeft, Zap, Search, Megaphone, Mail, Phone,
+  Sparkles, Copy, RefreshCw, Compass, Zap, Search, Megaphone, Mail, Phone,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Sidebar } from "@/components/kairos/Sidebar";
@@ -12,7 +12,7 @@ import { Header } from "@/components/kairos/Header";
 import { GlassCard } from "@/components/kairos/GlassCard";
 import AiFallbackBanner from "@/components/kairos/AiFallbackBanner";
 import RadarSignaux from "@/components/kairos/RadarSignaux";
-import { fetchRadar, genererSwot, majProspect } from "@/lib/kairosApi";
+import { fetchRadar, fetchSourcesRadar, saveReglagesRadar, genererSwot, majProspect } from "@/lib/kairosApi";
 
 const CANAL_META = {
   email: { icon: Send, color: "#DEC2A3", label: "Email" },
@@ -26,46 +26,22 @@ const CANAL_META = {
 
 const EASE = [0.22, 1, 0.36, 1];
 
-function MaskedLine({ children, delay = 0, className = "" }) {
-  return (
-    <span className={`block overflow-hidden ${className}`}>
-      <motion.span
-        className="block"
-        initial={{ y: "115%" }}
-        animate={{ y: 0 }}
-        transition={{ duration: 1, delay, ease: EASE }}
-      >
-        {children}
-      </motion.span>
-    </span>
-  );
-}
-
+// Apparition douce au montage (plus de sections grisées tant qu'on n'a pas scrollé).
 function Reveal({ children, delay = 0, className = "" }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 32 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-70px" }}
-      transition={{ duration: 0.75, delay, ease: EASE }}
-      className={className}
-    >
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45, delay, ease: EASE }} className={className}>
       {children}
     </motion.div>
   );
 }
 
-function Chapter({ num, title, sub }) {
+function Chapter({ title, sub }) {
   return (
-    <Reveal className="mb-8 flex items-end gap-4 sm:gap-6">
-      <span className="font-display text-6xl font-extrabold leading-none text-white/[0.07] sm:text-8xl" data-testid={`chapter-num-${num}`}>
-        {num}
-      </span>
-      <div className="pb-1">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold">{sub}</p>
-        <h2 className="mt-1 font-display text-2xl font-bold text-offwhite sm:text-3xl">{title}</h2>
-      </div>
-    </Reveal>
+    <div className="mb-5">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold">{sub}</p>
+      <h2 className="mt-1 font-display text-xl font-bold text-offwhite sm:text-2xl">{title}</h2>
+    </div>
   );
 }
 
@@ -78,7 +54,8 @@ const SWOT_QUADRANTS = [
 
 // Branché sur POST /radar/swot — prêt côté serveur depuis un moment,
 // jamais relié à l'écran avant (retour Marie Esther : « le SWOT utile ? »).
-function SwotSection() {
+function SwotSection({ manque, onReglages }) {
+  const navigate = useNavigate();
   const [swot, setSwot] = useState(null);
   const [loading, setLoading] = useState(false);
   const [erreur, setErreur] = useState(null);
@@ -93,9 +70,23 @@ function SwotSection() {
   };
 
   return (
-    <section className="pt-20" data-testid="radar-chapter-swot">
-      <Chapter num="04" sub="Vue d'ensemble" title="Ton SWOT, généré par l'IA" />
-      {!swot && !loading && (
+    <section className="pt-14" data-testid="radar-chapter-swot">
+      <Chapter sub="Vue d'ensemble" title="Ton SWOT, généré par l'IA" />
+      {manque && manque.length > 0 && !swot && (
+        <GlassCard className="p-6" data-testid="radar-swot-manque">
+          <p className="text-sm text-offwhite/75">Pour un SWOT utile (et pas un modèle générique), il manque encore :</p>
+          <ul className="mt-3 space-y-2">
+            {manque.map((m) => (
+              <li key={m.cle} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5">
+                <span className="text-sm text-offwhite/80">{m.texte}</span>
+                <button onClick={() => (m.lien ? navigate(m.lien) : onReglages())}
+                  className="shrink-0 text-xs font-semibold text-gold hover:underline">Compléter</button>
+              </li>
+            ))}
+          </ul>
+        </GlassCard>
+      )}
+      {(!manque || manque.length === 0) && !swot && !loading && (
         <GlassCard className="p-6 text-center">
           <p className="text-sm text-offwhite/65">Une analyse forces / faiblesses / opportunités / menaces à partir de ton vrai contexte — pas un modèle générique.</p>
           <button onClick={generer} data-testid="radar-swot-generer" className="btn-gold mt-4 inline-flex items-center gap-2 !px-6 !py-2.5">
@@ -142,12 +133,6 @@ function SwotSection() {
   );
 }
 
-function blipPosition(op, i) {
-  const angle = (i * 137.5 + 25) * (Math.PI / 180);
-  const rf = 0.3 + (1 - (op.score || 50) / 100) * 0.58;
-  return { x: 50 + Math.cos(angle) * 41 * rf, y: 50 + Math.sin(angle) * 41 * rf };
-}
-
 // Vrai prospect : identité, liens directs et suivi du contact.
 function FicheProspect({ p, message }) {
   const [statut, setStatut] = useState(p.statut || "nouveau");
@@ -189,80 +174,65 @@ function FicheProspect({ p, message }) {
   );
 }
 
-function RadarVisual({ opportunities, onSelect }) {
-  return (
-    <div className="relative aspect-square w-full max-w-[440px]" data-testid="radar-visual">
-      <div className="radar-sweep absolute inset-0 rounded-full" />
-      <svg viewBox="0 0 400 400" className="absolute inset-0 h-full w-full">
-        {[60, 110, 160, 194].map((r) => (
-          <circle key={r} cx="200" cy="200" r={r} fill="none" stroke="rgba(237,242,255,0.09)" strokeWidth="1" />
-        ))}
-        <circle cx="200" cy="200" r="194" fill="none" stroke="rgba(222,194,163,0.28)" strokeWidth="1" strokeDasharray="3 6" />
-        <line x1="200" y1="6" x2="200" y2="394" stroke="rgba(237,242,255,0.06)" />
-        <line x1="6" y1="200" x2="394" y2="200" stroke="rgba(237,242,255,0.06)" />
-        <circle cx="200" cy="200" r="4" fill="#DEC2A3" />
-      </svg>
-      {opportunities.map((op, i) => {
-        const meta = CANAL_META[op.canal] || CANAL_META.email;
-        const { x, y } = blipPosition(op, i);
-        return (
-          <motion.button
-            key={i}
-            onClick={() => onSelect(i)}
-            data-testid={`radar-blip-${i}`}
-            className="absolute z-10 flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border backdrop-blur-sm"
-            style={{
-              left: `${x}%`, top: `${y}%`,
-              borderColor: `${meta.color}66`, background: `${meta.color}1f`, color: meta.color,
-            }}
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 1 + i * 0.25, duration: 0.5, ease: EASE }}
-            whileHover={{ scale: 1.25 }}
-            title={op.titre}
-          >
-            <span className="blip-pulse absolute inset-0 rounded-full" style={{ border: `1px solid ${meta.color}` }} />
-            {React.createElement(meta.icon, { size: 13 })}
-          </motion.button>
-        );
-      })}
-    </div>
-  );
-}
+const CLIENTELES = [
+  { cle: "b2c", label: "Des particuliers" },
+  { cle: "b2b", label: "Des professionnels" },
+  { cle: "mixte", label: "Les deux" },
+];
 
-function Marquee() {
-  const words = ["Signaux captés", "Ta Vision", "3 opportunités max", "Le calme avant tout", "Passe à l'action"];
-  const row = [...words, ...words, ...words];
+// Premier accès : ville + clientèle, un seul bouton.
+function PremierScan({ src, onLance }) {
+  const [clientele, setClientele] = useState(src?.clientele_choisie ? src.clientele : "");
+  const [zone, setZone] = useState(src?.zone || "");
+  const [envoi, setEnvoi] = useState(false);
+  const pret = clientele && zone.trim().length >= 2;
+  const lancer = async (e) => {
+    e.preventDefault();
+    if (!pret) return;
+    setEnvoi(true);
+    try { await saveReglagesRadar({ clientele, zone: zone.trim() }); await onLance(); }
+    catch { toast.error("Enregistrement impossible, réessaie."); }
+    finally { setEnvoi(false); }
+  };
   return (
-    <div className="overflow-hidden border-y border-white/8 py-4" data-testid="radar-marquee">
-      <div className="animate-marquee flex w-max items-center gap-10">
-        {[0, 1].map((half) => (
-          <div key={half} className="flex items-center gap-10">
-            {row.map((w, i) => (
-              <span key={`${half}-${i}`} className="flex items-center gap-10 whitespace-nowrap">
-                <span className="font-serif-italic text-xl text-offwhite/45 sm:text-2xl">{w}</span>
-                <Sparkles size={13} className="text-gold/60" />
-              </span>
+    <GlassCard gold className="p-6 sm:p-8" data-testid="radar-premier-scan">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold">Premier scan</p>
+      <h2 className="mt-1 font-display text-xl font-bold text-offwhite sm:text-2xl">Deux infos et ton Radar démarre</h2>
+      <form onSubmit={lancer} className="mt-5 space-y-5">
+        <div>
+          <p className="mb-2 text-sm font-medium text-offwhite/80">Tu vends surtout à…</p>
+          <div className="flex flex-wrap gap-2">
+            {CLIENTELES.map((c) => (
+              <button type="button" key={c.cle} onClick={() => setClientele(c.cle)} data-testid={`radar-premier-${c.cle}`}
+                className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${clientele === c.cle
+                  ? "border-gold/60 bg-gold/15 text-gold" : "border-white/15 bg-white/5 text-offwhite/75 hover:border-white/30"}`}>
+                {c.label}
+              </button>
             ))}
           </div>
-        ))}
-      </div>
-    </div>
+        </div>
+        <label className="block">
+          <span className="mb-2 block text-sm font-medium text-offwhite/80">Ta ville ou ta zone</span>
+          <input value={zone} onChange={(e) => setZone(e.target.value)} placeholder="Ex. Lyon, 69003, Île-de-France…"
+            data-testid="radar-premier-zone"
+            className="h-11 w-full max-w-sm rounded-xl border border-white/15 bg-white/5 px-4 text-sm text-offwhite placeholder:text-offwhite/40 focus:border-gold/50 focus:outline-none" />
+        </label>
+        <button disabled={!pret || envoi} data-testid="radar-premier-lancer" className="btn-gold disabled:opacity-50">
+          {envoi ? <Loader2 size={15} className="animate-spin" /> : <RadarGlyph size={15} />} Lancer mon premier scan
+        </button>
+      </form>
+    </GlassCard>
   );
 }
 
 export default function Radar() {
   const [data, setData] = useState(null);
+  const [src, setSrc] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("tous");
   const navigate = useNavigate();
   const lenisRef = useRef(null);
-  const heroRef = useRef(null);
-
-  const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
-  const yVisual = useTransform(scrollYProgress, [0, 1], [0, 90]);
-  const yTitle = useTransform(scrollYProgress, [0, 1], [0, -70]);
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.85], [1, 0]);
+  const reglagesRef = useRef(null);
 
   useEffect(() => {
     const lenis = new Lenis({ duration: 1.15, smoothWheel: true });
@@ -273,9 +243,10 @@ export default function Radar() {
     return () => { cancelAnimationFrame(raf); lenis.destroy(); };
   }, []);
 
+  const chargerSources = () => fetchSourcesRadar().then(setSrc).catch(() => setSrc({}));
   const load = (refresh = false) => {
     setLoading(true);
-    fetchRadar(refresh)
+    return fetchRadar(refresh)
       .then((d) => {
         setData(d);
         if (refresh && d.limite_relances) toast.info("Tu as déjà relancé le scan 5 fois aujourd'hui : voici les dernières opportunités.");
@@ -283,7 +254,7 @@ export default function Radar() {
       .catch(() => toast.error("Radar indisponible"))
       .finally(() => setLoading(false));
   };
-  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); chargerSources(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const opportunities = useMemo(() => data?.opportunities || [], [data]);
   const counts = useMemo(() => {
@@ -292,15 +263,18 @@ export default function Radar() {
     return c;
   }, [opportunities]);
   const filtered = filter === "tous" ? opportunities : opportunities.filter((op) => op.canal === filter);
+  const canaux = Object.keys(CANAL_META).filter((k) => counts[k]);
 
-  const scrollToOp = (i) => {
-    const el = document.getElementById(`radar-op-${i}`);
-    if (el && lenisRef.current) lenisRef.current.scrollTo(el, { offset: -110, duration: 1.2 });
-  };
+  const premierAcces = src && src.clientele_choisie === false && !src.zone;
+  const sansObjectif = src ? src.objectifs === 0 : data?.manque_objectif;
 
   const copyMessage = (op) => {
     navigator.clipboard?.writeText(op.message || "");
     toast.success("Message copié — prêt à envoyer");
+  };
+  const versReglages = () => {
+    const el = reglagesRef.current;
+    if (el && lenisRef.current) lenisRef.current.scrollTo(el, { offset: -90, duration: 1 });
   };
 
   const today = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
@@ -311,263 +285,160 @@ export default function Radar() {
       <div className="lg:pl-[92px]">
         <Header />
 
-        {/* Bandeau d'alerte si l'IA tourne en repli */}
-        <div className="mx-auto max-w-6xl px-4 pt-6 sm:px-8 lg:px-14">
+        <div className="mx-auto max-w-6xl px-4 pb-24 pt-6 sm:px-8 lg:px-14">
           <AiFallbackBanner />
-        </div>
 
-        {/* ── HERO ── */}
-        <section ref={heroRef} className="relative overflow-hidden px-4 pb-14 pt-10 sm:px-8 lg:px-14 lg:pt-14">
-          <div className="pointer-events-none absolute -right-40 -top-40 h-[480px] w-[480px] rounded-full bg-gold/[0.07] blur-3xl" />
-          <div className="mx-auto flex max-w-6xl flex-col items-center gap-10 lg:flex-row lg:items-center lg:gap-6">
-            <motion.div style={{ y: yTitle, opacity: heroOpacity }} className="relative z-10 flex-1">
-              <button
-                onClick={() => navigate("/app")}
-                data-testid="radar-back-btn"
-                className="mb-8 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/5 px-4 py-2 text-xs font-medium text-offwhite/70 transition-colors hover:border-gold/40 hover:text-offwhite"
-              >
-                <ArrowLeft size={13} /> Retour au Cockpit
-              </button>
-              <MaskedLine delay={0.1}>
-                <span className="inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold/10 px-3.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.26em] text-gold">
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-gold opacity-60" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-gold" />
-                  </span>
-                  Scan actif · {today}
+          {/* ── BANDEAU ── */}
+          <section className="relative mt-2 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] px-5 py-5 sm:px-7" data-testid="radar-bandeau">
+            <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-gold/[0.08] blur-3xl" />
+            <div className="relative flex flex-wrap items-center justify-between gap-4">
+              <div className="flex min-w-0 items-center gap-4">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-gold/30 bg-gold/10 text-gold">
+                  <RadarGlyph size={22} />
                 </span>
-              </MaskedLine>
-              <h1 className="mt-5 font-display font-extrabold leading-[0.92]" data-testid="radar-hero-title">
-                <MaskedLine delay={0.22}>
-                  <span className="text-gradient-gold text-[19vw] sm:text-[13vw] lg:text-[9.5rem]">RADAR</span>
-                </MaskedLine>
-                <MaskedLine delay={0.36}>
-                  <span className="font-serif-italic text-[9vw] font-normal text-offwhite/85 sm:text-[5.5vw] lg:text-[3.6rem]">
-                    du jour, par l'IA
+                <div className="min-w-0">
+                  <h1 className="font-display text-2xl font-extrabold text-offwhite sm:text-3xl" data-testid="radar-hero-title">
+                    Radar <span className="font-serif-italic font-normal text-offwhite/75">du jour</span>
+                  </h1>
+                  <p className="mt-0.5 text-xs capitalize text-offwhite/55">Scan · {today}</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {!premierAcces && (
+                  <button onClick={() => load(true)} disabled={loading} data-testid="radar-refresh-btn" className="btn-gold !py-2 disabled:opacity-50">
+                    {loading ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />} Relancer le scan
+                  </button>
+                )}
+                <button onClick={() => navigate("/app/vision")} data-testid="radar-vision-btn" className="btn-ghost !py-2">
+                  <Compass size={15} className="text-gold" /> Ma Vision
+                </button>
+              </div>
+            </div>
+            {!premierAcces && !sansObjectif && data?.phrase_ia && (
+              <p className="relative mt-4 font-serif-italic text-base leading-relaxed text-offwhite/80" data-testid="radar-phrase-card">« {data.phrase_ia} »</p>
+            )}
+            {!premierAcces && (data?.objectifs_utilises || []).length > 0 && (
+              <div className="relative mt-3 flex flex-wrap gap-2">
+                {data.objectifs_utilises.map((o, i) => (
+                  <span key={i} data-testid={`radar-objectif-${i}`}
+                    className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full border border-white/12 bg-white/5 px-3 py-1 text-[11px] text-offwhite/75">
+                    <Zap size={11} className="shrink-0 text-gold" /> <span className="truncate">{o}</span>
                   </span>
-                </MaskedLine>
-              </h1>
-              <MaskedLine delay={0.55} className="mt-6 max-w-md">
-                <p className="text-sm leading-relaxed text-offwhite/65 sm:text-base">
-                  Chaque jour, Zayado croise ta Vision et ton activité pour te proposer trois opportunités
-                  qualifiées, avec un message prêt à envoyer. Tu relis, tu copies, tu envoies.
-                </p>
-              </MaskedLine>
-              <motion.div
-                initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.75, duration: 0.7, ease: EASE }}
-                className="mt-8 flex flex-wrap items-center gap-3"
-              >
-                <button onClick={() => load(true)} disabled={loading} data-testid="radar-refresh-btn" className="btn-gold">
-                  {loading ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
-                  Relancer le scan
-                </button>
-                <button onClick={() => navigate("/app/vision")} data-testid="radar-vision-btn" className="btn-ghost">
-                  <Compass size={15} className="text-gold" /> Affiner ma Vision
-                </button>
-              </motion.div>
-            </motion.div>
-
-            <motion.div style={{ y: yVisual }} className="flex flex-1 items-center justify-center">
-              {loading && !data ? (
-                <div className="flex flex-col items-center gap-4 py-16" data-testid="radar-loading">
-                  <RadarGlyph className="h-10 w-10 animate-pulse text-gold" />
-                  <p className="text-xs uppercase tracking-[0.24em] text-offwhite/50">Balayage des signaux…</p>
-                </div>
-              ) : (
-                <RadarVisual opportunities={opportunities} onSelect={scrollToOp} />
-              )}
-            </motion.div>
-          </div>
-        </section>
-
-        <Marquee />
-
-        <div className="mx-auto max-w-6xl px-4 pb-24 sm:px-8 lg:px-14">
-          {/* ── CHAPITRE 01 · TON CAP ── */}
-          <section className="pt-16" data-testid="radar-chapter-cap">
-            <Chapter num="01" sub="La boussole" title="Ton cap, notre référence" />
-            <Reveal delay={0.1}>
-              <GlassCard gold className="relative overflow-hidden" data-testid="radar-phrase-card">
-                <div className="absolute -left-10 -top-10 h-32 w-32 rounded-full bg-gold/10 blur-2xl" />
-                <p className="font-serif-italic text-xl leading-relaxed text-offwhite sm:text-2xl">
-                  « {data?.phrase_ia || "Le radar écoute ta Vision…"} »
-                </p>
-                <div className="mt-5 flex flex-wrap gap-2">
-                  {(data?.objectifs_utilises || []).map((o, i) => (
-                    <span
-                      key={i}
-                      data-testid={`radar-objectif-${i}`}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/5 px-3 py-1.5 text-[11px] text-offwhite/75"
-                    >
-                      <Zap size={11} className="text-gold" /> {o}
-                    </span>
-                  ))}
-                  {(!data?.objectifs_utilises || data.objectifs_utilises.length === 0) && (
-                    <span className="text-xs italic text-offwhite/50">
-                      Aucun objectif pour l'instant : pose-en un dans ton Plan d'action pour guider le Radar.
-                    </span>
-                  )}
-                </div>
-              </GlassCard>
-            </Reveal>
-          </section>
-
-          {/* ── CHAPITRE 02 · OPPORTUNITÉS ── */}
-          <section className="pt-20" data-testid="radar-chapter-opportunites">
-            <Chapter num="02" sub="Le bijou" title="Opportunités qualifiées" />
-            <Reveal className="mb-6 flex flex-wrap items-center gap-2">
-              {["tous", ...Object.keys(CANAL_META).filter((k) => counts[k])].map((c) => {
-                const meta = CANAL_META[c];
-                const active = filter === c;
-                return (
-                  <button
-                    key={c}
-                    onClick={() => setFilter(c)}
-                    data-testid={`radar-filter-${c}`}
-                    className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-semibold transition-all duration-200 ${
-                      active
-                        ? "border-gold/60 bg-gold/15 text-gold"
-                        : "border-white/12 bg-white/5 text-offwhite/60 hover:border-white/25 hover:text-offwhite"
-                    }`}
-                  >
-                    {meta && React.createElement(meta.icon, { size: 12, style: { color: meta.color } })}
-                    {c === "tous" ? "Tous" : meta.label}
-                    <span className={`rounded-full px-1.5 text-[10px] ${active ? "bg-gold/25" : "bg-white/10"}`}>
-                      {counts[c] || 0}
-                    </span>
-                  </button>
-                );
-              })}
-            </Reveal>
-
-            {filtered.length === 0 ? (
-              <Reveal>
-                <GlassCard className="py-14 text-center" data-testid="radar-empty-state">
-                  <RadarGlyph className="mx-auto mb-4 h-9 w-9 text-gold/60" />
-                  <p className="font-display text-lg font-bold text-offwhite">Le radar n'a rien capté ici</p>
-                  <p className="mx-auto mt-2 max-w-sm text-sm text-offwhite/60">
-                    Pose un objectif dans ton Plan d'action, choisis ta clientèle et ta ville ci-dessous, ou change de filtre.
-                  </p>
-                  <button onClick={() => navigate("/app/actions?tab=objectifs")} data-testid="radar-empty-vision-btn" className="btn-gold mt-6">
-                    <Compass size={15} /> Poser un objectif
-                  </button>
-                </GlassCard>
-              </Reveal>
-            ) : (
-              <div className="space-y-5">
-                {filtered.map((op) => {
-                  const i = opportunities.indexOf(op);
-                  const meta = CANAL_META[op.canal] || CANAL_META.email;
-                  return (
-                    <Reveal key={i} delay={i * 0.08}>
-                      <div id={`radar-op-${i}`}>
-                        <GlassCard
-                          className="group relative overflow-hidden transition-all duration-300 hover:border-gold/35"
-                          data-testid={`radar-op-card-${i}`}
-                        >
-                          <span className="pointer-events-none absolute -right-4 top-1/2 -translate-y-1/2 font-display text-[7rem] font-extrabold leading-none text-white/[0.045] transition-transform duration-500 group-hover:scale-110 sm:text-[9rem]">
-                            {String(i + 1).padStart(2, "0")}
-                          </span>
-                          <div className="relative flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-7">
-                            <div className="flex items-center gap-4 sm:flex-col sm:items-center">
-                              <span
-                                className="flex h-14 w-14 items-center justify-center rounded-2xl"
-                                style={{ background: `${meta.color}1c`, color: meta.color, border: `1px solid ${meta.color}44` }}
-                              >
-                                {React.createElement(meta.icon, { size: 20 })}
-                              </span>
-                              {op.score != null ? (
-                                <div className="text-center">
-                                  <p className="font-display text-2xl font-extrabold text-gold" data-testid={`radar-op-score-${i}`}>
-                                    {op.score}
-                                  </p>
-                                  <p className="text-[9px] uppercase tracking-[0.2em] text-offwhite/45">score</p>
-                                </div>
-                              ) : (
-                                <p className="text-center text-[9px] uppercase tracking-[0.2em] text-offwhite/45" data-testid={`radar-op-piste-${i}`}>piste</p>
-                              )}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-[10px] uppercase tracking-[0.22em] text-offwhite/50">
-                                {meta.label} · relié à « {op.objectif} »
-                              </p>
-                              <h3 className="mt-1.5 font-display text-xl font-bold text-offwhite sm:text-2xl">{op.titre}</h3>
-                              {op.prospect && <FicheProspect p={op.prospect} message={op.message} />}
-                              <p className="mt-3 max-w-2xl border-l-2 border-gold/30 pl-4 font-serif-italic text-[15px] leading-relaxed text-offwhite/70">
-                                {op.message}
-                              </p>
-                            </div>
-                            <div className="flex shrink-0 sm:flex-col sm:items-end">
-                              <button
-                                onClick={() => copyMessage(op)}
-                                data-testid={`radar-copy-btn-${i}`}
-                                className="inline-flex items-center gap-2 rounded-full border border-gold/35 bg-gold/10 px-4 py-2 text-xs font-semibold text-gold transition-all duration-200 hover:bg-gold hover:text-navy-900 active:scale-95"
-                              >
-                                <Copy size={12} /> Copier le message
-                              </button>
-                            </div>
-                          </div>
-                        </GlassCard>
-                      </div>
-                    </Reveal>
-                  );
-                })}
+                ))}
               </div>
             )}
           </section>
 
-          {/* ── CHAPITRE 03 · SIGNAUX DU TERRAIN ── */}
-          <section className="pt-20" data-testid="radar-chapter-signaux">
-            <Chapter num="03" sub="Le terrain" title="Signaux autour de toi" />
-            <RadarSignaux onChange={() => load()} />
-          </section>
-
-          {/* ── CHAPITRE 04 · SWOT ── */}
-          <SwotSection />
-
-          {/* ── CHAPITRE 05 · ACTION ── */}
-          <section className="pt-20" data-testid="radar-chapter-action">
-            <Chapter num="05" sub="À toi de jouer" title="Passe à l'action" />
-            <div className="grid gap-4 sm:grid-cols-3">
-              {[
-                {
-                  icon: RefreshCw, title: "Relancer le scan", testid: "radar-action-rescan",
-                  text: "De nouvelles opportunités, alignées sur ta Vision du moment.",
-                  action: () => load(true),
-                },
-                {
-                  icon: Compass, title: "Affiner ma Vision", testid: "radar-action-vision",
-                  text: "Plus ton cap est clair, plus les opportunités sont précises.",
-                  action: () => navigate("/app/vision"),
-                },
-                {
-                  icon: ArrowLeft, title: "Retour au Cockpit", testid: "radar-action-cockpit",
-                  text: "Retrouve ton énergie, tes priorités et ton point du jour.",
-                  action: () => navigate("/app"),
-                },
-              ].map((c, i) => (
-                <Reveal key={c.testid} delay={i * 0.1}>
-                  <button
-                    onClick={c.action}
-                    data-testid={c.testid}
-                    className="glass group flex h-full w-full flex-col items-start gap-3 rounded-2xl p-6 text-left transition-all duration-300 hover:border-gold/40 hover:bg-white/[0.07]"
-                  >
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold/15 text-gold transition-transform duration-300 group-hover:-translate-y-1">
-                      {React.createElement(c.icon, { size: 17 })}
-                    </span>
-                    <p className="font-display text-base font-bold text-offwhite">{c.title}</p>
-                    <p className="text-[12.5px] leading-relaxed text-offwhite/60">{c.text}</p>
+          {/* ── PREMIER ÉCRAN : premier scan, étape manquante ou opportunités ── */}
+          <section className="pt-8" data-testid="radar-chapter-opportunites">
+            {premierAcces ? (
+              <PremierScan src={src} onLance={async () => { await chargerSources(); await load(true); }} />
+            ) : loading && !data ? (
+              <div className="grid gap-4" data-testid="radar-loading">
+                {[0, 1, 2].map((i) => <div key={i} className="h-28 animate-pulse rounded-2xl bg-white/[0.05]" />)}
+              </div>
+            ) : sansObjectif && opportunities.length === 0 ? (
+              <GlassCard gold className="p-6 sm:p-8" data-testid="radar-empty-state">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold">Étape manquante</p>
+                <h2 className="mt-1 font-display text-xl font-bold text-offwhite">Donne un cap à ton Radar</h2>
+                <p className="mt-2 max-w-xl text-sm text-offwhite/65">
+                  N'importe quel objectif suffit : un objectif à 90 jours, ton objectif à 3 ans ou quelques lignes de Vision.
+                  Le Radar s'en sert pour choisir tes 3 opportunités du jour.
+                </p>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  <button onClick={() => navigate("/app/actions?tab=objectifs")} data-testid="radar-empty-vision-btn" className="btn-gold">
+                    <Zap size={15} /> Poser un objectif
                   </button>
-                </Reveal>
-              ))}
-            </div>
-            <Reveal className="mt-14 pb-6 text-center">
-              <p className="font-serif-italic text-sm text-offwhite/40">
-                Trois opportunités par jour, pas une de plus — le calme avant tout.
-              </p>
-            </Reveal>
+                  <button onClick={() => navigate("/parametres#vision")} className="btn-ghost">
+                    <Compass size={15} className="text-gold" /> Écrire ma Vision
+                  </button>
+                </div>
+              </GlassCard>
+            ) : (
+              <>
+                <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+                  <Chapter sub="Aujourd'hui" title={`${opportunities.length || "Aucune"} opportunité${opportunities.length > 1 ? "s" : ""} pour toi`} />
+                  {canaux.length > 1 && (
+                    <div className="mb-5 flex flex-wrap items-center gap-2">
+                      {["tous", ...canaux].map((c) => {
+                        const meta = CANAL_META[c];
+                        const active = filter === c;
+                        return (
+                          <button key={c} onClick={() => setFilter(c)} data-testid={`radar-filter-${c}`}
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${active
+                              ? "border-gold/60 bg-gold/15 text-gold" : "border-white/12 bg-white/5 text-offwhite/60 hover:text-offwhite"}`}>
+                            {meta && React.createElement(meta.icon, { size: 12, style: { color: meta.color } })}
+                            {c === "tous" ? "Tous" : meta.label}
+                            <span className="rounded-full bg-white/10 px-1.5 text-[10px]">{counts[c] || 0}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                {filtered.length === 0 ? (
+                  <GlassCard className="py-10 text-center" data-testid="radar-empty-filtre">
+                    <p className="text-sm text-offwhite/65">Rien sur ce canal aujourd'hui.</p>
+                    <button onClick={() => setFilter("tous")} className="mt-3 text-xs font-semibold text-gold hover:underline">Tout afficher</button>
+                  </GlassCard>
+                ) : (
+                  <div className="space-y-4">
+                    {filtered.map((op) => {
+                      const i = opportunities.indexOf(op);
+                      const meta = CANAL_META[op.canal] || CANAL_META.email;
+                      return (
+                        <Reveal key={i} delay={i * 0.06}>
+                          <GlassCard id={`radar-op-${i}`} className="group relative overflow-hidden transition-colors duration-300 hover:border-gold/35" data-testid={`radar-op-card-${i}`}>
+                            <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
+                              <div className="flex items-center gap-3 sm:flex-col sm:items-center">
+                                <span className="flex h-12 w-12 items-center justify-center rounded-2xl"
+                                  style={{ background: `${meta.color}1c`, color: meta.color, border: `1px solid ${meta.color}44` }}>
+                                  {React.createElement(meta.icon, { size: 19 })}
+                                </span>
+                                {op.score != null ? (
+                                  <div className="text-center">
+                                    <p className="font-display text-xl font-extrabold text-gold" data-testid={`radar-op-score-${i}`}>{op.score}</p>
+                                    <p className="text-[9px] uppercase tracking-[0.2em] text-offwhite/45">score</p>
+                                  </div>
+                                ) : (
+                                  <p className="text-center text-[9px] uppercase tracking-[0.2em] text-offwhite/45" data-testid={`radar-op-piste-${i}`}>piste</p>
+                                )}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[10px] uppercase tracking-[0.2em] text-offwhite/50">
+                                  {meta.label}{op.objectif ? <> · relié à « {op.objectif} »</> : null}
+                                </p>
+                                <h3 className="mt-1 font-display text-lg font-bold text-offwhite sm:text-xl">{op.titre}</h3>
+                                {op.prospect && <FicheProspect p={op.prospect} message={op.message} />}
+                                <p className="mt-3 max-w-2xl border-l-2 border-gold/30 pl-4 font-serif-italic text-[15px] leading-relaxed text-offwhite/75">{op.message}</p>
+                              </div>
+                              <div className="flex shrink-0 sm:flex-col sm:items-end">
+                                <button onClick={() => copyMessage(op)} data-testid={`radar-copy-btn-${i}`}
+                                  className="inline-flex items-center gap-2 rounded-full border border-gold/35 bg-gold/10 px-4 py-2 text-xs font-semibold text-gold transition-colors hover:bg-gold hover:text-navy-900">
+                                  <Copy size={12} /> Copier le message
+                                </button>
+                              </div>
+                            </div>
+                          </GlassCard>
+                        </Reveal>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
           </section>
+
+          {/* ── SIGNAUX DU TERRAIN + réglages ── */}
+          {!premierAcces && (
+            <section ref={reglagesRef} className="pt-14" data-testid="radar-chapter-signaux">
+              <Chapter sub="Le terrain" title="Signaux autour de toi" />
+              <RadarSignaux onChange={() => { load(); chargerSources(); }} />
+            </section>
+          )}
+
+          {/* ── SWOT (seulement s'il y a assez de données) ── */}
+          {!premierAcces && <SwotSection manque={src?.swot_manque} onReglages={versReglages} />}
         </div>
       </div>
     </div>

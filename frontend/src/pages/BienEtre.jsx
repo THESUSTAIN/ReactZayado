@@ -23,10 +23,10 @@ const MOOD_FACES = ["😞", "🙁", "😐", "🙂", "😊"];
 
 // Couleurs de la variante CLAIRE : celles du thème clair existant (theme-clair),
 // la maquette ne sert que de gabarit de forme, pas de palette.
-const L_NAVY = "#1F2A44";
-const L_MUTED = "rgba(31,42,68,0.55)";
-const L_FAINT = "rgba(31,42,68,0.45)";
-const L_GOLD = "#8A5A1E";
+const L_NAVY = "var(--be-ink)";
+const L_MUTED = "var(--be-muted)";
+const L_FAINT = "var(--be-muted)";
+const L_GOLD = "var(--be-accent)";
 
 // Palette apaisée (retour Marie Esther : le vert fluo piquait les yeux) —
 // sauge douce, bleu ardoise, terracotta feutré, beige doré.
@@ -46,7 +46,20 @@ const RITUALS = [
   { id: "r6", icon: Sparkles,  title: "Visualisation Refuge",  desc: "8 min · Ton lieu-refuge intérieur",                time: "08:00" },
 ];
 
+/** Suit la classe theme-clair posée sur <body> par le bouton lune/soleil du header. */
+function useThemeClair() {
+  const [clair, setClair] = useState(() => document.body.classList.contains("theme-clair"));
+  useEffect(() => {
+    const sync = () => setClair(document.body.classList.contains("theme-clair"));
+    const obs = new MutationObserver(sync);
+    obs.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
+  return clair;
+}
+
 export default function BienEtre() {
+  const clair = useThemeClair();
   const { aCheckin, energy } = useKairos();
   // Mesures réelles du jour (serveur). null = pas encore mesuré — « — », jamais un faux chiffre.
   const [vitals, setVitals] = useState(null);
@@ -137,7 +150,7 @@ export default function BienEtre() {
     <div className="be-page min-h-screen" data-testid="page-bienetre">
       <Sidebar />
       {/* Thème crème limité au contenu : la barre latérale garde son style. */}
-      <div className="be-clair theme-creme lg:pl-[92px]">
+      <div className={`${clair ? "be-clair " : ""}lg:pl-[92px]`}>
         <Header title="Bien-être & Mindset" subtitle="Prendre soin de toi, et de ton état d'esprit d'entrepreneur." />
 
         <main className="mx-auto max-w-5xl px-4 pb-28 pt-4 sm:px-6 sm:pt-6 lg:pb-12">
@@ -191,19 +204,19 @@ export default function BienEtre() {
                     <div className="flex items-start justify-between gap-2">
                       <h2 className="font-display text-[22px] font-semibold" style={{ color: L_NAVY }}>Tes rituels doux du jour</h2>
                       {serie?.jours > 0 && (
-                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: "rgba(217,169,78,0.16)", color: L_GOLD }} data-testid="bienetre-serie">
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: "var(--be-accent-soft)", color: L_GOLD }} data-testid="bienetre-serie">
                           <Flame size={12} /> {serie.jours} j
                         </span>
                       )}
                     </div>
-                    <ul className="mt-3 divide-y" style={{ borderColor: "#EDE7DC" }}>
+                    <ul className="mt-3">
                       {RITUALS.slice(0, 4).map((r) => {
                         const done = !!checked[r.id];
                         return (
-                          <li key={r.id} className="border-[#EDE7DC]">
+                          <li key={r.id} className="border-b last:border-b-0" style={{ borderColor: "var(--be-line)" }}>
                             <button onClick={() => toggleRitual(r.id)} className="flex w-full items-center gap-3 py-2.5 text-left" data-testid={`rituel-${r.id}`}>
-                              <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] border-2 transition ${done ? "border-[#1F2A44] bg-[#1F2A44]" : "border-[#D9CBB3] bg-white"}`}>
-                                {done && <Check size={12} className="text-white" strokeWidth={3} />}
+                              <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] border-2 transition ${done ? "be-check-on" : "be-check-off"}`}>
+                                {done && <Check size={12} strokeWidth={3} />}
                               </span>
                               <span className={`text-[15px] ${done ? "line-through opacity-60" : ""}`} style={{ color: L_NAVY }}>{r.title}</span>
                             </button>
@@ -239,9 +252,9 @@ export default function BienEtre() {
                     const done = !!checked[r.id];
                     return (
                       <button key={r.id} onClick={() => toggleRitual(r.id)} data-testid={`rituel-liste-${r.id}`}
-                        className={`flex items-start gap-3 rounded-2xl border p-4 text-left transition ${done ? "border-[#1F2A44]/30 bg-[#F4EFE6]" : "border-[#EDE7DC] bg-white hover:border-[#D9CBB3]"}`}>
-                        <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] border-2 ${done ? "border-[#1F2A44] bg-[#1F2A44]" : "border-[#D9CBB3]"}`}>
-                          {done && <Check size={12} className="text-white" strokeWidth={3} />}
+                        className={`flex items-start gap-3 rounded-2xl border p-4 text-left transition ${done ? "be-rituel-on" : "be-rituel-off"}`}>
+                        <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] border-2 ${done ? "be-check-on" : "be-check-off"}`}>
+                          {done && <Check size={12} strokeWidth={3} />}
                         </span>
                         <span className="min-w-0">
                           <span className="flex items-center gap-2 text-[14.5px] font-semibold" style={{ color: L_NAVY }}><r.icon size={15} style={{ color: L_GOLD }} /> {r.title}</span>
@@ -272,7 +285,7 @@ export default function BienEtre() {
                         {semaine.map((j) => (
                           <div key={j.date} className="flex flex-1 flex-col items-center gap-2">
                             <div className="flex h-32 w-full items-end justify-center">
-                              <span className="w-full max-w-[26px] rounded-full" style={{ height: j.energie != null ? `${(j.energie / 5) * 100}%` : "0%", background: j.jour === courbe?.analyse?.creux?.jour?.slice(0, 3) ? "#C98B84" : L_NAVY }} title={j.energie != null ? `${j.energie}/5` : "non mesuré"} />
+                              <span className="w-full max-w-[26px] rounded-full" style={{ height: j.energie != null ? `${(j.energie / 5) * 100}%` : "0%", background: j.jour === courbe?.analyse?.creux?.jour?.slice(0, 3) ? "#C98B84" : "var(--be-bar)" }} title={j.energie != null ? `${j.energie}/5` : "non mesuré"} />
                             </div>
                             <span className="text-[10.5px] capitalize" style={{ color: L_MUTED }}>{j.jour}</span>
                           </div>
@@ -311,10 +324,10 @@ function Anneau({ valeur }) {
   const pct = valeur != null ? valeur / 5 : 0;
   return (
     <svg viewBox="0 0 140 140" className="h-[140px] w-[140px] shrink-0" aria-hidden="true">
-      <circle cx="70" cy="70" r={r} fill="none" stroke="#F1EADF" strokeWidth="11" />
+      <circle cx="70" cy="70" r={r} fill="none" style={{ stroke: "var(--be-ring-track)" }} strokeWidth="11" />
       <circle cx="70" cy="70" r={r} fill="none" stroke="#D9BE93" strokeWidth="11" strokeLinecap="round"
         strokeDasharray={`${c * pct} ${c}`} transform="rotate(-90 70 70)" style={{ transition: "stroke-dasharray .6s ease" }} />
-      <text x="70" y="70" textAnchor="middle" dominantBaseline="central" fontFamily="inherit" fontSize="34" fontWeight="600" fill={L_NAVY} className="font-display">
+      <text x="70" y="70" textAnchor="middle" dominantBaseline="central" fontFamily="inherit" fontSize="34" fontWeight="600" style={{ fill: L_NAVY }} className="font-display">
         {valeur != null ? `${valeur}/5` : "—"}
       </text>
     </svg>
@@ -374,7 +387,7 @@ function RoueCard() {
         <Link to="/app/vision?view=wheel" className="mt-1 block" title="Modifier ma roue" data-testid="bienetre-roue-lien">
           <svg viewBox={`0 0 ${S} ${S}`} className="mx-auto h-[230px] w-full max-w-[300px]">
             {[0.25, 0.5, 0.75, 1].map((f) => (
-              <polygon key={f} points={piliers.map((_, i) => pt(i, R * f).join(",")).join(" ")} fill="none" stroke="#E7DFD2" strokeWidth="1" />
+              <polygon key={f} points={piliers.map((_, i) => pt(i, R * f).join(",")).join(" ")} fill="none" style={{ stroke: "var(--be-line)" }} strokeWidth="1" />
             ))}
             {piliers.map((p, i) => {
               const v = Math.max(0.06, (Number(p.score) || 0) / 100);
@@ -383,7 +396,7 @@ function RoueCard() {
             })}
             {piliers.map((p, i) => {
               const [x, y] = pt(i, R + 22);
-              return <text key={`t${i}`} x={x} y={y} textAnchor={Math.abs(x - C) < 8 ? "middle" : x > C ? "start" : "end"} dominantBaseline="middle" fontSize="10" fill={L_NAVY}>{p.name}</text>;
+              return <text key={`t${i}`} x={x} y={y} textAnchor={Math.abs(x - C) < 8 ? "middle" : x > C ? "start" : "end"} dominantBaseline="middle" fontSize="10" style={{ fill: L_NAVY }}>{p.name}</text>;
             })}
           </svg>
         </Link>
@@ -412,7 +425,7 @@ function IntentionDuJour() {
     return (
       <div className="be-raccourci !justify-start" data-testid="bienetre-mini-intention">
         <input autoFocus value={texte} onChange={(e) => setTexte(e.target.value)} onKeyDown={(e) => e.key === "Enter" && enregistrer()} onBlur={enregistrer}
-          placeholder="Aujourd'hui, je…" maxLength={200} className="w-full rounded-lg border border-[#E2D5BE] bg-white px-2 py-1.5 text-[13px]" data-testid="bienetre-intention-input" />
+          placeholder="Aujourd'hui, je…" maxLength={200} className="be-input w-full rounded-lg border px-2 py-1.5 text-[13px]" data-testid="bienetre-intention-input" />
       </div>
     );
   }

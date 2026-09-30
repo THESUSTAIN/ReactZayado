@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import CollaborateurModal from "./CollaborateurModal";
 import { prendreOngletEnAttente, prendrePromptEnAttente, discuterAvecIA } from "./GlobalChat";
+import CanauxCopilote from "@/components/kairos/CanauxCopilote";
 import { useKairos } from "@/context/KairosContext";
 import {
   streamChat, fetchPointDuJour, fetchDecisions, suggererDecisions, patchDecision, fetchActualite, enregistrerArticle, fetchEnregistres, validerDecisionEmail,
@@ -133,9 +134,64 @@ const RYTHMES_ACTU = [
   { key: "jamais", label: "Jamais, je la consulterai moi-même", confirm: "Très bien — pas d'alerte. Ton briefing t'attend dans l'onglet Actualité quand tu en as envie." },
 ];
 
+// Réglages que le Copilote demande lui-même, UN à la fois, au fil des ouvertures
+// du chat (avant : seul le rythme des actualités était demandé). Tout est
+// enregistré dans le profil et modifiable dans Paramètres.
+const OUTILS = ["Trello", "Microsoft Teams", "Slack", "Notion", "Google Agenda", "Outlook", "Excel / Sheets"];
+const REGLAGES = [
+  { key: "actu_rythme", question: <>Avant de commencer : à quel rythme veux-tu que la cloche te signale <b>l'actualité de ton marché</b> ?</>,
+    options: RYTHMES_ACTU.map((r) => ({ valeur: r.key, label: r.label, confirm: r.confirm })) },
+  { key: "copilote_ton", question: <>Comment préfères-tu que je te parle ?</>,
+    options: [
+      { valeur: "doux", label: "Doux et bienveillant", confirm: "Entendu — je reste doux et bienveillant. Tu peux changer ça dans Paramètres → Profil." },
+      { valeur: "direct", label: "Direct et concis", confirm: "Entendu — j'irai droit au but, réponses courtes." },
+      { valeur: "coach", label: "Coach qui me challenge", confirm: "Entendu — je te challengerai (toujours avec respect)." },
+    ] },
+  { key: "heure_point", question: <>À quelle heure veux-tu recevoir ton <b>point du jour</b> ?</>,
+    options: ["07:30", "08:30", "09:30", "12:00"].map((h) => ({ valeur: h, label: h.replace(":", "h"), confirm: `Noté — ton point du jour arrivera à ${h.replace(":", "h")}.` })) },
+  { key: "outils", multi: true, question: <>Quels outils utilises-tu déjà ? Je proposerai des actions qui s'y intègrent.</>, options: OUTILS.map((o) => ({ valeur: o, label: o })) },
+  { key: "canaux_vus", canaux: true },
+];
+const aujourdhuiIso = () => new Date().toISOString().slice(0, 10);
+
+function QuestionReglage({ q, onRepondre, onPlusTard }) {
+  const [choix, setChoix] = useState([]);
+  if (q.canaux) return <CanauxCopilote compact onFerme={() => onRepondre(q, "vu", "Plus tard")} />;
+  return (
+    <div className="rounded-2xl border border-gold/25 bg-gold/5 p-4" data-testid={`reglage-${q.key}`}>
+      <p className="text-sm leading-relaxed text-offwhite/90">{q.question}</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {q.options.map((o) => {
+          const pris = choix.includes(o.valeur);
+          return (
+            <button key={o.valeur} data-testid={`reglage-${q.key}-${o.valeur}`}
+              onClick={() => (q.multi ? setChoix((c) => (pris ? c.filter((x) => x !== o.valeur) : [...c, o.valeur])) : onRepondre(q, o.valeur, o.label, o.confirm))}
+              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${pris ? "border-gold bg-gold text-navy-900" : "border-gold/30 bg-gold/10 text-gold hover:bg-gold/20"}`}>
+              {o.label}
+            </button>
+          );
+        })}
+      </div>
+      <div className="mt-3 flex items-center gap-3">
+        {q.multi && (
+          <button onClick={() => onRepondre(q, choix.length ? choix.join(", ") : "aucun", choix.length ? choix.join(", ") : "Aucun de ces outils",
+            choix.length ? `Noté : ${choix.join(", ")}. Je m'en servirai pour te proposer des actions compatibles.` : "Noté — pas d'outil externe pour l'instant.")}
+            className="rounded-full bg-gold px-3.5 py-1.5 text-xs font-semibold text-navy-900" data-testid={`reglage-${q.key}-valider`}>Valider</button>
+        )}
+        <button onClick={() => onPlusTard(q)} className="text-[11.5px] text-offwhite/50 hover:text-offwhite" data-testid={`reglage-${q.key}-plus-tard`}>Plus tard</button>
+      </div>
+    </div>
+  );
+}
+
 function ChatTab({ firstName }) {
-  const { mode, contexte } = useKairos();
-  const accueil = `Bonjour${firstName ? ` ${firstName}` : ""}. Je suis le Copilote IA Zayado, là pour t'accompagner en douceur. Par quoi commence-t-on ?`;
+  const { mode, contexte, aCheckin, priorities, loaded } = useKairos();
+  // Nouveau compte (aucun check-in, aucune action) : le Copilote se présente et
+  // propose les 3 premiers pas, au lieu d'une simple formule de politesse.
+  const debutant = loaded && !aCheckin && !(priorities || []).length;
+  const accueil = debutant
+    ? `Bienvenue${firstName ? ` ${firstName}` : ""} 👋 Je suis ton Copilote Zayado. Pour bien démarrer, trois petits pas :\n1. Ton check-in du jour (30 secondes)\n2. Ton objectif principal\n3. Une première action de 15 minutes\nDis-moi par lequel on commence, je t'accompagne.`
+    : `Bonjour${firstName ? ` ${firstName}` : ""}. Je suis le Copilote IA Zayado, là pour t'accompagner en douceur. Par quoi commence-t-on ?`;
   const [messages, setMessages] = useState([{ role: "assistant", content: accueil }]);
   useEffect(() => {
     contexteChat.texte = messages.slice(1).slice(-8)
@@ -155,9 +211,11 @@ function ChatTab({ firstName }) {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, streaming]);
 
+  const [conversationLibre, setConversationLibre] = useState(false);
   const send = async (text) => {
     const content = (text ?? input).trim();
     if (!content) return;
+    setConversationLibre(true);
     if (streaming) { setInput(content); return; } // réponse en cours : le texte attend dans le champ
     setInput("");
     setMessages((m) => [...m, { role: "user", content }, { role: "assistant", content: "" }]);
@@ -206,12 +264,23 @@ function ChatTab({ firstName }) {
 
   // 1ère connexion : le Copilote demande le rythme de l'alerte Actualité et
   // l'enregistre lui-même (au lieu du défaut « tous les jours » silencieux).
-  const [rythmeActu, setRythmeActu] = useState(() => contexte?.actu_rythme || null);
-  useEffect(() => { if (!rythmeActu && contexte?.actu_rythme) setRythmeActu(contexte.actu_rythme); }, [contexte]); // eslint-disable-line react-hooks/exhaustive-deps
-  const choisirRythme = (r) => {
-    setRythmeActu(r.key);
-    saveProfile({ contexte_metier: { actu_rythme: r.key } }).catch(() => {});
-    setMessages((m) => [...m, { role: "user", content: r.label }, { role: "assistant", content: r.confirm }]);
+  const [reponses, setReponses] = useState({});
+  const val = (k) => reponses[k] ?? contexte?.[k];
+  // Une question par ouverture ; « Plus tard » = plus de question aujourd'hui.
+  const reporte = val("reglages_reportes_le") === aujourdhuiIso();
+  const questionEnCours = !reporte && contexte ? REGLAGES.find((q) => val(q.key) == null || val(q.key) === "") : null;
+  const [questionsPosees, setQuestionsPosees] = useState(0);
+  const repondre = (q, valeur, label, confirm) => {
+    setReponses((r) => ({ ...r, [q.key]: valeur }));
+    setQuestionsPosees((n) => n + 1);
+    const patch = { contexte_metier: { [q.key]: valeur } };
+    if (q.key === "heure_point") patch.heure_checkin = valeur;
+    saveProfile(patch).catch(() => {});
+    if (!q.canaux) setMessages((m) => [...m, { role: "user", content: label }, ...(confirm ? [{ role: "assistant", content: confirm }] : [])]);
+  };
+  const plusTard = (q) => {
+    setReponses((r) => ({ ...r, reglages_reportes_le: aujourdhuiIso() }));
+    saveProfile({ contexte_metier: { reglages_reportes_le: aujourdhuiIso() } }).catch(() => {});
   };
 
   return (
@@ -253,18 +322,10 @@ function ChatTab({ firstName }) {
             </div>
           </div>
         ))}
-        {messages.length === 1 && !streaming && !rythmeActu && (
-          <div className="rounded-2xl border border-gold/25 bg-gold/5 p-4" data-testid="actu-rythme-question">
-            <p className="text-sm leading-relaxed text-offwhite/90">Avant de commencer : à quel rythme veux-tu que la cloche te signale <b>l'actualité de ton marché</b> ?</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {RYTHMES_ACTU.map((r) => (
-                <button key={r.key} onClick={() => choisirRythme(r)} data-testid={`actu-rythme-${r.key}`}
-                  className="rounded-full border border-gold/30 bg-gold/10 px-3 py-1.5 text-xs font-medium text-gold transition-colors hover:bg-gold/20">
-                  {r.label}
-                </button>
-              ))}
-            </div>
-          </div>
+        {/* Réglage demandé par le Copilote : au démarrage d'une conversation, et
+            jusqu'à 2 d'affilée (pas plus, pour ne pas transformer le chat en formulaire). */}
+        {questionEnCours && !streaming && !conversationLibre && questionsPosees < 2 && (
+          <QuestionReglage key={questionEnCours.key} q={questionEnCours} onRepondre={repondre} onPlusTard={plusTard} />
         )}
       </div>
       <div className="border-t border-white/10 px-4 py-3">

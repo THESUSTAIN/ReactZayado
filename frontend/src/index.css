@@ -528,7 +528,7 @@ button.be-mini:hover > span:last-child { background: #1F2A44; color: #F8F8F6; }
   box-shadow: 0 24px 60px rgba(31, 42, 68, 0.18) !important;
 }
 /* Bandeau du header au défilement */
-.be-clair .bg-\[\#0b1a3d\]\/60 { background: rgba(248, 248, 246, 0.88) !important; backdrop-filter: blur(14px); }
+.be-clair .zy-header-defile, body.theme-clair .zy-header-defile { background: rgba(248, 248, 246, 0.88) !important; backdrop-filter: blur(14px); }
 
 /* Overlays volontairement sombres (séance de respiration immersive) : on ne
    les inverse pas — repère .be-dark-keep posé sur leur racine. */
@@ -569,28 +569,57 @@ body.theme-clair [data-testid="bottomnav"] {
 }
 
 
-/* ── Page Bien-être & Mindset (maquette crème, sept. 2026) ── */
-.be-page { background: #F4EFE6; }
-.be-page .be-card { background: #FFFFFF; border: 1px solid #EDE7DC; border-radius: 22px; padding: 24px; box-shadow: 0 1px 2px rgba(31,42,68,.05), 0 12px 30px -20px rgba(31,42,68,.18); }
-.be-tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; background: #FFFFFF; border: 1px solid #EDE7DC; border-radius: 999px; padding: 5px; box-shadow: 0 8px 22px -18px rgba(31,42,68,.3); }
-.be-tab { flex: 1 0 auto; border-radius: 999px; padding: 9px 18px; font-size: 15px; color: #1F2A44; transition: background .18s ease; white-space: nowrap; }
-.be-tab:hover { background: #F6F1E9; }
-.be-tab[data-actif="true"] { background: #E3CDA8; font-weight: 600; }
-.be-suggestion { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; background: #EFE5D5; border-radius: 18px; padding: 18px 24px; }
-.be-raccourci { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 96px; background: #FFFFFF; border: 1px solid #EDE7DC; border-radius: 18px; padding: 16px 10px; text-align: center; color: #1F2A44; font-size: 15px; box-shadow: 0 8px 22px -18px rgba(31,42,68,.3); transition: transform .18s ease, box-shadow .18s ease; }
-button.be-raccourci:hover { transform: translateY(-2px); box-shadow: 0 12px 24px -16px rgba(31,42,68,.35); }
-.be-tuile { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 78px; background: #F4EDE1; border-radius: 14px; padding: 10px 8px; transition: filter .18s ease; }
-.be-tuile:hover { filter: brightness(.97); }
-/* Séance complète (onglet Outils) : carte navy, textes clairs malgré .be-clair */
+.theme-creme .text-offwhite\/85, .theme-creme .text-offwhite\/75 { color: rgba(31, 42, 68, 0.8) !important; }
+.theme-creme .placeholder\:text-offwhite\/40::placeholder { color: rgba(31, 42, 68, 0.4) !important; }
+
+/* ── Page Bien-être & Mindset (mise en page maquette) ──
+   Sombre par défaut : fond bleu de l'app, cartes « verre ».
+   Clair (body.theme-clair) : palette claire de l'app — PAS le beige de l'admin. */
+.be-page {
+  --be-ink: #F5F1EA; --be-muted: rgba(245, 241, 234, 0.62); --be-accent: #DEC2A3;
+  --be-accent-soft: rgba(222, 194, 163, 0.16); --be-line: rgba(255, 255, 255, 0.12);
+  --be-card: rgba(255, 255, 255, 0.06); --be-card-border: rgba(255, 255, 255, 0.12);
+  --be-tile: rgba(255, 255, 255, 0.07); --be-suggestion: rgba(222, 194, 163, 0.12);
+  --be-tab-on: #DEC2A3; --be-tab-on-ink: #0f1b3a; --be-ring-track: rgba(255, 255, 255, 0.10);
+  --be-bar: #DEC2A3; --be-input: rgba(255, 255, 255, 0.08);
+}
+body.theme-clair .be-page {
+  --be-ink: #1F2A44; --be-muted: rgba(31, 42, 68, 0.58); --be-accent: #8A5A1E;
+  --be-accent-soft: rgba(217, 169, 78, 0.16); --be-line: #E8E6E1;
+  --be-card: #FFFFFF; --be-card-border: #E8E6E1;
+  --be-tile: #F3F3F1; --be-suggestion: rgba(217, 169, 78, 0.12);
+  --be-tab-on: #1F2A44; --be-tab-on-ink: #F8F8F6; --be-ring-track: #ECECEA;
+  --be-bar: #1F2A44; --be-input: #FFFFFF;
+}
+.be-page .be-card { background: var(--be-card); border: 1px solid var(--be-card-border); border-radius: 22px; padding: 24px; color: var(--be-ink); backdrop-filter: blur(18px); box-shadow: 0 16px 36px -26px rgba(3, 10, 24, 0.8); }
+body.theme-clair .be-page .be-card { backdrop-filter: none; box-shadow: 0 1px 2px rgba(31,42,68,.05), 0 12px 30px -20px rgba(31,42,68,.18); }
+.be-tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; background: var(--be-card); border: 1px solid var(--be-card-border); border-radius: 999px; padding: 5px; backdrop-filter: blur(18px); }
+.be-tab { flex: 1 0 auto; border-radius: 999px; padding: 9px 18px; font-size: 15px; color: var(--be-ink); opacity: .8; transition: background .18s ease, opacity .18s ease; white-space: nowrap; }
+.be-tab:hover { opacity: 1; background: var(--be-tile); }
+.be-tab[data-actif="true"] { background: var(--be-tab-on); color: var(--be-tab-on-ink); font-weight: 600; opacity: 1; }
+.be-suggestion { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; background: var(--be-suggestion); border: 1px solid var(--be-accent-soft); border-radius: 18px; padding: 18px 24px; }
+.be-raccourci { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 96px; background: var(--be-card); border: 1px solid var(--be-card-border); border-radius: 18px; padding: 16px 10px; text-align: center; color: var(--be-ink); font-size: 15px; transition: transform .18s ease, border-color .18s ease; }
+button.be-raccourci:hover { transform: translateY(-2px); border-color: var(--be-accent); }
+.be-tuile { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 78px; background: var(--be-tile); border-radius: 14px; padding: 10px 8px; transition: filter .18s ease; }
+.be-tuile:hover { filter: brightness(1.08); }
+.be-check-off { border-color: var(--be-muted); background: transparent; }
+.be-check-on { border-color: var(--be-accent); background: var(--be-accent); color: var(--be-tab-on-ink); }
+body.theme-clair .be-check-on { border-color: #1F2A44; background: #1F2A44; color: #fff; }
+.be-rituel-off { border-color: var(--be-line); background: var(--be-card); }
+.be-rituel-off:hover { border-color: var(--be-accent); }
+.be-rituel-on { border-color: var(--be-accent); background: var(--be-accent-soft); }
+.be-input { background: var(--be-input); color: var(--be-ink); border-color: var(--be-line); }
+.be-page .be-btn-navy { background: var(--be-tab-on); color: var(--be-tab-on-ink); }
+/* Séance complète (onglet Outils) en thème clair : carte navy, textes clairs malgré .be-clair */
 .be-seance-dark > section { background: #1C2746 !important; border-color: transparent !important; }
 .be-clair .be-seance-dark .text-white { color: #F6F1E9 !important; }
 .be-clair .be-seance-dark .text-white\/85, .be-clair .be-seance-dark .text-white\/70 { color: rgba(246,241,233,.8) !important; }
 .be-clair .be-seance-dark .text-white\/60, .be-clair .be-seance-dark .text-white\/55, .be-clair .be-seance-dark .text-white\/50 { color: rgba(246,241,233,.6) !important; }
 .be-clair .be-seance-dark .bg-white\/\[0\.03\] { background: rgba(255,255,255,.05) !important; box-shadow: none !important; }
 .be-clair .be-seance-dark .border-white\/10, .be-clair .be-seance-dark .border-white\/15 { border-color: rgba(255,255,255,.18) !important; }
-.theme-creme .text-offwhite\/85, .theme-creme .text-offwhite\/75 { color: rgba(31, 42, 68, 0.8) !important; }
-.theme-creme .placeholder\:text-offwhite\/40::placeholder { color: rgba(31, 42, 68, 0.4) !important; }
-.be-page .theme-creme { background: transparent; }
-/* Bas de la barre latérale (langue, réglages) lisible sur le fond crème de Bien-être */
-.be-page .side-nav > button[data-testid="nav-settings"]:not(.bg-white) { color: rgba(31, 42, 68, 0.65); }
-.be-page .side-nav [data-testid="lang-switcher-icon"] { color: rgba(31, 42, 68, 0.75); background: #FFFFFF; border-color: #E2D5BE; }
+/* Thème clair : teintes manquantes (textes /85 /75 et cartes /[0.06] /[0.10] restaient blancs sur blanc) */
+body.theme-clair .text-offwhite\/85, body.theme-clair .text-offwhite\/75 { color: rgba(31, 42, 68, 0.8) !important; }
+body.theme-clair .bg-white\/\[0\.06\], body.theme-clair .bg-white\/\[0\.10\], body.theme-clair .bg-white\/\[0\.08\] { background: #FFFFFF !important; box-shadow: 0 1px 8px -4px rgba(31, 42, 68, 0.08); }
+body.theme-clair .border-white\/\[0\.14\], body.theme-clair .border-white\/\[0\.16\], body.theme-clair .border-white\/25 { border-color: #E8E6E1 !important; }
+body.theme-clair input::placeholder, body.theme-clair textarea::placeholder { color: rgba(31, 42, 68, 0.42) !important; }
+body.theme-clair [data-testid="lang-switcher-icon"] { color: rgba(31, 42, 68, 0.75) !important; background: #FFFFFF !important; border-color: #E8E6E1 !important; }

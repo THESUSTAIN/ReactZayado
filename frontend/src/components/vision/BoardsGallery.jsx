@@ -137,9 +137,9 @@ export function BoardsGallery({ onOpenBoard, onGenerate }) {
             </div>
           </button>
         ))}
-        {boards && (
+        {boards && boards.length === 0 && (
           <button onClick={() => setNouveau(true)} className="flex min-h-[150px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-white/15 text-[13px] text-offwhite/55 transition hover:border-gold/50 hover:text-gold sm:min-h-[200px]" data-testid="vision-nouveau-tuile">
-            <Plus size={22} /> Nouveau board
+            <Plus size={22} /> Créer mon premier board
           </button>
         )}
       </div>

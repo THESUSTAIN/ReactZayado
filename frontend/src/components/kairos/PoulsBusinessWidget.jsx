@@ -50,7 +50,10 @@ export default function PoulsBusinessWidget() {
     );
   }
 
-  const meta = ALERTE_META[data.alerte] || ALERTE_META.vert;
+  // Pas de « Rythme sain » sur un compte vide : rien saisi → badge neutre.
+  const vide = !(data.ca_mensuel > 0 || data.ca_objectif > 0 || data.tresorerie > 0 || data.factures_en_attente > 0);
+  const meta = vide ? { color: "#9AA3B5", label: "À compléter", bg: "rgba(154,163,181,0.15)" }
+    : (ALERTE_META[data.alerte] || ALERTE_META.vert);
   const fmt = (v) => (v || 0).toLocaleString("fr-FR", { maximumFractionDigits: 0 });
 
   return (
@@ -83,7 +86,7 @@ export default function PoulsBusinessWidget() {
             <span className="inline-flex h-6 items-center gap-1.5 rounded-full px-2 text-[10px] font-semibold" style={{ background: meta.bg, color: meta.color }}>
               ● {meta.label}
             </span>
-            <p className="flex-1 text-[12.5px] italic leading-relaxed text-offwhite/80">{data.phrase_ia}</p>
+            <p className="flex-1 text-[12.5px] italic leading-relaxed text-offwhite/80">{vide ? "Renseigne ton CA du mois et ton objectif (bouton Éditer) pour que Zayado prenne ton pouls." : data.phrase_ia}</p>
           </div>
         </>
       ) : (

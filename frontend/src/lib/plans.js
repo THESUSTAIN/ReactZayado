@@ -53,6 +53,9 @@ export const PLANS_GRILLE = PLANS.filter((p) => !p.masque);
 // Essai « 1 mois pour 1 € » (modèle Shopify) sur Solo, une fois par compte.
 // ⚠ Garder aligné avec ESSAI_PRIX / ESSAI_JOURS côté serveur (commerce_ext.py).
 export const ESSAI = { plan: "serenite", prix: 1, mois: 1 };
+// « 1 mois » / « 2 mois » et « le premier mois » / « les 2 premiers mois » (plus de « les 1 premiers mois »).
+export const essaiDuree = () => `${ESSAI.mois} mois`;
+export const essaiPeriode = () => (ESSAI.mois === 1 ? "le premier mois" : `les ${ESSAI.mois} premiers mois`);
 export const prixFondateurMois = (p, cycle) =>
   p.fondateur ? (cycle === "annuel" ? Math.round(p.fondateur.annuel / 12) : p.fondateur.mensuel) : null;
 export const dateFinFr = (iso) => {

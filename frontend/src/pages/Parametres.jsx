@@ -15,6 +15,7 @@ import { oublierAbonnement } from "@/lib/acces";
 import { useI18n } from "@/i18n";
 import { Link, useNavigate } from "react-router-dom";
 import IntegrationsSection from "@/components/kairos/IntegrationsSection";
+import CanauxCopilote from "@/components/kairos/CanauxCopilote";
 
 // Paramètres en grande fenêtre modale — structure inspirée de
 // ReactZayado/SettingsModal.jsx (v13) : recherche + sections latérales.
@@ -230,6 +231,26 @@ function SectionProfil() {
         <label className="mb-1.5 block text-xs text-offwhite/50">Heure du point du jour</label>
         <input type="time" value={profil.heure_checkin || "08:30"} onChange={(e) => champ("heure_checkin", e.target.value)} className={INPUT} data-testid="parametres-heure" />
       </Carte>
+      <Carte titre="Ton Copilote" desc="Ce que le Copilote t'a demandé au fil de l'eau — modifiable ici.">
+        <label className="mb-1.5 block text-xs text-offwhite/50">Ton</label>
+        <select value={cm.copilote_ton || ""} onChange={(e) => setCm((c) => ({ ...c, copilote_ton: e.target.value }))} className={`${INPUT} mb-4`} data-testid="parametres-ton">
+          <option value="">Par défaut (apaisé)</option>
+          <option value="doux">Doux et bienveillant</option>
+          <option value="direct">Direct et concis</option>
+          <option value="coach">Coach qui me challenge</option>
+        </select>
+        <label className="mb-1.5 block text-xs text-offwhite/50">Outils que tu utilises</label>
+        <div className="flex flex-wrap gap-2" data-testid="parametres-outils">
+          {["Trello", "Microsoft Teams", "Slack", "Notion", "Google Agenda", "Outlook", "Excel / Sheets"].map((o) => {
+            const liste = (cm.outils && cm.outils !== "aucun" ? cm.outils.split(", ") : []);
+            const pris = liste.includes(o);
+            return (
+              <button key={o} type="button" onClick={() => setCm((c) => ({ ...c, outils: (pris ? liste.filter((x) => x !== o) : [...liste, o]).join(", ") || "aucun" }))}
+                className={`rounded-full border px-3 py-1.5 text-xs ${pris ? "border-gold bg-gold text-navy-900" : "border-white/15 bg-white/5 text-offwhite/75"}`}>{o}</button>
+            );
+          })}
+        </div>
+      </Carte>
       <Carte titre="Mémoire IA" desc="Le Copilote, le Radar et les documents IA s'appuient sur ces réponses. Quelques phrases suffisent.">
         {[
           ["pourquoi", "Pourquoi (ta raison d'être)", "Pourquoi fais-tu ce que tu fais ?"],
@@ -401,6 +422,9 @@ function SectionNotifications() {
   if (!profil) return <Carte><p className="text-sm text-offwhite/50">Chargement…</p></Carte>;
   return (
     <>
+    <Carte titre="Parler à ton Copilote depuis ton téléphone" desc="Relie Telegram ou WhatsApp : tu écris à Zayado comme à un contact, et tout se retrouve dans ton app (priorités, décisions, « c'est fait »).">
+      <CanauxCopilote />
+    </Carte>
     <Carte titre="Rappels et alertes" desc={profil.email ? `Envoyés à ${profil.email}.` : "Ajoute ton e-mail dans Profil pour recevoir les e-mails."}>
       <div className="flex items-center justify-between gap-4 border-b border-white/5 pb-4">
         <div><p className="text-sm font-medium text-offwhite">Toutes les notifications</p><p className="text-xs text-offwhite/50">Interrupteur général : coupe tous les envois.</p></div>

@@ -70,7 +70,7 @@ export function KairosProvider({ children }) {
   }, []);
 
   const submitCheckin = useCallback(({ score, mental, mood }) => {
-    setEnergy({ score, mood });
+    setEnergy({ score, mood, mental });
     setACheckin(true);
     postCheckin({ energie: score, charge: mental, mood }).then(() => refresh()).catch(() => {});
   }, [refresh]);

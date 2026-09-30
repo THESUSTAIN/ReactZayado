@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
 import { useKairos } from "@/context/KairosContext";
@@ -15,6 +15,15 @@ export function EnergyCheckin({ open, onClose }) {
   const [score, setScore] = useState(energy.score);
   const [mental, setMental] = useState(energy.mental || 3);
   const [mood, setMood] = useState(4);
+
+  // Pré-remplissage à chaque ouverture avec le dernier état connu (plus de valeurs figées au montage).
+  useEffect(() => {
+    if (!open) return;
+    setScore(energy.score || 3);
+    setMental(energy.mental || 3);
+    const i = MOODS.indexOf(energy.mood);
+    setMood(i >= 0 ? i + 1 : 3);
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = () => {
     submitCheckin({ score, mental, mood: MOODS[mood - 1] });
@@ -47,8 +56,7 @@ export function EnergyCheckin({ open, onClose }) {
                 </span>
                 <span className="text-sm font-semibold text-gold capitalize">{MOODS[mood - 1]}</span>
               </div>
-              <Slider value={[mood]} onValueChange={(v) => setMood(v[0])} min={1} max={5} step={1} data-testid="checkin-mood-slider" />
-              <div className="mt-3 grid grid-cols-5 gap-2" role="group" aria-label="Choisir son humeur">
+              <div className="grid grid-cols-5 gap-2" role="group" aria-label="Choisir son humeur">
                 {MOOD_FACES.map((face, i) => {
                   const value = i + 1;
                   return <button key={face} type="button" onClick={() => setMood(value)} aria-label={MOODS[i]} aria-pressed={mood === value} data-testid={`checkin-mood-face-${value}`}
@@ -56,9 +64,6 @@ export function EnergyCheckin({ open, onClose }) {
                     {face}
                   </button>;
                 })}
-              </div>
-              <div className="mt-1.5 flex justify-between text-[10px] text-offwhite/45">
-                <span>Épuisé</span><span>Rayonnant</span>
               </div>
             </div>
           </div>

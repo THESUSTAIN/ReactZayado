@@ -818,6 +818,21 @@ async def _contexte(db: AsyncSession, uid: str) -> str:
             lignes.append(f"Ce qui le/la différencie : {cm['approche']}")
     if objectifs:
         lignes.append("Objectifs actifs : " + " | ".join(f"{o.titre} ({o.progression}%)" for o in objectifs))
+    # Réglages que le Copilote a demandés au fil de l'eau (enregistrés dans le profil).
+    cm_r = (getattr(profil, "contexte_metier", None) or {}) if profil else {}
+    if cm_r.get("copilote_ton"):
+        lignes.append({"doux": "Ton souhaité : doux et bienveillant.",
+                       "direct": "Ton souhaité : direct et concis, sans détour.",
+                       "coach": "Ton souhaité : coach exigeant qui challenge (toujours respectueux)."}.get(cm_r["copilote_ton"], ""))
+    if cm_r.get("outils") and cm_r["outils"] != "aucun":
+        lignes.append(f"Outils déjà utilisés : {cm_r['outils']} (propose des actions compatibles, n'invente pas d'intégration).")
+    if cm_r.get("temps_quotidien"):
+        lignes.append(f"Temps disponible pour Zayado : environ {cm_r['temps_quotidien']} min par jour (calibre les actions proposées).")
+    if cm_r.get("jours_actifs"):
+        noms = {"1": "lun", "2": "mar", "3": "mer", "4": "jeu", "5": "ven", "6": "sam", "0": "dim"}
+        lignes.append("Jours de travail choisis : " + ", ".join(noms.get(j, j) for j in str(cm_r["jours_actifs"]).split(",") if j))
+    if cm_r.get("ca_tranche"):
+        lignes.append(f"CA mensuel actuel (tranche déclarée) : {cm_r['ca_tranche'].replace('_', ' ')}")
     # Objectif 3 ans (carte du cockpit) : l'IA disait « aucun objectif » alors qu'il était posé.
     if profil and getattr(profil, "objectif_3ans", None):
         lignes.append(f"Objectif à 3 ans : {profil.objectif_3ans}" + (f" (échéance {profil.echeance_3ans})" if getattr(profil, "echeance_3ans", None) else ""))
@@ -3677,6 +3692,24 @@ def _opportunites_signaux(signaux: dict, objectif: str) -> list:
     return ops
 
 
+async def _objectifs_radar(db: AsyncSession, uid: str) -> list:
+    """Tous les caps de l'utilisateur, du plus concret au plus large (dédoublonnés)."""
+    titres = [o.titre for o in (await db.execute(select(VisionObjectif).where(
+        VisionObjectif.user_id == uid, VisionObjectif.statut != "archive"))).scalars() if (o.titre or "").strip()]
+    p = (await db.execute(select(VisionProfile).where(VisionProfile.user_id == uid))).scalars().first()
+    if p and (p.objectif_3ans or "").strip():
+        titres.append(p.objectif_3ans.strip())
+    if p and (p.texte_vision or "").strip():
+        ligne = p.texte_vision.strip().splitlines()[0].strip()
+        titres.append(ligne[:117] + "…" if len(ligne) > 120 else ligne)
+    vus, sortie = set(), []
+    for t in titres:
+        if t.lower() not in vus:
+            vus.add(t.lower())
+            sortie.append(t)
+    return sortie
+
+
 async def _calculer_radar(db: AsyncSession, uid: str, graine: int = 0) -> dict:
     # Vrais prospects Apollo d'abord (si la clé plateforme est configurée et
     # que l'offre a du quota) ; l'IA complète jusqu'à 3 opportunités.
@@ -3700,25 +3733,30 @@ async def _calculer_radar(db: AsyncSession, uid: str, graine: int = 0) -> dict:
             apollo = await f_apollo(db, uid, "partenaire" if clientele == "b2c" else "client")
         except Exception as e:  # noqa: BLE001
             logger.warning("Radar : Apollo ignoré (%s)", e)
-    objectifs = list((await db.execute(select(VisionObjectif).where(VisionObjectif.user_id == uid))).scalars())
-    reels = _opportunites_prospects(apollo.get("prospects") or [], objectifs[0].titre if objectifs else "Trouver de nouveaux clients")
+    # N'importe quel objectif active le Radar : objectifs 90 jours, objectif à 3 ans, texte de Vision.
+    objectifs = await _objectifs_radar(db, uid)
+    premier = objectifs[0] if objectifs else "Trouver de nouveaux clients"
+    reels = _opportunites_prospects(apollo.get("prospects") or [], premier)
     if clientele == "b2c":
         reels = reels[:1]
-    par_signaux = _opportunites_signaux(signaux, objectifs[0].titre if objectifs else "Trouver de nouveaux clients") if signaux else []
+    par_signaux = _opportunites_signaux(signaux, premier) if signaux else []
     infos_apollo = {k: apollo.get(k) for k in ("etat", "quota", "utilises", "plan", "mode") if k in apollo}
     infos_apollo["clientele"] = clientele
     if clientele == "b2c" and par_signaux:
         # Particuliers : 1 prescripteur réel + des actions appuyées sur les signaux (recherches, ventes, pub).
         return {"opportunities": (reels + par_signaux)[:3],
                 "phrase_ia": "Des signaux réels autour de toi : ce que les gens cherchent, ce qui se vend, qui peut te recommander.",
-                "generated_at": datetime.now(timezone.utc).isoformat(), "source": "ia", "apollo": infos_apollo}
+                "generated_at": datetime.now(timezone.utc).isoformat(), "source": "ia", "apollo": infos_apollo,
+                "objectifs_utilises": objectifs[:3]}
     if len(reels) >= 3 or (reels and not objectifs):
         return {"opportunities": reels[:3], "phrase_ia": "3 vraies personnes à contacter aujourd'hui, choisies selon ta cible.",
-                "generated_at": datetime.now(timezone.utc).isoformat(), "source": "ia", "apollo": infos_apollo}
+                "generated_at": datetime.now(timezone.utc).isoformat(), "source": "ia", "apollo": infos_apollo,
+                "objectifs_utilises": objectifs[:3]}
     if not objectifs:
-        return {"opportunities": [], "phrase_ia": "Ajoute des objectifs sur ta Vision pour activer le radar.", "apollo": infos_apollo}
+        return {"opportunities": [], "manque_objectif": True,
+                "phrase_ia": "Pose un objectif (90 jours, 3 ans ou dans ta Vision) pour activer le Radar.", "apollo": infos_apollo}
 
-    titres = [o.titre for o in objectifs][:3]
+    titres = objectifs[:3]
 
     # Repli local (rapide, déterministe) — évite d'attendre le LLM au chargement du Cockpit
     fallback = [
@@ -4280,7 +4318,12 @@ async def telegram_webhook(uid: str, request: Request, db: AsyncSession = Depend
     text = (msg.get("text") or "").strip()
     if not chat_id or not text:
         return {"ok": True}
+    return await _tg_traiter(db, uid, token, chat_id, text)
 
+
+async def _tg_traiter(db: AsyncSession, uid: str, token: str, chat_id, text: str) -> dict:
+    """Traite un message Telegram pour le compte `uid` (bot du compte OU bot
+    Zayado partagé) : raccourcis (« c'est fait », « oui », « dans l'app »), puis Copilote IA."""
     front = os.environ.get("FRONTEND_PUBLIC_URL", "").rstrip("/")
 
     # /start : accueil propre + porte d'entrée vers l'app
@@ -4849,6 +4892,10 @@ install_carrousel(globals())
 # ── Ma Foi (TheSustain) : données personnelles + Mur de prière / Cercle partagés, réels ──
 from foi_ext import install_foi  # noqa: E402
 install_foi(globals())
+
+# ── Canaux du Copilote : Telegram (bot Zayado partagé) et WhatsApp, reliés par utilisateur ──
+from canaux_ext import install_canaux  # noqa: E402
+install_canaux(globals())
 
 # ─────────────── Processus (page /app/processus) ───────────────
 # Avant : stockés dans le navigateur uniquement, avec 4 processus de démonstration

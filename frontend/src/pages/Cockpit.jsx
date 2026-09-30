@@ -61,9 +61,11 @@ export default function Cockpit() {
                 <Flame className="h-4 w-4" /> {serie.jours} jour{serie.jours > 1 ? "s" : ""} de suite{!serie.aujourdhui_fait ? " · à prolonger aujourd'hui" : ""}
               </span>
             )}
-            <button onClick={() => setCheckinOpen(true)} className="btn-ghost" data-testid="open-checkin-btn">
-              <BatteryMedium className="h-4 w-4 text-gold" /> {t("cockpit.checkin")}
-            </button>
+            {aCheckin && (
+              <button onClick={() => setCheckinOpen(true)} className="btn-ghost" data-testid="open-checkin-btn" title="Refaire ton check-in si ton énergie a changé">
+                <BatteryMedium className="h-4 w-4 text-gold" /> Mettre à jour mon énergie
+              </button>
+            )}
           </div>
 
           <PlanEnAttenteBanner />
@@ -86,7 +88,7 @@ export default function Cockpit() {
                         Niveau d'énergie <span className="text-gold">↗</span>
                       </p>
                       <div className="mt-3 flex gap-1.5" aria-label="Humeur du jour">
-                        {["😞", "🙁", "😐", "🙂", "😊"].map((face, i) => <span key={face} className={`flex h-7 w-7 items-center justify-center rounded-lg border text-sm ${i + 1 === energy.score ? "border-gold/60 bg-gold/15" : "border-white/10 bg-white/[0.04] grayscale opacity-60"}`}>{face}</span>)}
+                        {["😞", "🙁", "😐", "🙂", "😊"].map((face, i) => <span key={face} className={`flex h-7 w-7 items-center justify-center rounded-lg border text-sm ${i === ["épuisé", "fatigué", "neutre", "aligné", "rayonnant"].indexOf(energy.mood) ? "border-gold/60 bg-gold/15" : "border-white/10 bg-white/[0.04] grayscale opacity-60"}`}>{face}</span>)}
                       </div>
                     </div>
                   ) : (

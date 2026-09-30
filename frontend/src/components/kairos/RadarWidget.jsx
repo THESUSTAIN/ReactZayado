@@ -52,7 +52,7 @@ export default function RadarWidget() {
 
       {(!data?.opportunities || data.opportunities.length === 0) ? (
         <p className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-4 text-center text-[12px] text-offwhite/60">
-          Ajoute des objectifs sur ta Vision pour activer le radar.
+          {data?.phrase_ia || "Pose un objectif (90 jours, 3 ans ou ta Vision) pour activer le Radar."}
         </p>
       ) : (
         <div className="space-y-2">

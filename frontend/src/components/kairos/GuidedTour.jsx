@@ -26,7 +26,7 @@ const STEPS = [
   { sel: "[data-testid=header-search]", title: "Recherche rapide", text: "Tape le nom d'une page puis Entrée. Raccourci : Ctrl + K (⌘ + K sur Mac)." },
   { sel: "[data-testid=header-chat]", title: "Collaborateur IA", text: "Ton copilote IA, sur toutes les pages : pose une question, valide ses décisions, lis l'actualité du jour." },
   { sel: "[data-testid=header-bell]", title: "Notifications", text: "Actualité du jour et décisions qui attendent ton feu vert." },
-  { sel: "[data-testid=open-checkin-btn]", title: "Check-in énergie", text: "Chaque jour, note ton énergie : Zayado adapte le rythme et les conseils." },
+  { sel: "[data-testid=energy-card]", title: "Check-in énergie", text: "Chaque jour, note ton énergie : Zayado adapte le rythme et les conseils." },
   { sel: "[data-testid=header-profile]", title: "Ton profil", text: "Paramètres, Mon espace, déconnexion… et cette visite, à relancer quand tu veux." },
 ];
 
