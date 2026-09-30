@@ -535,3 +535,9 @@ export const suggererIdees = (contexte) => jsendDetail("/idees/suggestions", "PO
 
 // Bien-être : bloquer une vraie pause (action + rappel Telegram)
 export const bloquerPause = (d) => jsendMsg("/bien-etre/pause", "POST", d);
+
+// Mon entreprise (organisation) : recherche par nom/SIRET et enregistrement
+export const fetchOrganisation = () => jget("/organisation");
+export const rechercherEntreprise = (q) => jget(`/organisation/recherche?q=${encodeURIComponent(q)}`);
+export const enregistrerOrganisation = (d) => jsendMsg("/organisation", "PUT", d);
+export const retirerOrganisation = () => jsendMsg("/organisation", "DELETE");

@@ -10,10 +10,12 @@ import {
   fetchState, saveProfile, fetchConnections, fetchMesFilleuls, inviterParrainage, appliquerCodePromo, fetchMoi,
   fetchAbonnement, fetchCommandes, telechargerExport, deleteData, fetchTarifsFondateur,
   resilierAbonnement, reprendreAbonnement, changerOffre, fetchEquipe, inviterCoequipier, retirerCoequipier,
-  oauthStockage, deconnecterCanal, fetchActualiteOptions,
+  oauthStockage, deconnecterCanal, fetchActualiteOptions, fetchOrganisation, rechercherEntreprise, enregistrerOrganisation,
 } from "@/lib/kairosApi";
 import { oublierAbonnement } from "@/lib/acces";
 import { useKairos } from "@/context/KairosContext";
+import { Sidebar } from "@/components/kairos/Sidebar";
+import { Header } from "@/components/kairos/Header";
 import { ChoixPays } from "@/components/kairos/ChoixPays";
 import { libellePays } from "@/lib/marches";
 import { useI18n } from "@/i18n";
@@ -157,8 +159,14 @@ export default function Parametres() {
   );
 
   return (
+    <>
+    {/* Derrière la fenêtre : l'app (menu + en-tête), floutée — avant, un fond uni foncé donnait l'impression d'une autre page. */}
+    <div aria-hidden="true" className="pointer-events-none select-none">
+      <Sidebar />
+      <div className="lg:pl-[92px]"><Header /></div>
+    </div>
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-navy-900/70 p-0 backdrop-blur-md sm:p-6"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-navy-900/35 p-0 backdrop-blur-xl sm:p-6"
       data-testid="parametres-overlay"
       onMouseDown={(e) => { if (e.target === e.currentTarget) fermer(); }}
     >
@@ -220,7 +228,7 @@ export default function Parametres() {
 
         {/* Panneau, défilable indépendamment */}
         <div className="min-w-0 flex-1 overflow-y-auto px-4 pb-6 pt-4 md:p-6" data-testid={`parametres-panel-${active}`}>
-          {active === "compte" && <><SectionGeneral /><SectionSecurite /></>}
+          {active === "compte" && <><SectionEntreprise /><SectionGeneral /><SectionSecurite /></>}
           {active === "copilote" && <><SectionProfil manquants={completion?.manquants || []} /><SectionVision /><SectionMaFoi /></>}
           {active === "notifications" && <SectionNotifications />}
           {active === "connexions" && <SectionConnexions />}
@@ -228,6 +236,7 @@ export default function Parametres() {
         </div>
       </div>
     </div>
+    </>
   );
 }
 
@@ -402,6 +411,94 @@ function SectionVision() {
   );
 }
 
+// Mon entreprise : nom + SIRET (recherche dans le répertoire officiel), pays.
+// Sert au légal de l'actualité, aux secteurs de veille et, à terme, à l'équipe et aux factures.
+function SectionEntreprise() {
+  const [org, setOrg] = useState(undefined);
+  const [q, setQ] = useState("");
+  const [res, setRes] = useState(null);
+  const [cherche, setCherche] = useState(false);
+  const [manuel, setManuel] = useState(false);
+  const [form, setForm] = useState({ nom: "", pays: "france", pays_label: "France" });
+  useEffect(() => { fetchOrganisation().then((d) => setOrg(d.organisation)).catch(() => setOrg(null)); }, []);
+  const chercher = async (e) => {
+    e?.preventDefault();
+    if (q.trim().length < 3) return;
+    setCherche(true);
+    try { setRes((await rechercherEntreprise(q.trim())).resultats || []); } catch { toast.error("Le répertoire des entreprises ne répond pas. Tu peux la saisir à la main."); setRes([]); }
+    setCherche(false);
+  };
+  const choisir = async (r) => {
+    try { const d = await enregistrerOrganisation({ nom: r.nom, siret: r.siret, pays: "france", pays_label: "France", details: r }); setOrg(d.organisation); setRes(null); setQ(""); toast.success("Entreprise enregistrée."); }
+    catch (e) { toast.error(e.message || "Enregistrement impossible."); }
+  };
+  const saisir = async () => {
+    if (form.nom.trim().length < 2) { toast.error("Indique le nom de l'entreprise."); return; }
+    try { const d = await enregistrerOrganisation(form); setOrg(d.organisation); setManuel(false); toast.success("Entreprise enregistrée."); }
+    catch (e) { toast.error(e.message || "Enregistrement impossible."); }
+  };
+  const eur = (v) => (v == null ? "—" : `${Math.round(v).toLocaleString("fr-FR")} €`);
+  if (org === undefined) return <Carte titre="Mon entreprise"><p className="text-sm text-offwhite/50">Chargement…</p></Carte>;
+  if (org && !manuel) {
+    const d = org.details || {};
+    return (
+      <Carte titre="Mon entreprise" desc="Utilisée pour ton actualité légale (pays de l'entreprise), tes secteurs de veille et ton équipe.">
+        <div className="rounded-xl border border-white/15 bg-white/5 p-4" data-testid="parametres-entreprise">
+          <p className="font-display text-lg font-semibold text-offwhite">{org.nom}</p>
+          <p className="mt-0.5 text-xs text-offwhite/55">{[org.siret && `SIRET ${org.siret}`, org.pays_label || libellePays(org.pays), d.naf_libelle].filter(Boolean).join(" · ")}</p>
+          {(d.adresse || d.finances) && (
+            <div className="mt-3 grid gap-2 text-xs text-offwhite/70 sm:grid-cols-2">
+              {d.adresse && <p>{d.adresse}</p>}
+              {d.effectif && <p>Effectif : {d.effectif}</p>}
+              {d.finances && <p>CA {d.finances.annee} : {eur(d.finances.ca)} · résultat {eur(d.finances.resultat)}</p>}
+              {d.dirigeants?.length > 0 && <p>Dirigeants : {d.dirigeants.join(", ")}</p>}
+            </div>
+          )}
+        </div>
+        {org.modifiable ? (
+          <div className="mt-3 flex gap-3 text-xs">
+            <button onClick={() => { setOrg(null); }} className="text-gold hover:underline">Changer d'entreprise</button>
+            <button onClick={() => { setForm({ nom: org.nom, pays: org.pays, pays_label: org.pays_label || "" }); setManuel(true); }} className="text-offwhite/60 hover:underline">Modifier à la main</button>
+          </div>
+        ) : <p className="mt-3 text-xs text-offwhite/50">Gérée par le titulaire de ton équipe.</p>}
+      </Carte>
+    );
+  }
+  return (
+    <Carte titre="Mon entreprise" desc="Retrouve ton entreprise par son nom ou son SIRET : on complète le reste (activité, adresse, chiffres publiés).">
+      {!manuel ? (
+        <>
+          <form onSubmit={chercher} className="flex gap-2">
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nom de l'entreprise ou SIRET" className={`${INPUT} flex-1`} data-testid="entreprise-recherche" />
+            <button className="inline-flex items-center gap-1.5 rounded-xl bg-gold px-4 text-sm font-semibold text-navy-900" disabled={cherche}>{cherche ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />} Chercher</button>
+          </form>
+          {res && (
+            <div className="mt-3 space-y-2" data-testid="entreprise-resultats">
+              {res.length === 0 && <p className="text-sm text-offwhite/55">Aucun résultat.</p>}
+              {res.map((r) => (
+                <button key={r.siren} onClick={() => choisir(r)} className="w-full rounded-xl border border-white/15 bg-white/5 p-3 text-left hover:border-gold/50">
+                  <p className="text-sm font-semibold text-offwhite">{r.nom}</p>
+                  <p className="text-xs text-offwhite/55">{[r.siret && `SIRET ${r.siret}`, r.ville, r.naf_libelle].filter(Boolean).join(" · ")}</p>
+                </button>
+              ))}
+            </div>
+          )}
+          <button onClick={() => setManuel(true)} className="mt-3 text-xs text-offwhite/60 hover:text-gold hover:underline">Entreprise hors de France ou pas encore immatriculée ? Saisis-la à la main</button>
+        </>
+      ) : (
+        <div className="space-y-3">
+          <input value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} placeholder="Nom de l'entreprise" className={`${INPUT} w-full`} />
+          <ChoixPays variante="liste" valeur={form.pays} libelle={form.pays_label} selectClass={INPUT} onChange={(k, l) => setForm({ ...form, pays: k, pays_label: l })} />
+          <div className="flex gap-2">
+            <button onClick={saisir} className="rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-navy-900">Enregistrer</button>
+            <button onClick={() => setManuel(false)} className="rounded-xl border border-white/15 px-4 py-2 text-sm">Annuler</button>
+          </div>
+        </div>
+      )}
+    </Carte>
+  );
+}
+
 function SectionGeneral() {
   const { lang, setLang } = useI18n();
   const [clair, setClair] = useState(() => {
@@ -552,7 +649,8 @@ function CarteVeille({ cm, setCm, rythme, changerRythme, srcOn, togglerSrc }) {
   const [ajoutPays, setAjoutPays] = useState(false);
   useEffect(() => { fetchActualiteOptions().then(setOpts).catch(() => setOpts({ secteurs: [] })); }, []);
   const pays = cm.actu_pays_suivis?.length ? cm.actu_pays_suivis : [cm.marche || "france"];
-  const secteurs = cm.actu_secteurs || [];
+  // Par défaut : les secteurs de ton activité (entreprise déclarée ou onboarding) ; tu peux en choisir d'autres.
+  const secteurs = cm.actu_secteurs?.length ? cm.actu_secteurs : (opts?.secteurs_suivis || []);
   const mots = cm.actu_mots_cles || [];
   const enregistrer = async (patch, msg = "Veille enregistrée.") => {
     const suivant = { ...cm, ...patch };
@@ -570,7 +668,8 @@ function CarteVeille({ cm, setCm, rythme, changerRythme, srcOn, togglerSrc }) {
     if (!mots.includes(m)) enregistrer({ actu_mots_cles: [...mots, m] });
     setMot("");
   };
-  const legalPays = cm.actu_legal_pays || cm.marche || "france";
+  const paysDefautLegal = opts?.entreprise?.pays || cm.marche || "france";
+  const legalPays = cm.actu_legal_pays || paysDefautLegal;
   return (
     <Carte titre="Ton actualité" desc="Le légal suit ton pays ; ta veille, c'est toi qui la choisis. Dans le chat, filtre « Légal » ou « Ma veille ».">
       <div className="space-y-5" data-testid="parametres-veille">
@@ -588,10 +687,10 @@ function CarteVeille({ cm, setCm, rythme, changerRythme, srcOn, togglerSrc }) {
             <Interrupteur on={srcOn("actu_legal")} onClick={() => togglerSrc("actu_legal")} testid="parametres-actu-legal" />
           </div>
           <div className="mt-3 max-w-xs">
-            <p className="mb-1 text-[11px] text-offwhite/45">Pays du légal {legalPays === (cm.marche || "france") ? "· celui de ton compte" : ""}</p>
+            <p className="mb-1 text-[11px] text-offwhite/45">Pays du légal {!cm.actu_legal_pays ? (opts?.entreprise ? `· celui de ton entreprise (${opts.entreprise.nom})` : "· celui de ton compte (déclare ton entreprise dans Compte pour l'affiner)") : "· choisi par toi"}</p>
             <ChoixPays variante="liste" valeur={legalPays} libelle={cm.actu_legal_pays ? "" : cm.marche_label}
               selectClass="h-9 w-full rounded-lg border border-white/15 bg-navy-800 px-2 text-sm text-offwhite"
-              onChange={(k) => enregistrer({ actu_legal_pays: k === (cm.marche || "france") ? null : k }, "Pays du légal enregistré.")} />
+              onChange={(k) => enregistrer({ actu_legal_pays: k === paysDefautLegal ? null : k }, "Pays du légal enregistré.")} />
           </div>
         </div>
 
@@ -621,7 +720,7 @@ function CarteVeille({ cm, setCm, rythme, changerRythme, srcOn, togglerSrc }) {
 
         <div className="border-b border-white/5 pb-4">
           <p className="text-sm font-medium text-offwhite">Ma veille · secteurs</p>
-          <p className="mb-2 text-xs text-offwhite/50">Jusqu'à 6 : les nouvelles de ces secteurs dans tes pays.</p>
+          <p className="mb-2 text-xs text-offwhite/50">Ceux de ton activité sont choisis d'office ; ajoute-en d'autres (6 au maximum). « Reprise, cession & fusions » est un secteur comme un autre : utile si tu achètes, vends ou conseilles des entreprises.</p>
           <div className="flex flex-wrap gap-2" data-testid="veille-secteurs">
             {(opts?.secteurs || []).map((sct) => (
               <button key={sct.cle} onClick={() => basculerSecteur(sct.cle)} data-testid={`veille-secteur-${sct.cle}`}

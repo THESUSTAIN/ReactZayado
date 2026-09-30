@@ -6,7 +6,7 @@ import { Mail, ArrowRight, Loader2, Eye, ShieldCheck, Server, Lock, RotateCcw, H
 import { GlassCard } from "@/components/kairos/GlassCard";
 import {
   fetchConnexionOptions, demanderLien, entrerApercu, connexionDemo, oauthStart, oauthEchange, verifierLien, setToken, fetchState,
-  connexionMdp, inscriptionMdp, getToken, fetchLoginCarousel, mediaUrl,
+  connexionMdp, inscriptionMdp, getToken, fetchLoginCarousel, mediaUrl, fetchMoi, fetchAbonnement,
 } from "@/lib/kairosApi";
 
 // Zayado ouvert dans un onglet Microsoft Teams (ou toute iframe) : les pages de
@@ -154,7 +154,13 @@ export default function Login() {
       const d = await fetchState();
       // /state renvoie « onboarded » à la racine (pas dans profile) : l'ancien test
       // lisait toujours undefined et renvoyait vers l'onboarding à chaque connexion.
-      navigate(next || ((d?.onboarded ?? d?.profile?.onboarded) ? "/app" : "/onboarding"));
+      if (next) { navigate(next); return; }
+      if (!(d?.onboarded ?? d?.profile?.onboarded)) { navigate("/onboarding"); return; }
+      // Plusieurs espaces (admin, vendeur, offre Équipe/Entreprise avec l'app RH) : page « Mon compte »
+      // qui les regroupe ; sinon directement le cockpit.
+      const [moi, abo] = await Promise.all([fetchMoi().catch(() => ({})), fetchAbonnement().catch(() => ({}))]);
+      const plusieurs = ["admin", "vendeur"].includes(moi?.role) || ["business", "entreprise"].includes(abo?.plan);
+      navigate(plusieurs ? "/compte" : "/app");
     } catch {
       navigate(next || "/onboarding");
     }

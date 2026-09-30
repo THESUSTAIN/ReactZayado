@@ -29,7 +29,7 @@ export const PLANS = [
     key: "pro", nom: "Pro", mensuel: 69, annuel: 708, ttc: true,
     fondateur: { mensuel: 49, annuel: 468 },
     pourQui: "Pour l'indépendant qui a des clients",
-    points: ["Tout Solo", "Radar : 90 vrais prospects / mois", "Agent Business : ton chatbot client, à ta marque", "Documents IA : brief, plan 30 j, SWOT", "Alertes WhatsApp & Telegram", "Espace vendeur : tes produits sur la boutique zayado.net", "Support prioritaire"],
+    points: ["Tout Solo", "Radar : 90 vrais prospects / mois", "Agent Business : ton chatbot client, à ta marque", "Documents IA : brief, plan 30 j, SWOT", "Alertes WhatsApp & Telegram", "Support prioritaire"],
   },
   {
     key: "business", nom: "Équipe", mensuel: 149, annuel: 1548, ttc: true,
@@ -90,7 +90,6 @@ export const COMPARATIF = [
   ["Agent Business : chatbot client à ta marque", "—", "—", "1", "3"],
   ["Chatbot qui répond avec tes documents", "—", "—", "—", "✓"],
   ["Alertes WhatsApp & Telegram", "—", "—", "✓", "✓"],
-  ["Espace vendeur : produits publiés sur zayado.net", "—", "—", "✓", "✓"],
   ["Comptes inclus", "1", "1", "1", "3 (toi + 2 Solo)"],
   ["Support", "E-mail", "E-mail", "Prioritaire", "Prioritaire"],
 ];
