@@ -2186,12 +2186,22 @@ async def connexion_oauth_start(provider: str, redirect_uri: Optional[str] = Non
         return {"configured": False}
     # Clés présentes : construction de l'URL d'autorisation (flux code).
     storage = purpose == "storage"
+    # Stockage : le Drive est rattaché au compte CONNECTÉ (état signé), jamais au compte
+    # qui porte l'e-mail Google/Microsoft (avant : on basculait sur un autre compte Zayado
+    # si l'adresse du Drive différait).
+    etat_stockage = ""
+    if storage:
+        uid_stockage = _uid()
+        if uid_stockage == DEMO_USER_ID:
+            raise HTTPException(401, "Connecte-toi pour relier ton espace cloud.")
+        etat_stockage = _pyjwt.encode({"uid": uid_stockage, "p": provider, "exp": int(time.time()) + 900},
+                                      JWT_SECRET, algorithm=JWT_ALGO)
     # Stockage (Drive/OneDrive) : retour sur le backend, qui garde les jetons.
     ru = _oauth_callback_url(provider, request) if (storage or not redirect_uri) else redirect_uri
     if provider == "google":
         params = {"client_id": cid, "redirect_uri": ru, "response_type": "code",
                   "scope": "openid email profile" + (" https://www.googleapis.com/auth/drive.file" if storage else ""),
-                  "state": f"storage|google|{uuid.uuid4().hex}" if storage else f"google_{uuid.uuid4().hex}",
+                  "state": f"storage|google|{etat_stockage}" if storage else f"google_{uuid.uuid4().hex}",
                   "access_type": "offline" if storage else "online"}
         if storage:
             params["prompt"] = "consent"
@@ -2209,7 +2219,7 @@ async def connexion_oauth_start(provider: str, redirect_uri: Optional[str] = Non
         tenant = os.environ.get("MICROSOFT_TENANT", "common")
         params = {"client_id": cid, "redirect_uri": ru, "response_type": "code",
                   "scope": "openid profile email" + (" User.Read Files.ReadWrite offline_access" if storage else ""),
-                  "state": f"storage|microsoft|{uuid.uuid4().hex}" if storage else f"microsoft_{uuid.uuid4().hex}"}
+                  "state": f"storage|microsoft|{etat_stockage}" if storage else f"microsoft_{uuid.uuid4().hex}"}
         base = f"https://login.microsoftonline.com/{tenant}/oauth2/v2.0/authorize"
     from urllib.parse import urlencode
     return {"configured": True, "authorization_url": f"{base}?{urlencode(params)}"}
@@ -2306,19 +2316,23 @@ async def connexion_oauth_callback(provider: str, code: Optional[str] = None, st
     if not (os.environ.get(f"{provider.upper()}_CLIENT_ID") and os.environ.get(f"{provider.upper()}_CLIENT_SECRET")):
         return RedirectResponse(f"{frontend}/login?erreur=oauth_non_configure")
     storage = bool(state and state.startswith("storage|"))
+    uid_stockage = None
+    if storage:
+        try:
+            charge = _pyjwt.decode(state.split("|", 2)[2], JWT_SECRET, algorithms=[JWT_ALGO])
+            uid_stockage = charge["uid"] if charge.get("p") == provider else None
+        except Exception:  # noqa: BLE001
+            uid_stockage = None
+        if not uid_stockage:
+            return RedirectResponse(f"{frontend}/parametres?cloud_erreur=expire#connexions")
     try:
         email, token_data, access_token = await _oauth_echange(provider, code, _oauth_callback_url(provider, request))
-        if not email:
-            return RedirectResponse(f"{frontend}/login?erreur=oauth_sans_email")
-        user = await _trouver_ou_creer_compte(db, email)
-        if provider == "thesustain":
-            await _marquer_membre_thesustain(db, user, token_data.get("_userinfo"))
-        jwt_token = _creer_token(user.id, user.role)
         if storage:
             provider_key = f"{provider}_drive"
-            conn = await _get_connection(db, provider_key, uid=user.id)
+            conn = await _get_connection(db, provider_key, uid=uid_stockage)
             if not conn:
-                conn = UserConnection(user_id=user.id, provider=provider_key, label=("Google Drive" if provider == "google" else "OneDrive / SharePoint"))
+                conn = UserConnection(user_id=uid_stockage, provider=provider_key,
+                                      label=("Google Drive" if provider == "google" else "OneDrive / SharePoint"))
                 db.add(conn)
             conn.status = "ready"
             conn.credentials_enc = _chiffrer(json.dumps({
@@ -2327,7 +2341,13 @@ async def connexion_oauth_callback(provider: str, code: Optional[str] = None, st
                 "expires_at": time.time() + int(token_data.get("expires_in", 3600)),
             }))
             await db.commit()
-            return RedirectResponse(f"{frontend}/login?cloud_connected={provider}#access_token={jwt_token}")
+            return RedirectResponse(f"{frontend}/parametres?cloud={provider}#connexions")
+        if not email:
+            return RedirectResponse(f"{frontend}/login?erreur=oauth_sans_email")
+        user = await _trouver_ou_creer_compte(db, email)
+        if provider == "thesustain":
+            await _marquer_membre_thesustain(db, user, token_data.get("_userinfo"))
+        jwt_token = _creer_token(user.id, user.role)
         return RedirectResponse(f"{frontend}/login#access_token={jwt_token}")
     except Exception as e:  # noqa: BLE001 — jamais de 500 brut sur un retour de consentement utilisateur
         logger.warning("Échec callback OAuth %s : %s", provider, e)
@@ -4944,6 +4964,14 @@ install_teams(globals())
 # ── « Se connecter avec Zayado » pour les applications séparées (app RH entreprise…) ──
 from sso_ext import install_sso  # noqa: E402
 install_sso(globals())
+
+# ── Modules livrés sans branchement (Lot 4) : newsletters, coffre de connexions, logs applicatifs ──
+from newsletters_ext import install_newsletters  # noqa: E402
+install_newsletters(globals())
+from connexions_vault_ext import install_connexions_vault  # noqa: E402
+install_connexions_vault(globals())
+from app_logs_ext import install_app_logs  # noqa: E402
+install_app_logs(globals())
 
 # ─────────────── Processus (page /app/processus) ───────────────
 # Avant : stockés dans le navigateur uniquement, avec 4 processus de démonstration

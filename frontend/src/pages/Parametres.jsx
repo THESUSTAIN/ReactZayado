@@ -1,53 +1,99 @@
-import React, { useState, useEffect } from "react";
-import { planNom, ESSAI } from "@/lib/plans";
+import React, { useState, useEffect, useRef } from "react";
+import { planNom, ESSAI, PLANS, PLAN_ENTREPRISE } from "@/lib/plans";
 import { lancerPaiement } from "@/lib/checkout";
 import {
-  User, Palette, Bell, Plug, ShieldCheck, CreditCard, Gift, Loader2, Save, Download, Cloud,
-  Search, X, Sun, Moon, Compass, Brain, Trash2, Mail, Plus, Receipt, Sparkles,
+  User, Bell, Plug, CreditCard, Loader2, Download, Cloud, Check,
+  Search, X, Sun, Moon, Compass, Brain, Trash2, Mail, Plus, Receipt, Sparkles, Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
   fetchState, saveProfile, fetchConnections, fetchMesFilleuls, inviterParrainage, appliquerCodePromo, fetchMoi,
   fetchAbonnement, fetchCommandes, telechargerExport, deleteData, fetchTarifsFondateur,
   resilierAbonnement, reprendreAbonnement, changerOffre, fetchEquipe, inviterCoequipier, retirerCoequipier,
+  oauthStockage, deconnecterCanal,
 } from "@/lib/kairosApi";
 import { oublierAbonnement } from "@/lib/acces";
 import { useI18n } from "@/i18n";
 import { Link, useNavigate } from "react-router-dom";
 import IntegrationsSection from "@/components/kairos/IntegrationsSection";
 import CanauxCopilote from "@/components/kairos/CanauxCopilote";
+import PoulsQonto from "@/components/kairos/PoulsQonto";
 
 // Paramètres en grande fenêtre modale — structure inspirée de
 // ReactZayado/SettingsModal.jsx (v13) : recherche + sections latérales.
 // Chaque section n'affiche que ce qui est réellement câblé côté serveur.
+// 5 onglets au lieu de 9 (retour audit) : on sait où chercher.
 const SECTIONS = [
-  { id: "general", label: "Général", Icon: Palette, mots: "langue français english thème clair sombre apparence" },
-  { id: "profil", label: "Profil & mémoire IA", Icon: User, mots: "prénom email identité heure point du jour mémoire ia pourquoi offre cible approche" },
-  { id: "vision", label: "Vision & valeurs", Icon: Compass, mots: "vision phrase valeurs inspiration cap" },
-  { id: "notifications", label: "Notifications", Icon: Bell, mots: "alerte rappel email lundi" },
-  { id: "integrations", label: "Intégrations", Icon: Plug, mots: "whatsapp telegram qonto connexion drive" },
-  { id: "cloud-save", label: "Enregistrement cloud", Icon: Cloud, mots: "drive google onedrive sharepoint document automatique nuage" },
-  { id: "parrainage", label: "Parrainage", Icon: Gift, mots: "inviter filleul mois offert ambassadeur affiliation programme" },
-  { id: "securite", label: "Sécurité & données", Icon: ShieldCheck, mots: "export rgpd données suppression connexion email" },
-  { id: "facturation", label: "Offre & factures", Icon: CreditCard, mots: "plan abonnement prix code réduction facture historique fondateur résilier prélèvement équipe coéquipier" },
+  { id: "compte", label: "Compte", Icon: User, mots: "langue français english thème clair sombre apparence export rgpd données suppression connexion email sécurité" },
+  { id: "copilote", label: "Mon Copilote", Icon: Brain, mots: "prénom email identité heure point du jour mémoire ia pourquoi offre cible approche ton outils marché pays vision phrase valeurs" },
+  { id: "notifications", label: "Notifications", Icon: Bell, mots: "alerte rappel email lundi repos actualité cloche" },
+  { id: "connexions", label: "Connexions", Icon: Plug, mots: "whatsapp telegram téléphone qonto drive google onedrive sharepoint cloud document teams rh intégrations" },
+  { id: "offre", label: "Offre & parrainage", Icon: CreditCard, mots: "plan abonnement prix code réduction facture historique fondateur résilier prélèvement équipe coéquipier parrainage filleul inviter ambassadeur" },
 ];
+// Anciennes adresses (#vision, #facturation…) utilisées ailleurs dans l'app.
+const ALIAS = { general: "compte", securite: "compte", profil: "copilote", vision: "copilote", integrations: "connexions",
+  "cloud-save": "connexions", facturation: "offre", parrainage: "offre" };
+const sectionDepuisHash = () => {
+  const h = (window.location.hash || "").replace("#", "");
+  const id = ALIAS[h] || h;
+  return SECTIONS.some((x) => x.id === id) ? id : "compte";
+};
 
-// Complétion du profil (comme final-main) : ce qui aide vraiment le Copilote.
+// Complétion du profil : ce qui aide vraiment le Copilote, avec ce qui manque (cliquable).
+const CHAMPS_PROFIL = [
+  ["prenom", "Ton prénom"], ["email", "Ton e-mail"], ["vision", "Ta phrase de vision"], ["pourquoi", "Ton pourquoi"],
+  ["offre", "Ton offre"], ["cible", "Ta cible"], ["approche", "Ce qui te différencie"], ["valeurs", "Tes valeurs"],
+];
 function useCompletion() {
-  const [pct, setPct] = useState(null);
+  const [etat, setEtat] = useState(null);
   const calculer = () => fetchState().then((d) => {
     const p = d.profile || {}, v = d.vision || {}, cm = v.contexte_metier || {};
-    const items = [p.prenom, p.email, v.texte, v.pourquoi, cm.offre, cm.cible, cm.approche, (v.valeurs || []).length];
-    setPct(Math.round((items.filter(Boolean).length / items.length) * 100));
+    const rempli = { prenom: p.prenom, email: p.email, vision: v.texte, pourquoi: v.pourquoi, offre: cm.offre, cible: cm.cible,
+      approche: cm.approche, valeurs: (v.valeurs || []).length };
+    const manquants = CHAMPS_PROFIL.filter(([k]) => !rempli[k]);
+    setEtat({ pct: Math.round(((CHAMPS_PROFIL.length - manquants.length) / CHAMPS_PROFIL.length) * 100), manquants });
   }).catch(() => {});
   useEffect(() => {
     calculer();
     window.addEventListener("zayado:profil-maj", calculer);
     return () => window.removeEventListener("zayado:profil-maj", calculer);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  return pct;
+  return etat;
 }
 const signalerMaj = () => window.dispatchEvent(new Event("zayado:profil-maj"));
+// Amène au champ manquant (onglet Mon Copilote) et le met en évidence.
+const allerAuChamp = (cle) => setTimeout(() => {
+  const el = document.querySelector(`[data-champ="${cle}"]`);
+  if (!el) return;
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  el.focus?.();
+  el.classList.add("ring-2", "ring-gold/70");
+  setTimeout(() => el.classList.remove("ring-2", "ring-gold/70"), 2200);
+}, 120);
+
+// Enregistrement automatique : 0,8 s après la dernière frappe, avec un petit « Enregistré ✓ ».
+function useAutoSave(payload, pret) {
+  const [etat, setEtat] = useState("");
+  const premier = useRef(true);
+  const cle = JSON.stringify(payload);
+  useEffect(() => {
+    if (!pret) return undefined;
+    if (premier.current) { premier.current = false; return undefined; }
+    setEtat("encours");
+    const t = setTimeout(async () => {
+      try { await saveProfile(payload); setEtat("ok"); signalerMaj(); }
+      catch { setEtat("ko"); }
+    }, 800);
+    return () => clearTimeout(t);
+  }, [cle, pret]); // eslint-disable-line react-hooks/exhaustive-deps
+  return etat;
+}
+function EtatSauvegarde({ etat }) {
+  if (!etat) return <span className="text-[11.5px] text-offwhite/40">Enregistrement automatique</span>;
+  if (etat === "encours") return <span className="inline-flex items-center gap-1 text-[11.5px] text-offwhite/55"><Loader2 size={11} className="animate-spin" /> Enregistrement…</span>;
+  if (etat === "ko") return <span className="text-[11.5px] text-red-300">Échec de l'enregistrement — vérifie ta connexion</span>;
+  return <span className="inline-flex items-center gap-1 text-[11.5px] text-emerald-300" data-testid="parametres-enregistre"><Check size={12} /> Enregistré</span>;
+}
 
 export default function Parametres() {
   const navigate = useNavigate();
@@ -57,10 +103,14 @@ export default function Parametres() {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const [active, setActive] = useState(() => {
-    const h = (window.location.hash || "").replace("#", "");
-    return SECTIONS.some((x) => x.id === h) ? h : "general";
-  });
+  const [active, setActive] = useState(sectionDepuisHash);
+  // Retour d'un branchement cloud (Google Drive / OneDrive)
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    if (q.get("cloud")) toast.success(q.get("cloud") === "google" ? "Google Drive relié." : "OneDrive / SharePoint relié.");
+    if (q.get("cloud_erreur")) toast.error("Le lien a expiré : relance la connexion depuis Connexions.");
+    if (q.get("cloud") || q.get("cloud_erreur")) window.history.replaceState(null, "", `/parametres${window.location.hash}`);
+  }, []);
   const completion = useCompletion();
   const [recherche, setRecherche] = useState("");
 
@@ -90,8 +140,8 @@ export default function Parametres() {
           <p className="px-3 py-2 text-[12px] text-offwhite/45" data-testid="parametres-recherche-vide">Aucun résultat.</p>
         )}
       </nav>
-      {/* Mobile : barre d'onglets défilante */}
-      <nav className="-mx-4 flex gap-1.5 overflow-x-auto border-b border-white/[0.14] px-4 py-3 [scrollbar-width:none] md:hidden" data-testid="parametres-nav-mobile">
+      {/* Mobile : barre d'onglets défilante (toujours visible : le panneau défile seul) */}
+      <nav className="flex gap-1.5 overflow-x-auto border-b border-white/[0.14] px-4 py-3 [scrollbar-width:none] md:hidden" data-testid="parametres-nav-mobile">
         {visibles.map((s) => (
           <button key={s.id} onClick={() => setActive(s.id)} data-testid={`parametres-navm-${s.id}`}
             className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 py-[7px] text-[12.5px] font-medium transition ${
@@ -105,12 +155,13 @@ export default function Parametres() {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-navy-900/70 p-3 backdrop-blur-md sm:p-6"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-navy-900/70 p-0 backdrop-blur-md sm:p-6"
       data-testid="parametres-overlay"
       onMouseDown={(e) => { if (e.target === e.currentTarget) fermer(); }}
     >
       <div
-        className="relative flex w-full max-w-[980px] flex-col overflow-hidden rounded-[22px] border border-white/[0.14] bg-[#101c38] shadow-[0_20px_60px_rgba(0,0,0,0.45)] md:max-h-[85vh] md:min-h-[70vh] md:flex-row"
+        // Hauteur FIXE : la fenêtre ne « saute » plus d'un onglet à l'autre.
+        className="relative flex h-full w-full max-w-[980px] flex-col overflow-hidden border-white/[0.14] bg-[#101c38] shadow-[0_20px_60px_rgba(0,0,0,0.45)] sm:h-[85vh] sm:rounded-[22px] sm:border md:flex-row"
         data-testid="parametres-modal"
         role="dialog"
         aria-modal="true"
@@ -126,44 +177,51 @@ export default function Parametres() {
         </button>
 
         {/* Colonne gauche : recherche + complétion + navigation */}
-        <div className="flex w-full shrink-0 flex-col overflow-y-auto md:w-[210px] md:border-r md:border-white/[0.14]">
+        <div className="flex w-full shrink-0 flex-col md:w-[220px] md:overflow-y-auto md:border-r md:border-white/[0.14]">
           <div className="px-4 pb-1 pt-4 md:px-3">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-offwhite/60">Réglages</p>
             <h1 className="mt-0.5 font-display text-2xl font-bold">Paramètres</h1>
           </div>
-          <div className="mx-4 mb-2 mt-3 flex items-center gap-2 rounded-[10px] border border-white/[0.14] bg-white/[0.06] px-2.5 py-[7px] md:mx-3">
+          <div className="mx-4 mb-2 mt-3 hidden items-center gap-2 rounded-[10px] border border-white/[0.14] bg-white/[0.06] px-2.5 py-[7px] md:mx-3 md:flex">
             <Search size={14} className="shrink-0 text-offwhite/50" />
             <input value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="Rechercher un réglage…"
               data-testid="parametres-recherche" className="w-full bg-transparent text-[13px] text-offwhite outline-none placeholder:text-offwhite/45" />
           </div>
           {completion !== null && (
-            <button onClick={() => setActive("profil")} data-testid="parametres-completion"
-              className="mx-4 mb-3 flex items-center gap-2.5 rounded-[10px] border border-gold/20 bg-gold/[0.06] p-2.5 text-left transition hover:bg-gold/[0.12] md:mx-3">
-              <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-                style={{ background: `conic-gradient(#DEC2A3 ${completion * 3.6}deg, rgba(255,255,255,0.14) 0deg)` }}>
-                <span className="absolute inset-[3px] rounded-full bg-[#1b2a4d]" />
-                <span className="relative text-[10px] font-bold text-gold">{completion}%</span>
-              </span>
-              <span className="min-w-0">
-                <span className="block text-[12.5px] font-semibold text-offwhite">Profil complété</span>
-                <span className="block text-[11px] text-offwhite/55">{completion < 100 ? "Complète ton profil" : "Profil complet !"}</span>
-              </span>
-            </button>
+            <div className="mx-3 mb-3 hidden rounded-[10px] border border-gold/20 bg-gold/[0.06] p-2.5 md:block" data-testid="parametres-completion">
+              <button onClick={() => { setActive("copilote"); if (completion.manquants[0]) allerAuChamp(completion.manquants[0][0]); }}
+                className="flex w-full items-center gap-2.5 text-left">
+                <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                  style={{ background: `conic-gradient(#DEC2A3 ${completion.pct * 3.6}deg, rgba(255,255,255,0.14) 0deg)` }}>
+                  <span className="absolute inset-[3px] rounded-full bg-[#1b2a4d]" />
+                  <span className="relative text-[10px] font-bold text-gold">{completion.pct}%</span>
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[12.5px] font-semibold text-offwhite">Profil complété</span>
+                  <span className="block text-[11px] text-offwhite/55">{completion.pct < 100 ? "Ton Copilote te connaît mieux avec :" : "Profil complet, bravo !"}</span>
+                </span>
+              </button>
+              {completion.manquants.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {completion.manquants.slice(0, 4).map(([k, l]) => (
+                    <button key={k} onClick={() => { setActive("copilote"); allerAuChamp(k); }} data-testid={`completion-${k}`}
+                      className="rounded-full border border-gold/30 px-2 py-0.5 text-[10.5px] text-gold hover:bg-gold/10">+ {l}</button>
+                  ))}
+                  {completion.manquants.length > 4 && <span className="px-1 text-[10.5px] text-offwhite/45">+{completion.manquants.length - 4}</span>}
+                </div>
+              )}
+            </div>
           )}
           {nav}
         </div>
 
         {/* Panneau, défilable indépendamment */}
         <div className="min-w-0 flex-1 overflow-y-auto px-4 pb-6 pt-4 md:p-6" data-testid={`parametres-panel-${active}`}>
-          {active === "profil" && <SectionProfil />}
-          {active === "general" && <SectionGeneral />}
-          {active === "vision" && <SectionVision />}
+          {active === "compte" && <><SectionGeneral /><SectionSecurite /></>}
+          {active === "copilote" && <><SectionProfil manquants={completion?.manquants || []} /><SectionVision /></>}
           {active === "notifications" && <SectionNotifications />}
-          {active === "integrations" && <><CarteTeams /><CarteZayadoRH /><IntegrationsSection /></>}
-          {active === "cloud-save" && <SectionCloudSave />}
-          {active === "parrainage" && <SectionParrainage />}
-          {active === "securite" && <SectionSecurite />}
-          {active === "facturation" && <SectionFacturation />}
+          {active === "connexions" && <SectionConnexions />}
+          {active === "offre" && <><SectionFacturation /><SectionParrainage /></>}
         </div>
       </div>
     </div>
@@ -184,11 +242,10 @@ function Carte({ children, titre, desc }) {
 const INPUT = "h-11 w-full rounded-xl border border-white/[0.14] bg-white/[0.08] px-3.5 text-sm text-offwhite outline-none transition placeholder:text-offwhite/45 focus:border-gold/60 focus:bg-white/[0.12]";
 const BTN_OR = "inline-flex h-10 items-center gap-2 rounded-2xl bg-gradient-to-br from-[#DEC2A3] to-[#F1E2CC] px-4 text-sm font-semibold text-navy-900 transition hover:brightness-105 disabled:opacity-60";
 
-function SectionProfil() {
+function SectionProfil({ manquants = [] }) {
   const [profil, setProfil] = useState(null);
   const [memoire, setMemoire] = useState(null);
   const [cm, setCm] = useState({});
-  const [sauvegarde, setSauvegarde] = useState(false);
 
   useEffect(() => {
     fetchState().then(async (d) => {
@@ -198,47 +255,70 @@ function SectionProfil() {
         try { const moi = await fetchMoi(); if (moi?.email) p.email = moi.email; } catch { /* compte sans email */ }
       }
       const c = d.vision?.contexte_metier || {};
-      setCm(c);
+      setCm({ copilote_ton: c.copilote_ton || "", outils: c.outils || "", marche: c.marche || "france" });
       setProfil(p);
       setMemoire({ pourquoi: d.vision?.pourquoi || "", offre: c.offre || "", cible: c.cible || "", approche: c.approche || "" });
     }).catch(() => toast.error("Impossible de charger ton profil."));
   }, []);
 
+  // Seules les clés de cette section partent : on n'écrase pas les réglages faits ailleurs.
+  const etat = useAutoSave(profil && memoire ? {
+    prenom: profil.prenom, email: profil.email, heure_checkin: profil.heure_checkin, pourquoi: memoire.pourquoi,
+    contexte_metier: { offre: memoire.offre, cible: memoire.cible, approche: memoire.approche, copilote_ton: cm.copilote_ton,
+      outils: cm.outils, marche: cm.marche, heure_point: profil.heure_checkin },
+  } : null, !!(profil && memoire));
+
   const champ = (cle, valeur) => setProfil((p) => ({ ...p, [cle]: valeur }));
   const mem = (cle, valeur) => setMemoire((m) => ({ ...m, [cle]: valeur }));
-  const enregistrer = async () => {
-    setSauvegarde(true);
-    try {
-      await saveProfile({
-        prenom: profil.prenom, email: profil.email, heure_checkin: profil.heure_checkin,
-        pourquoi: memoire.pourquoi,
-        contexte_metier: { ...cm, offre: memoire.offre, cible: memoire.cible, approche: memoire.approche },
-      });
-      toast.success("Profil enregistré. Le Copilote s'en sert dès maintenant.");
-      signalerMaj();
-    } catch { toast.error("Échec de l'enregistrement."); }
-    finally { setSauvegarde(false); }
-  };
 
   if (!profil || !memoire) return <Carte><p className="text-sm text-offwhite/50">Chargement…</p></Carte>;
+  const aFaire = manquants.filter(([k]) => ["prenom", "email", "pourquoi", "offre", "cible", "approche"].includes(k));
   return (
     <>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 pr-10">
+        <p className="text-[13px] text-offwhite/60">Ce que ton Copilote sait de toi. Tout est enregistré au fil de la frappe.</p>
+        <EtatSauvegarde etat={etat} />
+      </div>
+      {aFaire.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-1.5 rounded-2xl border border-gold/25 bg-gold/[0.07] px-3 py-2.5" data-testid="parametres-a-completer">
+          <span className="mr-1 text-[12px] text-offwhite/75">À compléter :</span>
+          {aFaire.map(([k, l]) => (
+            <button key={k} onClick={() => allerAuChamp(k)} className="rounded-full border border-gold/40 px-2.5 py-0.5 text-[11.5px] text-gold hover:bg-gold/10">{l}</button>
+          ))}
+        </div>
+      )}
       <Carte titre="Ton identité" desc="Ces informations personnalisent ton cockpit et ton Copilote.">
         <label className="mb-1.5 block text-xs text-offwhite/50">Prénom</label>
-        <input value={profil.prenom || ""} onChange={(e) => champ("prenom", e.target.value)} className={`${INPUT} mb-4`} data-testid="parametres-prenom" />
+        <input value={profil.prenom || ""} onChange={(e) => champ("prenom", e.target.value)} className={`${INPUT} mb-4`} data-testid="parametres-prenom" data-champ="prenom" />
         <label className="mb-1.5 block text-xs text-offwhite/50">E-mail (point du jour, e-mail du lundi)</label>
-        <input type="email" value={profil.email || ""} onChange={(e) => champ("email", e.target.value)} className={`${INPUT} mb-4`} data-testid="parametres-email" />
-        <label className="mb-1.5 block text-xs text-offwhite/50">Heure du point du jour</label>
-        <input type="time" value={profil.heure_checkin || "08:30"} onChange={(e) => champ("heure_checkin", e.target.value)} className={INPUT} data-testid="parametres-heure" />
+        <input type="email" value={profil.email || ""} onChange={(e) => champ("email", e.target.value)} className={`${INPUT} mb-4`} data-testid="parametres-email" data-champ="email" />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="mb-1.5 block text-xs text-offwhite/50">Heure du point du jour</label>
+            <input type="time" value={profil.heure_checkin || "08:30"} onChange={(e) => champ("heure_checkin", e.target.value)} className={INPUT} data-testid="parametres-heure" />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs text-offwhite/50">Ton marché (actualité, contexte économique)</label>
+            <select value={cm.marche} onChange={(e) => setCm((c) => ({ ...c, marche: e.target.value }))} className={INPUT} data-testid="parametres-marche">
+              {[["france", "France"], ["belgique", "Belgique"], ["senegal", "Sénégal"], ["cote_ivoire", "Côte d'Ivoire"], ["cameroun", "Cameroun"], ["maroc", "Maroc"]].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </div>
+        </div>
       </Carte>
       <Carte titre="Ton Copilote" desc="Ce que le Copilote t'a demandé au fil de l'eau — modifiable ici.">
         <label className="mb-1.5 block text-xs text-offwhite/50">Ton</label>
-        <select value={cm.copilote_ton || ""} onChange={(e) => setCm((c) => ({ ...c, copilote_ton: e.target.value }))} className={`${INPUT} mb-4`} data-testid="parametres-ton">
+        <select value={cm.copilote_ton || ""} onChange={(e) => setCm((c) => ({ ...c, copilote_ton: e.target.value }))} className={`${INPUT} mb-2`} data-testid="parametres-ton">
           <option value="">Par défaut (apaisé)</option>
           <option value="doux">Doux et bienveillant</option>
           <option value="direct">Direct et concis</option>
           <option value="coach">Coach qui me challenge</option>
         </select>
+        <p className="mb-4 rounded-xl bg-white/[0.05] px-3 py-2 text-[12.5px] italic text-offwhite/70" data-testid="parametres-ton-exemple">
+          « {{ doux: "Prends ton temps : une seule chose importante aujourd'hui, et le reste attendra.",
+            direct: "Priorité n°1 : relancer 3 prospects avant 11 h. Le reste, demain.",
+            coach: "Tu as dit 5 clients ce trimestre. Il en manque 3 : qui appelles-tu aujourd'hui ?" }[cm.copilote_ton]
+            || "Belle journée devant toi. Commençons par ce qui compte le plus." } »
+        </p>
         <label className="mb-1.5 block text-xs text-offwhite/50">Outils que tu utilises</label>
         <div className="flex flex-wrap gap-2" data-testid="parametres-outils">
           {["Trello", "Microsoft Teams", "Slack", "Notion", "Google Agenda", "Outlook", "Excel / Sheets"].map((o) => {
@@ -260,13 +340,11 @@ function SectionProfil() {
         ].map(([k, label, ph]) => (
           <div key={k} className="mb-3">
             <label className="mb-1.5 flex items-center gap-1.5 text-xs text-offwhite/60"><Brain size={12} className="text-gold" />{label}</label>
-            <textarea rows={2} value={memoire[k]} onChange={(e) => mem(k, e.target.value)} placeholder={ph} className={`${INPUT} h-auto resize-y py-3 leading-relaxed`} data-testid={`parametres-memoire-${k}`} />
+            <textarea rows={2} value={memoire[k]} onChange={(e) => mem(k, e.target.value)} placeholder={ph} data-champ={k}
+              className={`${INPUT} h-auto resize-y py-3 leading-relaxed`} data-testid={`parametres-memoire-${k}`} />
           </div>
         ))}
       </Carte>
-      <button onClick={enregistrer} disabled={sauvegarde} className={BTN_OR} data-testid="parametres-save-profil">
-        {sauvegarde ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Enregistrer
-      </button>
     </>
   );
 }
@@ -275,13 +353,13 @@ function SectionVision() {
   const [vision, setVision] = useState(null);
   const [valeurs, setValeurs] = useState([]);
   const [nouvelle, setNouvelle] = useState("");
-  const [sauvegarde, setSauvegarde] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchState().then((d) => { setVision(d.vision?.texte || ""); setValeurs(d.vision?.valeurs || []); })
       .catch(() => toast.error("Impossible de charger ta vision."));
   }, []);
+  const etat = useAutoSave({ texte_vision: vision ?? "", valeurs }, vision !== null);
 
   const ajouter = (e) => {
     e.preventDefault();
@@ -289,18 +367,13 @@ function SectionVision() {
     if (!v || valeurs.includes(v) || valeurs.length >= 7) return;
     setValeurs((l) => [...l, v]); setNouvelle("");
   };
-  const enregistrer = async () => {
-    setSauvegarde(true);
-    try { await saveProfile({ texte_vision: vision, valeurs }); toast.success("Vision enregistrée."); signalerMaj(); }
-    catch { toast.error("Échec de l'enregistrement."); }
-    finally { setSauvegarde(false); }
-  };
 
   if (vision === null) return <Carte><p className="text-sm text-offwhite/50">Chargement…</p></Carte>;
   return (
     <>
       <Carte titre="Ma phrase de vision" desc="Elle s'affiche sur ton Vision Board et guide les priorités proposées par l'IA.">
-        <textarea rows={3} value={vision} onChange={(e) => setVision(e.target.value)} placeholder="Dans 3 ans, je…" className={`${INPUT} h-auto resize-y py-3 leading-relaxed`} data-testid="parametres-vision-texte" />
+        <textarea rows={3} value={vision} onChange={(e) => setVision(e.target.value)} placeholder="Dans 3 ans, je…" data-champ="vision"
+          className={`${INPUT} h-auto resize-y py-3 leading-relaxed`} data-testid="parametres-vision-texte" />
       </Carte>
       <Carte titre="Mes valeurs" desc="Jusqu'à 7 valeurs : elles colorent le ton du Copilote et tes cartes Vision.">
         <div className="mb-3 flex flex-wrap gap-2">
@@ -312,17 +385,16 @@ function SectionVision() {
           {!valeurs.length && <span className="text-xs text-offwhite/45">Aucune valeur pour l'instant.</span>}
         </div>
         <form onSubmit={ajouter} className="flex gap-2">
-          <input value={nouvelle} onChange={(e) => setNouvelle(e.target.value)} placeholder="Ex. Liberté" className={`${INPUT} flex-1`} data-testid="parametres-valeur-input" />
+          <input value={nouvelle} onChange={(e) => setNouvelle(e.target.value)} placeholder="Ex. Liberté" data-champ="valeurs"
+            className={`${INPUT} flex-1`} data-testid="parametres-valeur-input" />
           <button type="submit" className={BTN_OR}><Plus size={14} /> Ajouter</button>
         </form>
       </Carte>
-      <div className="flex flex-wrap gap-2">
-        <button onClick={enregistrer} disabled={sauvegarde} className={BTN_OR} data-testid="parametres-save-vision">
-          {sauvegarde ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Enregistrer
-        </button>
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <button onClick={() => navigate("/app/vision")} className="inline-flex items-center gap-2 rounded-xl border border-white/15 px-4 py-2 text-sm hover:bg-white/5">
           <Compass size={14} /> Ouvrir mon Vision Board
         </button>
+        <EtatSauvegarde etat={etat} />
       </div>
     </>
   );
@@ -422,9 +494,6 @@ function SectionNotifications() {
   if (!profil) return <Carte><p className="text-sm text-offwhite/50">Chargement…</p></Carte>;
   return (
     <>
-    <Carte titre="Parler à ton Copilote depuis ton téléphone" desc="Relie Telegram ou WhatsApp : tu écris à Zayado comme à un contact, et tout se retrouve dans ton app (priorités, décisions, « c'est fait »).">
-      <CanauxCopilote />
-    </Carte>
     <Carte titre="Rappels et alertes" desc={profil.email ? `Envoyés à ${profil.email}.` : "Ajoute ton e-mail dans Profil pour recevoir les e-mails."}>
       <div className="flex items-center justify-between gap-4 border-b border-white/5 pb-4">
         <div><p className="text-sm font-medium text-offwhite">Toutes les notifications</p><p className="text-xs text-offwhite/50">Interrupteur général : coupe tous les envois.</p></div>
@@ -446,10 +515,10 @@ function SectionNotifications() {
           {JOURS.map((j, i) => <option key={j} value={(i + 1) % 7}>{j}</option>)}
         </select>
       </div>
-      <p className="mt-4 text-xs text-offwhite/45">L'heure de ton point du jour se règle dans Profil. Les décisions à valider arrivent aussi dans la cloche, en haut de l'écran.</p>
+      <p className="mt-4 text-xs text-offwhite/45">L'heure de ton point du jour se règle dans Mon Copilote. Telegram et WhatsApp se relient dans Connexions. Les décisions à valider arrivent aussi dans la cloche, en haut de l'écran.</p>
     </Carte>
 
-    <Carte titre="Ton actualité" desc="Choisis ce que tu reçois dans le briefing du jour (onglet Actualité du Copilote). Le pays se règle dans Profil → Marché.">      <div className="space-y-4">
+    <Carte titre="Ton actualité" desc="Choisis ce que tu reçois dans le briefing du jour (onglet Actualité du Copilote). Le pays se règle dans Mon Copilote › Ton marché.">      <div className="space-y-4">
         <div className="flex items-center justify-between gap-4 border-b border-white/5 pb-4">
           <div><p className="text-sm font-medium text-offwhite">Alerte dans la cloche</p><p className="text-xs text-offwhite/50">À quel rythme la cloche te signale une nouvelle actualité.</p></div>
           <select value={rythme} onChange={(e) => changerRythme(e.target.value)}
@@ -478,63 +547,96 @@ function SectionNotifications() {
   );
 }
 
-function SectionCloudSave() {
-  const [state, setState] = useState(null);
-  const [connections, setConnections] = useState([]);
-  const [saving, setSaving] = useState(false);
-  const [enabled, setEnabled] = useState(false);
-  const [provider, setProvider] = useState("google");
+// Connexions : tout ce que Zayado relie, au même endroit, avec son état.
+function SectionConnexions() {
+  const [conns, setConns] = useState(null);
+  const [cm, setCm] = useState(null);
+  const [abo, setAbo] = useState(null);
+  const [envoi, setEnvoi] = useState("");
 
-  useEffect(() => {
-    Promise.all([fetchState(), fetchConnections()]).then(([s, c]) => {
-      const ctx = s.vision?.contexte_metier || {};
-      setState(ctx);
-      setEnabled(ctx.auto_save_documents === true);
-      setProvider(ctx.document_provider || "google");
-      setConnections(c || []);
-    }).catch(() => toast.error("Impossible de charger le réglage cloud."));
-  }, []);
+  const charger = () => Promise.all([fetchConnections(), fetchState()]).then(([c, s]) => {
+    setConns(c || []);
+    const x = s.vision?.contexte_metier || {};
+    setCm({ auto_save_documents: x.auto_save_documents === true, document_provider: x.document_provider || "google" });
+  }).catch(() => { setConns([]); setCm({ auto_save_documents: false, document_provider: "google" }); });
+  useEffect(() => { charger(); fetchAbonnement().then(setAbo).catch(() => setAbo({})); }, []);
 
-  const connected = (provider === "google" ? "google_drive" : "microsoft_drive");
-  const isConnected = connections.some((c) => c.provider === connected && c.status === "ready");
-
-  const save = async () => {
-    setSaving(true);
+  const relie = (p) => (conns || []).some((c) => c.provider === p && c.status === "ready");
+  const relier = async (provider) => {
+    setEnvoi(provider);
     try {
-      await saveProfile({ contexte_metier: { ...(state || {}), auto_save_documents: enabled, document_provider: provider } });
-      toast.success(enabled ? "Enregistrement cloud activé." : "Enregistrement cloud désactivé.");
-    } catch { toast.error("Impossible d’enregistrer ce réglage."); }
-    finally { setSaving(false); }
+      const r = await oauthStockage(provider);
+      if (r.configured && r.authorization_url) { window.location.href = r.authorization_url; return; }
+      toast("Cette connexion n'est pas encore activée par Zayado.");
+    } catch { toast.error("Connexion impossible pour le moment."); }
+    setEnvoi("");
+  };
+  const couper = async (cle, nom) => {
+    if (!window.confirm(`Déconnecter ${nom} ? Les documents déjà envoyés restent dans ton espace.`)) return;
+    try { await deconnecterCanal(cle); toast.success(`${nom} déconnecté.`); charger(); } catch { toast.error("Déconnexion impossible."); }
+  };
+  const reglerAuto = async (patch) => {
+    const suivant = { ...cm, ...patch };
+    if (suivant.auto_save_documents && !relie(`${suivant.document_provider}_drive`)) {
+      toast("Relie d'abord cette destination juste au-dessus.");
+      return;
+    }
+    setCm(suivant);
+    try { await saveProfile({ contexte_metier: suivant }); toast.success(suivant.auto_save_documents ? "Enregistrement automatique activé." : "Enregistrement automatique coupé."); }
+    catch { toast.error("Échec de l'enregistrement."); }
   };
 
-  if (!state) return <Carte><p className="text-sm text-offwhite/50">Chargement…</p></Carte>;
+  const equipe = ["business", "entreprise"].includes(abo?.plan) && abo?.acces === "actif";
+  const Ligne = ({ Icone, nom, sous, ok, action }) => (
+    <div className="flex items-center gap-3 border-b border-white/[0.07] py-3 last:border-0">
+      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${ok ? "bg-emerald-500/15 text-emerald-300" : "bg-white/[0.06] text-offwhite/60"}`}><Icone size={17} /></span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-offwhite">{nom}</p>
+        <p className="truncate text-[12px] text-offwhite/55">{sous}</p>
+      </div>
+      {action}
+    </div>
+  );
+  const bouton = (ok, cle, nom, onRelier) => ok
+    ? <button onClick={() => couper(cle, nom)} className="inline-flex items-center gap-1 rounded-lg border border-white/15 px-2.5 py-1 text-[12px] text-offwhite/75 hover:bg-white/10" data-testid={`connexion-${cle}-couper`}><Check size={12} className="text-emerald-300" /> Relié</button>
+    : <button onClick={onRelier} disabled={envoi === cle.split("_")[0]} className="rounded-lg bg-gold px-3 py-1.5 text-[12px] font-semibold text-navy-900 disabled:opacity-50" data-testid={`connexion-${cle}-relier`}>
+        {envoi === cle.split("_")[0] ? <Loader2 size={13} className="animate-spin" /> : "Relier"}
+      </button>;
+
+  if (!conns || !cm) return <Carte><p className="text-sm text-offwhite/50">Chargement…</p></Carte>;
   return (
     <>
-      <Carte titre="Enregistrer automatiquement mes documents" desc="Quand l’IA crée un document, Zayado l’envoie dans ton espace cloud choisi. Aucun envoi n’est effectué si ce réglage est désactivé.">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${enabled ? "bg-emerald-500/15 text-emerald-300" : "bg-white/5 text-offwhite/50"}`}><Cloud size={18} /></span>
-            <div><p className="text-sm font-semibold text-offwhite">Sauvegarde automatique</p><p className="text-xs text-offwhite/50">{enabled ? "Activée pour les nouveaux documents" : "Désactivée"}</p></div>
-          </div>
-          <button onClick={() => setEnabled((v) => !v)} role="switch" aria-checked={enabled} data-testid="cloud-auto-save-toggle" className={`relative h-6 w-11 rounded-full transition-colors ${enabled ? "bg-gold" : "bg-white/15"}`}>
-            <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${enabled ? "translate-x-5" : "translate-x-0.5"}`} />
-          </button>
+      <Carte titre="Tes espaces cloud" desc="Les documents créés par l'IA (brief, plan 30 jours, SWOT…) peuvent partir tout seuls dans ton Drive. Zayado n'accède qu'aux fichiers qu'il crée.">
+        <div data-testid="parametres-connexions">
+          <Ligne Icone={Cloud} nom="Google Drive" ok={relie("google_drive")} sous={relie("google_drive") ? "Relié à ton compte Zayado" : "Pas relié"}
+            action={bouton(relie("google_drive"), "google_drive", "Google Drive", () => relier("google"))} />
+          <Ligne Icone={Cloud} nom="OneDrive / SharePoint" ok={relie("microsoft_drive")} sous={relie("microsoft_drive") ? "Relié à ton compte Zayado" : "Pas relié"}
+            action={bouton(relie("microsoft_drive"), "microsoft_drive", "OneDrive", () => relier("microsoft"))} />
         </div>
-        <label className="mt-5 block text-xs font-medium text-offwhite/60">Destination</label>
-        <select value={provider} onChange={(e) => setProvider(e.target.value)} className={`${INPUT} mt-1`} data-testid="cloud-auto-save-provider">
-          <option value="google">Google Drive</option>
-          <option value="microsoft">OneDrive / SharePoint</option>
-        </select>
-        <p className={`mt-2 text-xs ${isConnected ? "text-emerald-300" : "text-amber-300"}`}>
-          {isConnected ? "Connexion cloud active : les prochains documents seront transmis automatiquement." : "Connecte d’abord cette destination dans Intégrations."}
-        </p>
-        <button onClick={save} disabled={saving || (enabled && !isConnected)} className={`${BTN_OR} mt-4`} data-testid="cloud-auto-save-save">
-          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Enregistrer ce réglage
-        </button>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
+          <div>
+            <p className="text-sm font-medium text-offwhite">Enregistrer automatiquement mes documents</p>
+            <select value={cm.document_provider} onChange={(e) => reglerAuto({ document_provider: e.target.value })}
+              className="mt-1 rounded-lg border border-white/15 bg-white/5 px-2 py-1 text-xs text-offwhite" data-testid="cloud-auto-save-provider">
+              <option value="google">dans Google Drive</option>
+              <option value="microsoft">dans OneDrive / SharePoint</option>
+            </select>
+          </div>
+          <Interrupteur on={cm.auto_save_documents} onClick={() => reglerAuto({ auto_save_documents: !cm.auto_save_documents })} testid="cloud-auto-save-toggle" />
+        </div>
       </Carte>
-      <Carte titre="Confidentialité" desc="Chaque fichier est transmis uniquement après ton consentement OAuth. Zayado ne demande pas l’accès global à ton disque : Drive utilise l’accès aux fichiers créés par l’application et Microsoft utilise Files.ReadWrite.">
-        <p className="text-xs leading-relaxed text-offwhite/60">Tu peux couper la sauvegarde automatique à tout moment. Les documents déjà transmis restent dans ton espace cloud et ne sont pas supprimés par Zayado.</p>
+
+      <Carte titre="Ton Copilote sur ton téléphone" desc="Écris à Zayado comme à un contact : idées, priorités, « c'est fait ». Tout se retrouve dans ton app.">
+        <CanauxCopilote />
       </Carte>
+
+      <Carte titre="Ta banque (Pouls Business)" desc="Qonto : ton CA et ta trésorerie se mettent à jour tout seuls dans le Pouls Business.">
+        <PoulsQonto />
+      </Carte>
+
+      <CarteTeams />
+      <CarteZayadoRH equipe={equipe} />
+      <IntegrationsSection />
     </>
   );
 }
@@ -630,13 +732,21 @@ function SectionSecurite() {
 // App RH SÉPARÉE (rh.zayado.net) : on s'y connecte avec son compte Zayado ; ses données
 // vivent dans le Microsoft 365 de l'entreprise (Microsoft Lists), pas dans Zayado.
 const RH_URL = process.env.REACT_APP_RH_URL || "https://rh.zayado.net";
-function CarteZayadoRH() {
+function CarteZayadoRH({ equipe }) {
   return (
-    <Carte titre="Zayado RH pour ton équipe" desc="Onboarding, planning, présence, absences, pièces et temps de tes salariés, installés dans ton Microsoft 365 (SharePoint, Lists, Teams) en environ 10 minutes. Inclus dans les offres Équipe et Entreprise.">
-      <a href={`${RH_URL}/login`} target="_blank" rel="noopener noreferrer" className={`${BTN_OR} mt-1`} data-testid="parametres-zayado-rh">
-        Ouvrir Zayado RH
-      </a>
-      <p className="mt-2 text-[12px] text-offwhite/50">Connecte-toi avec « Se connecter avec Zayado », puis Paramètres › Installer.</p>
+    <Carte titre="Zayado RH pour ton équipe" desc="Onboarding, planning, présence, absences, pièces et temps de tes salariés, installés dans ton Microsoft 365 (SharePoint, Lists, Teams) en environ 10 minutes.">
+      {equipe ? (
+        <>
+          <a href={`${RH_URL}/login`} target="_blank" rel="noopener noreferrer" className={`${BTN_OR} mt-1`} data-testid="parametres-zayado-rh">
+            <Users size={14} /> Ouvrir Zayado RH
+          </a>
+          <p className="mt-2 text-[12px] text-offwhite/50">Connecte-toi avec « Se connecter avec Zayado », puis Paramètres › Installer.</p>
+        </>
+      ) : (
+        <Link to="/pricing" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-gold hover:underline" data-testid="parametres-zayado-rh-offre">
+          Inclus dans les offres Équipe et Entreprise →
+        </Link>
+      )}
     </Carte>
   );
 }
@@ -746,6 +856,34 @@ function GestionEquipe() {
   );
 }
 
+// Ce que l'offre comprend, et ce que l'offre au-dessus ajouterait.
+const ORDRE_OFFRES = ["reveur", "serenite", "pro", "business", "entreprise"];
+function ContenuOffre({ plan }) {
+  const toutes = [...PLANS, PLAN_ENTREPRISE];
+  const actuelle = toutes.find((p) => p.key === plan);
+  const suivante = toutes.find((p) => p.key === ORDRE_OFFRES[ORDRE_OFFRES.indexOf(plan) + 1]);
+  if (!actuelle || !actuelle.points?.length) return null;
+  return (
+    <div className="mt-4 grid gap-3 sm:grid-cols-2" data-testid="parametres-contenu-offre">
+      <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3.5">
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-offwhite/55">Inclus dans {actuelle.nom}</p>
+        <ul className="space-y-1.5">
+          {actuelle.points.map((p) => <li key={p} className="flex gap-2 text-[12.5px] text-offwhite/80"><Check size={13} className="mt-0.5 shrink-0 text-emerald-300" />{p}</li>)}
+        </ul>
+      </div>
+      {suivante && (
+        <div className="rounded-xl border border-gold/25 bg-gold/[0.06] p-3.5">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-gold">Avec {suivante.nom}, en plus</p>
+          <ul className="space-y-1.5">
+            {suivante.points.filter((p) => !p.startsWith("Tout ")).map((p) => <li key={p} className="flex gap-2 text-[12.5px] text-offwhite/80"><Plus size={13} className="mt-0.5 shrink-0 text-gold" />{p}</li>)}
+          </ul>
+          <Link to="/pricing" className="mt-2 inline-block text-[12px] font-semibold text-gold hover:underline">Comparer les offres →</Link>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SectionFacturation() {
   const [abo, setAbo] = useState(null);
   const [commandes, setCommandes] = useState(null);
@@ -788,8 +926,10 @@ function SectionFacturation() {
             <div>
               <p className="text-lg font-semibold text-gold" data-testid="parametres-plan">{planNom(abo.plan || "essentielle")}</p>
               <p className="text-xs text-offwhite/55">
-                {abo.fondateur ? "Tarif fondateur garanti · " : ""}
-                {abo.en_essai ? `Essai ${ESSAI.mois} mois · jusqu'au ${new Date(abo.fin).toLocaleDateString("fr-FR")}` : abo.acces === "actif" && abo.fin ? `Accès jusqu'au ${new Date(abo.fin).toLocaleDateString("fr-FR")}` : abo.acces === "actif" ? "Offre active" : "Ton espace est en pause : tes données sont conservées"}
+                {abo.cycle === "offert" ? "Offert par Zayado · aucun prélèvement" : <>
+                  {abo.fondateur ? "Tarif fondateur garanti · " : ""}
+                  {abo.en_essai ? `Essai ${ESSAI.mois} mois · jusqu'au ${new Date(abo.fin).toLocaleDateString("fr-FR")}` : abo.acces === "actif" && abo.fin ? `Accès jusqu'au ${new Date(abo.fin).toLocaleDateString("fr-FR")}` : abo.acces === "actif" ? "Offre active" : "Ton espace est en pause : tes données sont conservées"}
+                </>}
               </p>
             </div>
             {abo.acces !== "actif" && abo.essai?.disponible ? (
@@ -808,13 +948,14 @@ function SectionFacturation() {
             </button>
           </div>
         )}
-        <Renouvellement abo={abo} onChange={chargerAbo} />
+        {abo?.cycle !== "offert" && <Renouvellement abo={abo} onChange={chargerAbo} />}
+        {abo && <ContenuOffre plan={abo.acces === "actif" ? abo.plan : null} />}
         {abo?.equipe && (
           <p className="mt-3 rounded-xl border border-gold/30 bg-gold/10 px-3 py-2 text-xs text-offwhite/80" data-testid="parametres-membre-equipe">
             Espace Solo offert par l'équipe de <b>{abo.equipe.titulaire}</b>.
           </p>
         )}
-        {fondateur?.ouverte && !abo?.fondateur && (
+        {fondateur?.ouverte && !abo?.fondateur && abo?.cycle !== "offert" && !abo?.equipe && ["serenite", "pro", "essentielle", "reveur", undefined].includes(abo?.plan) && (
           <p className="mt-3 rounded-xl bg-gold/10 px-3 py-2 text-xs text-gold">Tarif fondateur ouvert{fondateur.places_restantes != null ? ` · ${fondateur.places_restantes} places restantes` : ""} : ton prix reste garanti tant que tu restes abonné·e.</p>
         )}
       </Carte>

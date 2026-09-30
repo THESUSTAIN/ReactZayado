@@ -43,6 +43,22 @@ def install_canaux(g: dict) -> None:
             raise HTTPException(401, "Connecte-toi pour relier ton Copilote.")
         return uid
 
+    async def _inclus(db, uid) -> bool:
+        """Copilote sur Telegram / WhatsApp : inclus à partir de l'offre Pro (grille tarifaire)."""
+        User = g.get("User")
+        u = await db.get(User, uid) if User is not None else None
+        if u and u.role in ("admin", "vendeur"):
+            return True
+        f_acces, Abo = g.get("_acces_actif"), g.get("Abonnement")
+        if not (f_acces and Abo is not None) or not await f_acces(db, uid):
+            return False
+        a = await db.get(Abo, uid)
+        return bool(a and a.plan in ("pro", "business", "entreprise"))
+
+    async def _exiger_inclus(db, uid) -> None:
+        if not await _inclus(db, uid):
+            raise HTTPException(403, "Le Copilote sur Telegram et WhatsApp est inclus à partir de l'offre Pro.")
+
     async def _conn(db, uid, provider):
         return (await db.execute(select(UserConnection).where(
             UserConnection.user_id == uid, UserConnection.provider == provider,
@@ -71,6 +87,7 @@ def install_canaux(g: dict) -> None:
         wa = await _conn(db, uid, "whatsapp")
         c = _tg_conf()
         return {
+            "inclus": await _inclus(db, uid),
             "telegram": {"disponible": bool(c["token"] and c["username"]),
                          "statut": ("connecte" if (tg and tg.status == "ready") or (tg_perso and tg_perso.status == "ready")
                                     else "en_attente" if tg and tg.status == "en_attente" else "deconnecte"),
@@ -83,6 +100,7 @@ def install_canaux(g: dict) -> None:
     @api.post("/canaux/telegram/lien")
     async def telegram_lien(db=Depends(get_db)):
         uid = _connecte()
+        await _exiger_inclus(db, uid)
         c = _tg_conf()
         if not (c["token"] and c["username"]):
             raise HTTPException(503, "La connexion Telegram arrive bientôt.")
@@ -100,7 +118,7 @@ def install_canaux(g: dict) -> None:
 
     @api.post("/canaux/whatsapp/qr")
     async def whatsapp_qr(db=Depends(get_db)):
-        _connecte()
+        await _exiger_inclus(db, _connecte())
         if not (g.get("WA_SERVICE_SECRET") and g.get("WA_SERVICE_URL")):
             raise HTTPException(503, "La connexion WhatsApp arrive bientôt.")
         data = await g["whatsapp_start"](db)
@@ -109,7 +127,9 @@ def install_canaux(g: dict) -> None:
     @api.delete("/canaux/{canal}")
     async def deconnecter(canal: str, db=Depends(get_db)):
         uid = _connecte()
-        providers = {"telegram": ("telegram_zayado", "telegram"), "whatsapp": ("whatsapp",)}.get(canal)
+        providers = {"telegram": ("telegram_zayado", "telegram"), "whatsapp": ("whatsapp",),
+                     # Espaces cloud (enregistrement automatique des documents)
+                     "google_drive": ("google_drive",), "microsoft_drive": ("microsoft_drive",)}.get(canal)
         if not providers:
             raise HTTPException(404, "Canal inconnu.")
         for p in providers:
@@ -151,5 +171,8 @@ def install_canaux(g: dict) -> None:
             UserConnection.status == "ready", UserConnection.revoked_at.is_(None)))).scalars().first()
         if not conn:
             await _tg_send(c["token"], chat_id, "Je ne te reconnais pas encore. Relie ton compte depuis Zayado → Copilote → « Connecter Telegram ».")
+            return {"ok": True}
+        if not await _inclus(db, conn.user_id):
+            await _tg_send(c["token"], chat_id, "Ton offre Zayado n'inclut plus le Copilote sur Telegram (offre Pro et plus). Tout reste disponible dans l'app.")
             return {"ok": True}
         return await _tg_traiter(db, conn.user_id, c["token"], chat_id, text)

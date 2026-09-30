@@ -1,14 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Sidebar } from "@/components/kairos/Sidebar";
 import { Header } from "@/components/kairos/Header";
-import {
-  Bot, MessageCircle, Send, Mail, Sparkles, Users, Briefcase, PenTool,
-  Search, TrendingUp, Shield, ArrowRight, Loader2, QrCode, Unplug, Plus,
-  RefreshCw, X, Check, Circle, CheckCircle2, Zap,
-} from "lucide-react";
-import { toast } from "sonner";
+import { Bot, Mail, Sparkles, Users, Briefcase, PenTool, Search, TrendingUp } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { fetchConnections, demarrerWhatsapp, connecterTelegram } from "@/lib/kairosApi";
+import CanauxCopilote from "@/components/kairos/CanauxCopilote";
 import { openChat } from "@/components/kairos/GlobalChat";
 
 const GOLD = "#DEC2A3";
@@ -29,47 +24,11 @@ const AI_AGENTS = [
 export default function Agents() {
   const navigate = useNavigate();
   const [tab, setTab] = useState("agents"); // agents | canaux
-  const [statuts, setStatuts] = useState({});
-  const [qr, setQr] = useState(null);
-  const [waBusy, setWaBusy] = useState(false);
-  const [tgToken, setTgToken] = useState("");
-  const [tgBusy, setTgBusy] = useState(false);
 
-  const chargerStatuts = () => fetchConnections().then((items) => {
-    const m = {};
-    (items || []).forEach((c) => { m[c.provider] = c; });
-    setStatuts(m);
-  }).catch(() => {});
-  useEffect(() => { chargerStatuts(); }, []);
-
-  const connecterWhatsapp = async () => {
-    setWaBusy(true);
-    try {
-      const d = await demarrerWhatsapp();
-      if (d.qr) setQr(d.qr);
-      else if (d.status === "ready" || d.status === "connected") { toast.success("WhatsApp est connecté."); chargerStatuts(); }
-      else toast.info(d.message || "Session WhatsApp en préparation, réessaie dans quelques secondes.");
-    } catch { toast.error("Le service WhatsApp n'est pas encore disponible. Réessaie plus tard."); }
-    finally { setWaBusy(false); }
-  };
-  const connecterTg = async (e) => {
-    e.preventDefault();
-    if (!tgToken.trim()) return;
-    setTgBusy(true);
-    try { await connecterTelegram(tgToken.trim()); toast.success("Bot Telegram connecté."); setTgToken(""); chargerStatuts(); }
-    catch { toast.error("Connexion Telegram impossible : vérifie le token donné par @BotFather."); }
-    finally { setTgBusy(false); }
-  };
   const ouvrirAgent = (a) => {
     if (a.ouvrir === "chat") openChat();
     else if (a.ouvrir === "actu") openChat("actu");
     else navigate(a.route);
-  };
-  const etat = (p) => {
-    const c = statuts[p];
-    if (!c) return ["Non connecté", "text-white/50"];
-    if (c.status === "ready" || c.status === "connected") return [`Connecté${c.label ? ` · ${c.label}` : ""}`, "text-emerald-300"];
-    return ["En attente", "text-amber-300"];
   };
 
   return (
@@ -146,35 +105,13 @@ export default function Agents() {
             </div>
           )}
 
-          {/* Canaux : connexions réelles */}
+          {/* Canaux : le même réglage que Paramètres › Connexions (plus de jeton @BotFather à coller) */}
           {tab === "canaux" && (
             <div className="space-y-3">
-              <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-5">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl" style={{ background: "#25D36622" }}><MessageCircle size={22} style={{ color: "#25D366" }} /></div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-display text-[16px] font-semibold text-white">WhatsApp</h3>
-                  <p className="mt-1 text-[13px] text-white/60">Échange avec le Copilote et valide tes décisions depuis ton WhatsApp.</p>
-                  <p className={`mt-1 text-[12px] ${etat("whatsapp")[1]}`}>{etat("whatsapp")[0]}</p>
-                </div>
-                <button onClick={connecterWhatsapp} disabled={waBusy} className="rounded-xl px-4 py-2.5 text-[12.5px] font-semibold text-navy-900 disabled:opacity-50" style={{ background: GOLD }} data-testid="canal-whatsapp">
-                  {waBusy ? <Loader2 size={14} className="animate-spin" /> : "Connecter WhatsApp"}
-                </button>
-              </div>
               <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
-                <div className="flex flex-wrap items-center gap-4">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl" style={{ background: "#2AABEE22" }}><Send size={22} style={{ color: "#2AABEE" }} /></div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-display text-[16px] font-semibold text-white">Telegram</h3>
-                    <p className="mt-1 text-[13px] text-white/60">Crée ton bot avec @BotFather sur Telegram, puis colle son token ici.</p>
-                    <p className={`mt-1 text-[12px] ${etat("telegram")[1]}`}>{etat("telegram")[0]}</p>
-                  </div>
-                </div>
-                <form onSubmit={connecterTg} className="mt-4 flex gap-2">
-                  <input value={tgToken} onChange={(e) => setTgToken(e.target.value)} placeholder="123456789:AA…" className="flex-1 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-gold/50" data-testid="canal-telegram-token" />
-                  <button type="submit" disabled={tgBusy || !tgToken.trim()} className="rounded-xl px-4 py-2 text-[12.5px] font-semibold text-navy-900 disabled:opacity-50" style={{ background: GOLD }}>
-                    {tgBusy ? <Loader2 size={14} className="animate-spin" /> : "Connecter"}
-                  </button>
-                </form>
+                <h3 className="font-display text-[16px] font-semibold text-white">Ton Copilote sur ton téléphone</h3>
+                <p className="mb-3 mt-1 text-[13px] text-white/60">Relie Telegram en un clic ou WhatsApp par QR code : tu écris à Zayado comme à un contact.</p>
+                <CanauxCopilote />
               </div>
               <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-5">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl" style={{ background: `${GOLD}22` }}><Mail size={22} style={{ color: GOLD }} /></div>
@@ -184,23 +121,12 @@ export default function Agents() {
                 </div>
                 <button onClick={() => navigate("/parametres#notifications")} className="rounded-xl border border-white/20 px-4 py-2.5 text-[12.5px] font-semibold text-white/80 hover:bg-white/5">Régler</button>
               </div>
+              <p className="text-[12px] text-white/45">Tous tes branchements (Drive, Qonto, Teams, téléphone) sont aussi dans Paramètres › Connexions.</p>
             </div>
           )}
         </main>
       </div>
 
-      {qr && (
-        <div onClick={() => { setQr(null); chargerStatuts(); }} className="fixed inset-0 z-[80] flex items-center justify-center bg-[#0b1a3d]/70 p-4 backdrop-blur-sm">
-          <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-sm rounded-2xl border border-white/15 p-6 text-center" style={{ background: "#101a34" }}>
-            <button onClick={() => { setQr(null); chargerStatuts(); }} className="absolute right-4 top-4 text-white/60 hover:text-white"><X size={16} /></button>
-            <MessageCircle size={28} className="mx-auto" style={{ color: "#25D366" }} />
-            <h3 className="mt-3 font-display text-[18px] font-semibold text-white">Scanne le QR avec WhatsApp</h3>
-            <p className="mt-1 text-[12.5px] text-white/55">WhatsApp → Paramètres → Appareils liés</p>
-            <img src={qr} alt="QR code WhatsApp" className="mx-auto mt-5 h-48 w-48 rounded-xl bg-white p-2" />
-            <p className="mt-4 text-[12px] text-white/60">Une fois scanné, ferme cette fenêtre.</p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

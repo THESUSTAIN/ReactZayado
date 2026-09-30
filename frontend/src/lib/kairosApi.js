@@ -479,3 +479,22 @@ export const fetchDiagnostic = () => jget("/diagnostic");
 // ── « Se connecter avec Zayado » (applications séparées : app RH entreprise…) ──
 export const fetchClientSso = (client_id, redirect_uri) => jget(`/connexion/sso/client?client_id=${encodeURIComponent(client_id)}&redirect_uri=${encodeURIComponent(redirect_uri)}`);
 export const creerCodeSso = (data) => jsend("/sso/code", "POST", data);
+
+// ── Espaces cloud de l'utilisateur (Google Drive / OneDrive) : rattachés au compte connecté ──
+export const oauthStockage = (provider) => jget(`/connexion/oauth/${provider}/start?purpose=storage`);
+
+// ── Admin : Newsletters (Lot 4), Connexions (coffre), Logs applicatifs ──
+export const fetchNewsletters = (statut) => jget(`/admin/newsletters${statut ? `?statut=${encodeURIComponent(statut)}` : ""}`);
+export const fetchNewsletter = (id) => jget(`/admin/newsletters/${id}`);
+export const majNewsletter = (id, data) => jsendMsg(`/admin/newsletters/${id}`, "PUT", data);
+export const relancerNewsletter = (id) => jsendMsg(`/admin/newsletters/${id}/relancer`, "POST");
+export const rejeterNewsletter = (id) => jsendMsg(`/admin/newsletters/${id}`, "DELETE");
+export const pousserNewsletterBrevo = (id) => jsendMsg(`/admin/newsletters/${id}/pousser-brevo`, "POST");
+export const fetchAdminConnexionsStats = () => jget("/admin/connections/stats");
+export const fetchAdminConnexionsListe = () => jget("/admin/connections/list");
+export const fetchAppLogs = (f = {}) => {
+  const q = new URLSearchParams(Object.entries(f).filter(([, v]) => v !== undefined && v !== null && v !== "").map(([k, v]) => [k, String(v)]));
+  return jget(`/app-logs${q.toString() ? `?${q}` : ""}`);
+};
+export const fetchAppLogsSummary = () => jget("/app-logs/summary");
+export const purgerAppLogs = (days = 30) => jsendMsg(`/app-logs/purge?days=${days}`, "DELETE");

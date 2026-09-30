@@ -46,7 +46,7 @@ def verify_admin(authorization: str = Header(default=None)):
 def _heygen_headers():
     api_key = os.environ.get("HEYGEN_API_KEY")
     if not api_key:
-        raise HTTPException(500, "HEYGEN_API_KEY non configuré côté serveur")
+        raise HTTPException(503, "Vidéos IA non configurées : ajoute HEYGEN_API_KEY dans les variables du backend.")
     return {"X-Api-Key": api_key, "Content-Type": "application/json"}
 
 

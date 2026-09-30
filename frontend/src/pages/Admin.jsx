@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { LayoutDashboard, Users, Store, Gift, Ticket, Video, Mail, Newspaper, CheckCircle2, AlertTriangle, CircleDashed, Images } from "lucide-react";
+import { LayoutDashboard, Users, Store, Gift, Ticket, Video, Mail, Newspaper, CheckCircle2, AlertTriangle, CircleDashed, Images, Inbox, UserCog, Link2, ScrollText, ShoppingBag } from "lucide-react";
 import CarrouselLoginAdmin from "@/components/admin/CarrouselLoginAdmin";
 import { SideMenuPro } from "@/components/pro/SideMenuPro";
 import {
@@ -14,6 +14,9 @@ import {
 } from "@/lib/kairosApi";
 import { Bell } from "lucide-react";
 import EmailsIA from "@/components/admin/EmailsIA";
+import AdminNewsletters from "@/components/admin/AdminNewsletters";
+import AdminConnexions from "@/components/admin/AdminConnexions";
+import AdminAppLogs from "@/components/admin/AdminAppLogs";
 import { Utilisateurs, ComptesVendeurs, CatalogueAdmin, Parrainage } from "@/components/admin/AdminGestion";
 import { useThemePro } from "@/lib/themePro";
 
@@ -37,6 +40,9 @@ const ONGLETS = [
   { key: "notifications", label: "Notifications" },
   { key: "emails-ia", label: "Emails IA" },
   { key: "carrousel", label: "Carrousel login" },
+  { key: "newsletters", label: "Newsletters" },
+  { key: "connexions", label: "Connexions utilisateurs" },
+  { key: "logs", label: "Logs applicatifs" },
 ];
 
 export default function Admin() {
@@ -45,8 +51,9 @@ export default function Admin() {
 
   const ICONS = {
     vue: <LayoutDashboard size={16} />, utilisateurs: <Users size={16} />, vendeurs: <Store size={16} />,
-    parrainage: <Gift size={16} />, "codes-promo": <Ticket size={16} />, commerce: <Ticket size={16} />, catalogue: <Store size={16} />, "comptes-vendeurs": <Users size={16} />, "videos-ia": <Video size={16} />,
+    parrainage: <Gift size={16} />, "codes-promo": <Ticket size={16} />, commerce: <ShoppingBag size={16} />, catalogue: <Store size={16} />, "comptes-vendeurs": <Users size={16} />, "videos-ia": <Video size={16} />,
     "emails-ia": <Mail size={16} />, "articles-seo": <Newspaper size={16} />, notifications: <Bell size={16} />, carrousel: <Images size={16} />,
+    demandes: <Inbox size={16} />, "compte-demo": <UserCog size={16} />, newsletters: <Newspaper size={16} />, connexions: <Link2 size={16} />, logs: <ScrollText size={16} />,
   };
   const menuItems = ONGLETS.map((o) => ({ key: o.key, label: o.label, icon: ICONS[o.key] }));
 
@@ -62,7 +69,6 @@ export default function Admin() {
       />
       <div className="min-w-0 px-4 py-5 sm:px-6 lg:ml-[288px] lg:px-10 lg:py-8">
       <h1 className="font-serif text-2xl font-bold">{ONGLETS.find((o) => o.key === onglet)?.label || "Admin"}</h1>
-      <p className="text-offwhite/55 text-sm mt-1">Réservé aux comptes avec le rôle admin — vérifié côté serveur.</p>
 
       <div className="mt-6">
         {onglet === "vue" && <VueEnsemble />}
@@ -79,6 +85,9 @@ export default function Admin() {
         {onglet === "notifications" && <NotificationsAdmin />}
         {onglet === "emails-ia" && <EmailsIA />}
         {onglet === "carrousel" && <CarrouselLoginAdmin />}
+        {onglet === "newsletters" && <AdminNewsletters />}
+        {onglet === "connexions" && <AdminConnexions />}
+        {onglet === "logs" && <AdminAppLogs />}
         {onglet === "articles-seo" && <AVenir label="Articles SEO" description="Génération d'articles SEO par IA — même remarque : référence Sentriq disponible, pas encore de route serveur ici." />}
       </div>
       </div>
@@ -182,7 +191,7 @@ function CompteDemo() {
 }
 
 function Carte({ children }) {
-  return <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">{children}</div>;
+  return <div className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">{children}</div>;
 }
 
 const NOMS_OFFRES = { reveur: "Rêveur", serenite: "Solo", pro: "Pro", business: "Équipe", entreprise: "Entreprise" };
@@ -213,13 +222,14 @@ function Branchements() {
         </span>
       </div>
       <div className="grid gap-2 sm:grid-cols-2" data-testid="admin-branchements">
-        {d.branchements.map((x) => (
-          <div key={x.cle} className={`flex gap-2.5 rounded-xl border p-3 ${x.ok ? "border-emerald-300/20 bg-emerald-300/[0.05]" : x.critique ? "border-red-300/30 bg-red-300/[0.07]" : "border-white/10 bg-white/[0.03]"}`}>
+        {/* Les urgences d'abord : critiques manquants, puis options, puis ce qui est branché. */}
+        {[...d.branchements].sort((a, b) => (a.ok - b.ok) || ((b.critique ? 1 : 0) - (a.critique ? 1 : 0))).map((x) => (
+          <div key={x.cle} className={`flex min-w-0 gap-2.5 rounded-xl border p-3 ${x.ok ? "border-emerald-300/20 bg-emerald-300/[0.05]" : x.critique ? "border-red-300/30 bg-red-300/[0.07]" : "border-white/10 bg-white/[0.03]"}`}>
             <span className="mt-0.5 shrink-0">{x.ok ? <CheckCircle2 size={16} className="text-emerald-300" /> : x.critique ? <AlertTriangle size={16} className="text-red-300" /> : <CircleDashed size={16} className="text-offwhite/50" />}</span>
             <div className="min-w-0">
               <p className="text-[13.5px] font-semibold">{x.nom}</p>
               {!x.ok && <p className="text-[12px] text-offwhite/60">{x.effet}</p>}
-              {!x.ok && <p className="mt-1 text-[11px] text-offwhite/45">Railway (service backend) : {x.variables.map((v) => <code key={v} className="mr-1 rounded bg-white/10 px-1">{v}</code>)}</p>}
+              {!x.ok && <p className="mt-1 text-[11px] text-offwhite/45">Railway (service backend) : {x.variables.map((v) => <code key={v} className="mr-1 break-all rounded bg-white/10 px-1">{v}</code>)}</p>}
             </div>
           </div>
         ))}

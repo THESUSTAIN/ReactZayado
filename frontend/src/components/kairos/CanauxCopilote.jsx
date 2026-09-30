@@ -63,12 +63,16 @@ export default function CanauxCopilote({ compact = false, onFerme }) {
         <Icone size={18} className="shrink-0 text-gold" />
         <div className="min-w-0 flex-1">
           <p className="text-[13.5px] font-semibold text-offwhite">{nom}</p>
-          <p className="truncate text-[11.5px] text-offwhite/55">{ok ? `Relié${info ? ` · ${info}` : ""}` : s?.disponible ? "Écris à ton Copilote depuis ton téléphone" : "Bientôt disponible"}</p>
+          <p className="truncate text-[11.5px] text-offwhite/55">{ok ? `Relié${info ? ` · ${info}` : ""}` : !s?.disponible ? "En cours d'activation par Zayado" : c.inclus ? "Écris à ton Copilote depuis ton téléphone" : "Inclus à partir de l'offre Pro"}</p>
         </div>
         {ok ? (
           <button onClick={() => couper(canal)} className="inline-flex items-center gap-1 rounded-lg border border-white/15 px-2.5 py-1 text-[12px] text-offwhite/70 hover:bg-white/10"><Check size={12} className="text-emerald-300" /> Relié</button>
+        ) : !s?.disponible ? (
+          <span className="rounded-lg border border-white/10 px-2.5 py-1 text-[11.5px] text-offwhite/50">Bientôt</span>
+        ) : !c.inclus ? (
+          <a href="/pricing" className="rounded-lg border border-gold/40 px-2.5 py-1 text-[11.5px] font-semibold text-gold hover:bg-gold/10" data-testid={`canal-${canal}-offre`}>Offre Pro</a>
         ) : (
-          <button onClick={onClick} disabled={!s?.disponible || envoi === canal} data-testid={`canal-${canal}-connecter`}
+          <button onClick={onClick} disabled={envoi === canal} data-testid={`canal-${canal}-connecter`}
             className="rounded-lg bg-gold px-3 py-1.5 text-[12px] font-semibold text-navy-900 disabled:opacity-40">
             {envoi === canal ? <Loader2 size={13} className="animate-spin" /> : "Connecter"}
           </button>

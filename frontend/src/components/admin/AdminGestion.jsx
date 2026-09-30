@@ -75,7 +75,9 @@ export function Utilisateurs() {
   // Recherche : on attend la fin de la frappe.
   useEffect(() => { const t = setTimeout(() => { setPage(1); setRecherche(q.trim()); }, 350); return () => clearTimeout(t); }, [q]);
 
-  const changerRole = async (id, r) => {
+  const changerRole = async (id, r, email) => {
+    const libelle = { admin: "ADMINISTRATEUR (accès à toute la console)", vendeur: "vendeur", client: "client" }[r] || r;
+    if (!window.confirm(`Passer ${email || "ce compte"} en ${libelle} ?`)) return;
     try { await changerRoleUtilisateur(id, r); toast.success("Rôle mis à jour"); charger(); } catch { toast.error("Échec du changement de rôle."); }
   };
   const changerPlan = async (u, plan) => {
@@ -157,7 +159,7 @@ export function Utilisateurs() {
                   <td className="py-2.5 text-offwhite/55">{dateFr(u.inscrit_le)}</td>
                   <td className="py-2.5 text-offwhite/70" title={u.derniere_connexion ? new Date(u.derniere_connexion).toLocaleString("fr-FR") : ""} data-testid={`admin-derniere-connexion-${u.id}`}>{depuis(u.derniere_connexion)}</td>
                   <td className="py-2.5">
-                    <select value={u.role} onChange={(e) => changerRole(u.id, e.target.value)} data-testid={`admin-role-select-${u.id}`} className={SELECT}>
+                    <select value={u.role} onChange={(e) => changerRole(u.id, e.target.value, u.email)} data-testid={`admin-role-select-${u.id}`} className={SELECT}>
                       <option value="client">client</option><option value="vendeur">vendeur</option><option value="admin">admin</option>
                     </select>
                   </td>
