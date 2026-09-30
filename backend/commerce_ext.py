@@ -151,6 +151,7 @@ def install_commerce(g: dict) -> None:
         return bool(await _titulaire_equipe(db, uid))
 
     g["_acces_actif"] = acces_actif
+    g["_titulaire_equipe"] = _titulaire_equipe
 
     @api.get("/abonnement")
     async def mon_abonnement(db: AsyncSession = Depends(get_db)):

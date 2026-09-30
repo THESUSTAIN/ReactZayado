@@ -1771,9 +1771,20 @@ async def maj_profil(body: ProfilIn, db: AsyncSession = Depends(get_db)):
         # l'entreprise/rôle/activité saisis à l'onboarding. Fusion à la place.
         # Texte, booléens et nombres acceptés (avant : seulement du texte, donc les
         # interrupteurs de Paramètres — ex. sauvegarde cloud — n'étaient jamais enregistrés).
-        nouveau = {k: (v[:2000] if isinstance(v, str) else v) for k, v in data["contexte_metier"].items()
-                   if isinstance(k, str) and len(k) <= 60 and isinstance(v, (str, bool, int, float))}
-        profil.contexte_metier = {**(profil.contexte_metier or {}), **nouveau}
+        # Listes courtes de textes acceptées (pays suivis, secteurs, mots-clés de veille) ;
+        # null = effacer le réglage (ex. revenir au pays du légal par défaut).
+        def _valeur_ok(v):
+            if isinstance(v, (str, bool, int, float)):
+                return True
+            return isinstance(v, list) and len(v) <= 20 and all(isinstance(x, str) and len(x) <= 120 for x in v)
+        brut = data["contexte_metier"]
+        nouveau = {k: (v[:2000] if isinstance(v, str) else v) for k, v in brut.items()
+                   if isinstance(k, str) and len(k) <= 60 and _valeur_ok(v)}
+        fusion = {**(profil.contexte_metier or {}), **nouveau}
+        for k, v in brut.items():
+            if v is None and isinstance(k, str):
+                fusion.pop(k, None)
+        profil.contexte_metier = fusion
     # Objectifs 90 jours saisis à l'onboarding
     # Corrigé : supprimait TOUS les objectifs existants (et leur avancement) si
     # l'onboarding était refait. Désormais on n'ajoute que les titres absents.
@@ -2094,19 +2105,37 @@ def _libelle_marche(cle: str, cm: dict) -> str:
     return (cle or "").replace("_", " ").title()
 
 
+def secteurs_par_defaut(cm: dict, org=None) -> list:
+    """Secteurs de veille par défaut : activité de l'entreprise (NAF), sinon activité choisie à l'onboarding."""
+    from organisation_ext import ACTIVITE_SECTEURS, secteur_depuis_naf
+    out = []
+    s_naf = secteur_depuis_naf(org.naf) if org is not None else None
+    if s_naf:
+        out.append(s_naf)
+    for sct in ACTIVITE_SECTEURS.get(cm.get("activite_type") or "", ["entreprises"]):
+        if sct not in out:
+            out.append(sct)
+    return out[:3]
+
+
 @api.get("/copilote/actualite/options")
 async def actualite_options(db: AsyncSession = Depends(get_db)):
     """Ce que l'utilisateur peut suivre : pays, secteurs, mots-clés ; et ce qu'il suit."""
-    cm = (await _profil(db, _uid())).contexte_metier or {}
+    uid = _uid()
+    cm = (await _profil(db, uid)).contexte_metier or {}
     pays_compte = cm.get("marche") or "france"
+    org, _ = await organisation_de(db, uid)
+    legal_pays = cm.get("actu_legal_pays") or (org.pays if org else None) or pays_compte
     return {
+        "entreprise": {"nom": org.nom, "pays": org.pays} if org else None,
+        "secteurs_defaut": secteurs_par_defaut(cm, org),
         "secteurs": [{"cle": k, "label": v[0]} for k, v in SECTEURS_ACTU.items()],
         "pays_compte": pays_compte, "pays_compte_label": _libelle_marche(pays_compte, cm),
-        "legal_pays": cm.get("actu_legal_pays") or pays_compte,
+        "legal_pays": legal_pays,
         "pays_suivis": cm.get("actu_pays_suivis") or [pays_compte],
-        "secteurs_suivis": cm.get("actu_secteurs") or [],
+        "secteurs_suivis": cm.get("actu_secteurs") or secteurs_par_defaut(cm, org),
         "mots_cles": cm.get("actu_mots_cles") or [],
-        "legal_officiel": (cm.get("actu_legal_pays") or pays_compte) in MARCHES and bool(MARCHES[cm.get("actu_legal_pays") or pays_compte].get("legal")),
+        "legal_officiel": legal_pays in MARCHES and bool(MARCHES[legal_pays].get("legal")),
     }
 
 
@@ -2133,9 +2162,12 @@ async def actualite(marche: str = "", filtre: str = "tout", db: AsyncSession = D
     veut_pays = cm.get("actu_pays") is not False
     veut_eco = cm.get("actu_eco") is not False
     veut_legal = cm.get("actu_legal") is not False
-    legal_pays = cm.get("actu_legal_pays") or pays_compte
+    # Légal : pays de l'ENTREPRISE déclarée (Paramètres › Mon entreprise), sinon celui du compte ;
+    # l'utilisateur peut le changer lui-même (actu_legal_pays).
+    org, _ = await organisation_de(db, uid)
+    legal_pays = cm.get("actu_legal_pays") or (org.pays if org else None) or pays_compte
     pays_suivis = [p for p in (cm.get("actu_pays_suivis") or [pays_compte]) if p][:4]
-    secteurs = [s for s in (cm.get("actu_secteurs") or []) if s in SECTEURS_ACTU][:6]
+    secteurs = [s for s in (cm.get("actu_secteurs") or secteurs_par_defaut(cm, org)) if s in SECTEURS_ACTU][:6]
     mots = [m for m in (cm.get("actu_mots_cles") or []) if isinstance(m, str) and m.strip()][:5]
 
     sources = []  # (url, type, libellé)
@@ -5244,6 +5276,8 @@ from admin_plus_ext import install_admin_plus  # noqa: E402
 install_admin_plus(globals())
 from rappels_ext import install_rappels  # noqa: E402
 install_rappels(globals())
+from organisation_ext import install_organisation  # noqa: E402
+install_organisation(globals())
 
 # ─────────────── Processus (page /app/processus) ───────────────
 # Avant : stockés dans le navigateur uniquement, avec 4 processus de démonstration
