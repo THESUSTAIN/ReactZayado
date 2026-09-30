@@ -115,8 +115,8 @@ input.bg-white\/\[0\.08\]:focus, textarea.bg-white\/\[0\.08\]:focus {
     .glass {
         /* Verre Zayado : blanc translucide + flou, bord clair lumineux avec un
            halo doux (comme la barre de recherche de la maquette). */
-        background: rgba(255, 255, 255, 0.10);
-        border: 1px solid rgba(255, 255, 255, 0.22);
+        background: rgba(255, 255, 255, 0.13);
+        border: 1px solid rgba(255, 255, 255, 0.28);
         backdrop-filter: blur(18px);
         -webkit-backdrop-filter: blur(18px);
         box-shadow:
@@ -578,8 +578,8 @@ body.theme-clair [data-testid="bottomnav"] {
 .be-page {
   --be-ink: #F5F1EA; --be-muted: rgba(245, 241, 234, 0.62); --be-accent: #DEC2A3;
   --be-accent-soft: rgba(222, 194, 163, 0.16); --be-line: rgba(255, 255, 255, 0.12);
-  --be-card: rgba(255, 255, 255, 0.06); --be-card-border: rgba(255, 255, 255, 0.12);
-  --be-tile: rgba(255, 255, 255, 0.07); --be-suggestion: rgba(222, 194, 163, 0.12);
+  --be-card: rgba(255, 255, 255, 0.12); --be-card-border: rgba(255, 255, 255, 0.26);
+  --be-tile: rgba(255, 255, 255, 0.10); --be-suggestion: rgba(222, 194, 163, 0.12);
   --be-tab-on: #DEC2A3; --be-tab-on-ink: #0f1b3a; --be-ring-track: rgba(255, 255, 255, 0.10);
   --be-bar: #DEC2A3; --be-input: rgba(255, 255, 255, 0.08);
 }
@@ -597,6 +597,12 @@ body.theme-clair .be-page .be-card { backdrop-filter: none; box-shadow: 0 1px 2p
 .be-tab { flex: 1 0 auto; border-radius: 999px; padding: 9px 18px; font-size: 15px; color: var(--be-ink); opacity: .8; transition: background .18s ease, opacity .18s ease; white-space: nowrap; }
 .be-tab:hover { opacity: 1; background: var(--be-tile); }
 .be-tab[data-actif="true"] { background: var(--be-tab-on); color: var(--be-tab-on-ink); font-weight: 600; opacity: 1; }
+.be-tab { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+@media (max-width: 639px) {
+  /* 5 onglets sur un téléphone : icône au-dessus d'un libellé court, sans défilement. */
+  .be-tabs { border-radius: 18px; padding: 4px; gap: 2px; overflow: visible; }
+  .be-tab { flex: 1 1 0; min-width: 0; flex-direction: column; gap: 3px; padding: 7px 2px; border-radius: 14px; font-size: 11px; }
+}
 .be-suggestion { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; background: var(--be-suggestion); border: 1px solid var(--be-accent-soft); border-radius: 18px; padding: 18px 24px; }
 .be-raccourci { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 96px; background: var(--be-card); border: 1px solid var(--be-card-border); border-radius: 18px; padding: 16px 10px; text-align: center; color: var(--be-ink); font-size: 15px; transition: transform .18s ease, border-color .18s ease; }
 button.be-raccourci:hover { transform: translateY(-2px); border-color: var(--be-accent); }
@@ -611,7 +617,10 @@ body.theme-clair .be-check-on { border-color: #1F2A44; background: #1F2A44; colo
 .be-input { background: var(--be-input); color: var(--be-ink); border-color: var(--be-line); }
 .be-page .be-btn-navy { background: var(--be-tab-on); color: var(--be-tab-on-ink); }
 /* Séance complète (onglet Outils) en thème clair : carte navy, textes clairs malgré .be-clair */
-.be-seance-dark > section { background: #1C2746 !important; border-color: transparent !important; }
+/* Carte « Séance du moment » : verre comme le reste en sombre ; navy plein seulement en clair. */
+.be-seance-compacte { background: var(--be-card); border: 1px solid var(--be-card-border); backdrop-filter: blur(18px); }
+body.theme-clair .be-seance-compacte { background: #1C2746; border-color: transparent; }
+.be-clair .be-seance-dark > section { background: #1C2746 !important; border-color: transparent !important; }
 .be-clair .be-seance-dark .text-white { color: #F6F1E9 !important; }
 .be-clair .be-seance-dark .text-white\/85, .be-clair .be-seance-dark .text-white\/70 { color: rgba(246,241,233,.8) !important; }
 .be-clair .be-seance-dark .text-white\/60, .be-clair .be-seance-dark .text-white\/55, .be-clair .be-seance-dark .text-white\/50 { color: rgba(246,241,233,.6) !important; }
@@ -623,3 +632,14 @@ body.theme-clair .bg-white\/\[0\.06\], body.theme-clair .bg-white\/\[0\.10\], bo
 body.theme-clair .border-white\/\[0\.14\], body.theme-clair .border-white\/\[0\.16\], body.theme-clair .border-white\/25 { border-color: #E8E6E1 !important; }
 body.theme-clair input::placeholder, body.theme-clair textarea::placeholder { color: rgba(31, 42, 68, 0.42) !important; }
 body.theme-clair [data-testid="lang-switcher-icon"] { color: rgba(31, 42, 68, 0.75) !important; background: #FFFFFF !important; border-color: #E8E6E1 !important; }
+
+
+/* ── Cartes plus visibles (thème sombre de l'app) ───────────────────────────
+   Beaucoup d'écrans utilisaient des fonds à 3-5 % de blanc et des bords à 10 % :
+   sur le ciel navy, les cartes disparaissaient. On aligne tout sur le verre Zayado
+   (.glass) : un voile blanc lisible et un contour clair. Les thèmes clairs
+   (theme-clair, console pro claire, Bien-être clair) gardent leurs propres règles. */
+body:not(.theme-clair) .zy-app :is(.bg-white\/\[0\.03\], .bg-white\/\[0\.04\], .bg-white\/5):not(.be-clair *, .theme-creme *, .pro-clair *) { background-color: rgba(255, 255, 255, 0.085); }
+body:not(.theme-clair) .zy-app :is(.bg-white\/\[0\.05\], .bg-white\/\[0\.06\], .bg-white\/\[0\.07\]):not(.be-clair *, .theme-creme *, .pro-clair *) { background-color: rgba(255, 255, 255, 0.11); }
+body:not(.theme-clair) .zy-app :is(.border-white\/10, .border-white\/\[0\.07\], .border-white\/\[0\.06\], .border-white\/5):not(.be-clair *, .theme-creme *, .pro-clair *) { border-color: rgba(255, 255, 255, 0.2); }
+body:not(.theme-clair) .zy-app :is(.border-white\/12, .border-white\/15):not(.be-clair *, .theme-creme *, .pro-clair *) { border-color: rgba(255, 255, 255, 0.24); }

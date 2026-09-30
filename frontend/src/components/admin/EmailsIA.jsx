@@ -233,7 +233,7 @@ function FenetreRetouche({ m, onClose, onOk }) {
   };
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
-      <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/10 bg-[#13254f] p-6 text-offwhite" onClick={(e) => e.stopPropagation()} data-testid="admin-email-retouche">
+      <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/10 bg-navy-900 p-6 text-offwhite" onClick={(e) => e.stopPropagation()} data-testid="admin-email-retouche">
         <p className="font-display text-lg font-semibold">Retoucher le brouillon</p>
         <div className="mt-4 space-y-3">
           <div><Label>Objet</Label><input value={sujet} onChange={(e) => setSujet(e.target.value)} className={CHAMP} /></div>

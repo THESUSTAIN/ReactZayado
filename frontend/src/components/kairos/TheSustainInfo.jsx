@@ -11,7 +11,7 @@ export const THESUSTAIN_URL = process.env.REACT_APP_THESUSTAIN_URL || "https://t
 export default function TheSustainInfo({ open, onClose }) {
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="border-white/10 bg-[#0f1f45] text-offwhite sm:max-w-lg" data-testid="thesustain-info">
+      <DialogContent className="fenetre text-offwhite sm:max-w-lg" data-testid="thesustain-info">
         <DialogTitle className="sr-only">Sens & spiritualité — TheSustain</DialogTitle>
         <DialogDescription className="sr-only">Aller plus loin sur le sens et les valeurs avec l'espace TheSustain.</DialogDescription>
         <div className="py-1">

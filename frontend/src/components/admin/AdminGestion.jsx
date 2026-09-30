@@ -1,13 +1,16 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, Loader2, Pencil, Search, Trash2, X, Gift, Plus, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Pencil, Search, Trash2, X, Gift, Plus, Check, Download, CalendarPlus, UserRound } from "lucide-react";
 import {
   fetchAdminUtilisateurs, changerRoleUtilisateur, changerPlanUtilisateur, passerCompteGratuit,
   fetchAdminCommerceVendors, modifierVendeurAdmin, supprimerVendeurAdmin,
   fetchAdminCommerceProducts, modifierProduitAdmin, supprimerProduitAdmin,
   fetchAdminParrainage, creerParrainageAdmin, modifierParrainageAdmin, supprimerParrainageAdmin,
   fetchAdminProgrammes, validerProgramme, payerCommission, crediterMoisAdmin, refuserProgrammeAdmin,
+  inviterEquipe, actionGroupeUtilisateurs, exporterUtilisateursCsv, fetchAdminFiche,
 } from "@/lib/kairosApi";
+
+export const MOTIFS_ACCES = { equipe: "Équipe Zayado", partenaire: "Partenaire", testeur: "Testeur", presse: "Presse", autre: "Autre" };
 
 /* Console admin — gestion complète : utilisateurs (paginés, total, dernière
    connexion, compte gratuit), comptes vendeurs, catalogue et parrainage. */
@@ -65,6 +68,8 @@ export function Utilisateurs() {
   const [offre, setOffre] = useState("");
   const [tri, setTri] = useState("inscription");
   const [gratuitPour, setGratuitPour] = useState(null);
+  const [selection, setSelection] = useState([]);
+  const [fiche, setFiche] = useState(null);
 
   const charger = useCallback(() => {
     fetchAdminUtilisateurs({ page, par_page: parPage, q: recherche, role, offre, tri })
@@ -97,9 +102,33 @@ export function Utilisateurs() {
     try { await passerCompteGratuit(u.id, false); toast.success("Compte gratuit retiré"); charger(); } catch (e) { toast.error(e.message); }
   };
 
+  const groupe = async (action) => {
+    const n = selection.length;
+    let extra = {};
+    if (action === "offrir") {
+      const plan = window.prompt(`Offrir quelle offre aux ${n} comptes ? (reveur, serenite, pro, business, entreprise)`, "pro");
+      if (!plan) return;
+      extra = { plan: plan.trim().toLowerCase(), motif: "autre" };
+    } else if (action === "prolonger") {
+      const j = window.prompt(`Prolonger l'accès payant de ${n} compte(s) de combien de jours ?`, "30");
+      if (!j) return;
+      extra = { jours: parseInt(j, 10) || 30 };
+    } else if (!window.confirm(`Retirer l'accès offert de ${n} compte(s) ? Leur accès s'arrête immédiatement.`)) return;
+    try {
+      const r = await actionGroupeUtilisateurs({ ids: selection, action, ...extra });
+      toast.success(`${r.faits} compte(s) mis à jour${r.ignores?.length ? ` · ${r.ignores.length} ignoré(s) (${r.ignores.slice(0, 3).join(", ")})` : ""}.`);
+      setSelection([]); charger();
+    } catch (e) { toast.error(e.message || "Action impossible."); }
+  };
+  const exporter = async () => {
+    try { await exporterUtilisateursCsv({ q: recherche, role, offre }); } catch { toast.error("Export impossible."); }
+  };
+  const basculer = (id) => setSelection((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]));
+
   if (erreur) return <Carte><p className="text-red-400 text-sm">{erreur}</p></Carte>;
   if (!d) return <Carte><p className="text-offwhite/50 text-sm">Chargement…</p></Carte>;
   const st = d.stats || {};
+  const tousCoches = d.items.length > 0 && d.items.every((u) => selection.includes(u.id));
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" data-testid="admin-users-stats">
@@ -127,10 +156,21 @@ export function Utilisateurs() {
           <select value={parPage} onChange={(e) => { setParPage(Number(e.target.value)); setPage(1); }} className={SELECT} aria-label="Par page">
             {[25, 50, 100].map((n) => <option key={n} value={n}>{n} / page</option>)}
           </select>
+          <button className={BTN} onClick={exporter} data-testid="admin-users-export"><Download size={12} /> Export CSV</button>
         </div>
+        {selection.length > 0 && (
+          <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-gold/30 bg-gold/[0.07] px-3 py-2 text-xs" data-testid="admin-users-groupe">
+            <b>{selection.length} sélectionné{selection.length > 1 ? "s" : ""}</b>
+            <button className={BTN} onClick={() => groupe("offrir")}><Gift size={12} /> Offrir une offre</button>
+            <button className={BTN} onClick={() => groupe("prolonger")}><CalendarPlus size={12} /> Prolonger</button>
+            <button className={BTN} onClick={() => groupe("retirer_offert")}><X size={12} /> Retirer l'offert</button>
+            <button className="ml-auto text-offwhite/60 hover:text-offwhite" onClick={() => setSelection([])}>Désélectionner</button>
+          </div>
+        )}
         <div className="overflow-x-auto"><table className="w-full min-w-[900px] text-sm">
           <thead>
             <tr className="text-left text-offwhite/50 border-b border-white/10">
+              <th className="w-8 pb-2"><input type="checkbox" aria-label="Tout sélectionner" checked={tousCoches} onChange={() => setSelection(tousCoches ? [] : d.items.map((u) => u.id))} /></th>
               <th className="pb-2">Email</th><th className="pb-2">Offre</th><th className="pb-2">Abonnement</th><th className="pb-2">Inscrit le</th><th className="pb-2">Dernière connexion</th><th className="pb-2">Rôle</th><th className="pb-2">Compte gratuit</th>
             </tr>
           </thead>
@@ -139,7 +179,8 @@ export function Utilisateurs() {
               const offert = u.abonnement?.etat === "offert";
               return (
                 <tr key={u.id} className="border-b border-white/5" data-testid={`admin-user-${u.id}`}>
-                  <td className="py-2.5 pr-2">{u.email}</td>
+                  <td className="py-2.5"><input type="checkbox" aria-label={`Sélectionner ${u.email}`} checked={selection.includes(u.id)} onChange={() => basculer(u.id)} /></td>
+                  <td className="py-2.5 pr-2"><button className="text-left hover:text-gold hover:underline" onClick={() => setFiche(u.id)} data-testid={`admin-user-fiche-${u.id}`}>{u.email}</button></td>
                   <td className="py-2.5">
                     <select value={u.plan || "essentielle"} onChange={(e) => changerPlan(u, e.target.value)} disabled={offert}
                       data-testid={`admin-plan-select-${u.id}`} className={SELECT} title={offert ? "Compte gratuit : retire-le d'abord pour changer l'offre" : ""}>
@@ -171,38 +212,90 @@ export function Utilisateurs() {
                 </tr>
               );
             })}
-            {!d.items.length && <tr><td colSpan={7} className="py-6 text-center text-offwhite/50">Aucun utilisateur ne correspond.</td></tr>}
+            {!d.items.length && <tr><td colSpan={8} className="py-6 text-center text-offwhite/50">Aucun utilisateur ne correspond.</td></tr>}
           </tbody>
         </table></div>
         <Pagination page={d.page} pages={d.pages} total={d.total} onPage={setPage} unite="utilisateur" />
       </Carte>
       {gratuitPour && <FenetreGratuit u={gratuitPour} onClose={() => setGratuitPour(null)} onOk={() => { setGratuitPour(null); charger(); }} />}
+      {fiche && <FicheUtilisateur id={fiche} onClose={() => setFiche(null)} />}
     </div>
   );
 }
 
 function FenetreGratuit({ u, onClose, onOk }) {
   const [plan, setPlan] = useState("pro");
+  const [motif, setMotif] = useState("equipe");
   const [envoi, setEnvoi] = useState(false);
   const valider = async () => {
     setEnvoi(true);
-    try { await passerCompteGratuit(u.id, true, plan); toast.success(`${u.email} a maintenant un compte gratuit ${NOMS_OFFRES[plan]}.`); onOk(); }
+    try { await inviterEquipe({ email: u.email, plan, motif, envoyer_email: false }); toast.success(`${u.email} a maintenant un compte gratuit ${NOMS_OFFRES[plan]}.`); onOk(); }
     catch (e) { toast.error(e.message); setEnvoi(false); }
   };
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#13254f] p-6 text-offwhite" onClick={(e) => e.stopPropagation()} data-testid="admin-gratuit-fenetre">
+      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-navy-900 p-6 text-offwhite" onClick={(e) => e.stopPropagation()} data-testid="admin-gratuit-fenetre">
         <p className="font-display text-lg font-semibold">Compte gratuit</p>
         <p className="mt-1 text-sm text-offwhite/65">Pour <b>{u.email}</b> — réservé aux collaborateurs et partenaires Zayado. Accès complet, sans date de fin ni prélèvement. Visible uniquement ici ; tu peux le retirer à tout moment.</p>
         <label className="mt-4 block text-xs text-offwhite/60">Offre accordée</label>
         <select value={plan} onChange={(e) => setPlan(e.target.value)} className={`${SELECT} mt-1 w-full py-2 text-sm`} data-testid="admin-gratuit-plan">
           {["reveur", "serenite", "pro", "business", "entreprise"].map((k) => <option key={k} value={k}>{NOMS_OFFRES[k]}</option>)}
         </select>
+        <label className="mt-3 block text-xs text-offwhite/60">Pourquoi ?</label>
+        <select value={motif} onChange={(e) => setMotif(e.target.value)} className={`${SELECT} mt-1 w-full py-2 text-sm`} data-testid="admin-gratuit-motif">
+          {Object.entries(MOTIFS_ACCES).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+        </select>
         <div className="mt-5 flex justify-end gap-2">
           <button className={BTN} onClick={onClose}>Annuler</button>
           <button className={BTN_OR} onClick={valider} disabled={envoi} data-testid="admin-gratuit-valider">{envoi ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} Activer</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ───────────────────────── Fiche 360° ───────────────────────── */
+const ETATS_ABO = { actif: "Actif", essai: "Essai", offert: "Offert", resilie: "Résilié", expire: "Expiré", aucun: "Aucun" };
+export function FicheUtilisateur({ id, onClose }) {
+  const [f, setF] = useState(null);
+  useEffect(() => { fetchAdminFiche(id).then(setF).catch(() => setF({ erreur: true })); }, [id]);
+  const Ligne = ({ label, children }) => <div className="flex justify-between gap-3 border-b border-white/[0.06] py-2 text-sm"><span className="text-offwhite/55">{label}</span><span className="text-right">{children}</span></div>;
+  return (
+    <div className="fixed inset-0 z-[80] flex justify-end bg-black/50" onClick={onClose}>
+      <aside className="h-full w-full max-w-md overflow-y-auto border-l border-white/10 bg-navy-900 p-6 text-offwhite" onClick={(e) => e.stopPropagation()} data-testid="admin-fiche">
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gold/20 text-gold"><UserRound size={18} /></span>
+            <div className="min-w-0"><p className="font-display text-lg font-semibold">{f?.prenom || "Fiche utilisateur"}</p><p className="break-all text-xs text-offwhite/55">{f?.email}</p></div>
+          </div>
+          <button onClick={onClose} aria-label="Fermer" className="rounded-lg p-1 text-offwhite/60 hover:bg-white/10"><X size={18} /></button>
+        </div>
+        {!f && <p className="text-sm text-offwhite/50">Chargement…</p>}
+        {f?.erreur && <p className="text-sm text-red-400">Fiche indisponible.</p>}
+        {f && !f.erreur && (
+          <>
+            <p className="mb-1 mt-2 text-[11px] uppercase tracking-wide text-offwhite/45">Compte</p>
+            <Ligne label="Rôle">{f.role}</Ligne>
+            <Ligne label="Inscrit le">{dateFr(f.inscrit_le)}</Ligne>
+            <Ligne label="Dernière connexion">{depuis(f.derniere_connexion)}</Ligne>
+            <Ligne label="Métier">{f.metier || "—"}</Ligne>
+            <Ligne label="Ma Foi">{f.ma_foi ? "Activé" : "Non"}</Ligne>
+            <p className="mb-1 mt-4 text-[11px] uppercase tracking-wide text-offwhite/45">Offre</p>
+            <Ligne label="Offre">{NOMS_OFFRES[f.abonnement?.plan] || "Aucune"}</Ligne>
+            <Ligne label="État">{ETATS_ABO[f.abonnement?.etat] || "—"}{f.abonnement?.prelevement_auto ? " · prélèvement auto" : ""}</Ligne>
+            {f.abonnement?.etat !== "offert" && <Ligne label="Fin">{dateFr(f.abonnement?.fin)}</Ligne>}
+            {f.acces_equipe && <Ligne label="Accès offert">{f.acces_equipe.motif}{f.acces_equipe.note ? ` · ${f.acces_equipe.note}` : ""}{f.acces_equipe.invite_par ? ` (par ${f.acces_equipe.invite_par})` : ""}</Ligne>}
+            <p className="mb-1 mt-4 text-[11px] uppercase tracking-wide text-offwhite/45">Connexions</p>
+            {f.connexions.length ? f.connexions.map((c, i) => <Ligne key={i} label={c.provider}>{c.status} · {dateFr(c.depuis)}</Ligne>) : <p className="py-2 text-sm text-offwhite/45">Aucune</p>}
+            <p className="mb-1 mt-4 text-[11px] uppercase tracking-wide text-offwhite/45">Parrainage & communauté</p>
+            <Ligne label="Filleuls">{f.parrainage?.filleuls ?? 0}</Ligne>
+            <Ligne label="Parrain">{f.parrainage?.parrain || "—"}</Ligne>
+            <Ligne label="Publications Ma Foi">{f.foi?.publications ?? 0}</Ligne>
+            <p className="mb-1 mt-4 text-[11px] uppercase tracking-wide text-offwhite/45">Dernières erreurs</p>
+            {f.erreurs.length ? f.erreurs.map((e, i) => <div key={i} className="border-b border-white/[0.06] py-2 text-xs"><span className="text-offwhite/45">{new Date(e.le).toLocaleString("fr-FR")} · {e.feature}</span><p className="text-red-300/90">{e.message}</p></div>) : <p className="py-2 text-sm text-offwhite/45">Aucune erreur récente</p>}
+          </>
+        )}
+      </aside>
     </div>
   );
 }
@@ -283,7 +376,7 @@ function FenetreVendeur({ v, onClose, onOk }) {
   };
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-[#13254f] p-6 text-offwhite" onClick={(e) => e.stopPropagation()} data-testid="admin-vendeur-fenetre">
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-navy-900 p-6 text-offwhite" onClick={(e) => e.stopPropagation()} data-testid="admin-vendeur-fenetre">
         <p className="font-display text-lg font-semibold">Boutique de {v.email}</p>
         <div className="mt-4 space-y-3">
           {CHAMPS_VENDEUR.map(([k, l]) => (
@@ -371,7 +464,7 @@ function FenetreProduit({ p, onClose, onOk }) {
   };
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#13254f] p-6 text-offwhite" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-navy-900 p-6 text-offwhite" onClick={(e) => e.stopPropagation()}>
         <p className="font-display text-lg font-semibold">Modifier le produit</p>
         <label className="mt-4 block"><span className="text-xs text-offwhite/60">Titre</span><input value={f.titre} onChange={(e) => setF({ ...f, titre: e.target.value })} className={`${INPUT} mt-1 w-full`} /></label>
         <label className="mt-3 block"><span className="text-xs text-offwhite/60">Prix (€)</span><input value={f.prix} onChange={(e) => setF({ ...f, prix: e.target.value })} className={`${INPUT} mt-1 w-full`} /></label>

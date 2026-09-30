@@ -277,7 +277,7 @@ export const LIVE_SOURCES = [
   { id: "roue",        label: "Roue de l'équilibre",       route: "/app/vision?view=wheel" },
   { id: "finances",    label: "Objectif de revenu",        route: "/app" },
   { id: "suivi",       label: "Suivi financier (tableau)", route: "/app" },
-  { id: "idees",       label: "Idées à fort impact",       route: "/app/ideas" },
+  { id: "idees",       label: "Idées à fort impact",       route: "/app/actions?tab=idees" },
   { id: "victoires",   label: "Victoires",                 route: "/app/revue" },
   { id: "swot",        label: "Analyse SWOT (IA)",         route: "/app/radar" },
 ];

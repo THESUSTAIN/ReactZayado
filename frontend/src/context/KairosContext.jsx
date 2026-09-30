@@ -1,7 +1,7 @@
 import { lireEnAttente, oublierEnAttente } from "@/lib/diagnostic";
 import React, { createContext, useContext, useMemo, useState, useCallback, useEffect } from "react";
 import { energyModes } from "@/mock/data";
-import { fetchState, postCheckin, toggleTache, getToken, saveDiagnostic } from "@/lib/kairosApi";
+import { fetchState, postCheckin, toggleTache, getToken, saveDiagnostic, saveProfile } from "@/lib/kairosApi";
 
 const KairosContext = createContext(null);
 
@@ -57,6 +57,12 @@ export function KairosProvider({ children }) {
   }, []);
 
   const refresh = useCallback(() => fetchState().then(hydrate).catch(() => setLoaded(true)), [hydrate]);
+  // Met à jour une préférence du compte (contexte_metier) et l'applique tout de suite dans l'app
+  // (menu, Ma Foi…) sans attendre un rechargement.
+  const majContexte = useCallback(async (patch) => {
+    setContexte((c) => ({ ...c, ...patch }));
+    await saveProfile({ contexte_metier: patch });
+  }, []);
   useEffect(() => { refresh(); }, [refresh]);
   // Connexion en SPA (pas de rechargement) : un nouveau token déclenche la
   // re-hydratation — sinon prénom, préférences et contexte restaient vides.
@@ -84,8 +90,8 @@ export function KairosProvider({ children }) {
   const value = useMemo(() => ({
     user, energy, setEnergy, balance, priorities, togglePriority,
     goal, victory, trend, mode, modeInfo, isRecovery, loaded, aCheckin, contexte,
-    submitCheckin, onboardingData, setOnboardingData,
-  }), [user, energy, balance, priorities, goal, victory, trend, mode, modeInfo, isRecovery, loaded, aCheckin, contexte, togglePriority, submitCheckin, onboardingData]);
+    submitCheckin, onboardingData, setOnboardingData, refresh, majContexte,
+  }), [user, energy, balance, priorities, goal, victory, trend, mode, modeInfo, isRecovery, loaded, aCheckin, contexte, togglePriority, submitCheckin, onboardingData, refresh, majContexte]);
 
   return <KairosContext.Provider value={value}>{children}</KairosContext.Provider>;
 }

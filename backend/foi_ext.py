@@ -28,7 +28,10 @@ CLES_ETAT = {
     "sagesse_application", "lecture_index", "lecture_favoris", "priere_personal", "priere_intentions",
     "priere_saved", "priere_decharges", "parcours_progress", "discernement_saved", "sabbat_checks",
     "memoire_progress", "choix_modules", "palais_lieux",
+    "sagesse_journal", "discernement_brouillon", "priere_exaucees", "pour_moi_vu",
 }
+SEUIL_MASQUAGE = 3  # signalements ouverts à partir desquels une publication est masquée en attendant l'admin
+MOTIFS_SIGNALEMENT = ("inapproprie", "haineux", "spam", "donnees_perso", "autre")
 
 
 def _iso(dt) -> Optional[str]:
@@ -82,7 +85,19 @@ def install_foi(g: dict) -> None:
         genre: Mapped[str] = mapped_column(String(20), default="encouragement")
         created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
-    g.update(FoiEtat=FoiEtat, FoiPost=FoiPost, FoiSoutien=FoiSoutien, FoiReponse=FoiReponse)
+    class FoiSignalement(Base):
+        __tablename__ = "foi_signalements"
+        __table_args__ = (UniqueConstraint("post_id", "user_id", name="uq_foi_signalement"),)
+        id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
+        post_id: Mapped[str] = mapped_column(String(36), index=True)
+        user_id: Mapped[str] = mapped_column(String(36), index=True)
+        motif: Mapped[str] = mapped_column(String(20), default="autre")
+        commentaire: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+        statut: Mapped[str] = mapped_column(String(10), default="ouvert", index=True)   # ouvert | garde | supprime
+        created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    g.update(FoiEtat=FoiEtat, FoiPost=FoiPost, FoiSoutien=FoiSoutien, FoiReponse=FoiReponse, FoiSignalement=FoiSignalement)
+    exiger_role = g["exiger_role"]
 
     def _connecte() -> str:
         uid = _uid()
@@ -156,6 +171,10 @@ def install_foi(g: dict) -> None:
         q = select(FoiPost).where(FoiPost.espace == espace)
         if categorie and categorie in CATEGORIES:
             q = q.where(FoiPost.categorie == categorie)
+        if _role_courant() != "admin":
+            masques = (select(FoiSignalement.post_id).where(FoiSignalement.statut == "ouvert")
+                       .group_by(FoiSignalement.post_id).having(func.count() >= SEUIL_MASQUAGE))
+            q = q.where((FoiPost.id.not_in(masques)) | (FoiPost.user_id == uid))
         total = (await db.execute(select(func.count()).select_from(q.subquery()))).scalar_one()
         page = max(1, page)
         posts = list((await db.execute(q.order_by(FoiPost.created_at.desc()).offset((page - 1) * 30).limit(30))).scalars())
@@ -223,6 +242,8 @@ def install_foi(g: dict) -> None:
             raise HTTPException(403, "Seul l'auteur ou un admin peut supprimer.")
         await db.execute(delete(FoiReponse).where(FoiReponse.post_id == post_id))
         await db.execute(delete(FoiSoutien).where(FoiSoutien.post_id == post_id))
+        for sg in (await db.execute(select(FoiSignalement).where(FoiSignalement.post_id == post_id, FoiSignalement.statut == "ouvert"))).scalars():
+            sg.statut = "supprime"
         await db.delete(p)
         await db.commit()
         return {"ok": True}
@@ -238,3 +259,97 @@ def install_foi(g: dict) -> None:
         await db.delete(r)
         await db.commit()
         return {"ok": True}
+
+    # ───────── Signalements (modération) ─────────
+    class SignalementIn(BaseModel):
+        motif: str = Field(default="autre", max_length=20)
+        commentaire: Optional[str] = Field(default=None, max_length=500)
+
+    @api.post("/foi/posts/{post_id}/signaler")
+    async def foi_signaler(post_id: str, body: SignalementIn, db: AsyncSession = Depends(get_db)):
+        uid = _connecte()
+        p = await db.get(FoiPost, post_id)
+        if not p:
+            raise HTTPException(404, "Publication introuvable.")
+        if p.user_id == uid:
+            raise HTTPException(422, "Tu ne peux pas signaler ta propre publication.")
+        existe = (await db.execute(select(FoiSignalement).where(FoiSignalement.post_id == post_id, FoiSignalement.user_id == uid))).scalar_one_or_none()
+        if existe:
+            return {"ok": True, "deja": True}
+        db.add(FoiSignalement(post_id=post_id, user_id=uid, motif=body.motif if body.motif in MOTIFS_SIGNALEMENT else "autre",
+                              commentaire=(body.commentaire or "").strip()[:500] or None))
+        await db.commit()
+        return {"ok": True}
+
+    @api.get("/admin/foi/signalements")
+    async def admin_foi_signalements(statut: str = "ouvert", db: AsyncSession = Depends(get_db), _r=Depends(exiger_role("admin"))):
+        sigs = list((await db.execute(select(FoiSignalement).where(FoiSignalement.statut == statut).order_by(FoiSignalement.created_at.desc()))).scalars())
+        par_post: dict = {}
+        for sg in sigs:
+            par_post.setdefault(sg.post_id, []).append(sg)
+        User = g["User"]
+        items = []
+        for pid, liste in par_post.items():
+            p = await db.get(FoiPost, pid)
+            auteur = await db.get(User, p.user_id) if p else None
+            items.append({
+                "post_id": pid, "espace": p.espace if p else None, "texte": p.texte if p else "(publication supprimée)",
+                "auteur_affiche": p.auteur if p else None, "auteur_email": auteur.email if auteur else None,
+                "publie_le": _iso(p.created_at) if p else None, "nombre": len(liste), "masque": len(liste) >= SEUIL_MASQUAGE,
+                "motifs": sorted({sg.motif for sg in liste}),
+                "commentaires": [sg.commentaire for sg in liste if sg.commentaire][:5],
+                "dernier": _iso(max(sg.created_at for sg in liste)),
+            })
+        items.sort(key=lambda x: -x["nombre"])
+        return {"items": items}
+
+    class DecisionIn(BaseModel):
+        decision: str   # garder | supprimer
+
+    @api.post("/admin/foi/signalements/{post_id}")
+    async def admin_foi_decider(post_id: str, body: DecisionIn, db: AsyncSession = Depends(get_db), _r=Depends(exiger_role("admin"))):
+        if body.decision not in ("garder", "supprimer"):
+            raise HTTPException(422, "Décision inconnue.")
+        for sg in (await db.execute(select(FoiSignalement).where(FoiSignalement.post_id == post_id, FoiSignalement.statut == "ouvert"))).scalars():
+            sg.statut = "garde" if body.decision == "garder" else "supprime"
+        if body.decision == "supprimer":
+            p = await db.get(FoiPost, post_id)
+            if p:
+                await db.execute(delete(FoiReponse).where(FoiReponse.post_id == post_id))
+                await db.execute(delete(FoiSoutien).where(FoiSoutien.post_id == post_id))
+                await db.delete(p)
+        await db.commit()
+        return {"ok": True}
+
+    # ───────── « Pour toi » : soutiens et réponses reçus ─────────
+    @api.get("/foi/pour-moi")
+    async def foi_pour_moi(marquer_vu: bool = False, db: AsyncSession = Depends(get_db)):
+        uid = _connecte()
+        vu = (await db.execute(select(FoiEtat).where(FoiEtat.user_id == uid, FoiEtat.cle == "pour_moi_vu"))).scalar_one_or_none()
+        depuis = None
+        if vu and (vu.valeur or {}).get("v"):
+            try:
+                depuis = datetime.fromisoformat(vu.valeur["v"])
+                depuis = depuis if depuis.tzinfo else depuis.replace(tzinfo=timezone.utc)
+            except Exception:  # noqa: BLE001
+                depuis = None
+        mes_posts = list((await db.execute(select(FoiPost).where(FoiPost.user_id == uid))).scalars())
+        ids = [p.id for p in mes_posts]
+        soutiens_total = sum(p.soutiens or 0 for p in mes_posts)
+        nouveaux_soutiens = nouvelles_reponses = 0
+        if ids:
+            qs = select(func.count()).select_from(FoiSoutien).where(FoiSoutien.post_id.in_(ids), FoiSoutien.user_id != uid)
+            qr = select(func.count()).select_from(FoiReponse).where(FoiReponse.post_id.in_(ids), FoiReponse.user_id != uid)
+            if depuis is not None:
+                qs, qr = qs.where(FoiSoutien.created_at > depuis), qr.where(FoiReponse.created_at > depuis)
+            nouveaux_soutiens = (await db.execute(qs)).scalar_one()
+            nouvelles_reponses = (await db.execute(qr)).scalar_one()
+        if marquer_vu:
+            maintenant = datetime.now(timezone.utc).isoformat()
+            if vu is None:
+                db.add(FoiEtat(user_id=uid, cle="pour_moi_vu", valeur={"v": maintenant}))
+            else:
+                vu.valeur = {"v": maintenant}
+            await db.commit()
+        return {"publications": len(ids), "soutiens_total": soutiens_total,
+                "nouveaux_soutiens": nouveaux_soutiens, "nouvelles_reponses": nouvelles_reponses}

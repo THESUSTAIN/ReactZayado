@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Compass, Radar, CheckSquare, MoreHorizontal, Lightbulb, Heart, CalendarCheck, Users, Settings, X, Lock, HandHeart } from "lucide-react";
+import { LayoutDashboard, Compass, Radar, CheckSquare, MoreHorizontal, Heart, CalendarCheck, Users, Settings, X, Lock, HandHeart, Bot } from "lucide-react";
 import { chargerAbonnement, MENU_REVEUR } from "@/lib/acces";
+import { useKairos } from "@/context/KairosContext";
 
 // Menu mobile en bas d'écran (toutes les pages de l'app). Le chat reste dans l'en-tête
 // (pas de doublon). Masqué dans l'éditeur de Vision Board, qui a sa propre barre d'outils.
@@ -12,9 +13,9 @@ const PRINCIPAUX = [
   { key: "actions", label: "Plan d'action", Icon: CheckSquare, path: "/app/actions" },
 ];
 const PLUS = [
-  { key: "ideas", label: "Idées", Icon: Lightbulb, path: "/app/ideas" },
   { key: "wellbeing", label: "Bien-être & Mindset", Icon: Heart, path: "/app/bien-etre" },
   { key: "mafoi", label: "Ma Foi", Icon: HandHeart, path: "/app/ma-foi" },
+  { key: "agent", label: "Agent Business", Icon: Bot, path: "/app/chatbot-b2b" },
   { key: "review", label: "Revue hebdo", Icon: CalendarCheck, path: "/app/revue" },
   { key: "settings", label: "Paramètres", Icon: Settings, path: "/parametres" },
 ];
@@ -24,7 +25,11 @@ export function BottomNav() {
   const navigate = useNavigate();
   const [plus, setPlus] = useState(false);
   const [plan, setPlan] = useState(null);
-  useEffect(() => { chargerAbonnement().then((a) => setPlan(a.plan)).catch(() => {}); }, []);
+  const [acces, setAcces] = useState(null);
+  const { contexte } = useKairos();
+  useEffect(() => { chargerAbonnement().then((a) => { setPlan(a.plan); setAcces(a.acces); }).catch(() => {}); }, []);
+  const visible = (k) => (k === "mafoi" ? contexte?.parcours_foi === true
+    : k === "agent" ? ["pro", "business", "entreprise"].includes(plan) && (acces == null || acces === "actif") : true);
   const masque = pathname.startsWith("/app/vision") && new URLSearchParams(search).get("view");
   useEffect(() => {
     document.body.classList.toggle("avec-nav-bas", !masque);
@@ -44,7 +49,7 @@ export function BottomNav() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-offwhite/55">Plus</p>
               <button onClick={() => setPlus(false)} aria-label="Fermer" className="rounded-lg p-1 text-offwhite/60"><X size={16} /></button>
             </div>
-            {PLUS.map(({ key, label, Icon, path }) => (
+            {PLUS.filter((i) => visible(i.key)).map(({ key, label, Icon, path }) => (
               <button key={key} onClick={() => navigate(path)} data-testid={`bottomnav-${key}`}
                 className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-[14.5px] ${actif(path) ? "bg-white text-navy-900 ring-1 ring-[#DEC2A3]" : "text-offwhite/85"}`}>
                 <Icon size={18} /> <span className="flex-1">{label}</span>{verrou(key) && <Lock size={13} className="text-gold" />}

@@ -10,9 +10,12 @@ import {
   fetchState, saveProfile, fetchConnections, fetchMesFilleuls, inviterParrainage, appliquerCodePromo, fetchMoi,
   fetchAbonnement, fetchCommandes, telechargerExport, deleteData, fetchTarifsFondateur,
   resilierAbonnement, reprendreAbonnement, changerOffre, fetchEquipe, inviterCoequipier, retirerCoequipier,
-  oauthStockage, deconnecterCanal,
+  oauthStockage, deconnecterCanal, fetchActualiteOptions,
 } from "@/lib/kairosApi";
 import { oublierAbonnement } from "@/lib/acces";
+import { useKairos } from "@/context/KairosContext";
+import { ChoixPays } from "@/components/kairos/ChoixPays";
+import { libellePays } from "@/lib/marches";
 import { useI18n } from "@/i18n";
 import { Link, useNavigate } from "react-router-dom";
 import IntegrationsSection from "@/components/kairos/IntegrationsSection";
@@ -161,7 +164,7 @@ export default function Parametres() {
     >
       <div
         // Hauteur FIXE : la fenêtre ne « saute » plus d'un onglet à l'autre.
-        className="relative flex h-full w-full max-w-[980px] flex-col overflow-hidden border-white/[0.14] bg-[#101c38] shadow-[0_20px_60px_rgba(0,0,0,0.45)] sm:h-[85vh] sm:rounded-[22px] sm:border md:flex-row"
+        className="fenetre relative flex h-full w-full max-w-[980px] flex-col overflow-hidden sm:h-[85vh] sm:rounded-[22px] md:flex-row"
         data-testid="parametres-modal"
         role="dialog"
         aria-modal="true"
@@ -218,7 +221,7 @@ export default function Parametres() {
         {/* Panneau, défilable indépendamment */}
         <div className="min-w-0 flex-1 overflow-y-auto px-4 pb-6 pt-4 md:p-6" data-testid={`parametres-panel-${active}`}>
           {active === "compte" && <><SectionGeneral /><SectionSecurite /></>}
-          {active === "copilote" && <><SectionProfil manquants={completion?.manquants || []} /><SectionVision /></>}
+          {active === "copilote" && <><SectionProfil manquants={completion?.manquants || []} /><SectionVision /><SectionMaFoi /></>}
           {active === "notifications" && <SectionNotifications />}
           {active === "connexions" && <SectionConnexions />}
           {active === "offre" && <><SectionFacturation /><SectionParrainage /></>}
@@ -255,7 +258,7 @@ function SectionProfil({ manquants = [] }) {
         try { const moi = await fetchMoi(); if (moi?.email) p.email = moi.email; } catch { /* compte sans email */ }
       }
       const c = d.vision?.contexte_metier || {};
-      setCm({ copilote_ton: c.copilote_ton || "", outils: c.outils || "", marche: c.marche || "france" });
+      setCm({ copilote_ton: c.copilote_ton || "", outils: c.outils || "", marche: c.marche || "france", marche_label: c.marche_label || "" });
       setProfil(p);
       setMemoire({ pourquoi: d.vision?.pourquoi || "", offre: c.offre || "", cible: c.cible || "", approche: c.approche || "" });
     }).catch(() => toast.error("Impossible de charger ton profil."));
@@ -265,7 +268,7 @@ function SectionProfil({ manquants = [] }) {
   const etat = useAutoSave(profil && memoire ? {
     prenom: profil.prenom, email: profil.email, heure_checkin: profil.heure_checkin, pourquoi: memoire.pourquoi,
     contexte_metier: { offre: memoire.offre, cible: memoire.cible, approche: memoire.approche, copilote_ton: cm.copilote_ton,
-      outils: cm.outils, marche: cm.marche, heure_point: profil.heure_checkin },
+      outils: cm.outils, marche: cm.marche, marche_label: cm.marche_label || null, heure_point: profil.heure_checkin },
   } : null, !!(profil && memoire));
 
   const champ = (cle, valeur) => setProfil((p) => ({ ...p, [cle]: valeur }));
@@ -299,9 +302,8 @@ function SectionProfil({ manquants = [] }) {
           </div>
           <div>
             <label className="mb-1.5 block text-xs text-offwhite/50">Ton marché (actualité, contexte économique)</label>
-            <select value={cm.marche} onChange={(e) => setCm((c) => ({ ...c, marche: e.target.value }))} className={INPUT} data-testid="parametres-marche">
-              {[["france", "France"], ["belgique", "Belgique"], ["senegal", "Sénégal"], ["cote_ivoire", "Côte d'Ivoire"], ["cameroun", "Cameroun"], ["maroc", "Maroc"]].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
+            <ChoixPays variante="liste" valeur={cm.marche} libelle={cm.marche_label} selectClass={INPUT}
+              onChange={(k, l) => setCm((c) => ({ ...c, marche: k, marche_label: l }))} />
           </div>
         </div>
       </Carte>
@@ -435,11 +437,30 @@ function SectionGeneral() {
   );
 }
 
+// Ma Foi (TheSustain) : optionnelle, un seul réglage pour tout le compte
+// (menu, page Ma Foi, parcours Foi de Bien-être, vie spirituelle du diagnostic).
+function SectionMaFoi() {
+  const { contexte, majContexte } = useKairos();
+  const on = contexte?.parcours_foi === true;
+  const basculer = async () => {
+    try { await majContexte({ parcours_foi: !on }); toast.success(on ? "Ma Foi est retirée de ton menu." : "Ma Foi est activée : elle apparaît dans ton menu."); }
+    catch { toast.error("Échec de l'enregistrement."); }
+  };
+  return (
+    <Carte titre="Ma Foi (par TheSustain)" desc="Dimension chrétienne optionnelle : verset et pause du jour, prière, parcours, journal de décisions et communauté. Tes notes restent enregistrées si tu la retires.">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-offwhite/80">{on ? "Activée : visible dans ton menu" : "Désactivée"}</p>
+        <Interrupteur on={on} onClick={basculer} testid="parametres-mafoi" />
+      </div>
+    </Carte>
+  );
+}
+
 function Interrupteur({ on, onClick, testid }) {
   return (
     <button onClick={onClick} role="switch" aria-checked={on} data-testid={testid}
       className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${on ? "bg-gold" : "bg-white/15"}`}>
-      <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${on ? "translate-x-5" : "translate-x-0.5"}`} />
+      <span className={`absolute left-0 top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${on ? "translate-x-5" : "translate-x-0.5"}`} />
     </button>
   );
 }
@@ -518,32 +539,116 @@ function SectionNotifications() {
       <p className="mt-4 text-xs text-offwhite/45">L'heure de ton point du jour se règle dans Mon Copilote. Telegram et WhatsApp se relient dans Connexions. Les décisions à valider arrivent aussi dans la cloche, en haut de l'écran.</p>
     </Carte>
 
-    <Carte titre="Ton actualité" desc="Choisis ce que tu reçois dans le briefing du jour (onglet Actualité du Copilote). Le pays se règle dans Mon Copilote › Ton marché.">      <div className="space-y-4">
+    <CarteVeille cm={cm} setCm={setCm} rythme={rythme} changerRythme={changerRythme} srcOn={srcOn} togglerSrc={togglerSrc} />
+    </>
+  );
+}
+
+// Actualité : le légal suit le pays du compte (modifiable), la veille est choisie par l'utilisateur
+// (pays suivis, secteurs, mots-clés). Le chat filtre ensuite « Légal » / « Ma veille ».
+function CarteVeille({ cm, setCm, rythme, changerRythme, srcOn, togglerSrc }) {
+  const [opts, setOpts] = useState(null);
+  const [mot, setMot] = useState("");
+  const [ajoutPays, setAjoutPays] = useState(false);
+  useEffect(() => { fetchActualiteOptions().then(setOpts).catch(() => setOpts({ secteurs: [] })); }, []);
+  const pays = cm.actu_pays_suivis?.length ? cm.actu_pays_suivis : [cm.marche || "france"];
+  const secteurs = cm.actu_secteurs || [];
+  const mots = cm.actu_mots_cles || [];
+  const enregistrer = async (patch, msg = "Veille enregistrée.") => {
+    const suivant = { ...cm, ...patch };
+    setCm(suivant);
+    try { await saveProfile({ contexte_metier: patch }); toast.success(msg); } catch { toast.error("Échec de l'enregistrement."); setCm(cm); }
+  };
+  const basculerSecteur = (k) => {
+    if (!secteurs.includes(k) && secteurs.length >= 6) { toast("6 secteurs au maximum."); return; }
+    enregistrer({ actu_secteurs: secteurs.includes(k) ? secteurs.filter((x) => x !== k) : [...secteurs, k] });
+  };
+  const ajouterMot = () => {
+    const m = mot.trim();
+    if (m.length < 2) return;
+    if (mots.length >= 5) { toast("5 mots-clés au maximum."); return; }
+    if (!mots.includes(m)) enregistrer({ actu_mots_cles: [...mots, m] });
+    setMot("");
+  };
+  const legalPays = cm.actu_legal_pays || cm.marche || "france";
+  return (
+    <Carte titre="Ton actualité" desc="Le légal suit ton pays ; ta veille, c'est toi qui la choisis. Dans le chat, filtre « Légal » ou « Ma veille ».">
+      <div className="space-y-5" data-testid="parametres-veille">
         <div className="flex items-center justify-between gap-4 border-b border-white/5 pb-4">
           <div><p className="text-sm font-medium text-offwhite">Alerte dans la cloche</p><p className="text-xs text-offwhite/50">À quel rythme la cloche te signale une nouvelle actualité.</p></div>
-          <select value={rythme} onChange={(e) => changerRythme(e.target.value)}
-            className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-offwhite focus:border-gold/50 focus:outline-none"
-            data-testid="parametres-actu-rythme">
-            <option value="quotidien">Chaque jour</option>
-            <option value="lundi">Le lundi uniquement</option>
-            <option value="jamais">Jamais</option>
+          <select value={rythme} onChange={(e) => changerRythme(e.target.value)} className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-offwhite focus:border-gold/50 focus:outline-none" data-testid="parametres-actu-rythme">
+            <option value="quotidien">Chaque jour</option><option value="lundi">Le lundi uniquement</option><option value="jamais">Jamais</option>
           </select>
         </div>
-        <div className="flex items-center justify-between gap-4">
-          <div><p className="text-sm font-medium text-offwhite">Légal & officiel</p><p className="text-xs text-offwhite/50">URSSAF, impôts (dates, montants), baux, RH — le flux officiel service-public.gouv.fr de ton pays. <b>Activé par défaut.</b></p></div>
-          <Interrupteur on={srcOn("actu_legal")} onClick={() => togglerSrc("actu_legal")} testid="parametres-actu-legal" />
+
+        <div className="border-b border-white/5 pb-4">
+          <div className="flex items-center justify-between gap-4">
+            <div><p className="text-sm font-medium text-offwhite">Légal & officiel</p>
+              <p className="text-xs text-offwhite/50">Impôts, social, baux, lois : ce qui change pour les entreprises de ton pays{opts?.legal_officiel ? " (source officielle)" : " (presse juridique)"}.</p></div>
+            <Interrupteur on={srcOn("actu_legal")} onClick={() => togglerSrc("actu_legal")} testid="parametres-actu-legal" />
+          </div>
+          <div className="mt-3 max-w-xs">
+            <p className="mb-1 text-[11px] text-offwhite/45">Pays du légal {legalPays === (cm.marche || "france") ? "· celui de ton compte" : ""}</p>
+            <ChoixPays variante="liste" valeur={legalPays} libelle={cm.actu_legal_pays ? "" : cm.marche_label}
+              selectClass="h-9 w-full rounded-lg border border-white/15 bg-navy-800 px-2 text-sm text-offwhite"
+              onChange={(k) => enregistrer({ actu_legal_pays: k === (cm.marche || "france") ? null : k }, "Pays du légal enregistré.")} />
+          </div>
         </div>
-        <div className="flex items-center justify-between gap-4 border-t border-white/5 pt-4">
-          <div><p className="text-sm font-medium text-offwhite">Économie de ton pays</p><p className="text-xs text-offwhite/50">Les nouvelles économiques de ton marché.</p></div>
-          <Interrupteur on={srcOn("actu_pays")} onClick={() => togglerSrc("actu_pays")} testid="parametres-actu-pays" />
+
+        <div className="border-b border-white/5 pb-4">
+          <p className="text-sm font-medium text-offwhite">Ma veille · pays suivis</p>
+          <p className="mb-2 text-xs text-offwhite/50">Jusqu'à 4 pays : l'actualité économique de chacun.</p>
+          <div className="flex flex-wrap items-center gap-2">
+            {pays.map((k) => (
+              <span key={k} className="inline-flex items-center gap-1.5 rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-xs text-gold">
+                {libellePays(k, k === cm.marche ? cm.marche_label : "")}
+                {pays.length > 1 && <button onClick={() => enregistrer({ actu_pays_suivis: pays.filter((x) => x !== k) })} aria-label="Retirer"><X size={12} /></button>}
+              </span>
+            ))}
+            {pays.length < 4 && !ajoutPays && <button onClick={() => setAjoutPays(true)} className="inline-flex items-center gap-1 rounded-full border border-white/15 px-3 py-1 text-xs text-offwhite/70 hover:bg-white/5" data-testid="veille-ajouter-pays"><Plus size={12} /> Pays</button>}
+          </div>
+          {ajoutPays && (
+            <div className="mt-2 max-w-xs">
+              <ChoixPays variante="liste" valeur="" selectClass="h-9 w-full rounded-lg border border-white/15 bg-navy-800 px-2 text-sm text-offwhite"
+                onChange={(k) => { if (!pays.includes(k)) enregistrer({ actu_pays_suivis: [...pays, k] }); setAjoutPays(false); }} />
+            </div>
+          )}
+          <div className="mt-3 flex flex-wrap gap-4 text-xs text-offwhite/60">
+            <label className="inline-flex items-center gap-2"><Interrupteur on={srcOn("actu_pays")} onClick={() => togglerSrc("actu_pays")} testid="parametres-actu-pays" /> Actualité générale</label>
+            <label className="inline-flex items-center gap-2"><Interrupteur on={srcOn("actu_eco")} onClick={() => togglerSrc("actu_eco")} testid="parametres-actu-eco" /> Économie</label>
+          </div>
         </div>
-        <div className="flex items-center justify-between gap-4 border-t border-white/5 pt-4">
-          <div><p className="text-sm font-medium text-offwhite">Économie générale</p><p className="text-xs text-offwhite/50">Le contexte éco plus large (France / Afrique francophone).</p></div>
-          <Interrupteur on={srcOn("actu_eco")} onClick={() => togglerSrc("actu_eco")} testid="parametres-actu-eco" />
+
+        <div className="border-b border-white/5 pb-4">
+          <p className="text-sm font-medium text-offwhite">Ma veille · secteurs</p>
+          <p className="mb-2 text-xs text-offwhite/50">Jusqu'à 6 : les nouvelles de ces secteurs dans tes pays.</p>
+          <div className="flex flex-wrap gap-2" data-testid="veille-secteurs">
+            {(opts?.secteurs || []).map((sct) => (
+              <button key={sct.cle} onClick={() => basculerSecteur(sct.cle)} data-testid={`veille-secteur-${sct.cle}`}
+                className={`rounded-full border px-3 py-1.5 text-xs transition ${secteurs.includes(sct.cle) ? "border-gold bg-gold text-navy-900" : "border-white/15 text-offwhite/75 hover:bg-white/5"}`}>{sct.label}</button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <p className="text-sm font-medium text-offwhite">Ma veille · mots-clés</p>
+          <p className="mb-2 text-xs text-offwhite/50">Jusqu'à 5 sujets précis (ex. « cession PME », « loi Pinel », un concurrent) : pour publier avant tout le monde.</p>
+          <div className="flex flex-wrap items-center gap-2">
+            {mots.map((m) => (
+              <span key={m} className="inline-flex items-center gap-1.5 rounded-full border border-sky-300/40 bg-sky-400/10 px-3 py-1 text-xs text-sky-100">
+                {m}<button onClick={() => enregistrer({ actu_mots_cles: mots.filter((x) => x !== m) })} aria-label="Retirer"><X size={12} /></button>
+              </span>
+            ))}
+            {mots.length < 5 && (
+              <form onSubmit={(e) => { e.preventDefault(); ajouterMot(); }} className="flex gap-1.5">
+                <input value={mot} onChange={(e) => setMot(e.target.value)} placeholder="Ajouter un mot-clé" className="h-8 w-44 rounded-lg border border-white/15 bg-white/5 px-2.5 text-xs text-offwhite" data-testid="veille-mot" />
+                <button className="h-8 rounded-lg bg-gold px-2.5 text-xs font-semibold text-navy-900"><Plus size={13} /></button>
+              </form>
+            )}
+          </div>
         </div>
       </div>
     </Carte>
-    </>
   );
 }
 

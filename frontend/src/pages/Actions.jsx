@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Plus, ArrowLeft, ArrowRight, Loader2, Target, Trash2, Check, Pause, Play, Link2 } from "lucide-react";
+import { Plus, ArrowLeft, ArrowRight, Loader2, Target, Trash2, Check, Pause, Play, Link2, Lightbulb, Lock, Zap } from "lucide-react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Sidebar } from "@/components/kairos/Sidebar";
 import { Header } from "@/components/kairos/Header";
@@ -8,8 +9,11 @@ import { GlassCard } from "@/components/kairos/GlassCard";
 import {
   fetchTaches, creerTache, majTacheStatut, relierTache, supprimerTache,
   fetchObjectifs, creerObjectif, majObjectif, supprimerObjectif,
+  fetchIdees, createIdee, transformerIdee,
 } from "@/lib/kairosApi";
 import { ProcessusContenu } from "@/pages/Processus";
+import { IdeesContenu } from "@/pages/Ideas";
+import { chargerAbonnement } from "@/lib/acces";
 
 // « Plan d'action » : un seul endroit pour ce qui était éparpillé (Objectifs dans
 // Vision, Actions, Processus). Objectif → actions → processus, reliés :
@@ -27,16 +31,31 @@ const TEINTES = ["#DEC2A3", "#60A5FA", "#34D399", "#F472B6", "#A78BFA"];
 const CHAMP = "rounded-xl border border-white/[0.14] bg-white/[0.08] px-3.5 text-sm text-offwhite outline-none placeholder:text-offwhite/40 focus:border-gold/60";
 const dateFr = (d) => (d ? new Date(`${d}T12:00:00`).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : "");
 
-function Onglets({ onglet, setOnglet, n }) {
+// Un seul parcours : Idées → Objectifs → Actions → Processus (avant : « Idées » était une page à part).
+function Onglets({ onglet, setOnglet, n, verrous }) {
   return (
-    <nav className="-mx-4 mb-7 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0" data-testid="plan-onglets">
-      {[["objectifs", `Objectifs${n.objectifs ? ` · ${n.objectifs}` : ""}`], ["actions", `Actions${n.actions ? ` · ${n.actions}` : ""}`], ["processus", "Processus"]].map(([k, l]) => (
-        <button key={k} onClick={() => setOnglet(k)} data-testid={`plan-onglet-${k}`}
-          className={`shrink-0 rounded-full px-5 py-2.5 text-[13.5px] font-semibold transition ${onglet === k ? "bg-gradient-to-b from-[#F1E2CC] to-[#DEC2A3] text-navy-900" : "border border-white/20 bg-white/[0.05] text-offwhite/75 hover:bg-white/10"}`}>
-          {l}
-        </button>
+    <nav className="-mx-4 mb-7 flex items-center gap-1.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0" data-testid="plan-onglets">
+      {[["idees", `Idées${n.idees ? ` · ${n.idees}` : ""}`], ["objectifs", `Objectifs${n.objectifs ? ` · ${n.objectifs}` : ""}`], ["actions", `Actions${n.actions ? ` · ${n.actions}` : ""}`], ["processus", "Processus"]].map(([k, l], i) => (
+        <React.Fragment key={k}>
+          {i > 0 && <ArrowRight size={13} className="shrink-0 text-offwhite/25" />}
+          <button onClick={() => setOnglet(k)} data-testid={`plan-onglet-${k}`}
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2.5 text-[13.5px] font-semibold transition sm:px-5 ${onglet === k ? "bg-gradient-to-b from-[#F1E2CC] to-[#DEC2A3] text-navy-900" : "border border-white/20 bg-white/[0.05] text-offwhite/75 hover:bg-white/10"}`}>
+            {verrous.includes(k) && <Lock size={12} />}{l}
+          </button>
+        </React.Fragment>
       ))}
     </nav>
+  );
+}
+
+function Verrou() {
+  return (
+    <GlassCard className="text-center" data-testid="plan-verrou">
+      <Lock size={22} className="mx-auto text-gold" />
+      <p className="mt-3 font-display text-lg font-semibold text-offwhite">Les actions et les processus sont inclus à partir de l'offre Solo</p>
+      <p className="mx-auto mt-1 max-w-md text-[13.5px] text-offwhite/60">Avec Rêveur, tu gardes tes idées et tes objectifs. Passe à Solo pour les transformer en actions et suivre ton avancement.</p>
+      <Link to="/parametres#offre" className="btn-gold mt-4 inline-flex">Voir les offres</Link>
+    </GlassCard>
   );
 }
 
@@ -111,7 +130,7 @@ function Objectifs({ objectifs, couleur, recharger, voirActions }) {
   );
 }
 
-function Actions({ taches, objectifs, couleur, filtre, setFiltre, recharger }) {
+function Actions({ taches, objectifs, couleur, filtre, setFiltre, recharger, idees, versIdees }) {
   const [titre, setTitre] = useState("");
   const [objectif, setObjectif] = useState("");
   const [ajout, setAjout] = useState(false);
@@ -125,6 +144,16 @@ function Actions({ taches, objectifs, couleur, filtre, setFiltre, recharger }) {
     catch { toast.error("Échec de l'ajout"); }
     setAjout(false);
   };
+  const rangerEnIdee = async () => {
+    if (!titre.trim()) { toast("Écris d'abord ton idée dans le champ."); return; }
+    try { await createIdee({ titre: titre.trim(), source: "manuelle" }); setTitre(""); recharger(); toast.success("Rangée dans tes idées : tu décideras plus tard."); }
+    catch { toast.error("Impossible pour le moment."); }
+  };
+  const lancerIdee = async (i) => {
+    try { await transformerIdee(i.id, "action", i.objectif_id ? { objectif_id: i.objectif_id } : {}); recharger(); toast.success("Idée lancée : elle est dans « À faire »."); }
+    catch (e) { toast.error(e.detail || "Impossible pour le moment."); }
+  };
+  const meilleures = (idees || []).filter((i) => i.statut !== "realisee").sort((a, b) => b.score - a.score).slice(0, 3);
   const deplacer = async (t, sens) => {
     const cible = ORDRE[ORDRE.indexOf(t.statut) + sens];
     if (!cible) return;
@@ -148,6 +177,9 @@ function Actions({ taches, objectifs, couleur, filtre, setFiltre, recharger }) {
         </select>
         <button type="submit" disabled={ajout} data-testid="actions-add-btn" className="btn-gold h-11">
           {ajout ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />} Ajouter
+        </button>
+        <button type="button" onClick={rangerEnIdee} data-testid="actions-ranger-idee" className="w-full text-left text-[12px] text-offwhite/50 hover:text-gold sm:w-auto sm:self-center">
+          Pas encore sûr ? <span className="underline">Ranger en idée</span>
         </button>
       </form>
 
@@ -173,6 +205,12 @@ function Actions({ taches, objectifs, couleur, filtre, setFiltre, recharger }) {
               {parColonne[col.key].map((t) => (
                 <GlassCard key={t.id} className="group !p-4" data-testid={`actions-card-${t.id}`}>
                   <p className={`text-sm font-medium leading-snug ${t.statut === "fait" ? "text-offwhite/45 line-through" : "text-offwhite"}`}>{t.titre}</p>
+                  {t.idee_id && (
+                    <button onClick={versIdees} title={t.idee_titre ? `Née de l'idée « ${t.idee_titre} »` : "Née d'une idée"}
+                      className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-gold/10 px-2 py-0.5 text-[10.5px] font-semibold text-gold hover:bg-gold/20" data-testid={`actions-badge-idee-${t.id}`}>
+                      <Lightbulb size={10} /> Idée
+                    </button>
+                  )}
                   {t.objectif_id ? (
                     <p className="mt-2 flex items-center gap-1.5 text-[11px] text-offwhite/65"><Target size={11} style={{ color: couleur(t.objectif_id) }} /><span className="truncate">{nomObjectif(t.objectif_id)}</span></p>
                   ) : (
@@ -200,7 +238,20 @@ function Actions({ taches, objectifs, couleur, filtre, setFiltre, recharger }) {
                   </div>
                 </GlassCard>
               ))}
-              {!parColonne[col.key].length && <p className="rounded-2xl border border-dashed border-white/10 px-4 py-6 text-center text-xs text-offwhite/35">Rien ici pour l'instant</p>}
+              {!parColonne[col.key].length && col.key === "a_faire" && meilleures.length > 0 ? (
+                <div className="rounded-2xl border border-dashed border-gold/30 p-4" data-testid="actions-suggestions-idees">
+                  <p className="mb-2 text-xs font-semibold text-gold">Tes meilleures idées : on en lance une ?</p>
+                  <div className="space-y-2">
+                    {meilleures.map((i) => (
+                      <div key={i.id} className="flex items-center gap-2 rounded-xl bg-white/[0.04] px-3 py-2">
+                        <Zap size={12} className="shrink-0 text-gold" />
+                        <span className="min-w-0 flex-1 truncate text-[12.5px] text-offwhite/85">{i.titre}</span>
+                        <button onClick={() => lancerIdee(i)} className="shrink-0 rounded-lg bg-gold px-2.5 py-1 text-[11px] font-semibold text-navy-900">Lancer</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : !parColonne[col.key].length && <p className="rounded-2xl border border-dashed border-white/10 px-4 py-6 text-center text-xs text-offwhite/35">Rien ici pour l'instant</p>}
             </div>
           </div>
         ))}
@@ -211,16 +262,21 @@ function Actions({ taches, objectifs, couleur, filtre, setFiltre, recharger }) {
 
 export default function PlanAction() {
   const [params, setParams] = useSearchParams();
-  const onglet = ["objectifs", "actions", "processus"].includes(params.get("tab")) ? params.get("tab") : "actions";
+  const [plan, setPlan] = useState(null);
+  useEffect(() => { chargerAbonnement().then((a) => setPlan(a.plan)).catch(() => {}); }, []);
+  const verrous = plan === "reveur" ? ["actions", "processus"] : [];
+  const onglet = ["idees", "objectifs", "actions", "processus"].includes(params.get("tab")) ? params.get("tab") : (plan === "reveur" ? "idees" : "actions");
   const setOnglet = (t, extra = {}) => setParams({ tab: t, ...extra });
   const filtre = params.get("objectif") || "tous";
   const [taches, setTaches] = useState([]);
+  const [idees, setIdees] = useState([]);
   const [objectifs, setObjectifs] = useState([]);
   const [chargement, setChargement] = useState(true);
 
   const recharger = () => Promise.all([
     fetchTaches().then((d) => setTaches(d.items || [])),
     fetchObjectifs().then((d) => setObjectifs(Array.isArray(d) ? d : d.items || [])),
+    fetchIdees().then((d) => setIdees(Array.isArray(d) ? d : [])),
   ]).catch(() => toast.error("Plan d'action indisponible")).finally(() => setChargement(false));
   useEffect(() => { recharger(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -233,20 +289,22 @@ export default function PlanAction() {
     <div className="min-h-screen" data-testid="actions-page">
       <Sidebar />
       <div className="lg:pl-[92px]">
-        <Header title="Plan d'action" subtitle="Objectifs, actions et processus, reliés." />
+        <Header title="Plan d'action" subtitle="Idées, objectifs, actions et processus, reliés." />
         <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-offwhite/60">Plan d'action</p>
-          <h1 className="mt-1 font-display text-3xl font-bold sm:text-4xl" data-testid="actions-title">De l'objectif à l'action</h1>
-          <p className="mt-2 max-w-2xl text-[14px] text-offwhite/65">Chaque action fait avancer un objectif, et tes processus transforment leurs étapes en actions. L'avancement se calcule tout seul.</p>
+          <h1 className="mt-1 font-display text-3xl font-bold sm:text-4xl" data-testid="actions-title">De l'idée à l'action</h1>
+          <p className="mt-2 max-w-2xl text-[14px] text-offwhite/65">Tu notes une idée, tu décides d'en faire un objectif ou une action, et l'avancement se calcule tout seul. Tes processus transforment leurs étapes en actions.</p>
           <div className="mt-5">
-            <Onglets onglet={onglet} setOnglet={setOnglet} n={{ objectifs: objectifs.filter((o) => o.statut === "actif").length, actions: taches.filter((t) => t.statut !== "fait").length }} />
+            <Onglets onglet={onglet} setOnglet={setOnglet} verrous={verrous} n={{ idees: idees.filter((i) => i.statut !== "realisee").length, objectifs: objectifs.filter((o) => o.statut === "actif").length, actions: taches.filter((t) => t.statut !== "fait").length }} />
           </div>
           {chargement ? <div className="flex justify-center py-16"><Loader2 className="h-7 w-7 animate-spin text-gold" /></div> : (
             <>
+              {onglet === "idees" && <IdeesContenu onChange={recharger} />}
+              {verrous.includes(onglet) && <Verrou />}
               {onglet === "objectifs" && <Objectifs objectifs={objectifs} couleur={couleur} recharger={recharger} voirActions={(id) => setOnglet("actions", { objectif: id })} />}
-              {onglet === "actions" && <Actions taches={taches} objectifs={objectifs} couleur={couleur} filtre={filtre}
-                setFiltre={(f) => setOnglet("actions", f === "tous" ? {} : { objectif: f })} recharger={recharger} />}
-              {onglet === "processus" && <ProcessusContenu objectifs={objectifs} onActionCreee={recharger} />}
+              {onglet === "actions" && !verrous.includes("actions") && <Actions taches={taches} objectifs={objectifs} couleur={couleur} filtre={filtre}
+                setFiltre={(f) => setOnglet("actions", f === "tous" ? {} : { objectif: f })} recharger={recharger} idees={idees} versIdees={() => setOnglet("idees")} />}
+              {onglet === "processus" && !verrous.includes("processus") && <ProcessusContenu objectifs={objectifs} onActionCreee={recharger} />}
             </>
           )}
         </main>

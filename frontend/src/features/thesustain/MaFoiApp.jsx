@@ -3,15 +3,20 @@ import { toast } from "sonner";
 import {
   BookOpen, HandHeart, Compass, Users, ShieldCheck, Sparkles, ArrowLeft, ArrowRight,
   ArrowUpRight, Heart, Plus, Check, Wind, Quote, MessageCircle, Send, Bot, CalendarClock,
-  Star, ChevronRight, Target, Moon, Feather, Cloud, ScrollText, Trash2, Loader2,
+  Star, ChevronRight, Target, Moon, Feather, Cloud, ScrollText, Trash2, Loader2, Flag, ListChecks,
+  PartyPopper, Power, Share2,
 } from "lucide-react";
-import { fetchFoiPosts, publierFoiPost, soutenirFoiPost, repondreFoiPost, supprimerFoiPost, supprimerFoiReponse } from "@/lib/kairosApi";
+import {
+  fetchFoiPosts, publierFoiPost, soutenirFoiPost, repondreFoiPost, supprimerFoiPost, supprimerFoiReponse,
+  signalerFoiPost, fetchFoiPourMoi,
+} from "@/lib/kairosApi";
 import {
   modules, sagesse, prayerPrompts, parcours, valeursBibliques,
   buildDiscernementSynthese, cercleCategories, THESUSTAIN_URL,
   dechargePrompts, dechargeVersets, psaumes, sabbat, association, versetsLecture,
+  themeDuJour, cleDuJour,
 } from "./thesustainData";
-import { useLocal, uid, setMaFoiActive } from "./store";
+import { useLocal, uid } from "./store";
 import { AideMemoire } from "./MemoireAide";
 
 const ICONS = { sagesse: BookOpen, priere: HandHeart, parcours: Compass, discernement: ShieldCheck, cercle: Users, repos: Moon, lecture: ScrollText };
@@ -57,17 +62,30 @@ function useFoiPosts(espace, categorie) {
     try { await supprimerFoiReponse(repId); setItems((l) => (l || []).map((p) => (p.id === postId ? { ...p, replies: p.replies.filter((r) => r.id !== repId) } : p))); }
     catch { toast.error("Suppression impossible."); }
   };
-  return { items, publier, soutenir, repondre, supprimer, supprimerReponse };
+  const signaler = async (id) => {
+    const motif = window.prompt("Pourquoi signales-tu ce message ? (inapproprié, haineux, spam, données personnelles, autre)", "inapproprié");
+    if (motif === null) return;
+    const m = motif.toLowerCase();
+    const cle = m.includes("hain") ? "haineux" : m.includes("spam") || m.includes("pub") ? "spam" : m.includes("donn") ? "donnees_perso" : m.includes("inap") ? "inapproprie" : "autre";
+    try { await signalerFoiPost(id, cle, motif); toast.success("Merci, l'équipe va regarder ce message."); }
+    catch (e) { toast.error(e.message || "Signalement impossible."); }
+  };
+  return { items, publier, soutenir, repondre, supprimer, supprimerReponse, signaler };
 }
 
-const Card = ({ className = "", children }) => (
-  <div className={`rounded-2xl border border-white/10 bg-white/[0.04] ${className}`}>{children}</div>
+const pluriel = (n, un, plusieurs) => `${n} ${n > 1 ? plusieurs : un}`;
+const SignalerBtn = ({ onClick }) => (
+  <button onClick={onClick} className="inline-flex items-center gap-1 text-[12px] text-offwhite/35 hover:text-rose-300" aria-label="Signaler" title="Signaler ce message"><Flag className="h-3.5 w-3.5" /> Signaler</button>
 );
-const GoldBtn = ({ onClick, children, className = "" }) => (
-  <button onClick={onClick} className={`inline-flex items-center justify-center gap-2 rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-navy-900 transition hover:bg-gold-hover ${className}`}>{children}</button>
+
+const Card = ({ className = "", children, ...rest }) => (
+  <div {...rest} className={`rounded-2xl border border-white/10 bg-white/[0.04] ${className}`}>{children}</div>
 );
-const GhostBtn = ({ onClick, children, className = "" }) => (
-  <button onClick={onClick} className={`inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm text-offwhite transition hover:bg-white/10 ${className}`}>{children}</button>
+const GoldBtn = ({ onClick, children, className = "", ...rest }) => (
+  <button {...rest} onClick={onClick} className={`inline-flex items-center justify-center gap-2 rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-navy-900 transition hover:bg-gold-hover ${className}`}>{children}</button>
+);
+const GhostBtn = ({ onClick, children, className = "", ...rest }) => (
+  <button {...rest} onClick={onClick} className={`inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm text-offwhite transition hover:bg-white/10 ${className}`}>{children}</button>
 );
 const SustainLink = ({ label = "Voir dans TheSustain" }) => (
   <button onClick={openSustain} className="inline-flex items-center gap-1.5 text-sm text-gold hover:text-gold-hover">{label} <ArrowUpRight className="h-4 w-4" /></button>
@@ -87,102 +105,119 @@ function Section({ title, subtitle, children }) {
   );
 }
 
-/* ─── CHOICE (première visite) ─── */
-function Choice({ onActivate, onSkip }) {
-  const opts = [
-    { id: "pilotage", emoji: "📊", label: "Pilotage de mon activité", faith: false },
-    { id: "equilibre", emoji: "⚡", label: "Équilibre & énergie", faith: false },
-    { id: "foi", emoji: "✝️", label: "Foi chrétienne", faith: true },
-    { id: "tout", emoji: "✨", label: "Tout", faith: true },
-  ];
+/* ─── CHOIX (Ma Foi pas encore activée sur le compte) ─── */
+function Choice({ onActivate, onSkip, enCours }) {
   return (
-    <div className="mx-auto max-w-2xl animate-fade-up py-6 text-center">
-      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gold/15 text-2xl">✝️</div>
-      <h1 className="font-display text-3xl font-extrabold text-offwhite">Qu'aimeriez-vous intégrer à votre expérience ?</h1>
-      <p className="mt-2 text-sm text-offwhite/60">Zayado s'adapte à vous. La dimension « Ma Foi » est optionnelle, proposée par TheSustain.</p>
-      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {opts.map((o) => (
-          <button key={o.id} onClick={() => (o.faith ? onActivate() : onSkip())}
-            className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left transition hover:border-gold/40 hover:bg-white/[0.07]">
-            <span className="text-2xl">{o.emoji}</span>
-            <span className="font-medium text-offwhite">{o.label}</span>
-            {o.faith && <span className="ml-auto rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-semibold text-gold">active Ma Foi</span>}
-          </button>
-        ))}
+    <div className="mx-auto max-w-xl animate-fade-up py-8 text-center" data-testid="mafoi-choix">
+      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gold/15 text-gold"><HandHeart className="h-7 w-7" /></div>
+      <h1 className="font-display text-3xl font-extrabold text-offwhite">Ajouter Ma Foi à ton Zayado ?</h1>
+      <p className="mt-3 text-sm leading-relaxed text-offwhite/65">Un espace optionnel, proposé par TheSustain, pour relier ta foi chrétienne et ton activité : un verset et une pause par jour, la prière, des parcours de 7 jours, un journal de décisions et une communauté d'entrepreneurs.</p>
+      <div className="mt-6 flex flex-col justify-center gap-2.5 sm:flex-row">
+        <GoldBtn onClick={onActivate} className="px-6 py-2.5" data-testid="mafoi-activer">{enCours ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Oui, activer Ma Foi</GoldBtn>
+        <GhostBtn onClick={onSkip} className="px-6 py-2.5">Pas pour moi</GhostBtn>
       </div>
-      <p className="mt-4 text-xs text-offwhite/40">Vous pourrez changer d'avis à tout moment.</p>
+      <p className="mt-4 text-xs text-offwhite/45">Tu peux l'activer ou la retirer à tout moment dans Paramètres › Mon Copilote. Le reste de Zayado ne change pas.</p>
     </div>
   );
 }
 
-/* ─── HUB ─── */
-function Hub({ go }) {
-  return (
-    <div className="animate-fade-up">
-      <Card className="relative overflow-hidden p-6 sm:p-8">
-        <div className="absolute -right-16 -top-16 h-52 w-52 rounded-full bg-gold/10 blur-3xl" />
-        <div className="relative max-w-2xl">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-gold/30 bg-gold/10 px-2.5 py-1 text-[11px] font-semibold text-gold">✝️ par TheSustain</span>
-          <h1 className="mt-3 font-display text-4xl font-extrabold text-offwhite sm:text-5xl">Ma Foi</h1>
-          <p className="mt-3 text-offwhite/75">Une dimension spirituelle pour les entrepreneurs qui souhaitent intégrer leur foi, leurs valeurs et leur recherche de sens dans leur parcours professionnel.</p>
-          <div className="mt-5 flex flex-wrap gap-2.5">
-            <GoldBtn onClick={() => go("sagesse")}>Commencer par la Sagesse <ArrowRight className="h-4 w-4" /></GoldBtn>
-            <GhostBtn onClick={openSustain}>Découvrir TheSustain</GhostBtn>
-          </div>
-        </div>
-      </Card>
+/* ─── AUJOURD'HUI POUR TOI (données réelles du compte) ─── */
+function useResumeFoi() {
+  const theme = themeDuJour();
+  const [progress] = useLocal("parcours_progress", {});
+  const [intentions] = useLocal("priere_intentions", []);
+  const [decisions] = useLocal("discernement_saved", []);
+  const [journal] = useLocal("sagesse_journal", {});
+  const [pourMoi, setPourMoi] = useState(null);
+  useEffect(() => { fetchFoiPourMoi().then(setPourMoi).catch(() => setPourMoi(null)); }, []);
+  const enCours = parcours.map((p) => ({ p, faits: (progress[p.id] || []).length })).find((x) => x.faits > 0 && x.faits < x.p.days.length);
+  const aujourdhui = cleDuJour();
+  const aReevaluer = (decisions || []).filter((d) => d.dateReeval && d.dateReeval <= aujourdhui && !d.issue);
+  return { theme, enCours, intentions: intentions || [], aReevaluer, pauseFaite: !!(journal || {})[aujourdhui], pourMoi };
+}
 
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {modules.map((m) => {
+function PourToi({ r, go, compact = false }) {
+  const lignes = [];
+  if (r.pourMoi?.nouveaux_soutiens) lignes.push({ Icone: HandHeart, texte: `${pluriel(r.pourMoi.nouveaux_soutiens, "personne prie", "personnes prient")} pour toi depuis ta dernière visite`, vue: "priere" });
+  if (r.pourMoi?.nouvelles_reponses) lignes.push({ Icone: MessageCircle, texte: `${pluriel(r.pourMoi.nouvelles_reponses, "nouvelle réponse", "nouvelles réponses")} à tes messages`, vue: "cercle" });
+  if (r.aReevaluer.length) lignes.push({ Icone: CalendarClock, texte: `Décision à réévaluer : « ${r.aReevaluer[0].decision} »`, vue: "discernement", fort: true });
+  if (r.enCours) lignes.push({ Icone: Compass, texte: `${r.enCours.p.title} · jour ${r.enCours.faits + 1} sur ${r.enCours.p.days.length}`, vue: "parcours" });
+  if (r.intentions.length) lignes.push({ Icone: HandHeart, texte: `${pluriel(r.intentions.length, "intention", "intentions")} dans ta prière`, vue: "priere" });
+  if (!r.pauseFaite) lignes.push({ Icone: Wind, texte: `Ta pause du jour : ${r.theme.theme}`, vue: "sagesse" });
+  if (!lignes.length) lignes.push({ Icone: Check, texte: "Tout est à jour pour aujourd'hui. Belle journée.", vue: null });
+  return (
+    <div className={compact ? "space-y-1" : "space-y-2"} data-testid="mafoi-pour-toi">
+      {lignes.slice(0, compact ? 3 : 5).map((l, i) => (
+        <button key={i} onClick={() => l.vue && go(l.vue)} disabled={!l.vue}
+          className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${l.fort ? "border border-gold/30 bg-gold/[0.07]" : "hover:bg-white/[0.05]"} ${l.vue ? "" : "cursor-default"}`}>
+          <l.Icone className="h-4 w-4 shrink-0 text-gold" /><span className="min-w-0 flex-1 text-offwhite/85">{l.texte}</span>{l.vue && <ChevronRight className="h-4 w-4 shrink-0 text-offwhite/35" />}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* ─── ACCUEIL : design « Sanctuaire » (choisi) ─── */
+function Hub({ go }) {
+  const r = useResumeFoi();
+  return <HubSanctuaire r={r} go={go} />;
+}
+
+// « Sanctuaire » : une seule chose au centre, le verset du jour ; tout le reste est discret.
+function HubSanctuaire({ r, go }) {
+  const date = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+  return (
+    <div className="animate-fade-up mx-auto max-w-2xl" data-testid="mafoi-hub-sanctuaire">
+      <div className="relative py-10 text-center sm:py-14">
+        <div className="pointer-events-none absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gold/[0.09] blur-3xl" />
+        <p className="relative text-[11px] uppercase tracking-[0.3em] text-offwhite/45">{date}</p>
+        <p className="relative mt-2 text-sm text-gold">{r.theme.theme}</p>
+        <p className="relative mx-auto mt-6 max-w-xl font-display text-[26px] leading-snug text-offwhite sm:text-[34px]">{r.theme.verse}</p>
+        <p className="relative mt-4 text-sm text-offwhite/55">{r.theme.reference}</p>
+        <div className="relative mt-8 flex justify-center">
+          <button onClick={() => go("sagesse")} className="group flex h-24 w-24 flex-col items-center justify-center rounded-full border border-gold/40 bg-gold/10 text-gold transition hover:bg-gold/20" data-testid="mafoi-sanctuaire-pause">
+            <Wind className="h-6 w-6" /><span className="mt-1 text-[11px] font-semibold">{r.pauseFaite ? "Revoir" : "3 min"}</span>
+          </button>
+        </div>
+        <p className="relative mt-5 text-sm italic text-offwhite/60">{r.theme.reflectionQuestion}</p>
+      </div>
+      <div className="border-t border-white/10 pt-5"><PourToi r={r} go={go} compact /></div>
+      <div className="mt-6 divide-y divide-white/[0.07] border-y border-white/[0.07]">
+        {modules.filter((m) => m.id !== "sagesse").map((m) => {
           const Icon = ICONS[m.id];
           return (
-            <button key={m.id} onClick={() => go(m.id)} className="group rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-left transition hover:border-gold/40 hover:bg-white/[0.07]">
-              <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-gold/10 text-gold"><Icon className="h-5 w-5" /></div>
-                <span className="text-lg">{m.emoji}</span>
-              </div>
-              <h3 className="mt-4 font-display text-lg font-bold text-offwhite">{m.title}</h3>
-              <p className="mt-1 text-sm text-offwhite/60">{m.tagline}</p>
-              <span className="mt-3 inline-flex items-center text-sm text-gold">Ouvrir <ChevronRight className="ml-0.5 h-4 w-4 transition group-hover:translate-x-0.5" /></span>
+            <button key={m.id} onClick={() => go(m.id)} className="group flex w-full items-center gap-4 py-3.5 text-left" data-testid={`mafoi-module-${m.id}`}>
+              <Icon className="h-4 w-4 shrink-0 text-gold/80" />
+              <span className="font-display text-[15px] font-semibold text-offwhite">{m.title}</span>
+              <span className="hidden min-w-0 flex-1 truncate text-sm text-offwhite/45 sm:block">{m.tagline}</span>
+              <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-offwhite/30 transition group-hover:translate-x-0.5 group-hover:text-gold" />
             </button>
           );
         })}
       </div>
-
-      <Card className="mt-6 p-6">
-        <div className="grid items-center gap-6 sm:grid-cols-[1fr_auto_1fr]">
-          <div>
-            <p className="text-[11px] uppercase tracking-widest text-offwhite/45">Porte d'entrée</p>
-            <p className="mt-1 font-display text-lg font-bold text-offwhite">Zayado</p>
-            <p className="text-sm text-offwhite/55">L'application de l'entrepreneur. Ma Foi y est un point d'accès optionnel.</p>
-          </div>
-          <div className="hidden flex-col items-center text-offwhite/40 sm:flex"><ArrowRight className="h-5 w-5" /><span className="mt-1 text-[10px] uppercase tracking-widest">via API</span></div>
-          <div>
-            <p className="text-[11px] uppercase tracking-widest text-offwhite/45">Moteur & propriétaire du contenu</p>
-            <p className="mt-1 font-display text-lg font-bold text-gold">TheSustain</p>
-            <p className="text-sm text-offwhite/55">Contenus chrétiens, prière, parcours, communauté. L'expérience appartient à TheSustain.</p>
-          </div>
-        </div>
-        <div className="mt-5 flex items-center justify-center gap-2 border-t border-white/10 pt-4 text-xs text-offwhite/50"><Sparkles className="h-3.5 w-3.5 text-gold" /> Powered by TheSustain</div>
-      </Card>
     </div>
   );
 }
 
 /* ─── SAGESSE ─── */
 function Sagesse() {
-  const [application, setApplication] = useLocal("sagesse_application", "");
+  const theme = themeDuJour();
+  const jour = cleDuJour();
+  const [journal, setJournal] = useLocal("sagesse_journal", {});
   const [medOpen, setMedOpen] = useState(false);
+  const texte = (journal || {})[jour] || "";
+  const ecrire = (v) => setJournal({ ...(journal || {}), [jour]: v });
+  const precedents = Object.entries(journal || {}).filter(([d, t]) => d !== jour && t).sort((a, b) => (a[0] < b[0] ? 1 : -1)).slice(0, 5);
   return (
-    <Section title="Sagesse" subtitle="Une pause pour nourrir votre foi et donner du sens à votre quotidien.">
+    <Section title="Sagesse" subtitle="Un thème par jour : un verset, une pause, une question, et ce que tu en fais dans ton activité.">
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <Card className="p-6">
-            <span className="inline-flex rounded-full border border-gold/30 bg-gold/10 px-2.5 py-1 text-[11px] font-semibold text-gold">Thème du jour · {sagesse.theme}</span>
+            <span className="inline-flex rounded-full border border-gold/30 bg-gold/10 px-2.5 py-1 text-[11px] font-semibold text-gold" data-testid="mafoi-theme-du-jour">Thème du jour · {theme.theme}</span>
             <Quote className="mt-3 h-6 w-6 text-gold/70" />
-            <p className="mt-1 font-display text-2xl leading-snug text-offwhite">{sagesse.verse}</p>
-            <p className="mt-3 text-sm font-medium text-gold">— {sagesse.reference}</p>
-            <AideMemoire className="mt-4" verset={{ text: sagesse.verse, ref: sagesse.reference }} />
+            <p className="mt-1 font-display text-2xl leading-snug text-offwhite">{theme.verse}</p>
+            <p className="mt-3 text-sm font-medium text-gold">— {theme.reference}</p>
+            <AideMemoire className="mt-4" verset={{ text: theme.verse, ref: theme.reference }} />
           </Card>
           <Card className="p-6">
             <div className="flex items-center justify-between">
@@ -192,20 +227,28 @@ function Sagesse() {
             {medOpen ? (
               <div className="mt-4">
                 <div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-gold/15 animate-pulse-glow"><Wind className="h-8 w-8 text-gold" /></div>
-                <div className="space-y-2 text-sm leading-relaxed text-offwhite/80">{sagesse.meditation.map((p, i) => <p key={i}>{p}</p>)}</div>
+                <div className="space-y-2 text-sm leading-relaxed text-offwhite/80">{theme.meditation.map((p, i) => <p key={i}>{p}</p>)}</div>
               </div>
             ) : <p className="mt-2 text-sm text-offwhite/55">Un temps guidé pour respirer et laisser ce thème descendre du mental vers le cœur.</p>}
           </Card>
           <Card className="p-6">
-            <h3 className="flex items-center gap-2 font-display text-lg font-bold text-offwhite"><Target className="h-4 w-4 text-gold" /> Application dans mon activité</h3>
-            <p className="mt-1 text-sm text-offwhite/55">{sagesse.applicationPrompt}</p>
-            <Textarea value={application} onChange={(e) => setApplication(e.target.value)} placeholder="Écrivez comment mettre ce thème en pratique cette semaine…" className="mt-3 min-h-24" />
-            <div className="mt-2 flex justify-end"><GhostBtn onClick={() => toast.success("Réflexion enregistrée.")}><Check className="h-4 w-4" /> Enregistrer</GhostBtn></div>
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="flex items-center gap-2 font-display text-lg font-bold text-offwhite"><Target className="h-4 w-4 text-gold" /> Dans mon activité</h3>
+              {texte && <span className="inline-flex items-center gap-1 text-xs text-emerald-300" data-testid="mafoi-sagesse-enregistre"><Check className="h-3.5 w-3.5" /> Enregistré</span>}
+            </div>
+            <p className="mt-1 text-sm text-offwhite/55">{theme.applicationPrompt}</p>
+            <Textarea value={texte} onChange={(e) => ecrire(e.target.value)} placeholder="Écris comment mettre ce thème en pratique cette semaine…" className="mt-3 min-h-24" data-testid="mafoi-sagesse-texte" />
+            {precedents.length > 0 && (
+              <div className="mt-4 border-t border-white/10 pt-3">
+                <p className="mb-2 text-[11px] uppercase tracking-wide text-offwhite/45">Mes derniers jours</p>
+                <div className="space-y-2">{precedents.map(([d, t]) => <div key={d} className="text-sm"><span className="text-[11px] text-offwhite/45">{new Date(d).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}</span><p className="text-offwhite/75">{t}</p></div>)}</div>
+              </div>
+            )}
           </Card>
         </div>
         <div className="space-y-4">
-          <Card className="p-6"><h3 className="flex items-center gap-2 font-display text-base font-bold text-offwhite"><HandHeart className="h-4 w-4 text-gold" /> Prière du jour</h3><p className="mt-2 text-sm italic leading-relaxed text-offwhite/80">{sagesse.prayer}</p></Card>
-          <Card className="p-6"><h3 className="flex items-center gap-2 font-display text-base font-bold text-offwhite"><Sparkles className="h-4 w-4 text-gold" /> Question de réflexion</h3><p className="mt-2 text-sm leading-relaxed text-offwhite/80">{sagesse.reflectionQuestion}</p></Card>
+          <Card className="p-6"><h3 className="flex items-center gap-2 font-display text-base font-bold text-offwhite"><HandHeart className="h-4 w-4 text-gold" /> Prière du jour</h3><p className="mt-2 text-sm italic leading-relaxed text-offwhite/80">{theme.prayer}</p></Card>
+          <Card className="p-6"><h3 className="flex items-center gap-2 font-display text-base font-bold text-offwhite"><Sparkles className="h-4 w-4 text-gold" /> Question de réflexion</h3><p className="mt-2 text-sm leading-relaxed text-offwhite/80">{theme.reflectionQuestion}</p></Card>
           <Card className="p-6">
             <h3 className="flex items-center gap-2 font-display text-base font-bold text-offwhite"><BookOpen className="h-4 w-4 text-gold" /> Articles courts</h3>
             <div className="mt-3 space-y-3">
@@ -233,7 +276,7 @@ function LectureBiblique() {
   const toggleFavori = () => setFavoris(estFavori ? favoris.filter((f) => f.ref !== v.ref) : [{ ...v }, ...favoris]);
 
   return (
-    <Section title="Lecture biblique" subtitle="Un verset à la fois. Prenez le temps de le lire, puis utilisez l'aide à la mémoire pour le retenir.">
+    <Section title="Lecture biblique" subtitle="Un verset à la fois. Prends le temps de le lire, puis utilise l'aide à la mémoire pour le retenir.">
       <Card className="p-6 sm:p-8">
         <div className="flex items-center justify-between">
           <span className="text-[11px] uppercase tracking-widest text-offwhite/45">Verset {(i % versetsLecture.length) + 1} / {versetsLecture.length}</span>
@@ -270,6 +313,7 @@ function Priere() {
   const [tab, setTab] = useState("perso");
   const [personal, setPersonal] = useLocal("priere_personal", "");
   const [intentions, setIntentions] = useLocal("priere_intentions", []);
+  const [exaucees, setExaucees] = useLocal("priere_exaucees", []);
   const [saved, setSaved] = useLocal("priere_saved", []);
   const mur = useFoiPosts("mur");
   const [anonyme, setAnonyme] = useState(false);
@@ -283,13 +327,28 @@ function Priere() {
   const postWall = async () => { if (!wallText.trim()) return; if (await mur.publier(wallText.trim(), { anonyme })) { setWallText(""); toast.success("Publié sur le mur de prière."); } };
   const deposer = () => { if (!dechargeText.trim()) return; const v = dechargeVersets[Math.floor(Math.random() * dechargeVersets.length)]; setDecharges([{ id: uid("dc"), text: dechargeText.trim(), remis: false, verset: v }, ...decharges]); setDechargeText(""); };
   const remettre = (id) => { setDecharges(decharges.map((x) => x.id === id ? { ...x, remis: true } : x)); toast.success("Remis entre les mains de Dieu 🙏"); };
+  // « Exaucée » : l'intention rejoint le carnet des prières exaucées (avant : elle disparaissait).
+  const exaucer = (it) => {
+    setIntentions(intentions.filter((x) => x.id !== it.id));
+    setExaucees([{ ...it, exaucee_le: new Date().toISOString(), partagee: false }, ...(exaucees || [])]);
+    toast.success("Rendons grâce ! Ajoutée à tes prières exaucées.");
+  };
+  const partagerTemoignage = async (it) => {
+    const texte = window.prompt("Ton témoignage (partagé dans le Cercle, catégorie Témoignages) :", `Prière exaucée : ${it.text}. Merci à ceux qui ont prié !`);
+    if (!texte || texte.trim().length < 2) return;
+    try {
+      await publierFoiPost({ espace: "cercle", categorie: "temoignages", texte: texte.trim() });
+      setExaucees(exaucees.map((x) => (x.id === it.id ? { ...x, partagee: true } : x)));
+      toast.success("Témoignage partagé dans le Cercle.");
+    } catch { toast.error("Partage impossible pour le moment."); }
+  };
 
   const Tab = ({ id, children }) => <button onClick={() => setTab(id)} className={`rounded-xl px-4 py-2 text-sm font-medium transition ${tab === id ? "bg-white text-navy-900" : "text-offwhite/60 hover:text-offwhite"}`}>{children}</button>;
 
   return (
-    <Section title="Ma prière" subtitle="Prière personnelle, intentions, mur de prière et mur des décharges.">
-      <div className="mb-4 inline-flex gap-1 rounded-2xl border border-white/10 bg-white/[0.03] p-1">
-        <Tab id="perso">🙏 Ma prière</Tab><Tab id="mur">🧱 Mur de prière</Tab><Tab id="decharges">🍃 Mur des décharges</Tab>
+    <Section title="Ma prière" subtitle="Prière personnelle, intentions, prières exaucées, mur de prière et mur des décharges.">
+      <div className="mb-4 inline-flex max-w-full gap-1 overflow-x-auto no-scrollbar rounded-2xl border border-white/10 bg-white/[0.03] p-1">
+        <Tab id="perso">🙏 Ma prière</Tab><Tab id="exaucees">✨ Exaucées{exaucees?.length ? ` (${exaucees.length})` : ""}</Tab><Tab id="mur">🧱 Mur de prière</Tab><Tab id="decharges">🍃 Mur des décharges</Tab>
       </div>
 
       {tab === "perso" && (
@@ -304,8 +363,21 @@ function Priere() {
             <h3 className="font-display text-base font-bold text-offwhite">Mes intentions</h3>
             <div className="mt-3 flex gap-2"><Input value={newInt} onChange={(e) => setNewInt(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addIntention()} placeholder="Ajouter une intention…" /><GoldBtn onClick={addIntention}><Plus className="h-4 w-4" /></GoldBtn></div>
             <div className="mt-3 flex flex-wrap gap-2">{prayerPrompts.map((p) => <button key={p} onClick={() => setIntentions([{ id: uid("int"), text: p }, ...intentions])} className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-offwhite/60 hover:text-offwhite">+ {p}</button>)}</div>
-            <div className="mt-4 space-y-2">{intentions.map((it) => <div key={it.id} className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-offwhite"><span>{it.text}</span><button onClick={() => setIntentions(intentions.filter((x) => x.id !== it.id))} className="text-xs text-offwhite/45 hover:text-gold">Répondu</button></div>)}</div>
+            <div className="mt-4 space-y-2">{intentions.map((it) => <div key={it.id} className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-offwhite"><span>{it.text}</span><span className="flex shrink-0 items-center gap-3"><button onClick={() => exaucer(it)} className="inline-flex items-center gap-1 text-xs text-gold hover:text-gold-hover" data-testid="mafoi-exaucee"><PartyPopper className="h-3.5 w-3.5" /> Exaucée</button><button onClick={() => setIntentions(intentions.filter((x) => x.id !== it.id))} className="text-offwhite/35 hover:text-rose-300" aria-label="Retirer"><Trash2 className="h-3.5 w-3.5" /></button></span></div>)}</div>
           </Card>
+        </div>
+      )}
+
+      {tab === "exaucees" && (
+        <div data-testid="mafoi-exaucees">
+          {!(exaucees || []).length && <Card className="p-6 text-center text-sm text-offwhite/60">Quand une intention trouve sa réponse, marque-la « Exaucée » : elle s'ajoute ici. Relire ce carnet dans les jours difficiles fait du bien.</Card>}
+          <div className="space-y-3">{(exaucees || []).map((x) => (
+            <Card key={x.id} className="flex flex-wrap items-center gap-3 p-4">
+              <PartyPopper className="h-5 w-5 shrink-0 text-gold" />
+              <div className="min-w-0 flex-1"><p className="text-sm text-offwhite">{x.text}</p><p className="text-[11px] text-offwhite/45">Exaucée le {new Date(x.exaucee_le).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</p></div>
+              {x.partagee ? <span className="text-xs text-emerald-300">Partagée dans le Cercle</span> : <GhostBtn onClick={() => partagerTemoignage(x)}><Share2 className="h-4 w-4" /> Témoigner</GhostBtn>}
+            </Card>
+          ))}</div>
         </div>
       )}
 
@@ -319,17 +391,17 @@ function Priere() {
             </div>
           </Card>
           {mur.items === null && <div className="flex items-center gap-2 text-sm text-offwhite/55"><Loader2 className="h-4 w-4 animate-spin" /> Chargement du mur…</div>}
-          {mur.items?.length === 0 && <Card className="p-6 text-center text-sm text-offwhite/60" data-testid="mafoi-mur-vide">Le mur est encore vide. Sois le premier à confier une intention : les membres pourront prier pour toi.</Card>}
+          {mur.items?.length === 0 && <Card className="p-6 text-center text-sm text-offwhite/60" data-testid="mafoi-mur-vide">Le mur est encore vide. Confie la première intention : les membres pourront prier pour toi.</Card>}
           <div className="space-y-3">{(mur.items || []).map((p) => (
             <Card key={p.id} className="p-5">
               <div className="flex items-start justify-between gap-2">
                 <div className="text-sm font-medium text-offwhite">{p.mine ? `${p.author} (toi)` : p.author} <span className="text-[11px] font-normal text-offwhite/40">· {ilYa(p.created_at)}</span></div>
-                {p.can_delete && <button onClick={() => mur.supprimer(p.id)} className="text-offwhite/40 hover:text-rose-300" aria-label="Supprimer"><Trash2 className="h-4 w-4" /></button>}
+                {p.can_delete ? <button onClick={() => mur.supprimer(p.id)} className="text-offwhite/40 hover:text-rose-300" aria-label="Supprimer"><Trash2 className="h-4 w-4" /></button> : <SignalerBtn onClick={() => mur.signaler(p.id)} />}
               </div>
               <p className="mt-1.5 whitespace-pre-line text-sm leading-relaxed text-offwhite/80">{p.text}</p>
               <div className="mt-3 flex items-center gap-3">
                 <button onClick={() => mur.soutenir(p.id)} className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm ${p.mine_support ? "bg-gold text-navy-900" : "border border-white/15 bg-white/5 text-offwhite hover:bg-white/10"}`}><HandHeart className="h-4 w-4" /> {p.mine_support ? "Je prie pour toi ✓" : "Je prie pour toi"}</button>
-                <span className="text-xs text-offwhite/45">{p.count} personne{p.count > 1 ? "s" : ""} prie{p.count > 1 ? "nt" : ""}</span>
+                <span className="text-xs text-offwhite/45">{p.count ? pluriel(p.count, "personne prie", "personnes prient") : "Sois le premier à prier"}</span>
               </div>
             </Card>
           ))}</div>
@@ -339,7 +411,7 @@ function Priere() {
       {tab === "decharges" && (
         <div>
           <Card className="mb-4 p-5">
-            <p className="text-sm text-offwhite/70">Déposez ici un fardeau, puis remettez-le symboliquement à Dieu. « Jetez sur lui tous vos soucis. »</p>
+            <p className="text-sm text-offwhite/70">Dépose ici un fardeau, puis remets-le symboliquement à Dieu. « Jetez sur lui tous vos soucis. » Ce mur est privé : toi seul le vois.</p>
             <div className="mt-3 flex flex-wrap gap-2">{dechargePrompts.map((p) => <button key={p} onClick={() => setDechargeText(p)} className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-offwhite/60 hover:text-offwhite">{p}</button>)}</div>
             <Textarea value={dechargeText} onChange={(e) => setDechargeText(e.target.value)} placeholder="Ce que je porte de lourd en ce moment…" className="mt-3 min-h-20" />
             <div className="mt-2 flex justify-end"><GoldBtn onClick={deposer}><Cloud className="h-4 w-4" /> Déposer</GoldBtn></div>
@@ -418,40 +490,51 @@ function F({ label, text, italic }) { return <div><div className="mb-1 text-[11p
 
 /* ─── DISCERNEMENT ─── */
 function Discernement() {
-  const [decision, setDecision] = useState("");
-  const [pourquoi, setPourquoi] = useState("");
-  const [craintes, setCraintes] = useState("");
-  const [remise, setRemise] = useState("");
-  const [dateReeval, setDateReeval] = useState("");
-  const [valeurs, setValeurs] = useState([]);
+  const VIDE = { decision: "", pourquoi: "", craintes: "", remise: "", dateReeval: "", valeurs: [] };
+  // Brouillon enregistré sur le compte : on peut changer de module sans rien perdre.
+  const [b, setB] = useLocal("discernement_brouillon", VIDE);
+  const brouillon = { ...VIDE, ...(b || {}) };
+  const maj = (patch) => setB({ ...brouillon, ...patch });
   const [synthese, setSynthese] = useState(null);
   const [saved, setSaved] = useLocal("discernement_saved", []);
-  const toggleVal = (v) => setValeurs((prev) => prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]);
-  const structurer = () => { if (!decision.trim() && valeurs.length === 0) { toast.error("Décrivez la décision ou choisissez des valeurs."); return; } setSynthese(buildDiscernementSynthese({ decision: decision.trim(), valeurs, craintes: craintes.trim() })); };
-  const saveDecision = () => { if (!decision.trim()) { toast.error("Ajoutez la décision envisagée."); return; } setSaved([{ id: uid("dec"), decision, valeurs, dateReeval, date: new Date().toLocaleDateString("fr-FR") }, ...saved]); toast.success("Décision enregistrée."); setDecision(""); setPourquoi(""); setCraintes(""); setRemise(""); setDateReeval(""); setValeurs([]); setSynthese(null); };
+  const aujourdhui = cleDuJour();
+  const toggleVal = (v) => maj({ valeurs: brouillon.valeurs.includes(v) ? brouillon.valeurs.filter((x) => x !== v) : [...brouillon.valeurs, v] });
+  const structurer = () => { if (!brouillon.decision.trim() && brouillon.valeurs.length === 0) { toast.error("Décris la décision ou choisis des valeurs."); return; } setSynthese(buildDiscernementSynthese({ decision: brouillon.decision.trim(), valeurs: brouillon.valeurs, craintes: brouillon.craintes.trim(), pourquoi: brouillon.pourquoi.trim() })); };
+  const saveDecision = () => {
+    if (!brouillon.decision.trim()) { toast.error("Ajoute la décision envisagée."); return; }
+    setSaved([{ id: uid("dec"), ...brouillon, decision: brouillon.decision.trim(), date: new Date().toLocaleDateString("fr-FR") }, ...(saved || [])]);
+    toast.success(brouillon.dateReeval ? "Décision enregistrée. Elle reviendra dans « Aujourd'hui pour toi » à la date choisie." : "Décision enregistrée.");
+    setB(VIDE); setSynthese(null);
+  };
+  const faireLePoint = (dd) => {
+    const issue = window.prompt(`Où en es-tu de « ${dd.decision} » ? Qu'as-tu décidé, et avec quelle paix ?`, "");
+    if (issue === null || !issue.trim()) return;
+    setSaved(saved.map((x) => (x.id === dd.id ? { ...x, issue: issue.trim(), issue_le: new Date().toLocaleDateString("fr-FR") } : x)));
+    toast.success("C'est noté dans ton journal.");
+  };
 
   return (
     <Section title="Discernement" subtitle="Un journal de décision éclairé par des valeurs bibliques.">
-      <Card className="mb-5 flex gap-3 border-gold/20 bg-gold/[0.05] p-4"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-gold" /><p className="text-sm text-offwhite/80">Cet espace vous aide à <strong>structurer votre réflexion</strong>. Il ne vous dira jamais « Dieu veut que tu fasses X. » La décision, la prière et l'écoute vous appartiennent.</p></Card>
+      <Card className="mb-5 flex gap-3 border-gold/20 bg-gold/[0.05] p-4"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-gold" /><p className="text-sm text-offwhite/80">Cet espace t'aide à <strong>structurer ta réflexion</strong>. Il ne te dira jamais « Dieu veut que tu fasses X. » La décision, la prière et l'écoute t'appartiennent.</p></Card>
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="space-y-4">
           <Card className="space-y-3 p-6">
-            <h3 className="font-display text-base font-bold text-offwhite">Ma décision</h3>
-            <div><label className="text-xs text-offwhite/50">Décision envisagée</label><Input value={decision} onChange={(e) => setDecision(e.target.value)} placeholder="ex : Embaucher un premier salarié" className="mt-1" /></div>
-            <div><label className="text-xs text-offwhite/50">Pourquoi ?</label><Textarea value={pourquoi} onChange={(e) => setPourquoi(e.target.value)} placeholder="Les raisons qui me poussent…" className="mt-1 min-h-16" /></div>
-            <div><label className="text-xs text-offwhite/50">Mes craintes</label><Textarea value={craintes} onChange={(e) => setCraintes(e.target.value)} placeholder="Ce qui me fait hésiter…" className="mt-1 min-h-16" /></div>
+            <div className="flex items-center justify-between"><h3 className="font-display text-base font-bold text-offwhite">Ma décision</h3>{brouillon.decision && <span className="text-[11px] text-offwhite/45">Brouillon enregistré</span>}</div>
+            <div><label className="text-xs text-offwhite/50">Décision envisagée</label><Input value={brouillon.decision} onChange={(e) => maj({ decision: e.target.value })} placeholder="ex : Embaucher un premier salarié" className="mt-1" data-testid="mafoi-decision" /></div>
+            <div><label className="text-xs text-offwhite/50">Pourquoi ?</label><Textarea value={brouillon.pourquoi} onChange={(e) => maj({ pourquoi: e.target.value })} placeholder="Les raisons qui me poussent…" className="mt-1 min-h-16" /></div>
+            <div><label className="text-xs text-offwhite/50">Mes craintes</label><Textarea value={brouillon.craintes} onChange={(e) => maj({ craintes: e.target.value })} placeholder="Ce qui me fait hésiter…" className="mt-1 min-h-16" /></div>
           </Card>
-          <Card className="p-6"><h3 className="font-display text-base font-bold text-offwhite">Valeurs bibliques à examiner</h3><div className="mt-3 flex flex-wrap gap-2">{valeursBibliques.map((v) => <button key={v} onClick={() => toggleVal(v)} className={`rounded-full border px-3 py-1.5 text-sm transition ${valeurs.includes(v) ? "border-gold/40 bg-gold/15 text-gold" : "border-white/10 bg-white/[0.03] text-offwhite/60 hover:text-offwhite"}`}>{v}</button>)}</div></Card>
+          <Card className="p-6"><h3 className="font-display text-base font-bold text-offwhite">Valeurs bibliques à examiner</h3><div className="mt-3 flex flex-wrap gap-2">{valeursBibliques.map((v) => <button key={v} onClick={() => toggleVal(v)} className={`rounded-full border px-3 py-1.5 text-sm transition ${brouillon.valeurs.includes(v) ? "border-gold/40 bg-gold/15 text-gold" : "border-white/10 bg-white/[0.03] text-offwhite/60 hover:text-offwhite"}`}>{v}</button>)}</div></Card>
           <Card className="space-y-3 p-6">
-            <div><label className="text-xs text-offwhite/50">Ce que je veux remettre à Dieu</label><Textarea value={remise} onChange={(e) => setRemise(e.target.value)} placeholder="Ce que je choisis de confier…" className="mt-1 min-h-16" /></div>
-            <div><label className="flex items-center gap-1.5 text-xs text-offwhite/50"><CalendarClock className="h-3.5 w-3.5" /> Date de réévaluation</label><Input type="date" value={dateReeval} onChange={(e) => setDateReeval(e.target.value)} className="mt-1" /></div>
-            <div className="flex flex-wrap gap-2 pt-1"><GoldBtn onClick={structurer}><Bot className="h-4 w-4" /> Structurer ma réflexion</GoldBtn><GhostBtn onClick={saveDecision}><Check className="h-4 w-4" /> Enregistrer</GhostBtn></div>
+            <div><label className="text-xs text-offwhite/50">Ce que je veux remettre à Dieu</label><Textarea value={brouillon.remise} onChange={(e) => maj({ remise: e.target.value })} placeholder="Ce que je choisis de confier…" className="mt-1 min-h-16" /></div>
+            <div><label className="flex items-center gap-1.5 text-xs text-offwhite/50"><CalendarClock className="h-3.5 w-3.5" /> Date de réévaluation</label><Input type="date" value={brouillon.dateReeval} onChange={(e) => maj({ dateReeval: e.target.value })} className="mt-1" /><p className="mt-1 text-[11px] text-offwhite/40">Ce jour-là, la décision revient dans « Aujourd'hui pour toi ».</p></div>
+            <div className="flex flex-wrap gap-2 pt-1"><GoldBtn onClick={structurer}><ListChecks className="h-4 w-4" /> Mettre en forme</GoldBtn><GhostBtn onClick={saveDecision} data-testid="mafoi-decision-enregistrer"><Check className="h-4 w-4" /> Enregistrer dans mon journal</GhostBtn></div>
           </Card>
         </div>
         <div className="space-y-4">
           {synthese && (
             <Card className="border-gold/20 bg-gold/[0.05] p-6 animate-fade-up">
-              <h3 className="flex items-center gap-2 font-display text-base font-bold text-offwhite"><Bot className="h-4 w-4 text-gold" /> Mise en forme de votre réflexion</h3>
+              <h3 className="flex items-center gap-2 font-display text-base font-bold text-offwhite"><ListChecks className="h-4 w-4 text-gold" /> Ta réflexion, mise en forme</h3>
               <p className="mt-1 text-sm text-offwhite/60">{synthese.intro}</p>
               <div className="mt-4 space-y-2 text-sm">{synthese.elements.map((el, i) => <div key={i} className="flex gap-2"><span className="text-gold">•</span><span className="text-offwhite/85">{el}</span></div>)}</div>
               <div className="mt-4"><div className="mb-1.5 text-xs uppercase tracking-wide text-gold/80">Questions à approfondir dans la prière</div><div className="space-y-1.5">{synthese.questions.map((q, i) => <div key={i} className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-offwhite/85">{q}</div>)}</div></div>
@@ -459,9 +542,20 @@ function Discernement() {
             </Card>
           )}
           <Card className="p-6"><h3 className="font-display text-base font-bold text-offwhite">Mon journal de décisions</h3>
-            <div className="mt-3 space-y-2">{saved.length === 0 && <p className="text-sm text-offwhite/50">Vos décisions enregistrées apparaîtront ici, avec leur date de réévaluation.</p>}{saved.map((dd) => (
-              <div key={dd.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-3"><div className="flex items-center justify-between"><span className="text-sm font-medium text-offwhite">{dd.decision}</span><span className="text-[11px] text-offwhite/40">{dd.date}</span></div>{dd.valeurs?.length > 0 && <div className="mt-2 flex flex-wrap gap-1.5">{dd.valeurs.map((v) => <span key={v} className="rounded-full border border-gold/30 px-2 py-0.5 text-[10px] text-gold">{v}</span>)}</div>}{dd.dateReeval && <div className="mt-2 flex items-center gap-1 text-[11px] text-offwhite/45"><CalendarClock className="h-3 w-3" /> Réévaluer le {new Date(dd.dateReeval).toLocaleDateString("fr-FR")}</div>}</div>
-            ))}</div>
+            <div className="mt-3 space-y-2" data-testid="mafoi-journal-decisions">{!(saved || []).length && <p className="text-sm text-offwhite/50">Tes décisions enregistrées apparaîtront ici, avec leur date de réévaluation.</p>}{(saved || []).map((dd) => {
+              const aFaire = dd.dateReeval && dd.dateReeval <= aujourdhui && !dd.issue;
+              return (
+                <div key={dd.id} className={`rounded-xl border p-3 ${aFaire ? "border-gold/40 bg-gold/[0.07]" : "border-white/10 bg-white/[0.03]"}`}>
+                  <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium text-offwhite">{dd.decision}</span><span className="shrink-0 text-[11px] text-offwhite/40">{dd.date}</span></div>
+                  {dd.pourquoi && <p className="mt-1 text-xs text-offwhite/60"><b className="font-medium text-offwhite/70">Pourquoi :</b> {dd.pourquoi}</p>}
+                  {dd.craintes && <p className="mt-0.5 text-xs text-offwhite/60"><b className="font-medium text-offwhite/70">Craintes :</b> {dd.craintes}</p>}
+                  {dd.remise && <p className="mt-0.5 text-xs text-offwhite/60"><b className="font-medium text-offwhite/70">Remis à Dieu :</b> {dd.remise}</p>}
+                  {dd.valeurs?.length > 0 && <div className="mt-2 flex flex-wrap gap-1.5">{dd.valeurs.map((v) => <span key={v} className="rounded-full border border-gold/30 px-2 py-0.5 text-[10px] text-gold">{v}</span>)}</div>}
+                  {dd.issue ? <p className="mt-2 rounded-lg bg-emerald-400/10 px-2.5 py-1.5 text-xs text-emerald-200">Le {dd.issue_le} : {dd.issue}</p>
+                    : dd.dateReeval && <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-offwhite/45"><CalendarClock className="h-3 w-3" /> Réévaluer le {new Date(dd.dateReeval).toLocaleDateString("fr-FR")}{aFaire && <button onClick={() => faireLePoint(dd)} className="ml-auto rounded-lg bg-gold px-2.5 py-1 text-[11px] font-semibold text-navy-900">Faire le point</button>}</div>}
+                </div>
+              );
+            })}</div>
           </Card>
         </div>
       </div>
@@ -497,7 +591,7 @@ function Cercle() {
         {cercleCategories.map((c) => <button key={c.id} onClick={() => setCat(c.id)} className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm border ${cat === c.id ? "border-gold/40 bg-white/10 text-offwhite" : "border-white/10 bg-white/[0.03] text-offwhite/60"}`}>{c.emoji} {c.label}</button>)}
       </div>
       <Card className="mb-4 p-5">
-        <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Partagez une situation, une question, un témoignage…" className="min-h-20" />
+        <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Partage une situation, une question, un témoignage…" className="min-h-20" />
         <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap gap-1.5">{cercleCategories.map((c) => <button key={c.id} onClick={() => setPostCat(c.id)} className={`rounded-full border px-2.5 py-1 text-xs ${postCat === c.id ? "border-gold/40 bg-gold/15 text-gold" : "border-white/10 bg-white/[0.03] text-offwhite/60"}`}>{c.emoji} {c.label}</button>)}</div>
           <div className="flex items-center gap-3">
@@ -510,7 +604,7 @@ function Cercle() {
       {cercle.items?.length === 0 && <Card className="p-6 text-center text-sm text-offwhite/60" data-testid="mafoi-cercle-vide">Aucun message ici pour l'instant. Lance la conversation : une question, un témoignage, une demande d'entraide.</Card>}
       <div className="space-y-3">{filtered.map((p) => { const c = catOf(p.category); return (
         <Card key={p.id} className="p-5">
-          <div className="mb-2 flex items-center gap-2"><span className="rounded-full border border-white/15 px-2 py-0.5 text-[10px] text-offwhite/60">{c?.emoji} {c?.label}</span><span className="text-[11px] text-offwhite/45">{p.mine ? `${p.author} (toi)` : p.author} · {ilYa(p.created_at)}</span>{p.can_delete && <button onClick={() => cercle.supprimer(p.id)} className="ml-auto text-offwhite/40 hover:text-rose-300" aria-label="Supprimer"><Trash2 className="h-4 w-4" /></button>}</div>
+          <div className="mb-2 flex items-center gap-2"><span className="rounded-full border border-white/15 px-2 py-0.5 text-[10px] text-offwhite/60">{c?.emoji} {c?.label}</span><span className="text-[11px] text-offwhite/45">{p.mine ? `${p.author} (toi)` : p.author} · {ilYa(p.created_at)}</span>{p.can_delete ? <button onClick={() => cercle.supprimer(p.id)} className="ml-auto text-offwhite/40 hover:text-rose-300" aria-label="Supprimer"><Trash2 className="h-4 w-4" /></button> : <span className="ml-auto"><SignalerBtn onClick={() => cercle.signaler(p.id)} /></span>}</div>
           <p className="text-sm leading-relaxed text-offwhite/90">{p.text}</p>
           <div className="mt-3 flex items-center gap-3">
             <button onClick={() => encourage(p.id)} className={`inline-flex items-center gap-1.5 text-sm ${p.mine_support ? "text-gold" : "text-offwhite/55 hover:text-offwhite"}`}><Heart className={`h-4 w-4 ${p.mine_support ? "fill-current" : ""}`} /> {p.count}</button>
@@ -529,11 +623,33 @@ function Cercle() {
 }
 
 /* ─── REPOS & SABBAT ─── */
+const semaineISO = (d = new Date()) => {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const j = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - j);
+  const debut = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+  return `${t.getUTCFullYear()}-S${String(Math.ceil(((t - debut) / 86400000 + 1) / 7)).padStart(2, "0")}`;
+};
 function Repos() {
   const [i, setI] = useState(0);
-  const [checks, setChecks] = useLocal("sabbat_checks", {});
+  const [etat, setEtat] = useLocal("sabbat_checks", {});
+  const semaine = semaineISO();
+  // Chaque semaine repart de zéro (avant : cochée une fois, la liste restait cochée pour toujours).
+  const courant = etat && etat.semaine === semaine ? etat : { semaine, checks: {}, serie: etat?.serie || 0, derniere_complete: etat?.derniere_complete || null };
+  const checks = courant.checks || {};
   const p = psaumes[i];
-  const toggle = (idx) => setChecks({ ...checks, [idx]: !checks[idx] });
+  const total = sabbat.engagements.length;
+  const toggle = (idx) => {
+    const n = { ...checks, [idx]: !checks[idx] };
+    const complete = sabbat.engagements.every((_, k) => n[k]);
+    let { serie, derniere_complete: derniere } = courant;
+    if (complete && derniere !== semaine) {
+      serie = derniere === semaineISO(new Date(Date.now() - 7 * 86400000)) ? (serie || 0) + 1 : 1;
+      derniere = semaine;
+      toast.success(serie > 1 ? `Semaine de Sabbat tenue : ${serie} semaines d'affilée 🕊️` : "Semaine de Sabbat tenue 🕊️");
+    }
+    setEtat({ semaine, checks: n, serie, derniere_complete: derniere });
+  };
+  const faits = sabbat.engagements.filter((_, k) => checks[k]).length;
   return (
     <Section title="Repos & Sabbat" subtitle="Pauses Psaumes et rythme de repos, contre l'épuisement du dirigeant.">
       <div className="grid gap-4 lg:grid-cols-2">
@@ -544,15 +660,21 @@ function Repos() {
           <p className="mt-2 text-center text-sm text-gold">— {p.ref}</p>
           <div className="mt-5 flex justify-center gap-2"><GhostBtn onClick={() => setI((i - 1 + psaumes.length) % psaumes.length)}>Précédent</GhostBtn><GoldBtn onClick={() => setI((i + 1) % psaumes.length)}>Psaume suivant <ArrowRight className="h-4 w-4" /></GoldBtn></div>
         </Card>
-        <Card className="p-6">
-          <h3 className="flex items-center gap-2 font-display text-lg font-bold text-offwhite"><Moon className="h-4 w-4 text-gold" /> Mon Sabbat (anti burn-out)</h3>
+        <Card className="p-6" data-testid="mafoi-sabbat">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="flex items-center gap-2 font-display text-lg font-bold text-offwhite"><Moon className="h-4 w-4 text-gold" /> Mon Sabbat cette semaine</h3>
+            <span className="text-xs text-offwhite/50">{faits}/{total}</span>
+          </div>
           <p className="mt-2 text-sm text-offwhite/65">{sabbat.intro}</p>
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full bg-gold transition-all" style={{ width: `${(faits / total) * 100}%` }} /></div>
           <div className="mt-4 space-y-2">{sabbat.engagements.map((e, idx) => (
             <button key={idx} onClick={() => toggle(idx)} className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-left text-sm text-offwhite/85">
-              <span className={`flex h-5 w-5 items-center justify-center rounded-md border ${checks[idx] ? "border-gold bg-gold text-navy-900" : "border-white/25"}`}>{checks[idx] && <Check className="h-3.5 w-3.5" />}</span>
+              <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${checks[idx] ? "border-gold bg-gold text-navy-900" : "border-white/25"}`}>{checks[idx] && <Check className="h-3.5 w-3.5" />}</span>
               <span className={checks[idx] ? "text-offwhite" : ""}>{e}</span>
             </button>
           ))}</div>
+          {courant.serie > 0 && <p className="mt-3 text-xs text-gold">🕊️ {pluriel(courant.serie, "semaine tenue", "semaines tenues")} d'affilée</p>}
+          <p className="mt-2 text-[11px] text-offwhite/40">La liste repart à zéro chaque lundi.</p>
           <div className="mt-4 rounded-xl border border-gold/20 bg-gold/[0.06] p-3 text-sm"><span className="italic text-offwhite/80">{sabbat.verse.text}</span><div className="mt-1 text-[11px] text-gold">— {sabbat.verse.ref}</div></div>
         </Card>
       </div>
@@ -561,12 +683,13 @@ function Repos() {
 }
 
 /* ─── ROOT ─── */
-export default function MaFoiApp({ initialView = "hub" }) {
+export default function MaFoiApp({ initialView = "hub", onActiver, onRefuser, onDesactiver, activation = false }) {
   const [view, setView] = useState(initialView);
   const go = (v) => { setView(v); if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" }); };
+  useEffect(() => { if (view === "priere" || view === "cercle") fetchFoiPourMoi(true).catch(() => {}); }, [view]);
 
   if (view === "choice") {
-    return <Choice onActivate={() => { setMaFoiActive(true); go("hub"); toast.success("Ma Foi activée ✨"); }} onSkip={() => { window.location.href = "/app"; }} />;
+    return <Choice enCours={activation} onActivate={onActiver} onSkip={onRefuser} />;
   }
 
   return (
@@ -574,7 +697,7 @@ export default function MaFoiApp({ initialView = "hub" }) {
       {view !== "hub" && (
         <div className="mb-4 flex items-center gap-2 overflow-x-auto no-scrollbar">
           <button onClick={() => go("hub")} className="shrink-0 inline-flex items-center rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-sm text-offwhite/60 hover:text-offwhite"><ArrowLeft className="mr-1.5 h-4 w-4" /> Ma Foi</button>
-          {modules.map((m) => <button key={m.id} onClick={() => go(m.id)} className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm border ${view === m.id ? "border-gold/40 bg-white/10 text-offwhite" : "border-white/10 bg-white/[0.03] text-offwhite/60 hover:text-offwhite"}`}>{m.emoji} {m.title}</button>)}
+          {modules.map((m) => { const Icon = ICONS[m.id]; return <button key={m.id} onClick={() => go(m.id)} className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm border ${view === m.id ? "border-gold/40 bg-white/10 text-offwhite" : "border-white/10 bg-white/[0.03] text-offwhite/60 hover:text-offwhite"}`}><Icon className="h-3.5 w-3.5" /> {m.title}</button>; })}
         </div>
       )}
       {view === "hub" && <Hub go={go} />}
@@ -587,12 +710,11 @@ export default function MaFoiApp({ initialView = "hub" }) {
       {view === "repos" && <Repos />}
 
       <div className="mt-8 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-6 text-sm text-offwhite/50 sm:flex-row">
-        <span className="inline-flex items-center gap-2">✝️ Ma Foi — une expérience <span className="font-medium text-gold">TheSustain</span> dans Zayado</span>
-        <button onClick={openSustain} className="inline-flex items-center gap-1.5 hover:text-offwhite">Powered by TheSustain <ArrowUpRight className="h-3.5 w-3.5" /></button>
+        <span className="inline-flex items-center gap-2">Ma Foi, une expérience <button onClick={openSustain} className="font-medium text-gold hover:text-gold-hover">TheSustain</button> dans Zayado</span>
+        <div className="flex flex-wrap items-center gap-3">
+          {onDesactiver && <button onClick={onDesactiver} className="inline-flex items-center gap-1.5 text-xs text-offwhite/45 hover:text-rose-300" data-testid="mafoi-desactiver"><Power className="h-3.5 w-3.5" /> Retirer Ma Foi</button>}
+        </div>
       </div>
     </div>
   );
 }
-
-// Expose l'état initial : si non activé, on montre l'écran de choix.
-MaFoiApp.startAtChoice = true;

@@ -2,11 +2,11 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  ArrowLeft, ArrowRight, Sparkles, Loader2, Check, History,
+  ArrowRight, Sparkles, Loader2, Check, History,
   BatteryMedium, Send, RotateCcw,
 } from "lucide-react";
 import { Sidebar } from "@/components/kairos/Sidebar";
-import { LanguageSwitcher } from "@/components/kairos/LanguageSwitcher";
+import { Header } from "@/components/kairos/Header";
 import { VoiceCapture } from "@/components/vision/VoiceCapture";
 import { useI18n } from "@/i18n";
 import {
@@ -14,10 +14,13 @@ import {
 } from "@/lib/kairosApi";
 
 const STEPS = ["q1", "q2", "q3", "q4", "q5"];
+// Brouillon de la semaine gardé sur l'appareil : on peut quitter et revenir sans rien perdre.
+const cleBrouillon = (semaine) => `zayado_revue_brouillon_${semaine}`;
+const lireBrouillon = (semaine) => { try { return JSON.parse(localStorage.getItem(cleBrouillon(semaine)) || "null"); } catch { return null; } };
 
 export default function WeeklyReview() {
   const { t, lang } = useI18n();
-  const navigate = useNavigate();
+  const navigate = useNavigate(); // eslint-disable-line no-unused-vars
 
   const [loading, setLoading] = useState(true);
   const [meta, setMeta] = useState(null);
@@ -33,14 +36,26 @@ export default function WeeklyReview() {
     fetchRevue()
       .then((r) => {
         setMeta(r);
-        if (r?.derniere?.reponses) setAnswers(r.derniere.reponses);
-        if (r?.derniere?.synthese && r?.derniere?.semaine === r?.semaine) setSynth(r.derniere.synthese);
+        // Avant : les réponses de la semaine précédente réapparaissaient dans la nouvelle revue.
+        const memeSemaine = r?.derniere?.semaine === r?.semaine;
+        if (memeSemaine && r?.derniere?.reponses) setAnswers(r.derniere.reponses);
+        else { const b = lireBrouillon(r?.semaine); if (b) setAnswers(b); }
+        if (r?.derniere?.synthese && memeSemaine) setSynth(r.derniere.synthese);
       })
       .catch(() => setMeta({ semaine: new Date().toISOString().slice(0, 10) }))
       .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => { taRef.current?.focus(); }, [step]);
+  useEffect(() => {
+    if (!meta?.semaine || !Object.keys(answers).length) return;
+    try { localStorage.setItem(cleBrouillon(meta.semaine), JSON.stringify(answers)); } catch { /* */ }
+  }, [answers, meta]);
+  const dateSemaine = (iso) => {
+    if (!iso) return "";
+    const d = new Date(`${iso.slice(0, 10)}T12:00:00`);
+    return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString(lang === "en" ? "en-GB" : "fr-FR", { day: "numeric", month: "long" });
+  };
 
   const key = STEPS[step];
   const filled = useMemo(() => STEPS.filter((k) => (answers[k] || "").trim()).length, [answers]);
@@ -61,10 +76,13 @@ export default function WeeklyReview() {
     try {
       const r = await postRevueSynthese({ reponses: answers, langue: lang });
       setSynth(r.synthese);
+      try { localStorage.removeItem(cleBrouillon(meta?.semaine)); } catch { /* */ }
       toast.success(t("review.saved"));
       setHistory([]);
-    } catch {
-      toast.error(t("review.error"));
+    } catch (e) {
+      // 402 : offre inactive (la synthèse utilise l'IA) — on le dit clairement.
+      if (String(e?.message || e).includes("402")) toast.error("La synthèse par l'IA est incluse dans les offres Zayado. Tes réponses sont gardées.");
+      else toast.error(t("review.error"));
     } finally {
       setBusy(false);
     }
@@ -95,23 +113,7 @@ export default function WeeklyReview() {
     <div className="min-h-screen">
       <Sidebar />
       <div className="lg:pl-[92px]">
-        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-white/5 bg-[#0b1a3d]/60 px-4 py-3 backdrop-blur-xl sm:px-6">
-          <button onClick={() => navigate("/app")} data-testid="review-back"
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-offwhite/80 transition hover:bg-white/10">
-            <ArrowLeft size={17} />
-          </button>
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold">Zayado</p>
-            <h1 className="truncate font-display text-lg font-bold text-offwhite sm:text-xl">{t("review.title")}</h1>
-          </div>
-          <div className="ml-auto flex items-center gap-2">
-            <LanguageSwitcher />
-            <button onClick={loadHistory} data-testid="review-history-toggle"
-              className="flex h-9 items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 text-xs font-medium text-offwhite/80 transition hover:bg-white/10">
-              <History size={14} /> <span className="hidden sm:inline">{t("review.history")}</span>
-            </button>
-          </div>
-        </header>
+        <Header title={t("review.title")} subtitle={t("review.subtitle")} />
 
         <main className="mx-auto max-w-3xl px-4 pb-24 pt-6 sm:px-6" data-testid="weekly-review">
           {loading ? (
@@ -122,9 +124,12 @@ export default function WeeklyReview() {
             <>
               <div className="mb-5 flex flex-wrap items-center gap-3">
                 <span className="rounded-full border border-gold/30 bg-gold/10 px-3 py-1 text-[11px] font-semibold text-gold">
-                  {t("review.week", { date: meta?.semaine || "" })}
+                  {t("review.week", { date: dateSemaine(meta?.semaine) })}
                 </span>
-                <span className="text-[11px] text-offwhite/50">{t("review.subtitle")}</span>
+                <button onClick={loadHistory} data-testid="review-history-toggle"
+                  className="ml-auto flex h-8 items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 text-xs font-medium text-offwhite/80 transition hover:bg-white/10">
+                  <History size={14} /> {t("review.history")}
+                </button>
                 {typeof meta?.energie_moyenne === "number" && (
                   <span className="inline-flex items-center gap-1.5 text-[11px] text-offwhite/60">
                     <BatteryMedium size={13} className="text-gold" />
@@ -138,7 +143,7 @@ export default function WeeklyReview() {
               {/* Progression */}
               <div className="mb-5 flex gap-1.5" data-testid="review-progress">
                 {STEPS.map((s, i) => (
-                  <button key={s} onClick={() => setStep(i)}
+                  <button key={s} onClick={() => setStep(i)} aria-label={`Étape ${i + 1}`}
                     className={`h-1.5 flex-1 rounded-full transition ${
                       i === step ? "bg-gold" : (answers[s] || "").trim() ? "bg-gold/45" : "bg-white/12"
                     }`} />
@@ -229,7 +234,7 @@ export default function WeeklyReview() {
                       {history.map((r) => (
                         <div key={r.id} className="glass rounded-xl p-4">
                           <div className="mb-1.5 flex items-center gap-2">
-                            <span className="text-[11px] font-semibold text-gold">{t("review.week", { date: r.semaine })}</span>
+                            <span className="text-[11px] font-semibold text-gold">{t("review.week", { date: dateSemaine(r.semaine) })}</span>
                             {typeof r.energie_moyenne === "number" && (
                               <span className="text-[10.5px] text-offwhite/45">{t("review.energyAvg", { n: r.energie_moyenne })}</span>
                             )}

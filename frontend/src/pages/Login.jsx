@@ -134,6 +134,9 @@ export default function Login() {
   useEffect(() => {
     fetchConnexionOptions().then(setOptions).catch(() => {});
     const params = new URLSearchParams(window.location.search);
+    // Lien d'invitation (équipe Zayado) : e-mail prérempli, formulaire d'inscription ouvert.
+    if (params.get("email")) setEmail(params.get("email"));
+    if (params.get("inscription") === "1") { setModeAuth("mdp"); setInscription(true); }
     if (params.get("erreur")) {
       toast.error("Connexion impossible. Réessaie.");
       window.history.replaceState({}, "", "/login");

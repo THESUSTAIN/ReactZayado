@@ -1,11 +1,14 @@
+// Idées = boîte d'entrée : ce qui n'est pas encore décidé. Une idée décidée devient
+// une action ou un objectif du Plan d'action (statut « realisee »), une seule fois.
 export const STATUTS = [
-  { id: "idee", label: "Idée", color: "#4a6a9e", desc: "Une piste à explorer." },
-  { id: "test", label: "Test", color: "#4AC0E0", desc: "On vérifie que ça vaut le coup." },
-  { id: "projet", label: "Projet", color: "#DEC2A3", desc: "Une initiative structurée, liée à un objectif." },
-  { id: "action", label: "Action", color: "#2FB89A", desc: "Une tâche concrète, liée à un objectif." },
+  { id: "idee", label: "À explorer", color: "#4a6a9e", desc: "Une piste, pas encore décidée." },
+  { id: "test", label: "À tester", color: "#4AC0E0", desc: "On vérifie que ça vaut le coup avant de s'engager." },
 ];
+export const REALISEE = { id: "realisee", label: "Réalisée", color: "#2FB89A", desc: "Devenue une action ou un objectif du Plan d'action." };
 
-export const statutMeta = (id) => STATUTS.find((s) => s.id === id) || STATUTS[0];
+// Anciennes idées en « Projet » / « Action » (avant la fusion) : traitées comme « À tester ».
+export const statutAffiche = (id) => (id === "projet" || id === "action" ? "test" : id);
+export const statutMeta = (id) => (id === "realisee" ? REALISEE : STATUTS.find((s) => s.id === statutAffiche(id)) || STATUTS[0]);
 
 export const scoreLabel = (score) => {
   if (score >= 2) return { label: "Quick win", tone: "text-emerald-300" };

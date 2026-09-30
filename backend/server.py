@@ -266,7 +266,8 @@ def _noter_activite(uid: str) -> None:
 
 
 _IA_PAYANTE = ("/api/copilote/chat", "/api/vision/ai-doc", "/api/vision/generate-board", "/api/vision/inspire",
-               "/api/revue-hebdo/synthese", "/api/radar/swot", "/api/sources/analyser", "/api/mindset/recadrer")
+               "/api/revue-hebdo/synthese", "/api/radar/swot", "/api/sources/analyser", "/api/mindset/recadrer",
+               "/api/idees/suggestions")
 
 
 def _ia_payante(request) -> bool:
@@ -514,6 +515,7 @@ class VisionTache(Base):
     statut: Mapped[str] = mapped_column(String(20), default="a_faire")
     objectif_id: Mapped[str] = mapped_column(String(36), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    idee_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)  # action née d'une idée
 
 
 class VisionVictoire(Base):
@@ -622,6 +624,9 @@ class Idee(Base):
     source: Mapped[str] = mapped_column(String(20), default="manuelle")  # manuelle|vocale|sync
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+    # Idée décidée : ce qu'elle est devenue dans le Plan d'action (plus de doublon Idée/Action).
+    vers_type: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)   # action | objectif
+    vers_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
 
 
 class User(Base):
@@ -1046,8 +1051,19 @@ def exiger_role(*roles_autorises: str):
     Depends(exiger_role("admin", "vendeur")) pour autoriser les deux.
     Le rôle vient du token (déjà vérifié par _AuthMiddleware) — jamais
     d'un paramètre de requête, pour ne pas pouvoir se l'auto-attribuer."""
-    def _dependance():
+    async def _dependance():
         role = _role_courant()
+        # Le rôle du jeton est vérifié contre la base : un admin rétrogradé perdait
+        # l'accès seulement à l'expiration de son jeton (30 jours), et un collaborateur
+        # promu devait se déconnecter/reconnecter avant d'y accéder.
+        uid = _uid()
+        if uid and uid != DEMO_USER_ID:
+            try:
+                async with async_session() as db_role:
+                    u = await db_role.get(User, uid)
+                role = u.role if u else role
+            except Exception:  # noqa: BLE001 — base indisponible : on garde le rôle du jeton
+                pass
         if role not in roles_autorises:
             raise HTTPException(403, f"Accès réservé aux rôles : {', '.join(roles_autorises)}.")
         return role
@@ -1151,6 +1167,13 @@ async def admin_compte_gratuit(user_id: str, body: AdminGratuitIn, db: AsyncSess
     else:
         a.plan, a.cycle, a.fin = "essentielle", "mensuel", None
         profil.plan = "essentielle"
+        # L'accès offert retiré ne doit plus apparaître dans « Équipe & accès offerts ».
+        AE = globals().get("AccesEquipe")
+        u = await db.get(User, user_id)
+        if AE is not None and u is not None:
+            acces = await db.get(AE, (u.email or "").lower())
+            if acces is not None:
+                await db.delete(acces)
     await db.commit()
     return {"ok": True, "abonnement": _abo_resume(a)}
 
@@ -1832,7 +1855,8 @@ async def chat(body: ChatIn, db: AsyncSession = Depends(get_db)):
         profil = await _profil(db, uid)
         marche = (profil.contexte_metier or {}).get("marche", "france")
         sources = sources_pour(body.message, marche)
-        pays = MARCHES.get(marche, MARCHES["france"])["label"]
+        cm_pays = profil.contexte_metier or {}
+        pays = MARCHES[marche]["label"] if marche in MARCHES else (cm_pays.get("marche_label") or (marche or "France").replace("_", " ").title())
         systeme += f"\n\n{prompt_juridique(pays)}"
     db.add(VisionChatMessage(user_id=uid, role="user", contenu=body.message))
     await db.commit()
@@ -1973,6 +1997,7 @@ async def suggerer_decisions(db: AsyncSession = Depends(get_db)):
 
 _ECO_FR = "https://www.lemonde.fr/economie/rss_full.xml"
 _ECO_AFRIQUE = "https://www.lemonde.fr/afrique-economie/rss_full.xml"
+_ECO_MONDE = "https://www.lemonde.fr/economie-mondiale/rss_full.xml"
 # Actualités OFFICIELLES pour les entreprises (URSSAF, impôts, baux, RH…) —
 # flux Service-Public Entreprendre (ex service-public.fr, .gouv.fr depuis oct. 2025).
 _LEGAL_FR = "https://www.service-public.gouv.fr/abonnements/rss/actu-actu-pro.rss"
@@ -1985,7 +2010,12 @@ MARCHES = {
     "cote_ivoire": {"label": "Côte d'Ivoire", "pays": "https://www.lemonde.fr/cote-d-ivoire/rss_full.xml", "eco": _ECO_AFRIQUE, "legal": _LEGAL_OHADA, "legal_label": "ohada.org"},
     "cameroun": {"label": "Cameroun", "pays": "https://www.lemonde.fr/cameroun/rss_full.xml", "eco": _ECO_AFRIQUE, "legal": _LEGAL_OHADA, "legal_label": "ohada.org"},
     "congo_rdc": {"label": "Congo (RDC)", "pays": "https://www.lemonde.fr/afrique/rss_full.xml", "eco": _ECO_AFRIQUE, "legal": _LEGAL_OHADA, "legal_label": "ohada.org"},
-    "belgique": {"label": "Belgique", "pays": "https://www.lemonde.fr/belgique/rss_full.xml", "eco": _ECO_FR, "legal": _LEGAL_FR, "legal_label": "service-public.gouv.fr"},
+    "belgique": {"label": "Belgique", "pays": "https://www.lemonde.fr/belgique/rss_full.xml", "eco": _ECO_FR},
+    "italie": {"label": "Italie", "pays": "https://www.lemonde.fr/italie/rss_full.xml", "eco": _ECO_MONDE},
+    "royaume_uni": {"label": "Royaume-Uni", "pays": "https://www.lemonde.fr/royaume-uni/rss_full.xml", "eco": _ECO_MONDE},
+    "maroc": {"label": "Maroc", "pays": "https://www.lemonde.fr/maroc/rss_full.xml", "eco": _ECO_AFRIQUE},
+    # Tout autre pays choisi dans « Autre » : actualité internationale + économie mondiale.
+    "international": {"label": "International", "pays": "https://www.lemonde.fr/international/rss_full.xml", "eco": _ECO_MONDE},
 }
 _cache_actu: dict = {}
 
@@ -2004,72 +2034,159 @@ def _lire_flux(url: str) -> list:
     return out
 
 
+# Secteurs suivis (au choix de l'utilisateur) : recherche Google Actualités par pays.
+SECTEURS_ACTU = {
+    "entreprises": ("Entreprises & PME", "PME entreprises"),
+    "finance": ("Finance, banque & investissement", "finance banque investissement"),
+    "cession": ("Reprise, cession & fusions", "cession reprise entreprise acquisition"),
+    "immobilier": ("Immobilier", "immobilier"),
+    "tech": ("Tech, IA & numérique", "intelligence artificielle numérique startup"),
+    "commerce": ("Commerce & e-commerce", "commerce e-commerce distribution"),
+    "sante": ("Santé & bien-être", "santé bien-être"),
+    "btp": ("BTP & artisanat", "BTP artisanat bâtiment"),
+    "restauration": ("Restauration, tourisme & hôtellerie", "restauration hôtellerie tourisme"),
+    "industrie": ("Industrie & énergie", "industrie énergie"),
+    "agriculture": ("Agriculture & alimentation", "agriculture agroalimentaire"),
+    "rh": ("Emploi, RH & management", "emploi recrutement management"),
+    "marketing": ("Marketing, médias & réseaux sociaux", "marketing réseaux sociaux influence"),
+    "formation": ("Formation, coaching & conseil", "formation coaching conseil"),
+    "transport": ("Transport & logistique", "transport logistique"),
+}
+# Édition Google Actualités par pays (langue, pays) ; les autres pays passent par l'édition France + nom du pays.
+_GNEWS_EDITIONS = {
+    "france": ("fr", "FR"), "belgique": ("fr", "BE"), "senegal": ("fr", "SN"), "cote_ivoire": ("fr", "CI"),
+    "maroc": ("fr", "MA"), "cameroun": ("fr", "CM"), "suisse": ("fr", "CH"), "canada": ("fr", "CA"),
+    "italie": ("it", "IT"), "royaume_uni": ("en", "GB"), "etats_unis": ("en", "US"), "espagne": ("es", "ES"),
+    "allemagne": ("de", "DE"), "portugal": ("pt-PT", "PT"),
+}
+
+
+def _gnews(requete: str, pays: str, libelle_pays: str = "") -> str:
+    from urllib.parse import quote_plus
+    hl, gl = _GNEWS_EDITIONS.get(pays, ("fr", "FR"))
+    q = requete if pays in _GNEWS_EDITIONS else f"{requete} {libelle_pays}".strip()
+    return f"https://news.google.com/rss/search?q={quote_plus(q + ' when:7d')}&hl={hl}&gl={gl}&ceid={gl}:{hl.split('-')[0]}"
+
+
+_cache_flux: dict = {}
+
+
+async def _flux_cache(url: str) -> list:
+    """Lecture d'un flux avec cache 30 min par URL (partagé entre utilisateurs)."""
+    now = datetime.now(timezone.utc)
+    e = _cache_flux.get(url)
+    if e and now - e["a"] < timedelta(minutes=30):
+        return e["d"]
+    try:
+        d = await asyncio.wait_for(asyncio.to_thread(_lire_flux, url), timeout=12)
+    except Exception as ex:  # noqa: BLE001
+        logger.info("Flux indisponible %s : %s", url[:80], ex)
+        d = e["d"] if e else []
+    _cache_flux[url] = {"a": now, "d": d}
+    return d
+
+
+def _libelle_marche(cle: str, cm: dict) -> str:
+    if cle in MARCHES:
+        return MARCHES[cle]["label"]
+    if cle == cm.get("marche") and cm.get("marche_label"):
+        return cm["marche_label"]
+    return (cle or "").replace("_", " ").title()
+
+
+@api.get("/copilote/actualite/options")
+async def actualite_options(db: AsyncSession = Depends(get_db)):
+    """Ce que l'utilisateur peut suivre : pays, secteurs, mots-clés ; et ce qu'il suit."""
+    cm = (await _profil(db, _uid())).contexte_metier or {}
+    pays_compte = cm.get("marche") or "france"
+    return {
+        "secteurs": [{"cle": k, "label": v[0]} for k, v in SECTEURS_ACTU.items()],
+        "pays_compte": pays_compte, "pays_compte_label": _libelle_marche(pays_compte, cm),
+        "legal_pays": cm.get("actu_legal_pays") or pays_compte,
+        "pays_suivis": cm.get("actu_pays_suivis") or [pays_compte],
+        "secteurs_suivis": cm.get("actu_secteurs") or [],
+        "mots_cles": cm.get("actu_mots_cles") or [],
+        "legal_officiel": (cm.get("actu_legal_pays") or pays_compte) in MARCHES and bool(MARCHES[cm.get("actu_legal_pays") or pays_compte].get("legal")),
+    }
+
+
 @api.get("/copilote/actualite")
-async def actualite(marche: str = "", db: AsyncSession = Depends(get_db)):
-    """Veille du jour (RSS Le Monde), PILOTÉE PAR L'ÉNERGIE : 3 à 5 items, masquée en récupération.
-    Sans paramètre `marche`, on utilise celui du profil (réglé à l'onboarding / Paramètres)."""
+async def actualite(marche: str = "", filtre: str = "tout", db: AsyncSession = Depends(get_db)):
+    """Veille du jour, PILOTÉE PAR L'ÉNERGIE (3 à 5 items, masquée en récupération).
+    - Légal : rattaché au pays du compte (sauf si l'utilisateur choisit un autre pays pour le légal) ;
+      source officielle quand elle existe (service-public, OHADA), sinon presse juridique du pays.
+    - Personnalisé : pays suivis, secteurs choisis et mots-clés de veille de l'utilisateur.
+    filtre = tout | legal | perso (le filtre du chat)."""
     uid = _uid()
     dernier = list((await db.execute(select(VisionCheckin).where(VisionCheckin.user_id == uid).order_by(VisionCheckin.date.desc()).limit(1))).scalars())
     energie = dernier[0].energie if dernier else 4
     marches = [{"cle": k, "label": v["label"]} for k, v in MARCHES.items()]
+    filtre = filtre if filtre in ("tout", "legal", "perso") else "tout"
 
-    if est_recup(energie):
-        return {"masque": True, "raison": "Mode récupération : l'actualité est en pause pour préserver ton énergie. Elle reviendra quand tu iras mieux.",
+    if est_recup(energie) and filtre == "tout":
+        return {"masque": True, "raison": "Mode récupération : l'actualité est en pause pour préserver ton énergie. Elle reviendra quand tu iras mieux. (Tu peux quand même ouvrir « Légal » ou « Ma veille ».)",
                 "marche": marche, "marches": marches, "articles": []}
 
-    if not marche:
-        profil = await _profil(db, uid)
-        marche = (profil.contexte_metier or {}).get("marche", "france")
-
-    limite = 5 if energie >= 4 else 3
-    cle = marche if marche in MARCHES else "france"
-
-    # Préférences de veille de l'utilisateur (Paramètres → Notifications) :
-    # actu_pays / actu_eco / actu_legal (tout est activé par défaut).
     profil = await _profil(db, uid)
     cm = profil.contexte_metier or {}
+    pays_compte = marche or cm.get("marche") or "france"
     veut_pays = cm.get("actu_pays") is not False
     veut_eco = cm.get("actu_eco") is not False
     veut_legal = cm.get("actu_legal") is not False
+    legal_pays = cm.get("actu_legal_pays") or pays_compte
+    pays_suivis = [p for p in (cm.get("actu_pays_suivis") or [pays_compte]) if p][:4]
+    secteurs = [s for s in (cm.get("actu_secteurs") or []) if s in SECTEURS_ACTU][:6]
+    mots = [m for m in (cm.get("actu_mots_cles") or []) if isinstance(m, str) and m.strip()][:5]
 
-    cle_cache = f"{cle}:{int(veut_pays)}{int(veut_eco)}{int(veut_legal)}"
-    entree = _cache_actu.get(cle_cache)
+    sources = []  # (url, type, libellé)
+    if filtre in ("tout", "legal") and (veut_legal or filtre == "legal"):
+        m = MARCHES.get(legal_pays)
+        if m and m.get("legal"):
+            sources.append((m["legal"], "officiel", m.get("legal_label") or "source officielle"))
+        else:
+            lib = _libelle_marche(legal_pays, cm)
+            sources.append((_gnews("réglementation entreprises loi fiscalité", legal_pays, lib), "legal", f"Juridique · {lib}"))
+    if filtre in ("tout", "perso"):
+        for p in pays_suivis:
+            lib = _libelle_marche(p, cm)
+            cle = p if p in MARCHES else "international"
+            if veut_pays:
+                sources.append((MARCHES[cle]["pays"] if p in MARCHES else _gnews("économie entreprises", p, lib), "presse", lib))
+            if veut_eco and p == pays_suivis[0] and MARCHES.get(cle, {}).get("eco") and MARCHES[cle]["eco"] != MARCHES[cle]["pays"]:
+                sources.append((MARCHES[cle]["eco"], "presse", "Économie"))
+        for sct in secteurs:
+            for p in pays_suivis[:2]:
+                sources.append((_gnews(SECTEURS_ACTU[sct][1], p, _libelle_marche(p, cm)), "secteur", SECTEURS_ACTU[sct][0]))
+        for mc in mots:
+            sources.append((_gnews(f'"{mc.strip()}"', pays_suivis[0], _libelle_marche(pays_suivis[0], cm)), "veille", mc.strip()))
+
+    limite = (5 if energie >= 4 else 3) if filtre == "tout" else 12
+    if not sources:
+        return {"masque": False, "erreur": False, "marche": pays_compte, "label": _libelle_marche(pays_compte, cm),
+                "marches": marches, "articles": [], "limite": limite, "vide_pref": True, "filtre": filtre}
+    listes = await asyncio.gather(*[_flux_cache(u) for u, _, _ in sources])
+    vus, par_source = set(), []
+    for (url, type_, lib), liste in zip(sources, listes):
+        items = []
+        for a in liste:
+            if a["titre"] and a["lien"] not in vus and a["titre"] not in vus:
+                vus.update((a["lien"], a["titre"]))
+                items.append({**a, "source": type_, "source_label": lib})
+        par_source.append(items)
+    # Mélange équitable : 1 article de chaque source à tour de rôle ; le légal ouvre (2 max en « tout »).
+    legaux = [a for lst in par_source for a in lst if a["source"] in ("officiel", "legal")]
+    autres = [lst for lst in par_source if lst and lst[0]["source"] not in ("officiel", "legal")]
+    melange = []
+    while any(autres):
+        for lst in autres:
+            if lst:
+                melange.append(lst.pop(0))
+    articles = (legaux[:2] + melange) if filtre == "tout" else (legaux if filtre == "legal" else melange)
     now = datetime.now(timezone.utc)
-    if entree and (now - entree["a"]) < timedelta(minutes=30):
-        data = dict(entree["d"])
-    else:
-        m = MARCHES[cle]
-        # L'officiel (légal : URSSAF, impôts, baux, RH…) passe en premier.
-        urls = ([(m["legal"], "officiel")] if (m.get("legal") and veut_legal) else []) \
-            + ([(m["pays"], "presse")] if veut_pays else []) \
-            + ([(m["eco"], "presse")] if (veut_eco and m["eco"] != m["pays"]) else [])
-        if not urls:
-            return {"masque": False, "erreur": False, "marche": cle, "label": MARCHES[cle]["label"],
-                    "marches": marches, "articles": [], "limite": limite, "vide_pref": True}
-        try:
-            listes = await asyncio.gather(*[asyncio.to_thread(_lire_flux, u) for u, _ in urls])
-        except Exception as e:  # noqa: BLE001
-            logger.warning("Actualité indisponible : %s", e)
-            return {"masque": False, "erreur": True, "marche": cle, "marches": marches, "articles": []}
-        vus, articles = set(), []
-        for (url, source), liste in zip(urls, listes):
-            for a in liste:
-                if a["titre"] and a["lien"] not in vus:
-                    vus.add(a["lien"])
-                    articles.append({**a, "source": source, "source_label": MARCHES[cle].get("legal_label") if source == "officiel" else None})
-        # L'officiel ouvre le briefing (max 2), la presse complète :
-        # le digest reste un résumé équilibré, pas un fil administratif.
-        legaux = [a for a in articles if a["source"] == "officiel"][:2]
-        presse = [a for a in articles if a["source"] != "officiel"]
-        articles = legaux + presse
-        data = {"marche": cle, "label": MARCHES[cle]["label"], "articles": articles, "genere_a": now.isoformat()}
-        _cache_actu[cle_cache] = {"a": now, "d": data}
-
-    return {"masque": False, "marche": data["marche"], "label": data.get("label"),
-            "marches": marches, "articles": data["articles"][:limite], "limite": limite,
-            "genere_a": data.get("genere_a"),
-            "rythme": cm.get("actu_rythme", "quotidien"),
-            "prochaine_maj": (entree["a"] + timedelta(minutes=30)).isoformat() if entree else None}
+    return {"masque": False, "marche": pays_compte, "label": _libelle_marche(pays_compte, cm), "filtre": filtre,
+            "marches": marches, "articles": articles[:limite], "limite": limite,
+            "genere_a": now.isoformat(), "rythme": cm.get("actu_rythme", "quotidien"),
+            "prochaine_maj": (now + timedelta(minutes=30)).isoformat()}
 
 
 # ─────────────── Connexion (lien magique + accès aperçu) ───────────────
@@ -2525,12 +2642,15 @@ async def lister_taches(db: AsyncSession = Depends(get_db)):
                                statut="fait" if it.done else "a_faire", icon="Flag"))
             await db.delete(it)
         await db.commit()
-    rows = (await db.execute(
+    rows = list((await db.execute(
         select(VisionTache).where(VisionTache.user_id == uid).order_by(VisionTache.created_at.desc())
-    )).scalars()
+    )).scalars())
+    ids_idees = [t.idee_id for t in rows if t.idee_id]
+    titres_idees = {i.id: i.titre for i in (await db.execute(select(Idee).where(Idee.id.in_(ids_idees)))).scalars()} if ids_idees else {}
     return {"items": [
         {"id": t.id, "titre": t.titre, "statut": t.statut, "duree_min": t.duree_min,
          "micro": t.micro, "progression": t.progression, "objectif_id": t.objectif_id,
+         "idee_id": t.idee_id, "idee_titre": titres_idees.get(t.idee_id),
          "created_at": t.created_at.isoformat() if t.created_at else None}
         for t in rows
     ]}
@@ -3298,7 +3418,9 @@ async def revue_synthese(body: RevueIn, db: AsyncSession = Depends(get_db)):
 
 # ─────────────── Idées (capture, Impact/Effort, statut, objectif lié) ───────────────
 
-STATUTS_IDEE = ("idee", "test", "projet", "action")
+STATUTS_IDEE = ("idee", "test", "projet", "action", "realisee")
+# « projet » et « action » restent lisibles (anciennes idées) ; on ne les choisit plus : une idée
+# décidée devient une vraie action ou un vrai objectif du Plan d'action, puis passe « realisee ».
 STATUTS_ENGAGES = ("projet", "action")  # nécessitent un objectif lié
 
 
@@ -3316,6 +3438,7 @@ async def _idee_json(db: AsyncSession, it: Idee) -> dict:
         "statut": it.statut, "impact": it.impact, "effort": it.effort,
         "score": _score(it.impact, it.effort), "objectif_id": it.objectif_id,
         "objectif_titre": titre_obj, "source": it.source,
+        "vers_type": it.vers_type, "vers_id": it.vers_id,
         "created_at": it.created_at.isoformat() if it.created_at else None,
     }
 
@@ -3450,7 +3573,7 @@ async def update_idee(idee_id: str, body: IdeePatch, db: AsyncSession = Depends(
     # Règle métier : passage en Projet/Action uniquement si une objectif est lié
     if data.get("statut") is not None:
         nouveau = data["statut"]
-        if nouveau not in STATUTS_IDEE:
+        if nouveau not in STATUTS_IDEE or nouveau == "realisee":
             raise HTTPException(status_code=422, detail="Statut invalide.")
         if nouveau in STATUTS_ENGAGES and not it.objectif_id:
             raise HTTPException(
@@ -3561,38 +3684,104 @@ async def _push_teams(titre: str, description: str) -> dict:
         return {"ok": False, "reason": str(e)[:120]}
 
 
-@api.post("/idees/{idee_id}/lancer")
-async def idee_lancer(idee_id: str, db: AsyncSession = Depends(get_db)):
-    """Convertit une idée (statut=action) en VisionTache + push vers Trello / Jira / HubSpot / Teams."""
+class TransformerIn(BaseModel):
+    vers: str = Field(pattern="^(action|objectif)$")
+    objectif_id: Optional[str] = None
+    echeance: Optional[str] = Field(default=None, max_length=10)
+
+
+async def _transformer_idee(db: AsyncSession, it: "Idee", vers: str, objectif_id: Optional[str] = None,
+                            echeance: Optional[str] = None) -> dict:
+    """Une idée décidée devient UNE action ou UN objectif du Plan d'action, une seule fois."""
+    uid = _uid()
+    if it.statut == "realisee":
+        raise HTTPException(status_code=409, detail="Cette idée est déjà dans ton Plan d'action.")
+    if vers == "action":
+        oid = None
+        if objectif_id or it.objectif_id:
+            o = (await db.execute(select(VisionObjectif).where(VisionObjectif.id == (objectif_id or it.objectif_id),
+                                                               VisionObjectif.user_id == uid))).scalar_one_or_none()
+            oid = o.id if o else None
+        t = VisionTache(user_id=uid, titre=it.titre[:300], duree_min=25, objectif_id=oid, icon="Sparkles",
+                        statut="a_faire", idee_id=it.id)
+        db.add(t)
+        await db.flush()
+        await _recalculer_objectif(db, oid)
+        it.vers_type, it.vers_id, it.objectif_id = "action", t.id, oid
+    else:
+        actifs = (await db.execute(select(func.count()).select_from(VisionObjectif).where(
+            VisionObjectif.user_id == uid, VisionObjectif.statut == "actif"))).scalar_one()
+        if actifs >= 5:
+            raise HTTPException(status_code=409, detail="5 objectifs actifs maximum : termine ou mets en pause un objectif d'abord.")
+        o = VisionObjectif(user_id=uid, titre=it.titre.strip()[:300], echeance=_date_ok(echeance) or iso_moins(-90), progression=0)
+        db.add(o)
+        await db.flush()
+        it.vers_type, it.vers_id, it.objectif_id = "objectif", o.id, o.id
+    it.statut = "realisee"
+    await db.commit()
+    await db.refresh(it)
+    return await _idee_json(db, it)
+
+
+@api.post("/idees/{idee_id}/transformer")
+async def idee_transformer(idee_id: str, body: TransformerIn, db: AsyncSession = Depends(get_db)):
     it = (await db.execute(select(Idee).where(Idee.id == idee_id, Idee.user_id == _uid()))).scalar_one_or_none()
     if not it:
         raise HTTPException(status_code=404, detail="Idée introuvable.")
-    if it.statut != "action":
-        raise HTTPException(status_code=400, detail="Passe d'abord l'idée en statut Action.")
+    idee = await _transformer_idee(db, it, body.vers, body.objectif_id, body.echeance)
+    pousses = []
+    if body.vers == "action":
+        # Envoi vers les outils reliés (Trello, Jira, HubSpot, Teams), sans bloquer.
+        for nom, f in (("trello", _push_trello), ("jira", _push_jira), ("hubspot", _push_hubspot), ("teams", _push_teams)):
+            try:
+                if (await f(it.titre, it.description or "")).get("ok"):
+                    pousses.append(nom)
+            except Exception:  # noqa: BLE001
+                pass
+    return {"ok": True, "idee": idee, "pushed_to": pousses}
 
-    tache = VisionTache(
-        user_id=_uid(), titre=it.titre, duree_min=25,
-        objectif_id=it.objectif_id, icon="Sparkles", statut="a_faire",
-    )
-    db.add(tache)
-    await db.commit()
-    await db.refresh(tache)
 
-    description = it.description or ""
-    pushes = {
-        "trello":  await _push_trello(it.titre, description),
-        "jira":    await _push_jira(it.titre, description),
-        "hubspot": await _push_hubspot(it.titre, description),
-        "teams":   await _push_teams(it.titre, description),
-    }
-    return {
-        "ok": True,
-        "tache_id": tache.id,
-        "titre": tache.titre,
-        "pushed_to": [k for k, v in pushes.items() if v.get("ok")],
-        "skipped": [k for k, v in pushes.items() if not v.get("ok") and v.get("reason") == "not_configured"],
-        "errors": {k: v for k, v in pushes.items() if not v.get("ok") and v.get("reason") != "not_configured"},
-    }
+@api.post("/idees/{idee_id}/lancer")
+async def idee_lancer(idee_id: str, db: AsyncSession = Depends(get_db)):
+    """Ancien bouton « Lancer maintenant » : même chose que « En faire une action » (plus de doublon)."""
+    r = await idee_transformer(idee_id, TransformerIn(vers="action"), db)
+    return {"ok": True, "tache_id": r["idee"]["vers_id"], "titre": r["idee"]["titre"], "pushed_to": r["pushed_to"], "skipped": [], "errors": {}}
+
+
+class SuggestionsIdeesIn(BaseModel):
+    contexte: Optional[str] = Field(default=None, max_length=600)
+
+
+@api.post("/idees/suggestions")
+async def idees_suggestions(body: SuggestionsIdeesIn, db: AsyncSession = Depends(get_db)):
+    """5 idées proposées par l'IA à partir du profil (métier, cible, offre) et du contexte saisi.
+    Avant : appel du chat sans jeton, et en cas d'échec 5 idées toutes faites présentées comme de l'IA."""
+    uid = _uid()
+    p = await _profil(db, uid)
+    cm = p.contexte_metier or {}
+    profil = ", ".join(f"{k} : {cm.get(k)}" for k in ("metier", "activite", "offre", "cible", "marche") if cm.get(k))
+    deja = [i.titre for i in (await db.execute(select(Idee).where(Idee.user_id == uid).order_by(Idee.created_at.desc()).limit(15))).scalars()]
+    systeme = ("Tu proposes des idées business concrètes à un entrepreneur. Réponds UNIQUEMENT en JSON : "
+               '{"items":[{"titre":"...","description":"une phrase","impact":1-10,"effort":1-10}]}. 5 idées, en français, '
+               "titres de 8 mots maximum, différentes des idées déjà notées.")
+    message = f"Profil : {profil or 'non renseigné'}.\nContexte : {body.contexte or '—'}.\nIdées déjà notées : {'; '.join(deja) or 'aucune'}."
+    try:
+        client = _client_llm(f"idees-{uid}-{uuid.uuid4().hex[:6]}", systeme)
+        if client is None:
+            return {"items": [], "ia": False}
+        from llm_mammouth import UserMessage
+        texte = await asyncio.wait_for(client.send_message(UserMessage(text=message)), timeout=40)
+        m = re.search(r"\{.*\}", str(texte), re.S)
+        items = []
+        for x in ((json.loads(m.group(0)).get("items") if m else None) or [])[:5]:
+            titre = (x.get("titre") or "").strip()[:200]
+            if titre:
+                items.append({"titre": titre, "description": (x.get("description") or "").strip()[:300],
+                              "impact": max(1, min(10, int(x.get("impact") or 5))), "effort": max(1, min(10, int(x.get("effort") or 5)))})
+        return {"items": items, "ia": bool(items)}
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Suggestions d'idées : %s", e)
+        return {"items": [], "ia": False}
 
 
 # ─────────── Cockpit widgets : Pouls Business + Radar + Impact ───────────
@@ -3993,6 +4182,62 @@ class SourceIn(BaseModel):
     contenu: str = Field(min_length=2, max_length=8000)
 
 
+def _url_publique(url: str) -> bool:
+    """Refuse les adresses internes (localhost, réseau privé, métadonnées cloud…) :
+    sans ce contrôle, coller « http://169.254.169.254/… » ou « http://localhost:… »
+    faisait lire au serveur des services internes (SSRF)."""
+    import ipaddress
+    import socket
+    try:
+        u = urlparse(url)
+        if u.scheme not in ("http", "https") or not u.hostname:
+            return False
+        if u.port not in (None, 80, 443):
+            return False
+        for info in socket.getaddrinfo(u.hostname, None):
+            ip = ipaddress.ip_address(info[4][0])
+            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast or ip.is_unspecified:
+                return False
+        return True
+    except Exception:  # noqa: BLE001
+        return False
+
+
+async def _lire_url_publique(url: str) -> str:
+    """GET avec suivi manuel des redirections (chaque étape revérifiée), 3 au plus."""
+    async with httpx.AsyncClient(timeout=12, follow_redirects=False) as client:
+        for _ in range(4):
+            if not _url_publique(url):
+                raise ValueError("adresse non autorisée")
+            r = await client.get(url, headers={"User-Agent": "Mozilla/5.0 ZayadoBot"})
+            if r.is_redirect and r.headers.get("location"):
+                url = str(r.url.join(r.headers["location"]))
+                continue
+            return r.text[:2_000_000]
+    raise ValueError("trop de redirections")
+
+
+_VERBES_ACTION = ("relancer", "envoyer", "appeler", "rappeler", "écrire", "ecrire", "préparer", "preparer", "faire", "payer",
+                  "réserver", "reserver", "valider", "signer", "contacter", "publier", "commander", "répondre", "repondre", "planifier")
+_MOTS_PROJET = ("projet", "lancer", "créer", "creer", "développer", "developper", "construire", "refonte", "nouvelle offre", "programme")
+
+
+def _classement_simple(contenu: str) -> list:
+    """Repli sans IA : découpe le texte en phrases et range chacune selon ses mots-clés."""
+    morceaux = [m.strip(" -•*\t") for m in re.split(r"[\n.;!?]+", contenu) if len(m.strip()) > 8]
+    items = []
+    for m in morceaux[:8]:
+        bas = m.lower()
+        if any(bas.startswith(v) or f" {v} " in f" {bas} " for v in _VERBES_ACTION):
+            t, raison = "action", "Commence par un verbe d'action : c'est une tâche concrète."
+        elif any(k in bas for k in _MOTS_PROJET):
+            t, raison = "projet", "Parle d'une initiative à construire."
+        else:
+            t, raison = "idee", "Piste à explorer."
+        items.append({"titre": m[:120], "type": t, "raison": raison})
+    return items
+
+
 @api.post("/sources/analyser")
 async def sources_analyser(body: SourceIn):
     """Propose un classement (idee|projet|action). NE range rien : validation obligatoire côté utilisateur."""
@@ -4001,11 +4246,9 @@ async def sources_analyser(body: SourceIn):
     if re.match(r"^https?://", contenu, re.I):
         hote = urlparse(contenu).hostname or ""
         if any(k in hote for k in ("sharepoint", "onedrive", "-my.sharepoint", "live.com")):
-            note = "Cette source privée (SharePoint/OneDrive) nécessitera une connexion Microsoft — bientôt (V1.5). J'analyse pour l'instant ce que je peux lire publiquement."
+            note = "Les documents SharePoint/OneDrive privés ne sont pas encore lisibles directement. J'analyse ce qui est public ; pour un classement fiable, colle le texte du document."
         try:
-            async with httpx.AsyncClient(timeout=12, follow_redirects=True) as client:
-                r = await client.get(contenu, headers={"User-Agent": "Mozilla/5.0 ZayadoBot"})
-                contenu = _extraire_texte_html(r.text)[:6000] or contenu
+            contenu = _extraire_texte_html(await _lire_url_publique(contenu))[:6000] or contenu
         except Exception as e:  # noqa: BLE001
             logger.info("Fetch source impossible : %s", e)
             note = note or "Je n'ai pas pu ouvrir ce lien directement. Colle plutôt le texte du document pour un classement fiable."
@@ -4033,6 +4276,11 @@ async def sources_analyser(body: SourceIn):
     except Exception as e:  # noqa: BLE001
         logger.warning("Analyse source : %s", e)
     proposals = [p for p in proposals if p["titre"]]
+    if not proposals and not re.match(r"^https?://", contenu, re.I):
+        # IA indisponible ou sans réponse : classement simple par mots-clés plutôt que rien.
+        proposals = _classement_simple(contenu)
+        if proposals:
+            note = note or "Classement simple (sans IA pour le moment) : vérifie chaque élément avant de valider."
     if not proposals:
         note = note or "Je n'ai rien pu extraire d'exploitable. Reformule ou colle un contenu plus détaillé."
     return {"proposals": proposals, "note": note}
@@ -4050,27 +4298,47 @@ class SourceValiderIn(BaseModel):
 
 @api.post("/sources/valider")
 async def sources_valider(body: SourceValiderIn, db: AsyncSession = Depends(get_db)):
-    """Range les éléments validés en Idées. Respecte la règle : projet/action sans objectif → rangé en Idée."""
-    crees, retrogrades = [], 0
+    """Range chaque élément validé au bon endroit : action → Plan d'action (Actions),
+    projet → Objectif, idée → Idées. Avant : tout finissait en Idées."""
+    uid = _uid()
+    idees, actions, objectifs, refus = [], 0, 0, 0
     for x in body.items:
-        statut = (x.type or "idee").lower()
-        if statut not in STATUTS_IDEE:
-            statut = "idee"
-        if statut in STATUTS_ENGAGES and not x.objectif_id:
-            statut = "idee"
-            retrogrades += 1
-        it = Idee(user_id=_uid(), titre=x.titre.strip()[:400], statut=statut,
-                  objectif_id=x.objectif_id or None, source="sync")
+        titre = x.titre.strip()[:300]
+        if not titre:
+            continue
+        type_ = (x.type or "idee").lower()
+        if type_ == "action":
+            oid = None
+            if x.objectif_id:
+                o = (await db.execute(select(VisionObjectif).where(VisionObjectif.id == x.objectif_id, VisionObjectif.user_id == uid))).scalar_one_or_none()
+                oid = o.id if o else None
+            db.add(VisionTache(user_id=uid, titre=titre, duree_min=25, objectif_id=oid, statut="a_faire", icon="FolderSync"))
+            await db.flush()
+            await _recalculer_objectif(db, oid)
+            actions += 1
+            continue
+        if type_ == "projet":
+            actifs = (await db.execute(select(func.count()).select_from(VisionObjectif).where(
+                VisionObjectif.user_id == uid, VisionObjectif.statut == "actif"))).scalar_one()
+            if actifs < 5:
+                db.add(VisionObjectif(user_id=uid, titre=titre, echeance=iso_moins(-90), progression=0))
+                await db.flush()
+                objectifs += 1
+                continue
+            refus += 1  # plus de place pour un objectif actif : rangé en idée
+        it = Idee(user_id=uid, titre=titre[:400], statut="idee", objectif_id=x.objectif_id or None, source="sync")
         db.add(it)
-        crees.append(it)
+        idees.append(it)
     await db.commit()
-    for it in crees:
+    for it in idees:
         await db.refresh(it)
+    morceaux = [f"{n} {lib}" for n, lib in ((actions, "action(s) dans ton Plan d'action"), (objectifs, "objectif(s)"), (len(idees), "idée(s)")) if n]
     return {
-        "crees": len(crees),
-        "retrogrades": retrogrades,
-        "note": (f"{retrogrades} élément(s) rangé(s) en Idées faute d'objectif lié (règle métier)." if retrogrades else None),
-        "idees": [await _idee_json(db, it) for it in crees],
+        "crees": actions + objectifs + len(idees), "actions": actions, "objectifs": objectifs, "idees_creees": len(idees),
+        "retrogrades": refus,
+        "note": (("Rangé : " + ", ".join(morceaux) + "." if morceaux else "")
+                 + (f" {refus} projet(s) gardé(s) en idée : tu as déjà 5 objectifs actifs." if refus else "")).strip() or None,
+        "idees": [await _idee_json(db, it) for it in idees],
     }
 
 
@@ -4972,6 +5240,10 @@ from connexions_vault_ext import install_connexions_vault  # noqa: E402
 install_connexions_vault(globals())
 from app_logs_ext import install_app_logs  # noqa: E402
 install_app_logs(globals())
+from admin_plus_ext import install_admin_plus  # noqa: E402
+install_admin_plus(globals())
+from rappels_ext import install_rappels  # noqa: E402
+install_rappels(globals())
 
 # ─────────────── Processus (page /app/processus) ───────────────
 # Avant : stockés dans le navigateur uniquement, avec 4 processus de démonstration
@@ -5022,8 +5294,12 @@ class DemandeCollaborateur(Base):
     message: Mapped[str] = mapped_column(Text)
     contact: Mapped[str] = mapped_column(String(255), default="")
     canal: Mapped[str] = mapped_column(String(50), default="collaborateur")
-    statut: Mapped[str] = mapped_column(String(20), default="nouvelle")  # nouvelle / traitee
+    statut: Mapped[str] = mapped_column(String(20), default="nouvelle")  # nouvelle / en_cours / traitee
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    # Réponse de l'équipe, visible par l'utilisateur dans « Mes demandes » (colonnes ajoutées
+    # automatiquement aux bases existantes par la réparation de schéma au démarrage).
+    reponse: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    maj_le: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
 
 class DemandeCollaborateurIn(BaseModel):
@@ -5064,11 +5340,62 @@ async def creer_demande_collaborateur(body: DemandeCollaborateurIn, db: AsyncSes
     return {"ok": True, "id": d.id}
 
 
+def _iso_naif(dt):
+    return None if dt is None else (dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)).isoformat()
+
+
+@api.get("/demandes-collaborateur/mes")
+async def mes_demandes_collaborateur(db: AsyncSession = Depends(get_db)):
+    """Suivi côté utilisateur : ses demandes, leur statut et la réponse de l'équipe."""
+    uid = _uid()
+    rows = (await db.execute(select(DemandeCollaborateur).where(DemandeCollaborateur.user_id == uid)
+                             .order_by(DemandeCollaborateur.created_at.desc()).limit(30))).scalars().all()
+    return {"demandes": [{"id": r.id, "message": r.message, "statut": r.statut, "reponse": r.reponse,
+                          "created_at": _iso_naif(r.created_at), "maj_le": _iso_naif(r.maj_le)} for r in rows]}
+
+
 @api.get("/admin/demandes-collaborateur")
 async def admin_demandes_collaborateur(db: AsyncSession = Depends(get_db), _role=Depends(exiger_role("admin"))):
     rows = (await db.execute(select(DemandeCollaborateur).order_by(DemandeCollaborateur.created_at.desc()).limit(200))).scalars().all()
-    return {"demandes": [{"id": r.id, "user_id": r.user_id, "message": r.message, "contact": r.contact,
-                          "statut": r.statut, "created_at": r.created_at.isoformat() if r.created_at else None} for r in rows]}
+    emails = {u.id: u.email for u in (await db.execute(select(User).where(User.id.in_({r.user_id for r in rows})))).scalars()} if rows else {}
+    return {"demandes": [{"id": r.id, "user_id": r.user_id, "email": emails.get(r.user_id), "message": r.message, "contact": r.contact,
+                          "statut": r.statut, "reponse": r.reponse, "maj_le": _iso_naif(r.maj_le),
+                          "created_at": _iso_naif(r.created_at)} for r in rows]}
+
+
+class DemandeMajIn(BaseModel):
+    statut: Optional[str] = None
+    reponse: Optional[str] = Field(default=None, max_length=5000)
+    prevenir: bool = True
+
+
+@api.patch("/admin/demandes-collaborateur/{demande_id}")
+async def admin_maj_demande(demande_id: str, body: DemandeMajIn, db: AsyncSession = Depends(get_db), _role=Depends(exiger_role("admin"))):
+    d = await db.get(DemandeCollaborateur, demande_id)
+    if not d:
+        raise HTTPException(404, "Demande introuvable.")
+    if body.statut:
+        if body.statut not in ("nouvelle", "en_cours", "traitee"):
+            raise HTTPException(422, "Statut inconnu.")
+        d.statut = body.statut
+    if body.reponse is not None:
+        d.reponse = body.reponse.strip() or None
+    d.maj_le = datetime.now(timezone.utc)
+    await db.commit()
+    envoye = False
+    if body.prevenir and body.reponse:
+        u = await db.get(User, d.user_id)
+        dest = (d.contact or "").strip() or (u.email if u else "")
+        if dest and "@" in dest:
+            import html as _html
+            try:
+                await send_email(to=dest, subject="L'équipe Zayado a répondu à ta demande",
+                                 html=_email_wrap(f"<p>Bonjour,</p><p>{_html.escape(body.reponse).replace(chr(10), '<br>')}</p>"
+                                                  f"<p>Tu retrouves le suivi dans Zayado › Collaborateurs.</p>"))
+                envoye = True
+            except Exception:  # noqa: BLE001
+                logger.warning("Réponse à la demande %s non envoyée par e-mail.", demande_id)
+    return {"ok": True, "email_envoye": envoye}
 
 
 # ─────────────── Récupération des données du compte démo ───────────────

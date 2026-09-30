@@ -1,13 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Loader2, FolderSync, Sparkles, ShieldCheck, Info, Check, ArrowLeft, Target } from "lucide-react";
+import { Loader2, FolderSync, Sparkles, ShieldCheck, Info, Check, ArrowLeft } from "lucide-react";
 import { Sidebar } from "@/components/kairos/Sidebar";
-import { STATUTS } from "@/components/ideas/constants";
+import { Header } from "@/components/kairos/Header";
 import { analyserSource, validerSource, fetchObjectifs } from "@/lib/kairosApi";
 
-const TYPES = STATUTS.filter((s) => ["idee", "projet", "action"].includes(s.id));
-const engage = (t) => t === "projet" || t === "action";
+// Chaque élément validé va au bon endroit du Plan d'action.
+const TYPES = [
+  { id: "action", label: "Action → Plan d'action" },
+  { id: "projet", label: "Projet → nouvel objectif" },
+  { id: "idee", label: "Idée → à explorer" },
+];
 
 export default function Sources() {
   const navigate = useNavigate();
@@ -41,9 +45,8 @@ export default function Sources() {
     setSaving(true);
     try {
       const res = await validerSource(items);
-      toast.success(`${res.crees} élément(s) rangé(s) dans Idées`);
-      if (res.note) toast.info(res.note);
-      navigate("/app/ideas");
+      toast.success(res.note || `${res.crees} élément(s) rangé(s).`);
+      navigate(res.actions ? "/app/actions?tab=actions" : res.objectifs ? "/app/actions?tab=objectifs" : "/app/actions?tab=idees");
     } catch { toast.error("Validation impossible."); }
     setSaving(false);
   };
@@ -52,14 +55,8 @@ export default function Sources() {
     <div className="min-h-screen">
       <Sidebar />
       <div className="lg:pl-[92px]">
-        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-white/5 bg-[#0b1a3d]/60 px-4 py-3 backdrop-blur-xl sm:px-6">
-          <button onClick={() => navigate("/app/ideas")} data-testid="sources-back" className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-offwhite/80 hover:bg-white/10"><ArrowLeft size={17} /></button>
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gold/15 text-gold"><FolderSync size={17} /></span>
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold">Intégrations</p>
-            <h1 className="truncate font-display text-lg font-bold text-offwhite sm:text-xl">Sources &amp; synchronisation</h1>
-          </div>
-        </header>
+        <Header title="Trier un document" subtitle="Colle un texte ou un lien : l'IA propose, tu valides." />
+        <div className="mx-auto max-w-3xl px-4 pt-4 sm:px-6"><button onClick={() => navigate("/app/actions?tab=idees")} data-testid="sources-back" className="inline-flex items-center gap-1.5 text-sm text-offwhite/60 hover:text-offwhite"><ArrowLeft size={15} /> Retour au Plan d'action</button></div>
 
         <main className="mx-auto max-w-3xl px-4 pb-24 pt-5 sm:px-6" data-testid="sources-page">
           <div className="mb-4 flex items-start gap-2 rounded-2xl border border-gold/25 bg-gold/8 p-3.5 text-xs text-offwhite/70" data-testid="sources-rule-note">
@@ -75,7 +72,7 @@ export default function Sources() {
             className="w-full resize-none rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-offwhite outline-none focus:border-gold/40 placeholder:text-offwhite/40"
           />
           <div className="mt-2 flex items-center gap-2 text-[11px] text-offwhite/45">
-            <Info size={13} /> Connexion SharePoint / OneDrive sécurisée (Microsoft) — bientôt (V1.5). En attendant, colle le texte pour un classement fiable.
+            <Info size={13} /> Les liens publics sont lus directement. Pour un document privé (SharePoint, OneDrive, Drive), colle son texte.
           </div>
 
           <button onClick={analyser} disabled={analyzing} data-testid="sources-analyze"
@@ -93,7 +90,7 @@ export default function Sources() {
                   <div key={i} data-testid={`sources-proposal-${i}`}
                     className={`glass rounded-2xl p-3.5 transition ${p.keep ? "" : "opacity-50"}`}>
                     <div className="flex items-start gap-3">
-                      <button onClick={() => setProp(i, { keep: !p.keep })} data-testid={`sources-keep-${i}`}
+                      <button onClick={() => setProp(i, { keep: !p.keep })} data-testid={`sources-keep-${i}`} aria-label={p.keep ? "Ne pas garder" : "Garder"}
                         className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition ${p.keep ? "border-gold bg-gold text-navy-900" : "border-white/30"}`}>
                         {p.keep && <Check size={13} />}
                       </button>
@@ -105,16 +102,14 @@ export default function Sources() {
                             className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs text-offwhite outline-none focus:border-gold/40">
                             {TYPES.map((t) => <option key={t.id} value={t.id} className="bg-navy-800">{t.label}</option>)}
                           </select>
-                          {engage(p.type) && (
+                          {p.type === "action" && (
                             <select value={p.objectif_id} onChange={(e) => setProp(i, { objectif_id: e.target.value })} data-testid={`sources-objectif-${i}`}
                               className="flex items-center rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs text-offwhite outline-none focus:border-gold/40">
-                              <option value="" className="bg-navy-800">Objectif ?</option>
+                              <option value="" className="bg-navy-800">Sans objectif</option>
                               {objectifs.map((o) => <option key={o.id} value={o.id} className="bg-navy-800">{o.titre}</option>)}
                             </select>
                           )}
-                          {engage(p.type) && !p.objectif_id && (
-                            <span className="inline-flex items-center gap-1 text-[10px] text-gold/80"><Target size={10} /> sans objectif → rangé en Idée</span>
-                          )}
+
                         </div>
                       </div>
                     </div>
@@ -124,7 +119,7 @@ export default function Sources() {
 
               <button onClick={valider} disabled={saving} data-testid="sources-validate"
                 className="btn-gold mt-4 w-full justify-center disabled:opacity-60">
-                {saving ? <><Loader2 size={16} className="animate-spin" /> Rangement…</> : <><Check size={16} /> Valider et ranger dans Idées</>}
+                {saving ? <><Loader2 size={16} className="animate-spin" /> Rangement…</> : <><Check size={16} /> Valider et ranger</>}
               </button>
             </div>
           )}

@@ -126,7 +126,8 @@ export const fetchDecisions = () => jget("/copilote/decisions");
 export const suggererDecisions = () => jsend("/copilote/decisions/suggerer", "POST");
 export const patchDecision = (id, statut, canal) => jsend(`/copilote/decisions/${id}`, "PATCH", { statut, canal });
 export const validerDecisionEmail = (id) => jsend(`/copilote/decisions/${id}/valider-email`, "POST");
-export const fetchActualite = () => jget("/copilote/actualite");
+export const fetchActualite = (filtre = "") => jget(`/copilote/actualite${filtre ? `?filtre=${filtre}` : ""}`);
+export const fetchActualiteOptions = () => jget("/copilote/actualite/options");
 export const enregistrerArticle = (titre, lien) => jsend("/copilote/enregistres", "POST", { titre, lien });
 export const fetchEnregistres = () => jget("/copilote/enregistres");
 export const exportData = () => jget("/export");
@@ -159,8 +160,9 @@ export const oauthEchange = (provider, code, redirect_uri, state) => jsend(`/con
 // ── Idées ──
 async function jsendDetail(path, method, body) {
   _GET_EN_COURS.clear();
+  // Avant : sans le jeton de connexion → 401 (changer le statut ou l'objectif d'une idée échouait).
   const r = await fetch(`${API}${path}`, {
-    method, headers: { "Content-Type": "application/json" },
+    method, headers: _headers({ "Content-Type": "application/json" }),
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await r.json().catch(() => ({}));
@@ -498,3 +500,38 @@ export const fetchAppLogs = (f = {}) => {
 };
 export const fetchAppLogsSummary = () => jget("/app-logs/summary");
 export const purgerAppLogs = (days = 30) => jsendMsg(`/app-logs/purge?days=${days}`, "DELETE");
+
+// Ma Foi : signalements, « pour toi »
+export const signalerFoiPost = (id, motif, commentaire) => jsendMsg(`/foi/posts/${id}/signaler`, "POST", { motif, commentaire });
+export const fetchFoiPourMoi = (marquerVu = false) => jget(`/foi/pour-moi${marquerVu ? "?marquer_vu=true" : ""}`);
+export const fetchAdminFoiSignalements = () => jget("/admin/foi/signalements");
+export const deciderFoiSignalement = (postId, decision) => jsendMsg(`/admin/foi/signalements/${postId}`, "POST", { decision });
+
+// Admin : équipe Zayado, fiche 360°, à traiter, journal, actions en groupe, export
+export const fetchAdminEquipe = () => jget("/admin/equipe");
+export const inviterEquipe = (d) => jsendMsg("/admin/equipe", "POST", d);
+export const retirerEquipe = (email) => jsendMsg(`/admin/equipe/${encodeURIComponent(email)}`, "DELETE");
+export const fetchAdminFiche = (id) => jget(`/admin/utilisateurs/${id}/fiche`);
+export const fetchAdminATraiter = () => jget("/admin/a-traiter");
+export const fetchAdminJournal = (q = "", page = 1) => jget(`/admin/journal?page=${page}${q ? `&q=${encodeURIComponent(q)}` : ""}`);
+export const actionGroupeUtilisateurs = (d) => jsendMsg("/admin/utilisateurs/groupe", "POST", d);
+export async function exporterUtilisateursCsv(f = {}) {
+  const q = new URLSearchParams(Object.entries(f).filter(([, v]) => v).map(([k, v]) => [k, String(v)]));
+  const r = await fetch(`${API}/admin/utilisateurs/export.csv${q.toString() ? `?${q}` : ""}`, { headers: _headers() });
+  if (!r.ok) throw new Error("Export impossible.");
+  const url = URL.createObjectURL(await r.blob());
+  const a = document.createElement("a");
+  a.href = url; a.download = `zayado-utilisateurs-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+
+// Collaborateurs : suivi des demandes (utilisateur) et réponse (admin)
+export const fetchMesDemandes = () => jget("/demandes-collaborateur/mes");
+export const majDemandeCollaborateur = (id, d) => jsendMsg(`/admin/demandes-collaborateur/${id}`, "PATCH", d);
+
+// Idées → Plan d'action : une idée décidée devient une action ou un objectif (une seule fois)
+export const transformerIdee = (id, vers, extra = {}) => jsendDetail(`/idees/${id}/transformer`, "POST", { vers, ...extra });
+export const suggererIdees = (contexte) => jsendDetail("/idees/suggestions", "POST", { contexte });
+
+// Bien-être : bloquer une vraie pause (action + rappel Telegram)
+export const bloquerPause = (d) => jsendMsg("/bien-etre/pause", "POST", d);

@@ -25,7 +25,14 @@ def test_calcul_serie_reste_ouverte_jusqu_a_minuit():
     auj = date(2026, 9, 25)
     jours = {(auj - timedelta(days=i)).isoformat() for i in (1, 2, 3)} | {"2026-09-01"}
     s = calcul_serie(jours, auj)
-    assert s == {"jours": 3, "aujourdhui_fait": False, "record": 3}
+    assert s == {"jours": 3, "aujourdhui_fait": False, "record": 3, "jour_repos": False}
+
+
+def test_jour_de_repos_ne_casse_pas_la_serie():
+    # Dimanche 27/09/2026 = jour de repos (0) : rien ce jour-là, la série continue.
+    jours = {"2026-09-24", "2026-09-25", "2026-09-26", "2026-09-28", "2026-09-29", "2026-09-30"}
+    assert calcul_serie(jours, date(2026, 9, 30), 0)["jours"] == 6
+    assert calcul_serie(jours, date(2026, 9, 30))["jours"] == 3
 
 
 def test_analyse_repere_le_jour_creux():

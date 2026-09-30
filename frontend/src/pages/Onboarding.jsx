@@ -1,3 +1,4 @@
+import { ChoixPays } from "@/components/kairos/ChoixPays";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import * as SliderPrimitive from "@radix-ui/react-slider";
@@ -33,7 +34,7 @@ const ACTIVITES = [
   { v: "Restauration", icon: UtensilsCrossed },
 ];
 const CLIENTELES = [["b2c", "Des particuliers"], ["b2b", "Des pros"], ["mixte", "Les deux"]];
-const MARCHES = [["france", "France"], ["belgique", "Belgique"], ["senegal", "Sénégal"], ["cote_ivoire", "Côte d'Ivoire"], ["cameroun", "Cameroun"], ["maroc", "Maroc"]];
+
 const OBJ_CA = [1000, 3000, 5000, 10000, 20000];
 const TRANCHES = [["demarrage", "Je démarre"], ["moins_1k", "Moins de 1 000 €"], ["1k_3k", "1 000 – 3 000 €"], ["3k_10k", "3 000 – 10 000 €"], ["plus_10k", "Plus de 10 000 €"]];
 const VISIONS = ["Vivre sereinement de mon activité", "Faire grandir mon chiffre d'affaires", "Construire une équipe", "Lancer un nouveau projet", "Retrouver du temps pour moi et mes proches", "Avoir plus d'impact"];
@@ -119,6 +120,7 @@ export default function Onboarding() {
   const [activiteAutre, setActiviteAutre] = useState("");
   const [clientele, setClientele] = useState("");
   const [marche, setMarche] = useState("france");
+  const [marcheLabel, setMarcheLabel] = useState("France");
   const [caObjectif, setCaObjectif] = useState(0);
   const [tranche, setTranche] = useState("");
   const [visions, setVisions] = useState([]);
@@ -139,11 +141,11 @@ export default function Onboarding() {
   const [waouh, setWaouh] = useState(null); // 1re opportunité du Radar, montrée avant le paiement
 
   // ── Reprendre là où on s'est arrêté (ce navigateur, sinon le compte) ──
-  const brouillonActuel = () => ({ i, prenom, role, activite, activiteAutre, clientele, marche, caObjectif, tranche, visions, visionAutre,
+  const brouillonActuel = () => ({ i, prenom, role, activite, activiteAutre, clientele, marche, marcheLabel, caObjectif, tranche, visions, visionAutre,
     goals, energie, energieTouchee, rythme, rythmeTouche, jours, rappel, values, moteur, foiChoix });
   const appliquerBrouillon = (b) => {
     if (!b || !b.i) return false;
-    const set = { prenom: setPrenom, role: setRole, activite: setActivite, activiteAutre: setActiviteAutre, clientele: setClientele, marche: setMarche,
+    const set = { prenom: setPrenom, role: setRole, activite: setActivite, activiteAutre: setActiviteAutre, clientele: setClientele, marche: setMarche, marcheLabel: setMarcheLabel,
       caObjectif: setCaObjectif, tranche: setTranche, visions: setVisions, visionAutre: setVisionAutre, goals: setGoals, energie: setEnergie,
       energieTouchee: setEnergieTouchee, rythme: setRythme, rythmeTouche: setRythmeTouche, jours: setJours, rappel: setRappel, values: setValues,
       moteur: setMoteur, foiChoix: setFoiChoix };
@@ -250,7 +252,7 @@ export default function Onboarding() {
         plan,
         objectifs: goals,
         contexte_metier: {
-          role, activite_type: activiteFinale, marche,
+          role, activite_type: activiteFinale, marche, marche_label: marcheLabel,
           ...(clientele ? { clientele } : {}),
           ...(tranche ? { ca_tranche: tranche } : {}),
           heure_point: rappel,
@@ -412,10 +414,8 @@ export default function Onboarding() {
                   {CLIENTELES.map(([k, l]) => <Pastille key={k} plein actif={clientele === k} onClick={() => setClientele(k)} testid={`onboarding-clientele-${k}`}>{l}</Pastille>)}
                 </div>
               </Bloc>
-              <Bloc titre="Ton marché">
-                <div className="flex flex-wrap gap-2">
-                  {MARCHES.map(([k, l]) => <Pastille key={k} actif={marche === k} onClick={() => setMarche(k)}>{l}</Pastille>)}
-                </div>
+              <Bloc titre="Ton pays">
+                <ChoixPays valeur={marche} libelle={marcheLabel} onChange={(k, l) => { setMarche(k); setMarcheLabel(l); }} />
               </Bloc>
             </div>
           )}

@@ -1,15 +1,17 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { X, Target, Trash2, Zap, Gauge, ArrowRight, Loader2, Rocket } from "lucide-react";
-import { STATUTS, statutMeta, scoreLabel } from "./constants";
-import { updateIdee, deleteIdee, lancerIdee } from "@/lib/kairosApi";
+import { X, Target, Trash2, Zap, Gauge, ArrowRight, Loader2, CheckSquare, Flag, ExternalLink } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { STATUTS, statutMeta, statutAffiche, scoreLabel } from "./constants";
+import { updateIdee, deleteIdee, transformerIdee } from "@/lib/kairosApi";
 
 export function IdeaDrawer({ idee, objectifs, onClose, onUpdated, onDeleted }) {
   const [local, setLocal] = useState(idee);
   const [savingStatut, setSavingStatut] = useState(false);
   const [highlightObj, setHighlightObj] = useState(false);
-  const [launching, setLaunching] = useState(false);
+  const [launching, setLaunching] = useState("");
+  const navigate = useNavigate();
   const debounceRef = useRef(null);
 
   useEffect(() => { setLocal(idee); }, [idee]);
@@ -55,19 +57,19 @@ export function IdeaDrawer({ idee, objectifs, onClose, onUpdated, onDeleted }) {
     catch { toast.error("Suppression impossible."); }
   };
 
-  const lancer = async () => {
-    if (local.statut !== "action") { toast.error("Passe d'abord l'idée en statut Action."); return; }
-    setLaunching(true);
+  // Décider : l'idée devient une action (ou un objectif) du Plan d'action, une seule fois.
+  const transformer = async (vers) => {
+    setLaunching(vers);
     try {
-      const r = await lancerIdee(idee.id);
-      const parts = [];
-      parts.push("Tâche créée dans ton agenda du jour.");
-      if (r.pushed_to?.length) parts.push(`Poussée sur : ${r.pushed_to.join(", ")}.`);
-      if (r.skipped?.length)   parts.push(`Non connecté : ${r.skipped.join(", ")}.`);
-      toast.success(parts.join(" "));
-    } catch (e) { toast.error(e.detail || "Lancement impossible."); }
-    setLaunching(false);
+      const r = await transformerIdee(idee.id, vers, vers === "action" && local.objectif_id ? { objectif_id: local.objectif_id } : {});
+      setLocal(r.idee); onUpdated?.(r.idee);
+      toast.success(vers === "action"
+        ? `Action ajoutée à ton Plan d'action${r.pushed_to?.length ? ` · envoyée sur ${r.pushed_to.join(", ")}` : ""}.`
+        : "Objectif créé dans ton Plan d'action.");
+    } catch (e) { toast.error(e.detail || "Impossible pour le moment."); }
+    setLaunching("");
   };
+  const realisee = local.statut === "realisee";
 
   const score = Math.round((local.impact / Math.max(1, local.effort)) * 100) / 100;
   const sc = scoreLabel(score);
@@ -99,33 +101,39 @@ export function IdeaDrawer({ idee, objectifs, onClose, onUpdated, onDeleted }) {
           className="mb-5 w-full resize-none rounded-xl border border-white/10 bg-white/5 p-3 font-display text-lg font-bold text-offwhite outline-none focus:border-gold/40"
         />
 
-        {/* Flux de statut */}
-        <label className="mb-2 block text-xs font-semibold text-offwhite/70">Statut</label>
-        <div className="mb-2 flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 p-1" data-testid="idea-drawer-statut">
-          {STATUTS.map((s, i) => {
-            const active = local.statut === s.id;
-            return (
-              <React.Fragment key={s.id}>
-                <button
-                  onClick={() => changeStatut(s.id)}
-                  disabled={savingStatut}
-                  data-testid={`idea-drawer-statut-${s.id}`}
-                  className={`flex-1 rounded-lg px-1 py-2 text-xs font-semibold transition ${active ? "text-navy-900" : "text-offwhite/60 hover:text-offwhite"}`}
-                  style={active ? { background: s.color } : {}}
-                >
-                  {s.label}
-                </button>
-                {i < STATUTS.length - 1 && <ArrowRight size={11} className="shrink-0 text-offwhite/25" />}
-              </React.Fragment>
-            );
-          })}
-        </div>
-        <p className="mb-5 text-[11px] text-offwhite/50">{statutMeta(local.statut).desc}</p>
+        {/* Statut : À explorer → À tester, puis décision */}
+        {realisee ? (
+          <div className="mb-5 rounded-xl border border-emerald-400/30 bg-emerald-400/[0.08] p-3.5" data-testid="idea-drawer-realisee">
+            <p className="text-sm font-semibold text-emerald-200">{local.vers_type === "objectif" ? "Devenue un objectif" : "Devenue une action"} du Plan d'action</p>
+            <button onClick={() => { onClose(); navigate(local.vers_type === "objectif" ? "/app/actions?tab=objectifs" : "/app/actions?tab=actions"); }}
+              className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-gold hover:underline">Voir dans le Plan d'action <ExternalLink size={12} /></button>
+          </div>
+        ) : (
+          <>
+            <label className="mb-2 block text-xs font-semibold text-offwhite/70">Où en est l'idée ?</label>
+            <div className="mb-2 flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 p-1" data-testid="idea-drawer-statut">
+              {STATUTS.map((s, i) => {
+                const active = statutAffiche(local.statut) === s.id;
+                return (
+                  <React.Fragment key={s.id}>
+                    <button onClick={() => changeStatut(s.id)} disabled={savingStatut} data-testid={`idea-drawer-statut-${s.id}`}
+                      className={`flex-1 rounded-lg px-1 py-2 text-xs font-semibold transition ${active ? "text-navy-900" : "text-offwhite/60 hover:text-offwhite"}`}
+                      style={active ? { background: s.color } : {}}>
+                      {s.label}
+                    </button>
+                    {i < STATUTS.length - 1 && <ArrowRight size={11} className="shrink-0 text-offwhite/25" />}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+            <p className="mb-5 text-[11px] text-offwhite/50">{statutMeta(local.statut).desc}</p>
+          </>
+        )}
 
         {/* Objectif lié */}
         <label className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-offwhite/70">
-          <Target size={13} className="text-gold" /> Objectif lié
-          <span className="font-normal text-offwhite/40">— requis pour Projet / Action</span>
+          <Target size={13} className="text-gold" /> Objectif servi
+          <span className="font-normal text-offwhite/40">— facultatif, repris dans l'action</span>
         </label>
         <select
           value={local.objectif_id || ""}
@@ -173,20 +181,24 @@ export function IdeaDrawer({ idee, objectifs, onClose, onUpdated, onDeleted }) {
           className="mb-6 w-full resize-none rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-offwhite outline-none focus:border-gold/40 placeholder:text-offwhite/40"
         />
 
-        {local.statut === "action" && (
-          <button
-            onClick={lancer}
-            disabled={launching}
-            data-testid="idea-drawer-lancer"
-            className="mt-auto mb-3 inline-flex items-center justify-center gap-2 rounded-xl bg-gold px-4 py-3 text-sm font-bold text-navy-900 shadow-[0_10px_28px_-8px_rgba(222,194,163,0.6)] transition hover:opacity-90 disabled:opacity-60"
-          >
-            {launching ? <Loader2 size={16} className="animate-spin" /> : <Rocket size={16} />}
-            Lancer maintenant
-          </button>
+        {!realisee && (
+          <div className="mt-auto mb-3">
+            <p className="mb-2 text-xs font-semibold text-offwhite/70">Tu te lances ?</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => transformer("action")} disabled={!!launching} data-testid="idea-drawer-vers-action"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-gold px-3 py-3 text-sm font-bold text-navy-900 transition hover:opacity-90 disabled:opacity-60">
+                {launching === "action" ? <Loader2 size={15} className="animate-spin" /> : <CheckSquare size={15} />} En faire une action
+              </button>
+              <button onClick={() => transformer("objectif")} disabled={!!launching} data-testid="idea-drawer-vers-objectif"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-gold/40 px-3 py-3 text-sm font-semibold text-gold transition hover:bg-gold/10 disabled:opacity-60">
+                {launching === "objectif" ? <Loader2 size={15} className="animate-spin" /> : <Flag size={15} />} En faire un objectif
+              </button>
+            </div>
+          </div>
         )}
 
         <button onClick={remove} data-testid="idea-drawer-delete"
-          className={`${local.statut === "action" ? "" : "mt-auto"} inline-flex items-center justify-center gap-2 rounded-xl border border-alert/30 bg-alert/10 px-4 py-2.5 text-sm font-semibold text-alert transition hover:bg-alert/20`}>
+          className={`${realisee ? "mt-auto" : ""} inline-flex items-center justify-center gap-2 rounded-xl border border-alert/30 bg-alert/10 px-4 py-2.5 text-sm font-semibold text-alert transition hover:bg-alert/20`}>
           <Trash2 size={15} /> Supprimer l'idée
         </button>
         {savingStatut && <p className="mt-2 flex items-center justify-center gap-1.5 text-[11px] text-offwhite/50"><Loader2 size={11} className="animate-spin" /> Mise à jour…</p>}

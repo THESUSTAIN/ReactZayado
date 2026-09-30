@@ -24,19 +24,18 @@ const THEME_KEY = "kairos_theme";
 // Pages proposées par la recherche rapide (Ctrl/⌘ + K).
 const PAGES = [
   { label: "Aujourd'hui · Cockpit", path: "/app", mots: "accueil cockpit dashboard tableau" },
-  { label: "Vision Board", path: "/app/vision", mots: "vision objectifs murs board" },
-  { label: "Radar", path: "/app/radar", mots: "marché veille signaux" },
+  { label: "Vision Board", path: "/app/vision", mots: "vision murs board" },
+  { label: "Radar", path: "/app/radar", mots: "marché veille signaux prospects" },
   { label: "Revue hebdo", path: "/app/revue", mots: "semaine bilan review" },
-  { label: "Idées", path: "/app/ideas", mots: "idee capture" },
-  { label: "Sources", path: "/app/sources", mots: "documents liens" },
-  { label: "Feuille de route (Plan d'action)", path: "/app/actions?tab=objectifs", mots: "roadmap jalons trimestre feuille de route" },
+  { label: "Plan d'action · Idées", path: "/app/actions?tab=idees", mots: "idee idées capture boîte" },
+  { label: "Plan d'action · Objectifs", path: "/app/actions?tab=objectifs", mots: "objectifs 90 jours cap trimestre feuille de route roadmap jalons" },
   { label: "Plan d'action · Actions", path: "/app/actions", mots: "taches missions todo priorités actions" },
-  { label: "Plan d'action · Objectifs", path: "/app/actions?tab=objectifs", mots: "objectifs 90 jours cap trimestre" },
+  { label: "Plan d'action · Processus", path: "/app/actions?tab=processus", mots: "processus workflow étapes routine" },
+  { label: "Trier un document", path: "/app/sources", mots: "sources documents liens notes" },
   { label: "Bien-être & Mindset", path: "/app/bien-etre", mots: "energie respiration mindset parcours carnet vendre refus" },
-  { label: "Collaborateurs", path: "/app/collaborateurs", mots: "expert humain aide" },
+  { label: "Collaborateurs", path: "/app/collaborateurs", mots: "expert humain aide équipe zayado" },
   { label: "Agents IA", path: "/app/agents", mots: "ia automatisation" },
   { label: "Agent Business (chatbot)", path: "/app/chatbot-b2b", mots: "clients chatbot" },
-  { label: "Plan d'action · Processus", path: "/app/actions?tab=processus", mots: "processus workflow étapes routine" },
   { label: "Mon espace", path: "/mon-espace", mots: "commandes achats compte" },
   { label: "Espace vendeur", path: "/espace-vendeur", mots: "marketplace vendre" },
   { label: "Paramètres", path: "/parametres", mots: "réglages compte profil connexion" },
@@ -46,7 +45,7 @@ const PAGES = [
 const norm = (x) => (x || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 const MODULES = [
-  { name: "Agent Business",      icon: MessageCircle, path: "/app/chatbot-b2b",   badge: "49€" },
+  { name: "Agent Business",      icon: MessageCircle, path: "/app/chatbot-b2b",   badge: "Pro" },
   { name: "Processus",           icon: Workflow,     path: "/app/actions?tab=processus" },
 ];
 
@@ -196,7 +195,7 @@ export function Header() {
 
   const mobileItems = [
     ["today", "Aujourd'hui", "/app"], ["vision", "Vision", "/app/vision"],
-    ["radar", "Radar", "/app/radar"], ["ideas", "Idées", "/app/ideas"],
+    ["radar", "Radar", "/app/radar"],
     ["actions", "Plan d'action", "/app/actions"], ["wellbeing", "Bien-être", "/app/bien-etre"],
   ];
 

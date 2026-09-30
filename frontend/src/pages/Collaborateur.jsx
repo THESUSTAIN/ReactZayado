@@ -1,9 +1,16 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Sidebar } from "@/components/kairos/Sidebar";
-import { Users, ArrowRight, Map, ShieldCheck, Send, Loader2, MessageSquare } from "lucide-react";
+import { Header } from "@/components/kairos/Header";
+import { ArrowRight, Map, ShieldCheck, Send, Loader2, MessageSquare, Clock, CheckCircle2, CircleDot } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { envoyerDemandeCollaborateur } from "@/lib/kairosApi";
+import { envoyerDemandeCollaborateur, fetchMesDemandes, fetchMoi } from "@/lib/kairosApi";
+
+const STATUTS = {
+  nouvelle: { label: "Envoyée", Icone: Clock, cls: "bg-white/10 text-offwhite/70" },
+  en_cours: { label: "En cours", Icone: CircleDot, cls: "bg-gold/15 text-gold" },
+  traitee: { label: "Traitée", Icone: CheckCircle2, cls: "bg-emerald-400/15 text-emerald-300" },
+};
 
 const NIVEAUX = [
   { value: "avec", label: "Faire avec moi", desc: "On avance ensemble sur ta demande" },
@@ -18,7 +25,14 @@ export default function Collaborateur() {
   const [contact, setContact] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [demandes, setDemandes] = useState(null);
   const navigate = useNavigate();
+  const chargerDemandes = () => fetchMesDemandes().then((d) => setDemandes(d.demandes || [])).catch(() => setDemandes([]));
+  useEffect(() => {
+    chargerDemandes();
+    // E-mail du compte proposé d'office (modifiable).
+    fetchMoi().then((m) => { if (m?.email) setContact((c) => c || m.email); }).catch(() => {});
+  }, []);
 
   const submit = async () => {
     if (!message.trim()) return;
@@ -27,7 +41,9 @@ export default function Collaborateur() {
       // Avec le jeton de session (avant : fetch sans en-tête → demande rattachée au compte démo).
       await envoyerDemandeCollaborateur({ message: `[${NIVEAUX.find((n) => n.value === niveau)?.label}] ${message.trim()}`, contact, channel: "collaborateur" });
       setSent(true);
-      toast.success("Demande envoyée à l'équipe Zayado.");
+      setMessage("");
+      chargerDemandes();
+      toast.success("Demande envoyée à l'équipe Zayado. Tu suivras la réponse ici.");
     } catch {
       // Corrigé : affichait « envoyée » même quand rien n'était enregistré.
       toast.error("La demande n'a pas pu être envoyée. Réessaie dans un instant.");
@@ -40,17 +56,9 @@ export default function Collaborateur() {
     <div className="min-h-screen">
       <Sidebar />
       <div className="lg:pl-[92px]">
-        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-white/5 bg-[#0b1a3d]/60 px-6 py-4 backdrop-blur-xl">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold/15 ring-1 ring-gold/30">
-            <Users size={18} className="text-gold" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-gold">Zayado · Espace humain</p>
-            <h1 className="font-display text-xl font-bold text-offwhite sm:text-2xl">Collaborateurs</h1>
-          </div>
-        </header>
+        <Header title="Collaborateurs" subtitle="Une personne de l'équipe Zayado avec toi." />
 
-        <main className="mx-auto max-w-5xl px-6 py-8">
+        <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
           <section className="mb-6">
             <p className="font-serif-italic italic text-[26px] leading-tight text-white sm:text-[32px]">« Ne porte pas tout seul. »</p>
             <p className="mt-2 max-w-2xl text-[14.5px] text-offwhite/60">
@@ -82,13 +90,13 @@ export default function Collaborateur() {
                 ))}
               </div>
 
-              <label className="mt-4 block text-xs text-offwhite/60">Email de contact (optionnel)</label>
+              <label className="mt-4 block text-xs text-offwhite/60">E-mail pour te répondre</label>
               <input value={contact} onChange={(e) => setContact(e.target.value)} placeholder="toi@exemple.fr"
                 className="mt-1 w-full rounded-xl border border-white/15 bg-white/5 px-3.5 py-2.5 text-sm text-white placeholder:text-white/35 focus:border-gold focus:outline-none" />
 
-              <button onClick={submit} disabled={sending || !message.trim() || sent}
-                className="mt-5 inline-flex items-center gap-1.5 rounded-xl bg-gold px-5 py-2.5 text-sm font-semibold text-navy-900 disabled:opacity-50">
-                {sent ? "Demande enregistrée" : sending ? <><Loader2 size={15} className="animate-spin" /> Envoi…</> : <>Valider ma demande <Send size={14} /></>}
+              <button onClick={submit} disabled={sending || !message.trim()}
+                className="mt-5 inline-flex items-center gap-1.5 rounded-xl bg-gold px-5 py-2.5 text-sm font-semibold text-navy-900 disabled:opacity-50" data-testid="collab-envoyer">
+                {sending ? <><Loader2 size={15} className="animate-spin" /> Envoi…</> : <>{sent ? "Envoyer une autre demande" : "Valider ma demande"} <Send size={14} /></>}
               </button>
             </div>
 
@@ -102,10 +110,23 @@ export default function Collaborateur() {
                 <p className="mt-2 text-[13px] leading-relaxed text-offwhite/60">
                   Le Collaborateur ne reçoit que les éléments que tu choisis de partager. Le délai, le périmètre et le statut sont visibles avant l'exécution.
                 </p>
-                <div className="mt-4 space-y-2 text-sm text-offwhite/70">
-                  <div className="flex items-center gap-2"><span className={`h-1.5 w-1.5 rounded-full ${sent ? "bg-emerald-400" : "bg-white/25"}`} /> Demande envoyée</div>
-                  <div className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-white/25" /> Collaborateur assigné</div>
-                  <div className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-white/25" /> À valider</div>
+                <p className="mt-4 text-[11px] font-semibold uppercase tracking-widest text-offwhite/45">Mes demandes</p>
+                <div className="mt-2 space-y-2" data-testid="collab-mes-demandes">
+                  {demandes === null && <p className="text-sm text-offwhite/50">Chargement…</p>}
+                  {demandes?.length === 0 && <p className="text-sm text-offwhite/50">Aucune demande pour l'instant.</p>}
+                  {demandes?.slice(0, 5).map((d) => {
+                    const st = STATUTS[d.statut] || STATUTS.nouvelle;
+                    return (
+                      <div key={d.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${st.cls}`}><st.Icone size={11} /> {st.label}</span>
+                          <span className="text-[11px] text-offwhite/40">{d.created_at ? new Date(d.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : ""}</span>
+                        </div>
+                        <p className="mt-1.5 line-clamp-2 text-[13px] text-offwhite/75">{d.message.replace(/^\[[^\]]+\]\s*/, "")}</p>
+                        {d.reponse && <p className="mt-2 rounded-lg bg-emerald-400/10 px-2.5 py-1.5 text-[12.5px] text-emerald-100">{d.reponse}</p>}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { LayoutDashboard, Users, Store, Gift, Ticket, Video, Mail, Newspaper, CheckCircle2, AlertTriangle, CircleDashed, Images, Inbox, UserCog, Link2, ScrollText, ShoppingBag } from "lucide-react";
+import { LayoutDashboard, Users, Store, Gift, Ticket, Video, Mail, Newspaper, CheckCircle2, AlertTriangle, CircleDashed, Images, Inbox, UserCog, Link2, ScrollText, ShoppingBag, BadgeCheck, History, Flag, ChevronRight, Info } from "lucide-react";
 import CarrouselLoginAdmin from "@/components/admin/CarrouselLoginAdmin";
 import { SideMenuPro } from "@/components/pro/SideMenuPro";
 import {
@@ -10,8 +10,10 @@ import {
   fetchHeygenAvatars, fetchHeygenVoices, heygenGenerer, heygenStatut,
   fetchAdminCommerceStats, fetchAdminCommerceOrders, changerStatutCommandeAdmin,
   fetchDemandesCollaborateur, fetchCompteDemo, transfererCompteDemo,
-  fetchAdminNotifications,
+  fetchAdminNotifications, fetchAdminATraiter, majDemandeCollaborateur,
 } from "@/lib/kairosApi";
+import { toast } from "sonner";
+import { AdminEquipe, AdminJournal, AdminModerationFoi } from "@/components/admin/AdminEquipe";
 import { Bell } from "lucide-react";
 import EmailsIA from "@/components/admin/EmailsIA";
 import AdminNewsletters from "@/components/admin/AdminNewsletters";
@@ -26,23 +28,26 @@ import { useThemePro } from "@/lib/themePro";
 // pas juste consultés en référence. "Emails IA" et "Articles SEO" restent
 // des onglets à venir — annoncés honnêtement comme tels.
 const ONGLETS = [
-  { key: "vue", label: "Vue d'ensemble" },
-  { key: "utilisateurs", label: "Utilisateurs" },
-  { key: "vendeurs", label: "Modération vendeurs" },
-  { key: "commerce", label: "Commandes Mollie" },
-  { key: "catalogue", label: "Catalogue produits" },
-  { key: "comptes-vendeurs", label: "Comptes vendeurs" },
-  { key: "parrainage", label: "Parrainage" },
-  { key: "codes-promo", label: "Codes promo" },
-  { key: "demandes", label: "Demandes collaborateurs" },
-  { key: "compte-demo", label: "Compte démo" },
-  { key: "videos-ia", label: "Vidéos IA" },
-  { key: "notifications", label: "Notifications" },
-  { key: "emails-ia", label: "Emails IA" },
-  { key: "carrousel", label: "Carrousel login" },
-  { key: "newsletters", label: "Newsletters" },
-  { key: "connexions", label: "Connexions utilisateurs" },
-  { key: "logs", label: "Logs applicatifs" },
+  { key: "vue", label: "Vue d'ensemble", groupe: "Pilotage" },
+  { key: "journal", label: "Journal des actions", groupe: "Pilotage" },
+  { key: "utilisateurs", label: "Utilisateurs", groupe: "Utilisateurs" },
+  { key: "equipe", label: "Équipe & accès offerts", groupe: "Utilisateurs" },
+  { key: "connexions", label: "Connexions utilisateurs", groupe: "Utilisateurs" },
+  { key: "demandes", label: "Demandes collaborateurs", groupe: "Utilisateurs" },
+  { key: "notifications", label: "Notifications", groupe: "Utilisateurs" },
+  { key: "commerce", label: "Commandes Mollie", groupe: "Ventes" },
+  { key: "parrainage", label: "Parrainage", groupe: "Ventes" },
+  { key: "codes-promo", label: "Codes promo", groupe: "Ventes" },
+  { key: "vendeurs", label: "Modération vendeurs", groupe: "Ventes" },
+  { key: "catalogue", label: "Catalogue produits", groupe: "Ventes" },
+  { key: "comptes-vendeurs", label: "Comptes vendeurs", groupe: "Ventes" },
+  { key: "moderation-foi", label: "Modération Ma Foi", groupe: "Contenus" },
+  { key: "newsletters", label: "Newsletters", groupe: "Contenus" },
+  { key: "emails-ia", label: "Emails IA", groupe: "Contenus" },
+  { key: "videos-ia", label: "Vidéos IA", groupe: "Contenus" },
+  { key: "carrousel", label: "Carrousel login", groupe: "Contenus" },
+  { key: "logs", label: "Logs applicatifs", groupe: "Technique" },
+  { key: "compte-demo", label: "Compte démo", groupe: "Technique" },
 ];
 
 export default function Admin() {
@@ -54,8 +59,9 @@ export default function Admin() {
     parrainage: <Gift size={16} />, "codes-promo": <Ticket size={16} />, commerce: <ShoppingBag size={16} />, catalogue: <Store size={16} />, "comptes-vendeurs": <Users size={16} />, "videos-ia": <Video size={16} />,
     "emails-ia": <Mail size={16} />, "articles-seo": <Newspaper size={16} />, notifications: <Bell size={16} />, carrousel: <Images size={16} />,
     demandes: <Inbox size={16} />, "compte-demo": <UserCog size={16} />, newsletters: <Newspaper size={16} />, connexions: <Link2 size={16} />, logs: <ScrollText size={16} />,
+    equipe: <BadgeCheck size={16} />, journal: <History size={16} />, "moderation-foi": <Flag size={16} />,
   };
-  const menuItems = ONGLETS.map((o) => ({ key: o.key, label: o.label, icon: ICONS[o.key] }));
+  const menuItems = ONGLETS.map((o) => ({ key: o.key, label: o.label, groupe: o.groupe, icon: ICONS[o.key] }));
 
   return (
     <div className={`min-h-screen text-offwhite ${theme === "clair" ? "pro-clair pro-cours" : "pro-sombre"}`} data-testid="admin-root">
@@ -71,7 +77,10 @@ export default function Admin() {
       <h1 className="font-serif text-2xl font-bold">{ONGLETS.find((o) => o.key === onglet)?.label || "Admin"}</h1>
 
       <div className="mt-6">
-        {onglet === "vue" && <VueEnsemble />}
+        {onglet === "vue" && <VueEnsemble allerA={setOnglet} />}
+        {onglet === "equipe" && <AdminEquipe />}
+        {onglet === "journal" && <AdminJournal />}
+        {onglet === "moderation-foi" && <AdminModerationFoi />}
         {onglet === "utilisateurs" && <Utilisateurs />}
         {onglet === "vendeurs" && <ModerationVendeurs />}
         {onglet === "commerce" && <CommandesMollie />}
@@ -98,21 +107,37 @@ export default function Admin() {
 function DemandesCollaborateur() {
   const [donnees, setDonnees] = useState(null);
   const [erreur, setErreur] = useState(null);
-  useEffect(() => {
-    fetchDemandesCollaborateur().then(setDonnees).catch(() => setErreur("Accès refusé ou erreur serveur."));
-  }, []);
+  const [reponses, setReponses] = useState({});
+  const charger = () => fetchDemandesCollaborateur().then(setDonnees).catch(() => setErreur("Accès refusé ou erreur serveur."));
+  useEffect(() => { charger(); }, []);
+  const maj = async (d, patch, msg) => {
+    try { const r = await majDemandeCollaborateur(d.id, patch); toast.success(msg + (r.email_envoye ? " · e-mail envoyé" : "")); charger(); }
+    catch { toast.error("Mise à jour impossible."); }
+  };
   if (erreur) return <Carte><p className="text-red-400 text-sm">{erreur}</p></Carte>;
   if (!donnees) return <Carte><p className="text-offwhite/50 text-sm">Chargement…</p></Carte>;
   if (!donnees.demandes.length) return <Carte><p className="text-offwhite/50 text-sm">Aucune demande pour l'instant.</p></Carte>;
+  const STATUTS = { nouvelle: "Nouvelle", en_cours: "En cours", traitee: "Traitée" };
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-testid="admin-demandes">
       {donnees.demandes.map((d) => (
         <Carte key={d.id}>
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-offwhite/50">
-            <span>{d.created_at ? new Date(d.created_at).toLocaleString("fr-FR") : ""}</span>
-            <span>Contact : {d.contact || "—"}</span>
+            <span>{d.created_at ? new Date(d.created_at).toLocaleString("fr-FR") : ""} · {d.email || "compte inconnu"}{d.contact && d.contact !== d.email ? ` · répondre à ${d.contact}` : ""}</span>
+            <select value={d.statut} onChange={(e) => maj(d, { statut: e.target.value, prevenir: false }, "Statut mis à jour")}
+              className={`rounded-lg border border-white/15 bg-navy-800 px-2 py-1 text-xs ${d.statut === "nouvelle" ? "text-amber-200" : d.statut === "traitee" ? "text-emerald-300" : "text-gold"}`}>
+              {Object.entries(STATUTS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+            </select>
           </div>
           <p className="mt-2 whitespace-pre-wrap text-sm">{d.message}</p>
+          {d.reponse && <p className="mt-2 rounded-lg bg-emerald-400/10 px-3 py-2 text-sm text-emerald-200">Ta réponse : {d.reponse}</p>}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <textarea rows={2} value={reponses[d.id] ?? ""} onChange={(e) => setReponses({ ...reponses, [d.id]: e.target.value })}
+              placeholder={d.reponse ? "Modifier la réponse…" : "Répondre (visible dans son espace + e-mail)…"}
+              className="min-w-[240px] flex-1 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm" />
+            <button disabled={!(reponses[d.id] || "").trim()} onClick={() => { maj(d, { reponse: reponses[d.id], statut: d.statut === "nouvelle" ? "en_cours" : d.statut }, "Réponse envoyée"); setReponses({ ...reponses, [d.id]: "" }); }}
+              className="self-start rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-navy-900 disabled:opacity-40">Répondre</button>
+          </div>
         </Carte>
       ))}
     </div>
@@ -238,7 +263,28 @@ function Branchements() {
   );
 }
 
-function VueEnsemble() {
+function ATraiter({ allerA }) {
+  const [items, setItems] = useState(null);
+  useEffect(() => { fetchAdminATraiter().then((d) => setItems(d.items)).catch(() => setItems([])); }, []);
+  const STYLE = { urgent: "border-red-300/30 bg-red-300/[0.07]", a_voir: "border-amber-300/25 bg-amber-300/[0.06]", info: "border-white/10 bg-white/[0.03]" };
+  const ICONE = { urgent: <AlertTriangle size={15} className="text-red-300" />, a_voir: <CircleDashed size={15} className="text-amber-200" />, info: <Info size={15} className="text-offwhite/60" /> };
+  return (
+    <Carte>
+      <p className="mb-3 font-semibold">À traiter aujourd'hui</p>
+      {!items && <p className="text-sm text-offwhite/50">Chargement…</p>}
+      {items?.length === 0 && <p className="flex items-center gap-2 text-sm text-emerald-300" data-testid="admin-a-traiter-vide"><CheckCircle2 size={16} /> Rien d'urgent : tout est à jour.</p>}
+      <div className="grid gap-2 sm:grid-cols-2" data-testid="admin-a-traiter">
+        {items?.map((x) => (
+          <button key={x.cle} onClick={() => allerA(x.onglet)} className={`flex min-w-0 items-center gap-2.5 rounded-xl border p-3 text-left text-sm transition hover:brightness-125 ${STYLE[x.niveau]}`}>
+            <span className="shrink-0">{ICONE[x.niveau]}</span><span className="min-w-0 flex-1">{x.texte}</span><ChevronRight size={14} className="shrink-0 text-offwhite/40" />
+          </button>
+        ))}
+      </div>
+    </Carte>
+  );
+}
+
+function VueEnsemble({ allerA }) {
   const [donnees, setDonnees] = useState(null);
   const [erreur, setErreur] = useState(null);
   useEffect(() => {
@@ -249,6 +295,7 @@ function VueEnsemble() {
   const ab = donnees.abonnements || { par_offre: {} };
   return (
     <div className="space-y-4" data-testid="admin-vue">
+      <ATraiter allerA={allerA} />
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 sm:gap-4">
         <Kpi label="Revenu mensuel" valeur={eur(ab.mrr_ttc)} note="TTC prélevés — pas de TVA collectée" or />
         <Kpi label="Clients payants" valeur={ab.payants ?? 0} />

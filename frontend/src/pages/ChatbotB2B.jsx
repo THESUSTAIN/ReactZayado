@@ -108,15 +108,6 @@ export default function ChatbotB2B() {
         <Header title="Agent Business" subtitle="Ton assistant IA, à ta marque, qui répond à tes clients." />
 
         <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
-          <div className="mb-5 inline-flex rounded-full border border-white/15 bg-white/5 p-1" data-testid="agent-business-subnav">
-            <button className="rounded-full px-4 py-2 text-[12.5px] font-semibold text-navy-900" style={{ background: GOLD }} data-testid="subnav-chatbot">
-              Agent client
-            </button>
-            <button onClick={() => window.location.assign("/app/agents")} className="rounded-full px-4 py-2 text-[12.5px] font-semibold text-white/70 hover:text-white" data-testid="subnav-agents-ia">
-              Agents IA
-            </button>
-          </div>
-
           {/* Bandeau d'alerte si l'IA tourne en repli */}
           <div className="mb-5">
             <AiFallbackBanner />
@@ -131,18 +122,18 @@ export default function ChatbotB2B() {
               <div className="flex-1">
                 <p className="text-[10.5px] font-semibold uppercase tracking-[0.24em]" style={{ color: GOLD }}>Agent Business · Inclus dès l'offre Pro</p>
                 <h1 className="mt-2 font-display text-[26px] font-semibold leading-tight sm:text-[34px]">
-                  Vos clients ont une réponse, <span className="font-serif-italic italic" style={{ color: GOLD }}>même quand vous êtes occupé.</span>
+                  Tes clients ont une réponse, <span className="font-serif-italic italic" style={{ color: GOLD }}>même quand tu es occupé.</span>
                 </h1>
                 <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-white/60">
-                  Un assistant à vos couleurs qui répond à vos clients et prospects à partir de vos propres informations,
-                  n'invente jamais un prix ni un délai, et vous transmet les demandes qui méritent un échange humain.
+                  Un assistant à tes couleurs qui répond à tes clients et prospects à partir de tes propres informations,
+                  n'invente jamais un prix ni un délai, et te transmet les demandes qui méritent un échange humain.
                 </p>
               </div>
             </div>
             <div className="mt-5 grid gap-3 sm:grid-cols-4">
               {[
-                { icon: Palette, label: "À votre marque" },
-                { icon: BookOpen, label: "Répond avec vos infos" },
+                { icon: Palette, label: "À ta marque" },
+                { icon: BookOpen, label: "Répond avec tes infos" },
                 { icon: ShieldCheck, label: "N'invente jamais" },
                 { icon: UserRound, label: "Relais vers un humain" },
               ].map((f) => (
@@ -308,7 +299,7 @@ export default function ChatbotB2B() {
                       <p className="mt-1 text-[12px] text-white/50">Pour les TPE et les structures plus grandes</p>
                       <div className="mt-3 font-display text-[26px] font-semibold">Nous contacter</div>
                       <ul className="mt-4 flex-1 space-y-2">
-                        {["Plusieurs agents clients", "Agent qui répond à partir de vos documents", "Plusieurs comptes utilisateurs", "Votre domaine, accompagnement dédié"].map((f) => (
+                        {["Plusieurs agents clients", "Agent qui répond à partir de tes documents", "Plusieurs comptes utilisateurs", "Ton domaine, accompagnement dédié"].map((f) => (
                           <li key={f} className="flex items-start gap-2 text-[12.5px] text-white/75">
                             <Check size={13} className="mt-0.5 shrink-0" style={{ color: GOLD }} /><span>{f}</span>
                           </li>

@@ -16,6 +16,12 @@ export function SideMenuPro({ titre, sousTitre, items, actif, onChange, retour }
   const [theme, basculerTheme] = useThemePro();
   const [ouvert, setOuvert] = useState(false);
   const [moi, setMoi] = useState(null);
+  const [groupesReplies, setGroupesReplies] = useState(() => { try { return JSON.parse(localStorage.getItem("pro_menu_replies") || "[]"); } catch { return []; } });
+  const basculerGroupe = (gr) => setGroupesReplies((l) => {
+    const n = l.includes(gr) ? l.filter((x) => x !== gr) : [...l, gr];
+    try { localStorage.setItem("pro_menu_replies", JSON.stringify(n)); } catch { /* */ }
+    return n;
+  });
 
   useEffect(() => {
     if (connecte) fetchMoi().then(setMoi).catch(() => {});
@@ -39,10 +45,19 @@ export function SideMenuPro({ titre, sousTitre, items, actif, onChange, retour }
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-2">
-        {items.map((it) => {
+        {items.map((it, i) => {
           const isActive = actif === it.key;
+          // Groupes (facultatifs) : un titre quand le groupe change ; replier/déplier au clic.
+          const nouveauGroupe = it.groupe && it.groupe !== items[i - 1]?.groupe;
+          const replie = it.groupe && groupesReplies.includes(it.groupe) && !isActive;
           return (
-            <button
+            <React.Fragment key={it.key}>
+            {nouveauGroupe && (
+              <button onClick={() => basculerGroupe(it.groupe)} className="flex w-full items-center justify-between px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40 hover:text-white/70" data-testid={`pro-groupe-${it.groupe}`}>
+                {it.groupe}<span>{groupesReplies.includes(it.groupe) ? "+" : "−"}</span>
+              </button>
+            )}
+            {!replie && <button
               key={it.key}
               onClick={() => choisir(it.key)}
               data-testid={`pro-menu-${it.key}`}
@@ -54,7 +69,8 @@ export function SideMenuPro({ titre, sousTitre, items, actif, onChange, retour }
               {it.badge != null && it.badge > 0 && (
                 <span className="rounded-full bg-[#C1272D] px-2 py-0.5 text-[10px] font-bold text-white">{it.badge}</span>
               )}
-            </button>
+            </button>}
+            </React.Fragment>
           );
         })}
       </nav>

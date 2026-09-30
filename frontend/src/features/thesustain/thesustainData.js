@@ -4,11 +4,11 @@
 export const THESUSTAIN_URL = "https://thesustain.net";
 
 export const modules = [
-  { id: "sagesse", emoji: "📖", title: "Sagesse", tagline: "Nourrir votre foi et donner du sens à votre quotidien." },
+  { id: "sagesse", emoji: "📖", title: "Sagesse", tagline: "Un thème par jour pour nourrir ta foi et donner du sens à ton travail." },
   { id: "priere", emoji: "🙏", title: "Prière", tagline: "Prière personnelle, intentions, intercession — et un mur de prière." },
   { id: "parcours", emoji: "🧭", title: "Parcours bibliques", tagline: "Bible & entrepreneuriat, en parcours guidés de 7 jours." },
   { id: "lecture", emoji: "📜", title: "Lecture biblique", tagline: "Un verset à la fois, avec une aide à la mémoire pour le retenir." },
-  { id: "discernement", emoji: "🧭", title: "Discernement", tagline: "Un journal de décision éclairé par des valeurs bibliques." },
+  { id: "discernement", emoji: "🕯️", title: "Discernement", tagline: "Un journal de décision éclairé par des valeurs bibliques." },
   { id: "cercle", emoji: "🤝", title: "Cercle", tagline: "Une communauté de bâtisseurs : prière, témoignages, entraide." },
   { id: "repos", emoji: "🕊️", title: "Repos & Sabbat", tagline: "Pauses Psaumes et rythme de repos, contre l'épuisement du dirigeant." },
 ];
@@ -19,17 +19,17 @@ export const sagesse = {
   verse: "« Que celui qui vole ne vole plus ; mais plutôt qu'il travaille, en faisant de ses mains ce qui est bien, pour avoir de quoi donner à celui qui est dans le besoin. »",
   reference: "Éphésiens 4:28",
   meditation: [
-    "Prenez trois minutes. Respirez lentement.",
-    "L'intégrité n'est pas une contrainte qui ralentit votre activité — elle en est la fondation la plus solide. Une entreprise bâtie sur la vérité inspire confiance, et la confiance est le capital le plus précieux d'un entrepreneur.",
-    "Là où vous êtes tenté(e) de couper un angle ou d'arrondir un chiffre, imaginez la paix d'une conscience alignée.",
-    "Votre travail n'est pas seulement une source de revenus : il peut devenir un canal de bénédiction pour ceux qui vous entourent.",
+    "Prends trois minutes. Respire lentement.",
+    "L'intégrité n'est pas une contrainte qui ralentit ton activité — elle en est la fondation la plus solide. Une entreprise bâtie sur la vérité inspire confiance, et la confiance est le capital le plus précieux d'un entrepreneur.",
+    "Là où tu es tenté(e) de couper un angle ou d'arrondir un chiffre, imagine la paix d'une conscience alignée.",
+    "Ton travail n'est pas seulement une source de revenus : il peut devenir un canal de bénédiction pour ceux qui t'entourent.",
   ],
   prayer: "Seigneur, donne-moi de bâtir mon activité sur la vérité et la droiture. Que mes décisions d'aujourd'hui reflètent mes valeurs, même quand personne ne regarde. Amen.",
   reflectionQuestion: "Où, dans mon activité, suis-je tenté(e) de sacrifier l'intégrité pour un gain rapide ?",
-  applicationPrompt: "Comment cette valeur peut-elle influencer votre manière de vendre, négocier ou diriger cette semaine ?",
+  applicationPrompt: "Comment cette valeur peut-elle influencer ta manière de vendre, négocier ou diriger cette semaine ?",
   teachings: [
-    { title: "Le travail comme vocation", duration: "2 min", text: "Dans la Bible, le travail n'est pas une punition mais un appel : cultiver, créer, servir. Voir son activité comme une vocation change la façon de la mener." },
-    { title: "L'argent, serviteur et non maître", duration: "3 min", text: "« Nul ne peut servir deux maîtres. » L'argent est un excellent serviteur mais un mauvais maître. La question n'est pas combien vous gagnez, mais qui gouverne votre cœur." },
+    { title: "Le travail comme vocation", duration: "2 min", text: "Dans la Bible, le travail n'est pas une punition mais un appel : cultiver, créer, servir. Voir ton activité comme une vocation change la façon de la mener." },
+    { title: "L'argent, serviteur et non maître", duration: "3 min", text: "« Nul ne peut servir deux maîtres. » L'argent est un excellent serviteur mais un mauvais maître. La question n'est pas combien tu gagnes, mais qui gouverne ton cœur." },
     { title: "Le repos comme acte de foi", duration: "2 min", text: "S'arrêter, c'est reconnaître que tout ne dépend pas de nous. Le repos n'est pas une faiblesse d'entrepreneur : c'est une discipline de confiance." },
   ],
 };
@@ -61,7 +61,7 @@ export const psaumes = [
   { text: "« C'est en vain que vous vous levez matin, que vous vous couchez tard : il en donne autant à ses bien-aimés pendant leur sommeil. »", ref: "Psaume 127:2" },
 ];
 export const sabbat = {
-  intro: "Le Sabbat n'est pas une perte de temps : c'est reconnaître que l'œuvre ne dépend pas seulement de vous. Un dirigeant qui se repose témoigne de sa confiance.",
+  intro: "Le Sabbat n'est pas une perte de temps : c'est reconnaître que l'œuvre ne dépend pas seulement de toi. Un dirigeant qui se repose témoigne de sa confiance.",
   engagements: [
     "Je bloque un temps de repos hebdomadaire, non négociable.",
     "Je coupe les notifications pro pendant ce temps.",
@@ -163,17 +163,18 @@ export const questionsPriere = [
   "Suis-je pressé(e) par une échéance qui m'empêche de discerner ?",
   "De quel conseil sage aurais-je besoin avant de décider ?",
 ];
-export function buildDiscernementSynthese({ decision, valeurs, craintes }) {
-  const valeursTxt = valeurs && valeurs.length ? valeurs.join(", ") : "les valeurs que vous choisirez d'examiner";
+export function buildDiscernementSynthese({ decision, valeurs, craintes, pourquoi }) {
+  const valeursTxt = valeurs && valeurs.length ? valeurs.join(", ") : "les valeurs que tu choisiras d'examiner";
   return {
-    intro: "Voici une mise en forme de votre réflexion. Ceci n'est pas un avis divin ni une réponse : seulement un support pour prier et décider en conscience.",
+    intro: "Voici une mise en forme de ta réflexion. Ceci n'est pas un avis divin ni une réponse : seulement un support pour prier et décider en conscience.",
     elements: [
-      decision ? `Décision envisagée : « ${decision} »` : "Vous n'avez pas encore formulé la décision envisagée.",
+      decision ? `Décision envisagée : « ${decision} »` : "Tu n'as pas encore formulé la décision envisagée.",
       `Valeurs bibliques à examiner : ${valeursTxt}.`,
-      craintes ? `Craintes identifiées : ${craintes}` : "Vous pourriez nommer vos craintes pour les mettre en lumière.",
+      ...(pourquoi ? [`Ce qui te pousse : ${pourquoi}`] : []),
+      craintes ? `Craintes identifiées : ${craintes}` : "Tu pourrais nommer tes craintes pour les mettre en lumière.",
     ],
     questions: questionsPriere,
-    disclaimer: "Rappel : cet espace vous aide à structurer votre pensée. La décision, la prière et l'écoute vous appartiennent.",
+    disclaimer: "Rappel : cet espace t'aide à structurer ta pensée. La décision, la prière et l'écoute t'appartiennent.",
   };
 }
 
@@ -207,3 +208,66 @@ export const association = {
     { label: "Ressources chrétiennes", href: "https://thesustain.net" },
   ],
 };
+
+// ───── SAGESSE : un thème différent chaque jour (texte Louis Segond 1910) ─────
+const th = (theme, verse, reference, reflectionQuestion, applicationPrompt, prayer) => ({ theme, verse, reference, reflectionQuestion, applicationPrompt, prayer });
+export const themesSagesse = [
+  { ...th("Intégrité dans les affaires", sagesse.verse, sagesse.reference, sagesse.reflectionQuestion, sagesse.applicationPrompt, sagesse.prayer) },
+  th("Confier ses projets", "« Recommande à l'Éternel tes œuvres, et tes projets réussiront. »", "Proverbes 16:3",
+    "Quel projet est-ce que je porte seul(e), sans l'avoir remis à Dieu ?", "Quel projet de la semaine veux-tu confier avant de te lancer ?",
+    "Seigneur, je te remets mes projets. Aligne-les sur ce qui est bon, et donne-moi la paix quel que soit le résultat. Amen."),
+  th("L'inquiétude", "« Ne vous inquiétez de rien ; mais en toute chose faites connaître vos besoins à Dieu par des prières et des supplications, avec des actions de grâces. »", "Philippiens 4:6",
+    "Quelle inquiétude revient le plus souvent dans ma journée de travail ?", "Écris l'inquiétude qui te pèse, puis une chose concrète que tu peux faire aujourd'hui.",
+    "Seigneur, tu connais mes soucis de trésorerie, de clients, d'avenir. Je te les confie et je te remercie pour ce que j'ai déjà reçu. Amen."),
+  th("Le travail comme service", "« Tout ce que vous faites, faites-le de bon cœur, comme pour le Seigneur et non pour des hommes. »", "Colossiens 3:23",
+    "Pour qui est-ce que je travaille vraiment : pour la reconnaissance, pour l'argent, ou pour servir ?", "Quelle tâche ingrate peux-tu faire cette semaine avec soin, comme un service ?",
+    "Seigneur, que mon travail d'aujourd'hui soit fait de bon cœur, même ce que personne ne verra. Amen."),
+  th("Bien s'entourer", "« Les projets échouent, faute d'une assemblée qui délibère ; mais ils réussissent quand il y a de nombreux conseillers. »", "Proverbes 15:22",
+    "Qui peut me dire la vérité sur mon activité, même quand elle dérange ?", "À qui vas-tu demander conseil cette semaine, et sur quelle question ?",
+    "Seigneur, place sur ma route des personnes sages et donne-moi l'humilité de les écouter. Amen."),
+  th("Le repos", "« Venez à moi, vous tous qui êtes fatigués et chargés, et je vous donnerai du repos. »", "Matthieu 11:28",
+    "Qu'est-ce qui m'empêche vraiment de m'arrêter ?", "Quel temps de repos non négociable bloques-tu dans ton agenda cette semaine ?",
+    "Seigneur, je dépose ma fatigue devant toi. Apprends-moi à me reposer sans culpabilité. Amen."),
+  th("La générosité", "« Que chacun donne comme il l'a résolu en son cœur, sans tristesse ni contrainte ; car Dieu aime celui qui donne avec joie. »", "2 Corinthiens 9:7",
+    "Où est-ce que je retiens par peur de manquer ?", "Quel geste généreux (temps, conseil, don) peux-tu faire cette semaine ?",
+    "Seigneur, libère mon cœur de la peur de manquer, et fais de moi quelqu'un qui donne avec joie. Amen."),
+  th("L'humilité", "« L'arrogance précède la ruine, et l'orgueil précède la chute. »", "Proverbes 16:18",
+    "Dans quelle situation ai-je du mal à reconnaître que je me suis trompé(e) ?", "Quelle erreur récente peux-tu reconnaître simplement, auprès d'un client ou d'un proche ?",
+    "Seigneur, garde-moi de l'orgueil qui aveugle. Donne-moi de reconnaître mes erreurs et d'apprendre. Amen."),
+  th("Persévérer", "« Ne nous lassons pas de faire le bien ; car nous moissonnerons au temps convenable, si nous ne nous relâchons pas. »", "Galates 6:9",
+    "Qu'est-ce que je suis sur le point d'abandonner trop tôt ?", "Quelle petite action régulière vas-tu tenir cette semaine, même sans résultat visible ?",
+    "Seigneur, quand je ne vois pas encore de fruit, garde-moi fidèle dans les petites choses. Amen."),
+  th("Le courage", "« Ne t'ai-je pas donné cet ordre : Fortifie-toi et prends courage ? Ne t'effraie point et ne t'épouvante point, car l'Éternel, ton Dieu, est avec toi dans tout ce que tu entreprendras. »", "Josué 1:9",
+    "Quelle décision je repousse parce qu'elle me fait peur ?", "Quel appel, quel devis ou quelle conversation difficile vas-tu faire cette semaine ?",
+    "Seigneur, donne-moi le courage d'avancer malgré la peur, en sachant que tu es avec moi. Amen."),
+  th("Demander la sagesse", "« Si quelqu'un d'entre vous manque de sagesse, qu'il la demande à Dieu, qui donne à tous simplement et sans reproche, et elle lui sera donnée. »", "Jacques 1:5",
+    "Sur quelle question ai-je besoin de sagesse plutôt que d'information ?", "Formule la question sur laquelle tu demandes la sagesse cette semaine.",
+    "Seigneur, je manque de sagesse pour cette décision. Donne-la-moi simplement, comme tu l'as promis. Amen."),
+  th("L'argent", "« Ne vous livrez pas à l'amour de l'argent ; contentez-vous de ce que vous avez ; car Dieu lui-même a dit : Je ne te délaisserai point, et je ne t'abandonnerai point. »", "Hébreux 13:5",
+    "L'argent est-il mon serviteur ou mon maître en ce moment ?", "Quelle décision financière de la semaine veux-tu prendre en paix plutôt que dans la peur ?",
+    "Seigneur, que l'argent reste un serviteur dans mon activité. Merci de ne jamais m'abandonner. Amen."),
+  th("La diligence", "« Les projets de l'homme diligent ne mènent qu'à l'abondance, mais celui qui agit avec précipitation n'arrive qu'à la disette. »", "Proverbes 21:5",
+    "Où est-ce que je confonds vitesse et précipitation ?", "Quel projet mérite que tu prennes le temps de le préparer vraiment ?",
+    "Seigneur, donne-moi la patience de bien préparer, et la constance de bien faire. Amen."),
+  th("Servir les autres", "« Ne faites rien par esprit de parti ou par vaine gloire, mais que l'humilité vous fasse regarder les autres comme étant au-dessus de vous-mêmes. »", "Philippiens 2:3",
+    "Comment est-ce que je considère mes clients, mes partenaires, mon équipe ?", "Quelle attention concrète peux-tu offrir à un client ou un collaborateur cette semaine ?",
+    "Seigneur, apprends-moi à diriger en servant, et à voir la valeur de chaque personne. Amen."),
+  th("L'échec et la faiblesse", "« Ma grâce te suffit, car ma puissance s'accomplit dans la faiblesse. »", "2 Corinthiens 12:9",
+    "Quel échec récent me fait encore honte ?", "Qu'as-tu appris de ton dernier échec, et que feras-tu différemment ?",
+    "Seigneur, je te donne mes échecs. Que ta grâce soit plus forte que ma honte. Amen."),
+  th("Les paroles", "« Une réponse douce calme la fureur, mais une parole dure excite la colère. »", "Proverbes 15:1",
+    "Comment je réagis quand un client ou un partenaire est dur avec moi ?", "Quelle conversation tendue peux-tu aborder avec douceur cette semaine ?",
+    "Seigneur, mets sur mes lèvres des paroles justes et douces, surtout dans les tensions. Amen."),
+];
+const jourDeLAnnee = (d = new Date()) => Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 86400000);
+// Même thème pour toute la journée, un autre demain.
+export const themeDuJour = (d = new Date()) => {
+  const t = themesSagesse[jourDeLAnnee(d) % themesSagesse.length];
+  return { ...sagesse, ...t, meditation: [
+    "Prends trois minutes. Respire lentement.",
+    `Lis le verset une fois, puis une deuxième fois plus lentement : ${t.verse}`,
+    `Laisse venir la question du jour : ${t.reflectionQuestion}`,
+    "Termine en confiant à Dieu ce qui est venu, sans chercher à tout résoudre.",
+  ] };
+};
+export const cleDuJour = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;

@@ -1,13 +1,17 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard, Compass, Lightbulb, CheckSquare, Heart, Settings, CalendarCheck, Radar, Lock, HandHeart,
+  LayoutDashboard, Compass, CheckSquare, Heart, Settings, CalendarCheck, Radar, Lock, HandHeart, Bot,
 } from "lucide-react";
 import { chargerAbonnement, MENU_REVEUR } from "@/lib/acces";
 import { BottomNav } from "./BottomNav";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { useI18n } from "@/i18n";
 import { fetchActualite } from "@/lib/kairosApi";
+import { useKairos } from "@/context/KairosContext";
+
+// Agent Business (chatbot client) : inclus à partir de l'offre Pro.
+export const OFFRES_AGENT = ["pro", "business", "entreprise"];
 
 // Forme "île" avec scoops (encoches en haut/bas) — portée depuis
 // cap-vivant-scoops-light, un projet précédent où elle existait déjà.
@@ -19,11 +23,12 @@ const ITEMS = [
   { key: "vision", name: "Vision", Icon: Compass },
   { key: "radar", name: "Radar", Icon: Radar },
   { key: "review", name: "Revue hebdo", Icon: CalendarCheck },
-  { key: "ideas", name: "Idées", Icon: Lightbulb },
   { key: "actions", name: "Plan d'action", Icon: CheckSquare },
   { key: "wellbeing", name: "Bien-être & Mindset", Icon: Heart },
   // ✝️ Ma Foi (par TheSustain) — module spirituel optionnel, ajouté de façon additive.
   { key: "mafoi", name: "Ma Foi", Icon: HandHeart },
+  // Agent Business : produit à part (chatbot pour TES clients), visible à partir de Pro.
+  { key: "agent", name: "Agent Business", Icon: Bot },
   // « Collaborateur » retiré du rail (doublon) : le même accès existe déjà
   // via le bouton « Collaborateur » en haut du chat IA, présent partout.
 ];
@@ -40,16 +45,27 @@ export function Sidebar() {
       setActualiteNonVue(aDuContenu && dernierVu !== aujourdHui);
     }).catch(() => setActualiteNonVue(false));
   }, [location.pathname]);
-  const itemsAvecAlerte = ITEMS.map((item) => item.key === "today" ? { ...item, alert: actualiteNonVue } : item);
+  const { contexte } = useKairos();
+  const [abo, setAbo] = useState(null);
+  useEffect(() => { chargerAbonnement().then(setAbo).catch(() => {}); }, []);
+  // Ma Foi est optionnelle : visible seulement si activée sur le compte (onboarding, Paramètres, Bien-être).
+  // Agent Business : seulement pour les offres qui l'incluent.
+  const visible = (key) => {
+    if (key === "mafoi") return contexte?.parcours_foi === true;
+    if (key === "agent") return !!abo && OFFRES_AGENT.includes(abo.plan) && (abo.acces === undefined || abo.acces === "actif");
+    return true;
+  };
+  const itemsAvecAlerte = ITEMS.filter((item) => visible(item.key)).map((item) => item.key === "today" ? { ...item, alert: actualiteNonVue } : item);
   const deriveActive = useCallback(() => {
     if (location.pathname.startsWith("/app/radar")) return "radar";
     if (location.pathname.startsWith("/app/revue")) return "review";
     if (location.pathname.startsWith("/app/vision")) return "vision";
     if (location.pathname.startsWith("/app/bien-etre")) return "wellbeing";
     if (location.pathname.startsWith("/app/ma-foi")) return "mafoi";
-    if (location.pathname.startsWith("/app/actions") || location.pathname.startsWith("/app/processus")) return "actions";
+    if (location.pathname.startsWith("/app/chatbot-b2b")) return "agent";
+    if (location.pathname.startsWith("/app/actions") || location.pathname.startsWith("/app/processus")
+      || location.pathname.startsWith("/app/ideas") || location.pathname.startsWith("/app/sources")) return "actions";
     if (location.pathname.startsWith("/app/collaborateurs")) return "collab";
-    if (location.pathname.startsWith("/app/ideas") || location.pathname.startsWith("/app/sources")) return "ideas";
     if (location.pathname === "/parametres") return "settings";
     return "today";
   }, [location.pathname]);
@@ -77,7 +93,7 @@ export function Sidebar() {
     else if (key === "review") navigate("/app/revue");
     else if (key === "wellbeing") navigate("/app/bien-etre");
     else if (key === "mafoi") navigate("/app/ma-foi");
-    else if (key === "ideas") navigate("/app/ideas");
+    else if (key === "agent") navigate("/app/chatbot-b2b");
   };
 
   return (
@@ -106,7 +122,7 @@ export function Sidebar() {
                   key={item.key}
                   onClick={() => go(item.key)}
                   data-testid={`nav-${item.key}`}
-                  title={(item.key === "mafoi" ? "Ma Foi" : t(`nav.${item.key}`))}
+                  title={(["mafoi", "agent"].includes(item.key) ? item.name : t(`nav.${item.key}`))}
                   className={`group relative flex h-11 w-11 items-center justify-center rounded-2xl transition-all duration-200 ${
                     isActive
                       ? "bg-white text-navy-900 ring-2 ring-[#DEC2A3] shadow-[0_0_20px_rgba(222,194,163,0.45),0_8px_22px_-8px_rgba(255,255,255,0.35)]"
@@ -119,7 +135,7 @@ export function Sidebar() {
                     <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-alert ring-2 ring-navy-900 shadow-[0_0_8px_2px_rgba(211,47,47,0.6)]" data-testid="scoop-alert-dot" />
                   )}
                   <span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-lg border border-white/15 bg-navy-800 px-2.5 py-1.5 text-xs text-offwhite opacity-0 shadow-xl transition-opacity group-hover:opacity-100">
-                    {(item.key === "mafoi" ? "Ma Foi" : t(`nav.${item.key}`))}
+                    {(["mafoi", "agent"].includes(item.key) ? item.name : t(`nav.${item.key}`))}
                   </span>
                 </button>
               );

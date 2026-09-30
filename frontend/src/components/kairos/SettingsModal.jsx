@@ -1,3 +1,4 @@
+import { ChoixPays } from "./ChoixPays";
 import React, { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { fetchState, saveProfile, exportData, deleteData } from "@/lib/kairosApi";
@@ -20,6 +21,7 @@ export function SettingsModal({ open, onClose }) {
   const [planAttente, setPlanAttente] = useState(null);
   const [notif, setNotif] = useState(true);
   const [marche, setMarche] = useState("france");
+  const [marcheLabel, setMarcheLabel] = useState("");
   const [saving, setSaving] = useState(false);
   const [confirmDel, setConfirmDel] = useState("");
 
@@ -30,12 +32,13 @@ export function SettingsModal({ open, onClose }) {
       setHeure(s.profile?.heure_checkin || "08:30"); setPlan(s.profile?.plan || "essentielle"); setPlanAttente(s.profile?.plan_en_attente || null);
       setNotif(s.profile?.notifications ?? true);
       setMarche(s.profile?.contexte_metier?.marche || "france");
+      setMarcheLabel(s.profile?.contexte_metier?.marche_label || "");
     }).catch(() => {});
   }, [open]);
 
   const save = async () => {
     setSaving(true);
-    try { await saveProfile({ prenom, email, heure_checkin: heure, notifications: notif, contexte_metier: { marche } }); toast.success("Paramètres enregistrés"); onClose(); }
+    try { await saveProfile({ prenom, email, heure_checkin: heure, notifications: notif, contexte_metier: { marche, marche_label: marcheLabel || null } }); toast.success("Paramètres enregistrés"); onClose(); }
     catch { toast.error("Enregistrement impossible."); }
     setSaving(false);
   };
@@ -72,14 +75,8 @@ export function SettingsModal({ open, onClose }) {
                   <input type="time" value={heure} onChange={(e) => setHeure(e.target.value)} data-testid="settings-heure" className={`${inputCls} pl-9`} /></div>
               </Field>
               <Field l="Pays / marché — actualité & contexte économique">
-                <select value={marche} onChange={(e) => setMarche(e.target.value)} data-testid="settings-marche" className={inputCls}>
-                  <option value="france">France</option>
-                  <option value="senegal">Sénégal</option>
-                  <option value="cote_ivoire">Côte d'Ivoire</option>
-                  <option value="cameroun">Cameroun</option>
-                  <option value="maroc">Maroc</option>
-                  <option value="belgique">Belgique</option>
-                </select>
+                <ChoixPays variante="liste" valeur={marche} libelle={marcheLabel} selectClass={inputCls}
+                  onChange={(k, l) => { setMarche(k); setMarcheLabel(l); }} />
               </Field>
             </div>
           </section>

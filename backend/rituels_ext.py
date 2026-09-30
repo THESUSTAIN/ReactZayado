@@ -22,21 +22,30 @@ RITUELS = {
 JOURS = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
 
 
-def calcul_serie(jours_actifs: set, aujourd_hui: date) -> dict:
-    """Série en cours (jusqu'à aujourd'hui, ou hier si rien encore aujourd'hui) et record."""
+def calcul_serie(jours_actifs: set, aujourd_hui: date, jour_repos: Optional[int] = None) -> dict:
+    """Série en cours (jusqu'à aujourd'hui, ou hier si rien encore aujourd'hui) et record.
+    jour_repos : jour de repos réglé dans Paramètres (0 = dimanche … 6 = samedi, comme en JavaScript).
+    Ce jour-là est neutre : ne rien faire ne casse pas la série (et le faire la prolonge)."""
+    def repos(d: date) -> bool:
+        return jour_repos is not None and (d.weekday() + 1) % 7 == jour_repos
     fait = aujourd_hui.isoformat() in jours_actifs
-    d = aujourd_hui if fait else aujourd_hui - timedelta(days=1)
+    d = aujourd_hui if (fait or repos(aujourd_hui)) else aujourd_hui - timedelta(days=1)
     n = 0
-    while d.isoformat() in jours_actifs:
-        n += 1
+    for _ in range(800):
+        if d.isoformat() in jours_actifs:
+            n += 1
+        elif not repos(d):
+            break
         d -= timedelta(days=1)
     record, courant, prec = 0, 0, None
     for j in sorted(jours_actifs):
         dj = date.fromisoformat(j)
-        courant = courant + 1 if prec and (dj - prec).days == 1 else 1
+        trou = [prec + timedelta(days=k) for k in range(1, (dj - prec).days)] if prec else None
+        continu = prec is not None and all(repos(x) for x in trou)
+        courant = courant + 1 if continu else 1
         record = max(record, courant)
         prec = dj
-    return {"jours": n, "aujourdhui_fait": fait, "record": max(record, n)}
+    return {"jours": n, "aujourdhui_fait": fait, "record": max(record, n), "jour_repos": repos(aujourd_hui)}
 
 
 def analyse_semaine(points: list) -> Optional[dict]:
@@ -89,7 +98,10 @@ def install_rituels(g: dict) -> None:
 
     async def serie(db: AsyncSession, uid: str) -> dict:
         auj = date.today()
-        return calcul_serie(await jours_actifs(db, uid, (auj - timedelta(days=400)).isoformat()), auj)
+        cm = (await g["_profil"](db, uid)).contexte_metier or {}
+        jr = cm.get("jour_repos")
+        jr = jr if isinstance(jr, int) and 0 <= jr <= 6 else None
+        return calcul_serie(await jours_actifs(db, uid, (auj - timedelta(days=400)).isoformat()), auj, jr)
 
     g["_serie_bien_etre"] = serie
 

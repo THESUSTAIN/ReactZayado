@@ -71,7 +71,7 @@ export function CaptureBar({ onCreated, autoFocus }) {
       >
         {recording ? <Square size={15} /> : <Mic size={16} />}
       </button>
-      <button onClick={submit} disabled={saving || !value.trim()} data-testid="idea-capture-add"
+      <button onClick={submit} disabled={saving || !value.trim()} data-testid="idea-capture-add" aria-label="Ajouter l'idée"
         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold text-navy-900 transition hover:bg-gold-hover disabled:opacity-40">
         {saving ? <Loader2 size={15} className="animate-spin" /> : <Plus size={17} />}
       </button>

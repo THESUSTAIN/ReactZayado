@@ -69,7 +69,11 @@ _THEMES = [
      [_OHADA_ACTES, _OHADA_ORG]),
 ]
 
-_MARCHES_OHADA = ("senegal", "cote_ivoire", "cameroun", "congo_rdc")
+# Les 17 États membres de l'OHADA (clés utilisées par la liste des pays de l'onboarding).
+_MARCHES_OHADA = ("senegal", "cote_ivoire", "cameroun", "congo_rdc", "benin", "burkina_faso", "centrafrique", "comores",
+                  "congo", "gabon", "guinee", "guinee_bissau", "guinee_equatoriale", "mali", "niger", "tchad", "togo")
+# Pays où les sources françaises (Légifrance, service-public…) s'appliquent.
+_MARCHES_DROIT_FR = ("france",)
 
 
 def est_question_juridique(message: str) -> bool:
@@ -81,6 +85,9 @@ def sources_pour(message: str, marche: str) -> list:
     """2 sources du thème détecté + 1 source de référence du pays (max 3)."""
     bas = message.lower()
     ohada = marche in _MARCHES_OHADA
+    if not ohada and marche not in _MARCHES_DROIT_FR and marche:
+        # Autre pays (Belgique, Italie, Royaume-Uni, Maroc…) : pas de sources françaises trompeuses.
+        return []
     idx = 2 if ohada else 1  # colonne sources du tuple
     for _cle, mots, fr, oh in _THEMES:
         if any(m in bas for m in mots):

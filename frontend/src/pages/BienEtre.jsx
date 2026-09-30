@@ -12,11 +12,13 @@ import {
   Heart, Battery, Activity, Moon, Wind, Coffee, BookOpen, Music,
   Sparkles, ChevronRight, Plus, Check, Waves, Cloud, Leaf, Play,
   TrendingUp, Zap, Flame, Volume2, Square, Smile, PenLine, Loader2,
+  Sun, Route, Wrench, NotebookPen, CalendarPlus, X,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useKairos } from "@/context/KairosContext";
 import { EnergyCheckin } from "@/components/kairos/EnergyCheckin";
-import { fetchState, completerCheckin, fetchRituels, basculerRituel, fetchCourbeEnergie, fetchWheel, saveProfile } from "@/lib/kairosApi";
+import { fetchState, completerCheckin, fetchRituels, basculerRituel, fetchCourbeEnergie, fetchWheel, saveProfile, bloquerPause } from "@/lib/kairosApi";
 
 const GOLD = "#DEC2A3";
 const MOOD_FACES = ["😞", "🙁", "😐", "🙂", "😊"];
@@ -45,6 +47,21 @@ const RITUALS = [
   { id: "r5", icon: Waves,     title: "Marche méditative",     desc: "15 min · Dehors, sans casque",                     time: "15:00" },
   { id: "r6", icon: Sparkles,  title: "Visualisation Refuge",  desc: "8 min · Ton lieu-refuge intérieur",                time: "08:00" },
 ];
+// Jour de repos (Paramètres › Notifications) : seulement les rituels calmes, sans objectif de productivité.
+const RITUELS_CALMES = ["r1", "r3", "r5", "r6"];
+
+// Suggestion du moment : selon le check-in (énergie, stress), l'heure et le jour de repos.
+function suggestionDuMoment({ vitals, aCheckin, repos, heure }) {
+  if (repos) return { texte: "Jour de repos : pas de to-do aujourd'hui. Une marche dehors ou un moment avec tes proches.", action: "marche", bouton: "Marche méditative" };
+  if (!aCheckin) return { texte: "Commence par ton check-in (30 secondes) : la suite s'adapte à ton énergie.", action: "checkin", bouton: "Faire mon check-in" };
+  if (vitals?.stress >= 4) return { texte: "Ton stress est haut : 3 minutes de cohérence cardiaque maintenant, avant ta prochaine tâche.", action: "respirer", bouton: "Respirer · 3 min" };
+  if (vitals?.energy != null && vitals.energy <= 2) return { texte: "Énergie basse : allège ta fin de journée et protège une vraie pause de 20 minutes.", action: "creneau", bouton: "Bloquer une pause", duree: 20 };
+  if (vitals?.sleep != null && vitals.sleep <= 2) return { texte: "Nuit courte : fais ta tâche la plus difficile tôt, puis garde l'après-midi pour le léger.", action: "priorites", bouton: "Voir mes priorités" };
+  if (heure < 11) return { texte: "Tu es dans ta meilleure fenêtre : attaque ta priorité n° 1 avant de lire tes messages.", action: "priorites", bouton: "Voir mes priorités" };
+  if (heure < 14) return { texte: "Pause déjeuner loin de l'écran : ton après-midi sera plus clair.", action: "creneau", bouton: "Bloquer ma pause", duree: 30 };
+  if (heure < 18) return { texte: "Le creux de l'après-midi arrive : une pause courte maintenant garde ton énergie stable.", action: "creneau", bouton: "Bloquer une pause", duree: 15 };
+  return { texte: "Ferme ta journée : une pensée d'ancrage, et tu décroches.", action: "ancrage", bouton: "Pensée d'ancrage" };
+}
 
 /** Suit la classe theme-clair posée sur <body> par le bouton lune/soleil du header. */
 function useThemeClair() {
@@ -60,7 +77,10 @@ function useThemeClair() {
 
 export default function BienEtre() {
   const clair = useThemeClair();
-  const { aCheckin, energy } = useKairos();
+  const { aCheckin, energy, contexte } = useKairos();
+  const navigate = useNavigate();
+  const [creneau, setCreneau] = useState(null);
+  const repos = typeof contexte?.jour_repos === "number" && contexte.jour_repos === new Date().getDay();
   // Mesures réelles du jour (serveur). null = pas encore mesuré — « — », jamais un faux chiffre.
   const [vitals, setVitals] = useState(null);
   const [checked, setChecked] = useState({});  // ritual id → true (enregistré côté serveur)
@@ -137,14 +157,20 @@ export default function BienEtre() {
   const totalRituals = RITUALS.length;
   const avgEnergy = history.length ? (history.reduce((s, v) => s + v, 0) / history.length).toFixed(1) : null;
 
-  const suggestion = vitals?.stress >= 4
-    ? "Ton stress est haut : une vraie pause respiration maintenant"
-    : vitals?.energy != null && vitals.energy <= 2
-      ? "Énergie basse : allège ta fin de journée et protège une pause"
-      : "Une pause courte cet après-midi garde ton énergie stable";
+  const sugg = suggestionDuMoment({ vitals, aCheckin, repos, heure: new Date().getHours() });
+  const agirSuggestion = () => {
+    if (sugg.action === "checkin") setEnergieOpen(true);
+    else if (sugg.action === "respirer") setSeance({ protocole: "coherence", ambiance: "aucune", duree: 3 });
+    else if (sugg.action === "creneau") setCreneau({ duree: sugg.duree || 15 });
+    else if (sugg.action === "priorites") navigate("/app");
+    else if (sugg.action === "ancrage") { if (!checked.r4) toggleRitual("r4"); }
+    else if (sugg.action === "marche") { if (!checked.r5) toggleRitual("r5"); }
+  };
+  const ritualsDuJour = repos ? RITUALS.filter((r) => RITUELS_CALMES.includes(r.id)) : RITUALS;
 
   // Onglets alignés sur la maquette. Les anciens liens (?tab=sens) restent valables.
-  const ONGLETS = [["aujourdhui", "Aujourd'hui"], ["rituels", "Rituels"], ["parcours", "Parcours"], ["outils", "Outils"], ["carnet", "Carnet"]];
+  // Sur mobile : icône + libellé court, pour que les 5 tiennent sans défiler.
+  const ONGLETS = [["aujourdhui", "Aujourd'hui", "Jour", Sun], ["rituels", "Rituels", "Rituels", Leaf], ["parcours", "Parcours", "Parcours", Route], ["outils", "Outils", "Outils", Wrench], ["carnet", "Carnet", "Carnet", NotebookPen]];
 
   return (
     <div className="be-page min-h-screen" data-testid="page-bienetre">
@@ -161,9 +187,9 @@ export default function BienEtre() {
           </div>
 
           <nav className="be-tabs mt-6" data-testid="bienetre-onglets">
-            {ONGLETS.map(([k, l]) => (
-              <button key={k} onClick={() => allerA(k)} data-testid={`bienetre-onglet-${k}`} data-actif={onglet === k ? "true" : "false"} className="be-tab">
-                {l}
+            {ONGLETS.map(([k, l, court, Icone]) => (
+              <button key={k} onClick={() => allerA(k)} data-testid={`bienetre-onglet-${k}`} data-actif={onglet === k ? "true" : "false"} className="be-tab" aria-label={l}>
+                <Icone size={16} className="be-tab-icone" /><span className="hidden sm:inline">{l}</span><span className="sm:hidden">{court}</span>
               </button>
             ))}
           </nav>
@@ -182,11 +208,16 @@ export default function BienEtre() {
                 <div className="be-suggestion" data-testid="bienetre-suggestion">
                   <div className="min-w-0">
                     <p className="font-display text-[20px] font-semibold" style={{ color: L_NAVY }}>Suggestion du moment</p>
-                    <p className="mt-0.5 text-[13px]" style={{ color: L_MUTED }}>{suggestion}</p>
+                    <p className="mt-0.5 text-[13px]" style={{ color: L_MUTED }} data-testid="bienetre-suggestion-texte">{sugg.texte}</p>
                   </div>
-                  <button onClick={() => setSeance({ protocole: vitals?.stress >= 4 ? "coherence" : "box", ambiance: "aucune", duree: 3 })} className="be-btn-navy" data-testid="bienetre-bloquer-creneau">
-                    Bloquer un créneau
-                  </button>
+                  <div className="flex shrink-0 flex-wrap gap-2">
+                    <button onClick={agirSuggestion} className="be-btn-navy" data-testid="bienetre-suggestion-action">{sugg.bouton}</button>
+                    {sugg.action !== "creneau" && !repos && (
+                      <button onClick={() => setCreneau({ duree: 15 })} className="inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-[13px] font-semibold" style={{ borderColor: "var(--be-card-border)", color: L_NAVY }} data-testid="bienetre-bloquer-creneau">
+                        <CalendarPlus size={14} /> Bloquer une pause
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-3 sm:gap-4">
@@ -210,7 +241,7 @@ export default function BienEtre() {
                       )}
                     </div>
                     <ul className="mt-3">
-                      {RITUALS.slice(0, 4).map((r) => {
+                      {ritualsDuJour.slice(0, 4).map((r) => {
                         const done = !!checked[r.id];
                         return (
                           <li key={r.id} className="border-b last:border-b-0" style={{ borderColor: "var(--be-line)" }}>
@@ -248,7 +279,8 @@ export default function BienEtre() {
                   </div>
                 </div>
                 <div className="grid gap-2.5 md:grid-cols-2">
-                  {RITUALS.map((r) => {
+                  {repos && <p className="mb-3 rounded-xl px-3 py-2 text-[13px]" style={{ background: "var(--be-accent-soft)", color: L_NAVY }} data-testid="bienetre-repos">Jour de repos : seulement des rituels calmes, et ta série ne se casse pas si tu ne fais rien.</p>}
+                  {ritualsDuJour.map((r) => {
                     const done = !!checked[r.id];
                     return (
                       <button key={r.id} onClick={() => toggleRitual(r.id)} data-testid={`rituel-liste-${r.id}`}
@@ -309,6 +341,7 @@ export default function BienEtre() {
           onClose={() => setShowCheckin(false)} />
       )}
       {breathingOpen && <BreathingSession onClose={() => setBreathingOpen(false)} onTermine={seanceTerminee} />}
+      {creneau && <FenetreCreneau duree={creneau.duree} onClose={() => setCreneau(null)} />}
       {seance && <BreathingSession autoStart defaultCycle={seance.protocole} durationMin={seance.duree} ambiance={seance.ambiance}
         onClose={() => setSeance(null)} onTermine={seanceTerminee} />}
       <EnergyCheckin open={energieOpen} onClose={() => { setEnergieOpen(false); setTimeout(() => { chargerVitals(); chargerCourbe(); }, 800); }} />
@@ -408,6 +441,37 @@ function RoueCard() {
   );
 }
 
+/** Bloquer une vraie pause : une action dans le Plan d'action + un rappel Telegram si relié. */
+function FenetreCreneau({ duree: dureeInit = 15, onClose }) {
+  const dans = (min) => { const d = new Date(Date.now() + min * 60000); d.setMinutes(Math.ceil(d.getMinutes() / 15) * 15); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes() % 60).padStart(2, "0")}`; };
+  const [heure, setHeure] = useState(dans(30));
+  const [duree, setDuree] = useState(dureeInit);
+  const [envoi, setEnvoi] = useState(false);
+  const valider = async () => {
+    setEnvoi(true);
+    try {
+      const r = await bloquerPause({ heure, duree, rappel: true });
+      toast.success(`${r.titre} : ajoutée à ton Plan d'action${r.telegram ? " · rappel Telegram programmé" : ""}.`);
+      onClose();
+    } catch (e) { toast.error(e.message || "Impossible pour le moment."); setEnvoi(false); }
+  };
+  return (
+    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/50 p-4 sm:items-center" onClick={onClose}>
+      <div className="fenetre w-full max-w-sm rounded-2xl p-5 text-offwhite" onClick={(e) => e.stopPropagation()} data-testid="bienetre-fenetre-creneau">
+        <div className="flex items-center justify-between"><p className="font-display text-lg font-semibold">Bloquer une pause</p><button onClick={onClose} aria-label="Fermer" className="rounded-lg p-1 text-offwhite/60 hover:bg-white/10"><X size={18} /></button></div>
+        <p className="mt-1 text-[13px] text-offwhite/60">Elle arrive dans ton Plan d'action ; si ton Copilote Telegram est relié, il te prévient à l'heure.</p>
+        <label className="mt-4 block text-xs text-offwhite/60">À quelle heure ?</label>
+        <input type="time" value={heure} onChange={(e) => setHeure(e.target.value)} className="mt-1 h-10 w-full rounded-xl border border-white/15 bg-white/5 px-3 text-sm" data-testid="creneau-heure" />
+        <label className="mt-3 block text-xs text-offwhite/60">Combien de temps ?</label>
+        <div className="mt-1 flex gap-2">{[10, 15, 20, 30].map((d) => <button key={d} onClick={() => setDuree(d)} className={`flex-1 rounded-xl border px-2 py-2 text-sm ${duree === d ? "border-gold bg-gold text-navy-900" : "border-white/15"}`}>{d} min</button>)}</div>
+        <button onClick={valider} disabled={envoi} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-gold py-2.5 text-sm font-semibold text-navy-900 disabled:opacity-60" data-testid="creneau-valider">
+          {envoi ? <Loader2 size={15} className="animate-spin" /> : <CalendarPlus size={15} />} Bloquer {duree} min à {heure}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** Intention du jour : enregistrée sur le compte (profil), pas dans le navigateur. */
 function IntentionDuJour() {
   const auj = new Date().toISOString().slice(0, 10);
@@ -446,7 +510,7 @@ function SeanceCompacte({ vitals, onLancer }) {
   const [proto, setProto] = useState(conseil);
   useEffect(() => { setProto(conseil); }, [conseil]);
   return (
-    <section className="flex flex-col items-center justify-center rounded-[22px] px-6 py-7 text-center" style={{ background: "#1C2746" }} data-testid="seance-du-moment">
+    <section className="be-seance-compacte flex flex-col items-center justify-center rounded-[22px] px-6 py-7 text-center" data-testid="seance-du-moment">
       <h2 className="font-display text-[22px] font-semibold" style={{ color: "#F6F1E9" }}>Séance du moment</h2>
       <div className="mt-4 flex flex-wrap justify-center gap-2">
         {[["4-7-8", "4-7-8"], ["coherence", "Cohérence"], ["box", "Box"]].map(([id, l]) => (
@@ -461,7 +525,7 @@ function SeanceCompacte({ vitals, onLancer }) {
       <button onClick={() => onLancer({ protocole: proto, ambiance: "aucune", duree: proto === "coherence" ? 5 : 3 })} data-testid="seance-lancer"
         className="mt-5 flex h-[76px] w-[76px] items-center justify-center rounded-full text-[15px] font-semibold"
         style={{ background: "#D9BE93", color: "#1C2746", boxShadow: "0 0 0 8px rgba(246,241,233,0.12)" }}>
-        Start
+        Commencer
       </button>
     </section>
   );

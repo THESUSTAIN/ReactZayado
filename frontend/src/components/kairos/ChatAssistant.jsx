@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   Sparkles, Send, Mic, Lightbulb, BatteryLow, Compass, X, Loader2,
   Sun, ListChecks, Newspaper, Check, Clock, XCircle, ExternalLink, RefreshCw, Mail, Bookmark,
-  Maximize2, Minimize2, CloudCheck, Users, Scale, Copy,
+  Maximize2, Minimize2, CloudCheck, Users, Scale, Copy, PenLine,
 } from "lucide-react";
 import CollaborateurModal from "./CollaborateurModal";
 import { prendreOngletEnAttente, prendrePromptEnAttente, discuterAvecIA } from "./GlobalChat";
@@ -444,17 +444,27 @@ function ActuTab() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [enregistres, setEnregistres] = useState([]);
-  // Corrigé : le pays/marché n'a plus à être choisi ici via des boutons —
-  // c'est réglé une fois dans Paramètres (ou à l'onboarding), le chat lit
-  // simplement le réglage du profil, comme le fait déjà le serveur.
-  const load = async () => { setLoading(true); try { setData(await fetchActualite()); } catch { setData({ erreur: true, articles: [] }); } setLoading(false); };
+  // Filtre : tout / légal (pays du compte) / ma veille (pays, secteurs et mots-clés choisis dans Paramètres).
+  const [filtre, setFiltre] = useState(() => { try { return localStorage.getItem("zayado_actu_filtre") || "tout"; } catch { return "tout"; } });
+  const load = async (f = filtre) => { setLoading(true); try { setData(await fetchActualite(f)); } catch { setData({ erreur: true, articles: [] }); } setLoading(false); };
   const chargerEnregistres = async () => { try { const d = await fetchEnregistres(); setEnregistres(d?.articles || []); } catch { /* silencieux */ } };
-  useEffect(() => { load(); chargerEnregistres(); }, []);
+  useEffect(() => { load(); chargerEnregistres(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const changerFiltre = (f) => { setFiltre(f); try { localStorage.setItem("zayado_actu_filtre", f); } catch { /* */ } load(f); };
+  const ETIQUETTES = { officiel: "Officiel", legal: "Juridique", secteur: "Secteur", veille: "Ta veille", presse: "" };
 
   return (
     <div className="h-full overflow-y-auto px-4 py-4" data-testid="actu-tab">
-      <p className="mb-1 px-1 text-xs font-semibold uppercase tracking-[0.2em] text-gold">Actualité de ton marché</p>
-      <p className="mb-3 px-1 text-xs text-offwhite/55">Un résumé court, jamais un fil d'actus infini.</p>
+      <div className="mb-3 flex items-center justify-between gap-2 px-1">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Actualité</p>
+        <a href="/parametres#notifications" className="text-[11px] text-offwhite/50 hover:text-gold" data-testid="actu-regler">Choisir mes sources</a>
+      </div>
+      <div className="mb-3 flex gap-1 rounded-xl border border-white/10 bg-white/5 p-1" data-testid="actu-filtres">
+        {[["tout", "Tout"], ["legal", "Légal"], ["perso", "Ma veille"]].map(([k, l]) => (
+          <button key={k} onClick={() => changerFiltre(k)} data-testid={`actu-filtre-${k}`}
+            className={`flex-1 rounded-lg px-2 py-1.5 text-[12px] font-semibold transition ${filtre === k ? "bg-gold text-navy-900" : "text-offwhite/65 hover:text-offwhite"}`}>{l}</button>
+        ))}
+      </div>
+      <p className="mb-3 px-1 text-xs text-offwhite/55">{filtre === "legal" ? `Ce qui change pour les entreprises${data?.label ? ` (${data.label})` : ""} : lois, impôts, social.` : filtre === "perso" ? "Tes pays, tes secteurs et tes mots-clés : de quoi publier avant tout le monde." : "Un résumé court, jamais un fil d'actus infini."}</p>
       {data?.genere_a && !data?.masque && !data?.erreur && (
         <p className="mb-3 px-1 text-[10.5px] text-offwhite/40" data-testid="actu-dates">
           Généré le {new Date(data.genere_a).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
@@ -477,9 +487,9 @@ function ActuTab() {
               className="cursor-pointer rounded-xl border border-white/10 bg-white/5 p-3 transition-colors hover:border-gold/30 hover:bg-white/[0.07]"
               title="Cliquer pour ouvrir le résumé IA"
               data-testid={`actu-item-${i}`}>
-              {a.source === "officiel" && (
-                <span className="mb-1.5 inline-flex items-center gap-1 rounded-full bg-gold/15 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.14em] text-gold" data-testid={`actu-officiel-${i}`}>
-                  Officiel · {a.source_label || "source officielle"}
+              {a.source && a.source !== "presse" && (
+                <span className={`mb-1.5 inline-flex max-w-full items-center gap-1 truncate rounded-full px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.14em] ${a.source === "officiel" || a.source === "legal" ? "bg-gold/15 text-gold" : "bg-sky-400/15 text-sky-200"}`} data-testid={`actu-${a.source === "officiel" ? "officiel" : "etiquette"}-${i}`}>
+                  {ETIQUETTES[a.source]}{a.source_label ? ` · ${a.source_label}` : ""}
                 </span>
               )}
               <p className="text-sm font-medium leading-snug text-offwhite">{a.titre}</p>
@@ -494,6 +504,14 @@ function ActuTab() {
                   >
                     <Sparkles className="h-3 w-3" /> En parler à l'IA
                   </button>
+                  {a.source !== "officiel" && a.source !== "legal" && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); discuterAvecIA(`Écris-moi un post LinkedIn (150 mots, ton expert et accessible, une accroche forte, mon avis de professionnel et une question pour lancer la discussion) à partir de cette actualité : « ${a.titre} » (${a.lien})`); }}
+                      className="inline-flex items-center gap-1 rounded-full border border-white/10 px-2 py-1 text-[10px] text-offwhite/70 hover:border-gold/40 hover:text-gold"
+                      data-testid={`actu-post-${i}`}>
+                      <PenLine className="h-3 w-3" /> Post
+                    </button>
+                  )}
                   <button
                     onClick={async (e) => { e.stopPropagation(); if (dejaSauve) return; try { await enregistrerArticle(a.titre, a.lien); toast.success("Article enregistré — retrouve-le dans « Tes articles enregistrés » ci-dessous."); chargerEnregistres(); } catch { toast.error("Enregistrement impossible."); } }}
                     disabled={dejaSauve}
@@ -509,7 +527,7 @@ function ActuTab() {
           })}
           {(data?.articles || []).length === 0 && data?.vide_pref && (
             <p className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-offwhite/60">
-              Toutes les sources sont coupées dans tes réglages. Réactive-en au moins une dans Paramètres → Notifications.
+              {filtre === "perso" ? "Ta veille est vide : choisis des pays, des secteurs ou des mots-clés dans Paramètres › Notifications." : "Toutes les sources sont coupées dans tes réglages. Réactive-en au moins une dans Paramètres › Notifications."}
             </p>
           )}
           {enregistres.length > 0 && (

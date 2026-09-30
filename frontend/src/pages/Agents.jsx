@@ -35,26 +35,9 @@ export default function Agents() {
     <div className="min-h-screen">
       <Sidebar />
       <div className="lg:pl-[92px]">
-        <Header title="Agent Business" subtitle="Ton équipe IA, connectée à toi." />
+        <Header title="Agents IA" subtitle="Ton équipe IA, connectée à toi." />
 
         <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
-          {/* Sub-nav Agent Business (Chatbot Client / Agents IA) */}
-          <div className="mb-5 inline-flex rounded-full border border-white/15 bg-white/5 p-1" data-testid="agent-business-subnav">
-            <button
-              onClick={() => window.location.assign("/app/chatbot-b2b")}
-              className="rounded-full px-4 py-2 text-[12.5px] font-semibold text-white/70 hover:text-white"
-              data-testid="subnav-chatbot"
-            >
-              Chatbot Client
-            </button>
-            <button
-              className="rounded-full px-4 py-2 text-[12.5px] font-semibold text-navy-900"
-              style={{ background: GOLD }}
-              data-testid="subnav-agents-ia"
-            >
-              Agents IA
-            </button>
-          </div>
           {/* Hero */}
           <div className="mb-6 rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-6 sm:p-8">
             <p className="text-[10.5px] font-semibold uppercase tracking-[0.24em]" style={{ color: GOLD }}>Ton équipe étendue</p>

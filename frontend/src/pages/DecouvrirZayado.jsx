@@ -38,7 +38,7 @@ const MODULES = [
     accroche: "Un copilote qui connaît ton projet et veille ton marché chaque jour.",
     benefices: [
       "Actualité de TON marché, résumée chaque jour — jamais un fil d'actus infini",
-      "Choisis tes marchés : France, Sénégal, Côte d'Ivoire, Cameroun, Maroc, Belgique…",
+      "Choisis ton pays : France, Belgique, Italie, Royaume-Uni, Sénégal, Côte d'Ivoire, Maroc… ou n'importe quel autre.",
       "Un chat contextuel qui clarifie, rédige et prépare tes documents",
       "Chaque article peut devenir une décision ou une opportunité en un clic",
     ],

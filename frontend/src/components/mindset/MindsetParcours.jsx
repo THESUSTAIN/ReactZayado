@@ -1,7 +1,8 @@
+import { useKairos } from "@/context/KairosContext";
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, Check, Lock, Loader2, Trophy, Sparkles, ExternalLink } from "lucide-react";
-import { fetchParcoursListe, fetchParcours, demarrerParcours, saveProfile } from "@/lib/kairosApi";
+import { fetchParcoursListe, fetchParcours, demarrerParcours } from "@/lib/kairosApi";
 import Exercice from "@/components/mindset/Exercice";
 
 // Onglet « Parcours » : 4 programmes de 7 jours, un jour débloqué par jour.
@@ -103,6 +104,7 @@ export default function MindsetParcours({ ouvert, onOuvrir }) {
   const [items, setItems] = useState(null);
   const [foiActive, setFoiActive] = useState(false);
   const [activation, setActivation] = useState(false);
+  const { majContexte } = useKairos();
   const charger = () => fetchParcoursListe().then((d) => { setItems(d.items); setFoiActive(!!d.foi_active); }).catch(() => setItems([]));
   useEffect(() => { if (!ouvert) charger(); }, [ouvert]); // eslint-disable-line react-hooks/exhaustive-deps
   if (ouvert) return <Detail id={ouvert} onRetour={() => onOuvrir(null)} />;
@@ -111,7 +113,7 @@ export default function MindsetParcours({ ouvert, onOuvrir }) {
   const activerFoi = async () => {
     setActivation(true);
     try {
-      await saveProfile({ contexte_metier: { parcours_foi: true } });
+      await majContexte({ parcours_foi: true });
       toast.success("Parcours « Entreprendre avec la foi » activé.");
       charger();
     } catch { toast.error("Activation impossible pour l'instant."); }

@@ -171,7 +171,7 @@ export default function VisionBoardMobileHome({ onOpenBoard }) {
           <TabItem icon={HomeIcon} label="Cockpit" active onClick={() => navigate("/app")} />
           <TabItem icon={LayoutGrid} label="Boards" onClick={() => navigate("/app/vision")} />
           <div className="w-14" />
-          <TabItem icon={Target} label="Idées" onClick={() => navigate("/app/ideas")} />
+          <TabItem icon={Target} label="Idées" onClick={() => navigate("/app/actions?tab=idees")} />
           <TabItem icon={User} label="Profil" onClick={() => navigate("/parametres")} />
           <button onClick={nouveauBoard} aria-label="Nouveau board"
             className="absolute left-1/2 -top-5 flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full text-white shadow-lg"
