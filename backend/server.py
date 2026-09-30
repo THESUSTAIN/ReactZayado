@@ -4937,6 +4937,14 @@ install_diagnostic(globals())
 from onboarding_ext import install_onboarding  # noqa: E402
 install_onboarding(globals())
 
+# ── Pack Microsoft Teams généré pour le domaine demandé (avant : fichier absent → 404) ──
+from teams_ext import install_teams  # noqa: E402
+install_teams(globals())
+
+# ── « Se connecter avec Zayado » pour les applications séparées (app RH entreprise…) ──
+from sso_ext import install_sso  # noqa: E402
+install_sso(globals())
+
 # ─────────────── Processus (page /app/processus) ───────────────
 # Avant : stockés dans le navigateur uniquement, avec 4 processus de démonstration
 # affichés à tout nouveau compte. Maintenant : par utilisateur, côté serveur.

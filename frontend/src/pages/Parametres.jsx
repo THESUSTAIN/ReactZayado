@@ -159,7 +159,7 @@ export default function Parametres() {
           {active === "general" && <SectionGeneral />}
           {active === "vision" && <SectionVision />}
           {active === "notifications" && <SectionNotifications />}
-          {active === "integrations" && <><CarteTeams /><IntegrationsSection /></>}
+          {active === "integrations" && <><CarteTeams /><CarteZayadoRH /><IntegrationsSection /></>}
           {active === "cloud-save" && <SectionCloudSave />}
           {active === "parrainage" && <SectionParrainage />}
           {active === "securite" && <SectionSecurite />}
@@ -627,6 +627,20 @@ function SectionSecurite() {
   );
 }
 
+// App RH SÉPARÉE (rh.zayado.net) : on s'y connecte avec son compte Zayado ; ses données
+// vivent dans le Microsoft 365 de l'entreprise (Microsoft Lists), pas dans Zayado.
+const RH_URL = process.env.REACT_APP_RH_URL || "https://rh.zayado.net";
+function CarteZayadoRH() {
+  return (
+    <Carte titre="Zayado RH pour ton équipe" desc="Onboarding, planning, présence, absences, pièces et temps de tes salariés, installés dans ton Microsoft 365 (SharePoint, Lists, Teams) en environ 10 minutes. Inclus dans les offres Équipe et Entreprise.">
+      <a href={`${RH_URL}/login`} target="_blank" rel="noopener noreferrer" className={`${BTN_OR} mt-1`} data-testid="parametres-zayado-rh">
+        Ouvrir Zayado RH
+      </a>
+      <p className="mt-2 text-[12px] text-offwhite/50">Connecte-toi avec « Se connecter avec Zayado », puis Paramètres › Installer.</p>
+    </Carte>
+  );
+}
+
 function CarteTeams() {
   return (
     <Carte titre="Zayado dans Microsoft Teams" desc="Ouvre ton cockpit dans un onglet Teams : Aujourd'hui, Radar, Plan d'action et Vision, à côté de tes conversations.">
@@ -636,7 +650,7 @@ function CarteTeams() {
         <li>Choisis le fichier, puis <b>Ajouter</b>. Connecte-toi une fois avec ton e-mail et ton mot de passe Zayado.</li>
       </ol>
       <p className="mt-2 text-[12px] text-offwhite/50">Si le chargement est bloqué, ton administrateur Microsoft 365 peut l'ajouter pour toute l'entreprise (Centre d'administration Teams › Gérer les applications › Charger).</p>
-      <a href="/teams/zayado-teams.zip" download className={`${BTN_OR} mt-3`} data-testid="parametres-teams-telecharger"><Download size={14} /> Télécharger le pack Teams</a>
+      <a href="/api/public/teams/zayado-teams.zip" download="zayado-teams.zip" className={`${BTN_OR} mt-3`} data-testid="parametres-teams-telecharger"><Download size={14} /> Télécharger le pack Teams</a>
     </Carte>
   );
 }

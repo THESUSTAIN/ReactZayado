@@ -475,3 +475,7 @@ export const deconnecterCanal = (canal) => jsendMsg(`/canaux/${canal}`, "DELETE"
 // ── Diagnostic d'équilibre (page publique + app) ──
 export const saveDiagnostic = (data) => jsend("/diagnostic", "POST", data);
 export const fetchDiagnostic = () => jget("/diagnostic");
+
+// ── « Se connecter avec Zayado » (applications séparées : app RH entreprise…) ──
+export const fetchClientSso = (client_id, redirect_uri) => jget(`/connexion/sso/client?client_id=${encodeURIComponent(client_id)}&redirect_uri=${encodeURIComponent(redirect_uri)}`);
+export const creerCodeSso = (data) => jsend("/sso/code", "POST", data);
