@@ -28,6 +28,7 @@ import PricingSuccess from "@/pages/PricingSuccess";
 import Mockup from "@/pages/Mockup";
 import Marketplace from "@/pages/Marketplace";
 import MonEspace from "@/pages/MonEspace";
+import MonCompte from "@/pages/MonCompte";
 import Achat from "@/pages/Achat";
 import Parametres from "@/pages/Parametres";
 import Admin from "@/pages/Admin";
@@ -144,6 +145,7 @@ function App() {
             <Route path="/espace-vendeur" element={<ProtectedRoute><Marketplace /></ProtectedRoute>} />
             <Route path="/app/marketplace" element={<Navigate to="/espace-vendeur" replace />} />
             <Route path="/mon-espace" element={<ProtectedRoute><MonEspace /></ProtectedRoute>} />
+            <Route path="/compte" element={<ProtectedRoute><MonCompte /></ProtectedRoute>} />
             <Route path="/acheter" element={<ProtectedRoute><Achat /></ProtectedRoute>} />
             <Route path="/parametres" element={<ProtectedRoute><Parametres /></ProtectedRoute>} />
             <Route path="/programmes" element={<ProtectedRoute><Programmes /></ProtectedRoute>} />

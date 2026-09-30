@@ -37,7 +37,6 @@ const PAGES = [
   { label: "Agents IA", path: "/app/agents", mots: "ia automatisation" },
   { label: "Agent Business (chatbot)", path: "/app/chatbot-b2b", mots: "clients chatbot" },
   { label: "Mon espace", path: "/mon-espace", mots: "commandes achats compte" },
-  { label: "Espace vendeur", path: "/espace-vendeur", mots: "marketplace vendre" },
   { label: "Paramètres", path: "/parametres", mots: "réglages compte profil connexion" },
   { label: "Collaborateur IA (chat)", action: "chat", mots: "copilote assistant chat ia" },
   { label: "Visite guidée", action: "tour", mots: "aide tutoriel découvrir" },
@@ -406,6 +405,9 @@ export function Header() {
           <DropdownMenuContent align="end" className="glass-strong w-56 border-white/10 text-offwhite">
             <DropdownMenuGroup><DropdownMenuLabel className="text-xs uppercase tracking-[0.2em] text-gold">{user.firstName || "Mon compte"}</DropdownMenuLabel></DropdownMenuGroup>
             <DropdownMenuSeparator className="bg-white/10" />
+            <DropdownMenuItem onClick={() => navigate("/compte")} className="cursor-pointer gap-2 focus:bg-white/10 focus:text-offwhite" data-testid="profile-compte">
+              <User className="h-4 w-4" /> Mon compte
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate("/parametres")} className="cursor-pointer gap-2 focus:bg-white/10 focus:text-offwhite" data-testid="profile-settings">
               <Settings className="h-4 w-4 text-gold" /> Paramètres
             </DropdownMenuItem>
