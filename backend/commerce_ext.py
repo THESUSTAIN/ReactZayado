@@ -913,7 +913,7 @@ def install_commerce(g: dict) -> None:
                 await envoyer(to=email, subject="Tu es invité(e) sur Zayado",
                               html=(f"<p>Bonjour,</p><p>{(moi.email if moi else 'Un membre')} t'offre un espace Zayado dans son équipe : "
                                     f"ton propre cockpit, ta Vision, ton Radar et ton Plan d'action.</p>"
-                                    f"<p><a href=\"{_frontend_url()}/login?next=%2Fonboarding\">Créer mon espace avec cette adresse</a></p>"))
+                                    f"<p><a href=\"{_frontend_url()}/login?email={email}&inscription=1&next=%2Fonboarding\">Créer mon espace avec cette adresse</a></p>"))
             except Exception as e:  # noqa: BLE001
                 _log("Invitation équipe non envoyée : %s", e)
         return {"id": m.id, "email": m.email, "inscrit": False}
