@@ -1,127 +1,156 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   LayoutDashboard, Users, ShieldCheck, Store, Handshake, ChevronRight, Building2, Receipt, User, Bell,
-  Download, LifeBuoy, LogOut, Gift, Loader2, Sparkles, ExternalLink, CreditCard,
+  Download, LifeBuoy, LogOut, Loader2, ShoppingBag, Compass, TrendingUp, Gift, ExternalLink, Crown,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  fetchMoi, fetchAbonnement, fetchMesFilleuls, fetchOrganisation, fetchCommandes, fetchState, telechargerExport, setToken,
+  fetchMoi, fetchAbonnement, fetchMesFilleuls, fetchOrganisation, fetchCommandes, fetchState, telechargerExport,
+  setToken, fetchLoginCarousel, mediaUrl,
 } from "@/lib/kairosApi";
-import { planNom } from "@/lib/plans";
+import { planNom, PLANS } from "@/lib/plans";
 
 const RH_URL = process.env.REACT_APP_RH_URL || "https://rh.zayado.net";
+// Commandes de la boutique (Shopify) : l'espace client de la boutique, jamais ouvert dans le cockpit.
+const BOUTIQUE_COMPTE_URL = process.env.REACT_APP_BOUTIQUE_COMPTE_URL || "https://zayado.net/account";
 
-/* « Mon compte » : un seul point d'entrée après la connexion (comme l'espace client Kiabi).
-   Les espaces s'affichent selon l'offre et le rôle : Cockpit (SaaS), Zayado RH (Équipe/Entreprise),
-   Console admin, Espace vendeur (marketplace) ; la boutique n'est jamais ouverte d'ici. */
+// Paliers de parrainage (affichage) : nombre de filleuls abonnés.
+const PALIERS = [[0, "Membre"], [1, "Ambassadeur"], [3, "Ambassadeur Or"], [10, "Partenaire"]];
+
+/* « Mon compte » — page d'accueil après connexion, sur le modèle de l'espace client Kiabi :
+   une image à gauche (bandeau en haut sur mobile) et, à droite, une liste de lignes par rubrique.
+   Deux designs à valider : A « clair » (fond blanc, comme Kiabi) et B « Zayado » (ciel navy, verre).
+   ?design=b pour voir le B. */
 export default function MonCompte() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const design = params.get("design") === "b" ? "b" : "a";
   const [d, setD] = useState(null);
 
   useEffect(() => {
-    Promise.allSettled([fetchMoi(), fetchAbonnement(), fetchMesFilleuls(), fetchOrganisation(), fetchCommandes(), fetchState()])
-      .then(([moi, abo, fil, org, cmd, st]) => setD({
+    Promise.allSettled([fetchMoi(), fetchAbonnement(), fetchMesFilleuls(), fetchOrganisation(), fetchCommandes(), fetchState(), fetchLoginCarousel()])
+      .then(([moi, abo, fil, org, cmd, st, car]) => setD({
         moi: moi.value || {}, abo: abo.value || {}, filleuls: fil.value?.items || [],
         org: org.value?.organisation || null, commandes: cmd.value?.items || [],
         prenom: st.value?.profile?.prenom || "",
+        // L'image vient du carrousel de connexion (modifiable dans la console admin).
+        image: car.value?.slides?.[0]?.src ? mediaUrl(car.value.slides[0].src) : "/presentation-poster.jpg",
       }));
   }, []);
 
   if (!d) return <div className="flex min-h-screen items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-gold" /></div>;
 
+  const clair = design === "a";
   const role = d.moi.role;
   const actif = d.abo.acces === "actif";
   const plan = d.abo.plan;
-  const espaces = [
-    { cle: "cockpit", titre: "Mon cockpit", desc: actif ? `Offre ${planNom(plan)}` : "Active ton offre pour y accéder", Icone: LayoutDashboard, go: () => navigate(actif ? "/app" : "/activer"), visible: true, principal: true },
-    { cle: "rh", titre: "Zayado RH", desc: "Planning, présence, absences de ton équipe", Icone: Users, go: () => window.open(RH_URL, "_blank", "noopener"), visible: ["business", "entreprise"].includes(plan) && actif, externe: true },
-    { cle: "vendeur", titre: "Espace vendeur", desc: "Tes produits sur la marketplace", Icone: Store, go: () => navigate("/espace-vendeur"), visible: role === "vendeur" || role === "admin" },
-    { cle: "admin", titre: "Console admin", desc: "Utilisateurs, offres, contenus", Icone: ShieldCheck, go: () => navigate("/admin"), visible: role === "admin" },
-    { cle: "cession", titre: "Cession & Reprise", desc: "Cédants, repreneurs, fiches entreprise", Icone: Handshake, go: () => toast("En préparation : bientôt disponible."), visible: role === "admin", bientot: true },
-  ].filter((e) => e.visible);
-
   const actifs = d.filleuls.filter((f) => f.statut === "actif").length;
-  const deconnexion = () => { setToken(null); navigate("/login"); };
-  const Ligne = ({ Icone, label, onClick, testid }) => (
-    <button onClick={onClick} data-testid={testid} className="glass flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left text-[15px] text-offwhite transition hover:border-gold/40">
-      <Icone size={19} className="text-gold" /><span className="flex-1">{label}</span><ChevronRight size={17} className="text-offwhite/45" />
+  const palier = [...PALIERS].reverse().find(([n]) => actifs >= n);
+  const suivant = PALIERS.find(([n]) => n > actifs);
+  const ordre = PLANS.map((p) => p.key);
+  const offreSuivante = actif && plan !== "offert" ? PLANS[ordre.indexOf(plan) + 1] : PLANS.find((p) => p.key === "serenite");
+
+  const c = clair
+    ? { page: "bg-[#F6F1E9] text-[#0f1b3a]", ligne: "bg-[#EADFCC] hover:bg-[#E2D4BC] border border-[#DCCBAF]", titre: "text-[#0f1b3a]", doux: "text-[#6b6252]", icone: "text-[#0f1b3a]", carte: "bg-[#EFE6D6] border border-[#DCCBAF]", barre: "bg-[#DCCBAF]" }
+    : { page: "text-offwhite", ligne: "bg-white/[0.09] hover:bg-white/[0.14] border border-white/15", titre: "text-offwhite", doux: "text-offwhite/60", icone: "text-gold", carte: "glass", barre: "bg-white/15" };
+
+  const Ligne = ({ Icone, label, sous, onClick, testid, externe, badge }) => (
+    <button onClick={onClick} data-testid={testid} className={`flex w-full items-center gap-4 rounded-xl px-5 py-4 text-left transition ${c.ligne}`}>
+      <Icone size={20} className={`shrink-0 ${c.icone}`} strokeWidth={1.8} />
+      <span className="min-w-0 flex-1">
+        <span className={`flex items-center gap-2 text-[15px] ${c.titre}`}>{label}{badge && <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${clair ? "bg-[#0f1b3a] text-white" : "bg-gold/20 text-gold"}`}>{badge}</span>}</span>
+        {sous && <span className={`block truncate text-[12.5px] ${c.doux}`}>{sous}</span>}
+      </span>
+      {externe ? <ExternalLink size={16} className={c.doux} /> : <ChevronRight size={18} className={c.titre} />}
     </button>
   );
-  const Titre = ({ children }) => <h2 className="mb-3 mt-8 font-display text-lg font-semibold text-offwhite">{children}</h2>;
+  const Rubrique = ({ titre, children }) => (
+    <section className="mt-9">
+      <h2 className={`mb-3 text-[15px] font-bold ${c.titre}`}>{titre}</h2>
+      <div className="space-y-3">{children}</div>
+    </section>
+  );
+
+  const deconnexion = () => { setToken(null); navigate("/login"); };
 
   return (
-    <main className="min-h-screen px-4 pb-16 pt-8 text-offwhite sm:px-8" data-testid="mon-compte">
-      <div className="mx-auto max-w-5xl">
-        <div className="flex items-center justify-between gap-3">
-          <img src="/logo.png" alt="Zayado" className="h-10 w-10 object-contain" />
-          <button onClick={deconnexion} className="inline-flex items-center gap-1.5 text-sm text-offwhite/60 hover:text-offwhite" data-testid="compte-deconnexion"><LogOut size={15} /> Se déconnecter</button>
-        </div>
-        <h1 className="mt-6 font-display text-3xl font-bold sm:text-4xl">Bonjour {d.prenom || "à toi"}</h1>
-        <p className="mt-1 text-sm text-offwhite/60">{d.moi.email}</p>
+    <div className={`min-h-screen ${c.page}`} data-testid="mon-compte" data-design={design}>
+      {/* Barre du haut, comme Kiabi : logo au centre, raccourci cockpit à droite */}
+      <header className={`sticky top-0 z-20 flex items-center justify-between px-4 py-3 sm:px-8 ${clair ? "border-b border-[#DCCBAF] bg-[#F6F1E9]/95" : "border-b border-white/10 bg-[#0b1a3d]/80"} backdrop-blur`}>
+        <span className={`text-[12px] font-semibold uppercase tracking-[0.2em] ${clair ? "text-[#8A5A1E]" : "text-gold"}`}>Mon compte</span>
+        <img src={clair ? "/logo-zayado-bleu.png" : "/logo-zayado-blanc.png"} alt="Zayado" className="h-8 object-contain" onError={(e) => { e.currentTarget.src = "/logo.png"; }} />
+        <button onClick={() => navigate(actif ? "/app" : "/activer")} className={`rounded-full px-4 py-2 text-[13px] font-semibold ${clair ? "bg-[#0f1b3a] text-white" : "bg-gold text-navy-900"}`} data-testid="compte-vers-cockpit">Cockpit</button>
+      </header>
 
-        <Titre>Mes espaces</Titre>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" data-testid="compte-espaces">
-          {espaces.map((e) => (
-            <button key={e.cle} onClick={e.go} data-testid={`compte-espace-${e.cle}`}
-              className={`glass group flex items-start gap-3 rounded-2xl p-5 text-left transition hover:border-gold/50 ${e.principal ? "ring-1 ring-gold/40" : ""}`}>
-              <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${e.principal ? "bg-gold text-navy-900" : "bg-gold/15 text-gold"}`}><e.Icone size={20} /></span>
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-2 font-display text-[17px] font-semibold">{e.titre}{e.bientot && <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-offwhite/70">bientôt</span>}</span>
-                <span className="mt-0.5 block text-[13px] text-offwhite/60">{e.desc}</span>
-              </span>
-              {e.externe ? <ExternalLink size={15} className="mt-1 text-offwhite/40" /> : <ChevronRight size={17} className="mt-1 text-offwhite/40 transition group-hover:translate-x-0.5" />}
-            </button>
-          ))}
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+        {/* Image : colonne fixe à gauche sur ordinateur, bandeau en haut sur mobile */}
+        <div className="h-52 overflow-hidden sm:h-72 lg:sticky lg:top-[57px] lg:h-[calc(100vh-57px)]">
+          <img src={d.image} alt="" className="h-full w-full object-cover" onError={(e) => { e.currentTarget.src = "/presentation-poster.jpg"; }} />
         </div>
 
-        <div className="grid gap-x-8 lg:grid-cols-2">
-          <div>
-            <Titre>Mon offre & parrainage</Titre>
-            <div className="glass rounded-2xl p-5" data-testid="compte-offre">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs uppercase tracking-widest text-offwhite/50">Offre</p>
-                  <p className="mt-1 font-display text-2xl font-semibold">{actif ? planNom(plan) : "Aucune offre active"}</p>
-                  <p className="mt-0.5 text-xs text-offwhite/55">{d.abo.cycle === "offert" ? "Offert par Zayado" : d.abo.renouvellement?.date ? `Renouvellement le ${new Date(d.abo.renouvellement.date).toLocaleDateString("fr-FR")}` : ""}</p>
-                </div>
-                <button onClick={() => navigate("/parametres#offre")} className="rounded-xl border border-white/20 px-3 py-1.5 text-xs font-semibold hover:bg-white/10"><CreditCard size={13} className="mr-1 inline" /> Gérer</button>
-              </div>
-              <div className="mt-4 border-t border-white/10 pt-4">
-                <p className="flex items-center gap-2 text-sm font-semibold"><Gift size={15} className="text-gold" /> {actifs} filleul{actifs > 1 ? "s" : ""} abonné{actifs > 1 ? "s" : ""}</p>
-                <p className="mt-0.5 text-xs text-offwhite/55">Chaque personne invitée qui s'abonne t'offre 1 mois d'abonnement{d.filleuls.length > actifs ? ` · ${d.filleuls.length - actifs} invitation(s) en attente` : ""}.</p>
-                <button onClick={() => navigate("/parametres#offre")} className="mt-3 text-xs font-semibold text-gold hover:underline">Inviter quelqu'un →</button>
-              </div>
+        <main className="mx-auto w-full max-w-[560px] px-5 pb-20 pt-8 lg:px-10">
+          <h1 className={`text-[26px] font-bold ${c.titre}`}>Bonjour {d.prenom || "à toi"}</h1>
+          <p className={`mt-1 text-[15px] ${c.doux}`}>{d.moi.email}</p>
+
+          <Rubrique titre="Mes espaces">
+            <Ligne Icone={LayoutDashboard} label="Mon cockpit" sous={actif ? `Offre ${planNom(plan)}` : "Active ton offre pour y accéder"} onClick={() => navigate(actif ? "/app" : "/activer")} testid="compte-espace-cockpit" />
+            {["business", "entreprise"].includes(plan) && actif && <Ligne Icone={Users} label="Zayado RH" sous="Planning, présence et absences de ton équipe" onClick={() => window.open(RH_URL, "_blank", "noopener")} externe testid="compte-espace-rh" />}
+            {(role === "vendeur" || role === "admin") && <Ligne Icone={Store} label="Espace vendeur" sous="Tes produits sur la marketplace" onClick={() => navigate("/espace-vendeur")} testid="compte-espace-vendeur" />}
+            {role === "admin" && <Ligne Icone={ShieldCheck} label="Console admin" sous="Utilisateurs, offres, contenus" onClick={() => navigate("/admin")} testid="compte-espace-admin" />}
+            {role === "admin" && <Ligne Icone={Handshake} label="Cession & Reprise" sous="Cédants, repreneurs, fiches entreprise" badge="bientôt" onClick={() => toast("En préparation.")} testid="compte-espace-cession" />}
+          </Rubrique>
+
+          <Rubrique titre="Mes commandes">
+            <Ligne Icone={ShoppingBag} label="Mes achats sur la boutique" sous="Commandes zayado.net : suivi, factures, retours" onClick={() => window.open(BOUTIQUE_COMPTE_URL, "_blank", "noopener")} externe testid="compte-boutique" />
+            <Ligne Icone={Receipt} label="Mes factures d'abonnement" onClick={() => navigate("/parametres#offre")} testid="compte-factures" />
+            {d.commandes.length > 0 && <Ligne Icone={Gift} label={`Mes services achetés (${d.commandes.length})`} onClick={() => navigate("/mon-espace")} testid="compte-achats" />}
+          </Rubrique>
+
+          <Rubrique titre="Mon espace fidélité">
+            <div className="grid gap-3 sm:grid-cols-2" data-testid="compte-fidelite">
+              <button onClick={() => navigate("/parametres#offre")} className={`rounded-xl p-5 text-left ${c.ligne}`}>
+                <p className={`text-[13px] ${c.doux}`}>Mes filleuls abonnés</p>
+                <p className={`mt-1 text-3xl font-bold ${c.titre}`}>{actifs}</p>
+                <p className={`mt-3 text-[14px] font-semibold ${c.titre}`}>Tu es <span className={clair ? "text-[#B07A2E]" : "text-gold"}>{palier?.[1]}</span></p>
+                {suivant && <p className={`text-[12px] ${c.doux}`}>Plus que {suivant[0] - actifs} filleul{suivant[0] - actifs > 1 ? "s" : ""} pour devenir {suivant[1]}</p>}
+                {suivant && <div className={`mt-2 h-1.5 overflow-hidden rounded-full ${c.barre}`}><div className={`h-full rounded-full ${clair ? "bg-[#B07A2E]" : "bg-gold"}`} style={{ width: `${Math.max(6, (actifs / suivant[0]) * 100)}%` }} /></div>}
+                <p className={`mt-3 text-[12px] ${c.doux}`}>1 mois offert pour chaque filleul qui s'abonne.</p>
+              </button>
+              {offreSuivante && (
+                <button onClick={() => navigate("/parametres#offre")} className="rounded-xl bg-[#0f1b3a] p-5 text-left text-white">
+                  <Crown size={20} className="text-[#DEC2A3]" />
+                  <p className="mt-2 text-[15px] font-semibold">{actif ? `Passer à ${offreSuivante.nom}` : "Activer mon offre"}</p>
+                  <p className="mt-1 text-[12.5px] text-white/70">{offreSuivante.points?.slice(1, 3).join(" · ")}</p>
+                  <span className="mt-4 block rounded-lg bg-white py-2 text-center text-[13px] font-semibold text-[#0f1b3a]">Voir</span>
+                </button>
+              )}
             </div>
+          </Rubrique>
 
-            <Titre>Mon entreprise</Titre>
-            <button onClick={() => navigate("/parametres#compte")} className="glass flex w-full items-center gap-3 rounded-2xl p-4 text-left hover:border-gold/40" data-testid="compte-entreprise">
-              <Building2 size={20} className="text-gold" />
-              <span className="min-w-0 flex-1">
-                <span className="block font-semibold">{d.org?.nom || "Déclarer mon entreprise"}</span>
-                <span className="block truncate text-xs text-offwhite/55">{d.org ? [d.org.siret && `SIRET ${d.org.siret}`, d.org.details?.naf_libelle].filter(Boolean).join(" · ") : "Nom ou SIRET : sert à ton actualité légale et à ta veille"}</span>
-              </span>
-              <ChevronRight size={17} className="text-offwhite/45" />
-            </button>
-          </div>
+          <Rubrique titre="Ma rentabilité">
+            <Ligne Icone={TrendingUp} label="Analyse financière de mon entreprise" sous="Chiffre d'affaires, marges, trésorerie, point mort" badge="bientôt" onClick={() => toast("En préparation : envoie-nous ton exemple d'analyse.")} testid="compte-rentabilite" />
+          </Rubrique>
 
-          <div>
-            <Titre>Mes factures & achats</Titre>
-            <Ligne Icone={Receipt} label={`Factures d'abonnement`} onClick={() => navigate("/parametres#offre")} testid="compte-factures" />
-            {d.commandes.length > 0 && <div className="mt-3"><Ligne Icone={Sparkles} label={`Mes achats (${d.commandes.length})`} onClick={() => navigate("/mon-espace")} testid="compte-achats" /></div>}
+          <Rubrique titre="Nos services">
+            <Ligne Icone={Compass} label="Mon diagnostic d'équilibre" sous="3 minutes · 8 domaines · tes 2 priorités" onClick={() => navigate("/app/diagnostic")} testid="compte-diagnostic" />
+            <Ligne Icone={LifeBuoy} label="Un expert Zayado avec moi" sous="Demande d'aide et suivi de tes demandes" onClick={() => navigate("/app/collaborateurs")} testid="compte-collaborateurs" />
+          </Rubrique>
 
-            <Titre>Mon profil</Titre>
-            <div className="space-y-3">
-              <Ligne Icone={User} label="Informations" onClick={() => navigate("/parametres#compte")} testid="compte-infos" />
-              <Ligne Icone={Bell} label="Préférences et confidentialité" onClick={() => navigate("/parametres#notifications")} testid="compte-preferences" />
-              <Ligne Icone={Download} label="Télécharger mes données" onClick={async () => { try { await telechargerExport(); } catch { toast.error("Export impossible pour le moment."); } }} testid="compte-export" />
-            </div>
+          <Rubrique titre="Mon profil">
+            <Ligne Icone={User} label="Informations" onClick={() => navigate("/parametres#compte")} testid="compte-infos" />
+            <Ligne Icone={Building2} label={d.org?.nom ? `Mon entreprise · ${d.org.nom}` : "Déclarer mon entreprise"} onClick={() => navigate("/parametres#compte")} testid="compte-entreprise" />
+            <Ligne Icone={Bell} label="Préférences et confidentialité" onClick={() => navigate("/parametres#notifications")} testid="compte-preferences" />
+            <Ligne Icone={Download} label="Télécharger mes données" onClick={async () => { try { await telechargerExport(); } catch { toast.error("Export impossible pour le moment."); } }} testid="compte-export" />
+          </Rubrique>
 
-            <Titre>Besoin d'aide</Titre>
-            <Ligne Icone={LifeBuoy} label="Écrire à l'équipe Zayado" onClick={() => navigate("/app/collaborateurs")} testid="compte-aide" />
-          </div>
-        </div>
+          <Rubrique titre="Besoin d'aide">
+            <Ligne Icone={LifeBuoy} label="Contacter l'équipe Zayado" onClick={() => window.open("mailto:contact@zayado.net", "_self")} testid="compte-aide" />
+          </Rubrique>
+
+          <button onClick={deconnexion} className={`mt-10 inline-flex items-center gap-2 text-[15px] ${c.titre}`} data-testid="compte-deconnexion">Se déconnecter <LogOut size={17} /></button>
+        </main>
       </div>
-    </main>
+    </div>
   );
 }

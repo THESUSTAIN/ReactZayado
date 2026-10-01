@@ -839,7 +839,7 @@ function SectionConnexions() {
       </Carte>
 
       <CarteTeams />
-      <CarteZayadoRH equipe={equipe} />
+      {equipe && <CarteZayadoRH equipe={equipe} />}
       <IntegrationsSection />
     </>
   );

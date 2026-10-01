@@ -4,14 +4,14 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import * as SliderPrimitive from "@radix-ui/react-slider";
 import { useKairos } from "@/context/KairosContext";
 import { valuesLibrary } from "@/mock/data";
-import { saveProfile, savePouls, postCheckin, fetchTarifsFondateur, fetchState, fetchRadar } from "@/lib/kairosApi";
+import { saveProfile, savePouls, postCheckin, fetchTarifsFondateur, fetchState } from "@/lib/kairosApi";
 import { toast } from "sonner";
 import { PLANS, PLANS_LANCEMENT, PLAN_ENTREPRISE, prixFondateurMois, ESSAI, essaiDuree, essaiPeriode } from "@/lib/plans";
 import { lancerPaiement } from "@/lib/checkout";
 import { THESUSTAIN_URL } from "@/components/kairos/TheSustainInfo";
 import {
   Sparkles, ArrowRight, ArrowLeft, Plus, Check, Loader2, Rocket, Briefcase, MessagesSquare, ShoppingBag,
-  Building2, Hammer, HeartPulse, Laptop, Palette, UtensilsCrossed, Flame, Zap, CalendarDays, Clock, Info, HeartHandshake,
+  Building2, Hammer, HeartPulse, Laptop, Palette, UtensilsCrossed, Flame, Zap, CalendarDays, Clock, Info, HeartHandshake, Lock,
 } from "lucide-react";
 
 // Onboarding « jeu » : une question par écran, des choix à toucher, très peu de
@@ -153,7 +153,7 @@ export default function Onboarding() {
     const etape = Math.min(Number(b.i) || 0, ETAPES.length - 1);
     setI(etape);
     const reste = NB - etape;
-    setRetourMsg(`Te revoilà ! Il te reste ${reste} question${reste > 1 ? "s" : ""}, on reprend là où tu t'étais arrêté·e.`);
+    setRetourMsg(reste > 0 ? `Te revoilà ! Il te reste ${reste} question${reste > 1 ? "s" : ""}, on reprend là où tu t'étais arrêté·e.` : "Te revoilà ! Tout est prêt, il ne reste que la validation.");
     return true;
   };
 
@@ -276,16 +276,9 @@ export default function Onboarding() {
       return;
     }
     try { localStorage.removeItem(CLE_BROUILLON); } catch { /* stockage indisponible */ }
-    // Effet « waouh » : une première opportunité RÉELLE tirée des réponses, avant le paiement.
-    let premiere = null;
-    try {
-      const r = await Promise.race([fetchRadar(false), new Promise((_, ko) => setTimeout(() => ko(new Error("lent")), 25000))]);
-      // Jamais un modèle générique (repli sans IA) : seulement une vraie piste.
-      premiere = (r?.opportunities || []).find((o) => o && o.titre && !o.modele) || null;
-    } catch { /* pas grave : on passe directement à la suite */ }
-    await new Promise((resolve) => setTimeout(resolve, Math.max(0, 1800 - (Date.now() - startedAt))));
+    // Paiement tout de suite : le « merci, ton cockpit se prépare » s'affiche au retour (page /activer).
+    await new Promise((resolve) => setTimeout(resolve, Math.max(0, 900 - (Date.now() - startedAt))));
     setOnboardingData({ vision: visionTexte.join(", "), why: moteur, goals, values, checkinHour: rappel, plan });
-    if (premiere) { setSaving(false); setWaouh(premiere); return; }
     await allerPaiement();
   };
 
@@ -324,7 +317,7 @@ export default function Onboarding() {
     valeurs: ["Qu'est-ce qui compte pour toi ?", "Jusqu'à 5 valeurs."],
     sens: ["Envie d'aller plus loin sur le sens ?", null],
     offre: ["Choisis ta formule", `Solo : ${essaiDuree()} pour ${ESSAI.prix} €, puis tarif fondateur. Sans engagement.`],
-    pret: ["Ton récap", "Un coup d'œil, et je prépare ton cockpit avec ces réponses."],
+    pret: ["Ton récap", "Dernière étape : le paiement sécurisé. Ton cockpit se prépare dès qu'il est validé."],
   };
 
   return (
@@ -615,12 +608,13 @@ export default function Onboarding() {
       {/* Gros bouton en bas, toujours au même endroit */}
       <div className="fixed inset-x-0 bottom-0 z-20 bg-gradient-to-t from-[#0a1230] via-[#0a1230]/90 to-transparent px-4 pb-5 pt-8">
         <div className="mx-auto max-w-lg">
-          {etape === "pret" ? (
+          {etape === "pret" ? (<>
             <button onClick={finish} disabled={saving} data-testid="onboarding-finish"
               className="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-[#F4EFE6] text-lg font-bold text-navy-900 shadow-lg transition hover:brightness-105 disabled:opacity-60">
-              {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <>Créer mon cockpit <Rocket className="h-5 w-5" /></>}
+              {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : plan === "entreprise" ? <>Envoyer ma demande <Rocket className="h-5 w-5" /></> : <>Payer et activer mon cockpit <Lock className="h-5 w-5" /></>}
             </button>
-          ) : (
+            {plan !== "entreprise" && <p className="mt-2 text-center text-[11.5px] text-offwhite/50" data-testid="onboarding-reassurance">Paiement sécurisé Mollie · sans engagement · tu reviens ici juste après</p>}
+          </>) : (
             <button onClick={suivant} disabled={!peutContinuer} data-testid="onboarding-next"
               className="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-[#F4EFE6] text-lg font-bold text-navy-900 shadow-lg transition hover:brightness-105 disabled:opacity-40">
               {etape === "intro" ? "C'est parti" : "Continuer"} <ArrowRight className="h-5 w-5" />
@@ -655,9 +649,9 @@ export default function Onboarding() {
             <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gold/15 ring-1 ring-gold/30">
               <Sparkles className="h-8 w-8 animate-pulse text-gold" />
             </div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Zayado prépare ton espace</p>
-            <h2 className="mt-3 font-display text-2xl font-bold text-offwhite">On relie tes réponses</h2>
-            <p className="mt-2 text-sm text-offwhite/60">{["Lecture de ta vision…", "Structuration de tes objectifs…", "Préparation de ton cockpit…", "Dernières vérifications…"][savePhase]}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Tes réponses sont enregistrées</p>
+            <h2 className="mt-3 font-display text-2xl font-bold text-offwhite">Direction le paiement sécurisé</h2>
+            <p className="mt-2 text-sm text-offwhite/60">{["Enregistrement de ta vision…", "Enregistrement de tes objectifs…", "Ouverture du paiement Mollie…", "Encore un instant…"][savePhase]}</p>
             <div className="mt-6 h-2 overflow-hidden rounded-full bg-white/10"><div className="onboarding-progress-shimmer h-full rounded-full bg-gold" /></div>
           </div>
         </div>

@@ -355,6 +355,18 @@ export const transfererCompteDemo = (email, tables) => jsend("/admin/compte-demo
 export const fetchAgentsBusiness = () => jget("/agent-business");
 export const creerAgentBusiness = (data) => jsend("/agent-business", "POST", data);
 export const modifierAgentBusiness = (id, data) => jsend(`/agent-business/${id}`, "PUT", data);
+// « Mes agents » : agents IA personnalisés (modèles, missions, branchement sur l'Agent Business).
+export const fetchModelesAgents = () => jget("/agents-perso/modeles");
+export const fetchMesAgents = () => jget("/agents-perso");
+export const creerMonAgent = (data) => jsendDetail("/agents-perso", "POST", data);
+export const modifierMonAgent = (id, data) => jsendDetail(`/agents-perso/${id}`, "PUT", data);
+export const supprimerMonAgent = (id) => jsendDetail(`/agents-perso/${id}`, "DELETE");
+export const historiqueMonAgent = (id) => jsendDetail(`/agents-perso/${id}/historique`, "GET");
+export const effacerHistoriqueMonAgent = (id) => jsendDetail(`/agents-perso/${id}/historique`, "DELETE");
+export const discuterMonAgent = (id, message) => jsendDetail(`/agents-perso/${id}/chat`, "POST", { message });
+export const brancherMonAgent = (id, chatbot_id) => jsendDetail(`/agents-perso/${id}/brancher`, "POST", { chatbot_id });
+export const fetchPublicationChatbot = (id) => jsendDetail(`/agent-business/${id}/publication`, "GET");
+export const publierChatbot = (id, publier) => jsendDetail(`/agent-business/${id}/publication`, "POST", { publier });
 export const testerAgentBusiness = (id, message, historique) =>
   jsend(`/agent-business/${id}/tester`, "POST", { message, historique });
 

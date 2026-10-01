@@ -272,7 +272,7 @@ _IA_PAYANTE = ("/api/copilote/chat", "/api/vision/ai-doc", "/api/vision/generate
 
 def _ia_payante(request) -> bool:
     path, m = request.url.path, request.method
-    if m == "POST" and (path in _IA_PAYANTE or (path.startswith("/api/agent-business/") and path.endswith("/tester"))):
+    if m == "POST" and (path in _IA_PAYANTE or (path.startswith(("/api/agent-business/", "/api/agents-perso/")) and path.endswith(("/tester", "/chat")))):
         return True
     # Le Radar reste consultable (1er aperçu en fin d'onboarding), mais la relance forcée est payante.
     return path == "/api/cockpit/radar" and request.query_params.get("refresh") in ("true", "1")
@@ -5640,7 +5640,14 @@ async def tester_agent_business(agent_id: str, body: AgentTestIn, db: AsyncSessi
         historique.append(f"{role} : {str(h.get('texte', ''))[:1500]}")
     consigne = ((("Conversation jusqu'ici :\n" + "\n".join(historique) + "\n\n") if historique else "")
                 + f"Nouveau message du client : {question}")
-    client = _client_llm(f"agent-{a.id}-{uuid.uuid4().hex[:8]}", _consigne_agent(a))
+    systeme = _consigne_agent(a)
+    f_renfort = globals().get("_renfort_agent_business")
+    if f_renfort:
+        try:
+            systeme += await f_renfort(db, a)
+        except Exception:  # noqa: BLE001
+            pass
+    client = _client_llm(f"agent-{a.id}-{uuid.uuid4().hex[:8]}", systeme)
     if client is None:
         return {"reponse": "Merci pour votre message ! Je le transmets à l'équipe, qui vous répondra rapidement.",
                 "ia": False}
@@ -5777,6 +5784,9 @@ async def admin_diagnostics():
         "branchements": branchements,
     }
 
+
+from agents_perso_ext import install_agents_perso  # noqa: E402
+install_agents_perso(globals())
 
 app.include_router(api)
 app.include_router(heygen_router, prefix="/api")

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import MesAgents from "@/components/agents/MesAgents";
 import { Sidebar } from "@/components/kairos/Sidebar";
 import { Header } from "@/components/kairos/Header";
 import { Bot, Mail, Sparkles, Users, Briefcase, PenTool, Search, TrendingUp } from "lucide-react";
@@ -23,7 +24,7 @@ const AI_AGENTS = [
 
 export default function Agents() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState("agents"); // agents | canaux
+  const [tab, setTab] = useState(() => (new URLSearchParams(window.location.search).get("tab") || "mes")); // mes | agents | canaux
 
   const ouvrirAgent = (a) => {
     if (a.ouvrir === "chat") openChat();
@@ -35,26 +36,32 @@ export default function Agents() {
     <div className="min-h-screen">
       <Sidebar />
       <div className="lg:pl-[92px]">
-        <Header title="Agents IA" subtitle="Ton équipe IA, connectée à toi." />
+        <Header title="Agents IA" subtitle="Crée tes propres agents, confie-leur des missions." />
 
         <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
           {/* Hero */}
           <div className="mb-6 rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-6 sm:p-8">
             <p className="text-[10.5px] font-semibold uppercase tracking-[0.24em]" style={{ color: GOLD }}>Ton équipe étendue</p>
             <h1 className="mt-2 font-display text-[28px] font-semibold leading-tight sm:text-[36px]">
-              Des <span className="font-serif-italic italic" style={{ color: GOLD }}>agents IA</span>, un ton doux, des canaux <span className="font-serif-italic italic" style={{ color: GOLD }}>humains.</span>
+              Tes <span className="font-serif-italic italic" style={{ color: GOLD }}>agents IA</span>, à ta façon.
             </h1>
             <p className="mt-3 max-w-2xl text-[14px] leading-relaxed text-white/60">
-              Zayado n'est pas un seul robot : le <b className="text-white">Copilote IA</b> et des agents spécialisés travaillent chacun dans leur espace de l'app, et tu valides depuis tes canaux (WhatsApp, Telegram, Email) pour rester joignable partout.
+              Crée un agent en 1 clic à partir d'un modèle (commercial, contenu, finances…), donne-lui tes consignes et confie-lui une mission chaque jour.
+              Branche-le sur ton <b className="text-white">Agent Business</b> pour qu'il réponde aussi à tes clients, sur ton site.
             </p>
           </div>
 
           {/* Tabs */}
           <div className="mb-6 inline-flex rounded-full border border-white/15 bg-white/5 p-1">
+            <button onClick={() => setTab("mes")} data-testid="agents-tab-mes"
+              className={`rounded-full px-5 py-2 text-[13px] font-semibold transition ${tab === "mes" ? "text-navy-900" : "text-white/70 hover:text-white"}`}
+              style={tab === "mes" ? { background: GOLD } : {}}>
+              Mes agents
+            </button>
             <button onClick={() => setTab("agents")}
               className={`rounded-full px-5 py-2 text-[13px] font-semibold transition ${tab === "agents" ? "text-navy-900" : "text-white/70 hover:text-white"}`}
               style={tab === "agents" ? { background: GOLD } : {}}>
-              Agents IA
+              Intégrés
             </button>
             <button onClick={() => setTab("canaux")}
               className={`rounded-full px-5 py-2 text-[13px] font-semibold transition ${tab === "canaux" ? "text-navy-900" : "text-white/70 hover:text-white"}`}
@@ -63,7 +70,9 @@ export default function Agents() {
             </button>
           </div>
 
-          {/* Agents */}
+          {tab === "mes" && <MesAgents />}
+
+          {/* Agents intégrés à Zayado */}
           {tab === "agents" && (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {AI_AGENTS.map((a) => (

@@ -10,7 +10,10 @@ import { toast } from "sonner";
 import { PLANS, prixFondateurMois, dateFinFr } from "@/lib/plans";
 import {
   fetchAgentsBusiness, creerAgentBusiness, modifierAgentBusiness, testerAgentBusiness, fetchTarifsFondateur,
+  fetchPublicationChatbot, publierChatbot, fetchMesAgents,
 } from "@/lib/kairosApi";
+import { Link } from "react-router-dom";
+import { Copy, ExternalLink, Globe, Plug } from "lucide-react";
 
 const GOLD = "#DEC2A3";
 const VIDE = {
@@ -147,7 +150,7 @@ export default function ChatbotB2B() {
 
           {/* Onglets */}
           <div className="mb-5 inline-flex rounded-full border border-white/15 bg-white/5 p-1">
-            {[{ id: "config", label: "Configuration", Icon: Settings }, { id: "test", label: "Tester", Icon: Play }, { id: "plan", label: "Offres", Icon: TrendingUp }].map((t) => (
+            {[{ id: "config", label: "Configuration", Icon: Settings }, { id: "test", label: "Tester", Icon: Play }, { id: "publier", label: "Publier", Icon: Globe }, { id: "plan", label: "Offres", Icon: TrendingUp }].map((t) => (
               <button key={t.id} onClick={() => setTab(t.id)}
                 className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-[12.5px] font-semibold transition ${tab === t.id ? "text-navy-900" : "text-white/70 hover:text-white"}`}
                 style={tab === t.id ? { background: GOLD } : {}}>
@@ -221,7 +224,7 @@ export default function ChatbotB2B() {
                         {["Donne à l'agent tes informations : offres, tarifs, horaires, FAQ.",
                           "Teste-le dans l'onglet « Tester » avec les vraies questions de tes clients.",
                           "Ajuste tes informations jusqu'à ce que les réponses te conviennent.",
-                          "Zayado l'installe sur ton site à ta marque."].map((t, i) => (
+                          "Publie-le : un lien à partager ou un code à coller sur ton site (onglet « Publier »)."].map((t, i) => (
                           <li key={t} className="flex gap-2.5">
                             <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10.5px] font-bold text-navy-900" style={{ background: GOLD }}>{i + 1}</span>
                             <span>{t}</span>
@@ -236,6 +239,8 @@ export default function ChatbotB2B() {
                   </div>
                 </div>
               )}
+
+              {tab === "publier" && <Publication agent={agent} onConfig={() => setTab("config")} />}
 
               {tab === "test" && (
                 agent
@@ -394,6 +399,72 @@ function TestConversation({ agent, modifie, couleur, onEnregistrer }) {
         <p className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-[12px] text-white/55">
           C'est une vraie conversation avec l'IA, à partir de ta base de connaissance. Pose aussi une question dont la réponse n'y figure pas : l'agent doit le reconnaître et proposer de transmettre la demande.
         </p>
+      </div>
+    </div>
+  );
+}
+
+// Publier l'Agent Business : lien public + code à intégrer, et agent « cerveau » branché.
+function Publication({ agent, onConfig }) {
+  const [pub, setPub] = useState(null);
+  const [cerveau, setCerveau] = useState(undefined);
+  const [envoi, setEnvoi] = useState(false);
+  useEffect(() => {
+    if (!agent) return;
+    fetchPublicationChatbot(agent.id).then(setPub).catch(() => setPub({ publie: false }));
+    fetchMesAgents().then((r) => setCerveau((r.agents || []).find((a) => a.chatbot_id === agent.id) || null)).catch(() => setCerveau(null));
+  }, [agent]);
+  if (!agent) {
+    return (
+      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-[13.5px] text-white/70">
+        Crée d'abord ton agent dans l'onglet Configuration. <button onClick={onConfig} className="font-semibold text-gold underline">Configurer</button>
+      </div>
+    );
+  }
+  const basculer = async (publier) => {
+    setEnvoi(true);
+    try { setPub(await publierChatbot(agent.id, publier)); toast.success(publier ? "Ton assistant est en ligne." : "Ton assistant est hors ligne."); }
+    catch (e) { toast.error(e.detail || "Impossible pour le moment."); }
+    finally { setEnvoi(false); }
+  };
+  const copier = (t) => { navigator.clipboard?.writeText(t).then(() => toast.success("Copié."), () => toast.error("Copie impossible.")); };
+  return (
+    <div className="grid gap-4 lg:grid-cols-5" data-testid="chatbot-publication">
+      <div className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.04] p-6 lg:col-span-3">
+        <h3 className="font-display text-[16px] font-semibold text-white">Mettre ton assistant en ligne</h3>
+        <p className="text-[13px] text-white/60">Tes clients discutent avec lui depuis un lien (à mettre dans ta bio, tes e-mails, un QR code) ou directement sur ton site.</p>
+        {pub === null ? <Loader2 size={16} className="animate-spin text-white/50" /> : pub.publie ? (
+          <>
+            <div>
+              <label className={etiquette}>Lien à partager</label>
+              <div className="mt-1.5 flex gap-2">
+                <input readOnly value={pub.url} className="min-w-0 flex-1 rounded-xl border border-white/15 bg-white/5 px-3.5 py-2.5 text-[12.5px] text-white" data-testid="chatbot-lien" />
+                <button onClick={() => copier(pub.url)} className="rounded-xl border border-white/20 px-3 text-white/80 hover:bg-white/10" title="Copier"><Copy size={15} /></button>
+                <a href={pub.url} target="_blank" rel="noopener noreferrer" className="flex items-center rounded-xl border border-white/20 px-3 text-white/80 hover:bg-white/10" title="Ouvrir"><ExternalLink size={15} /></a>
+              </div>
+            </div>
+            <div>
+              <label className={etiquette}>Code à coller sur ton site (Shopify, WordPress, Wix…)</label>
+              <textarea readOnly rows={3} value={pub.iframe} className="mt-1.5 w-full rounded-xl border border-white/15 bg-white/5 px-3.5 py-2.5 font-mono text-[11.5px] text-white/80" />
+              <button onClick={() => copier(pub.iframe)} className="mt-1 inline-flex items-center gap-1.5 text-[12px] font-semibold text-gold"><Copy size={12} /> Copier le code</button>
+            </div>
+            <button onClick={() => basculer(false)} disabled={envoi} className="rounded-xl border border-white/20 px-4 py-2 text-[12.5px] text-white/70 hover:text-white" data-testid="chatbot-depublier">Mettre hors ligne</button>
+          </>
+        ) : (
+          <button onClick={() => basculer(true)} disabled={envoi} className="inline-flex items-center gap-2 rounded-xl bg-gold px-5 py-2.5 text-[13px] font-semibold text-navy-900 disabled:opacity-60" data-testid="chatbot-publier">
+            {envoi ? <Loader2 size={14} className="animate-spin" /> : <Globe size={14} />} Mettre en ligne
+          </button>
+        )}
+        <p className="text-[11.5px] text-white/40">Protégé contre les abus (nombre de messages limité par visiteur et par jour). Il se met en pause si ton offre n'est plus active.</p>
+      </div>
+      <div className="rounded-2xl border border-gold/30 bg-gold/[0.06] p-6 lg:col-span-2" data-testid="chatbot-cerveau">
+        <h3 className="flex items-center gap-2 font-display text-[15px] font-semibold text-white"><Plug size={16} style={{ color: GOLD }} /> Son « cerveau »</h3>
+        {cerveau === undefined ? <Loader2 size={16} className="mt-3 animate-spin text-white/50" /> : cerveau ? (
+          <p className="mt-2 text-[13px] text-white/70">Il suit les consignes de ton agent <b className="text-white">{cerveau.nom}</b>, en plus des infos de ton entreprise.</p>
+        ) : (
+          <p className="mt-2 text-[13px] text-white/70">Tu peux lui brancher un de tes agents IA (ex. ton assistant commercial) pour qu'il réponde avec ses consignes et son savoir-faire.</p>
+        )}
+        <Link to="/app/agents" className="mt-3 inline-flex text-[12.5px] font-semibold text-gold hover:underline">{cerveau ? "Changer dans Mes agents →" : "Brancher un agent →"}</Link>
       </div>
     </div>
   );

@@ -12,6 +12,8 @@ import { useKairos } from "@/context/KairosContext";
 
 // Agent Business (chatbot client) : inclus à partir de l'offre Pro.
 export const OFFRES_AGENT = ["pro", "business", "entreprise"];
+// « Agents IA » (mes agents + Agent Business) : dès l'offre Solo.
+export const OFFRES_AGENTS_IA = ["serenite", "pro", "business", "entreprise"];
 
 // Forme "île" avec scoops (encoches en haut/bas) — portée depuis
 // cap-vivant-scoops-light, un projet précédent où elle existait déjà.
@@ -28,7 +30,7 @@ const ITEMS = [
   // ✝️ Ma Foi (par TheSustain) — module spirituel optionnel, ajouté de façon additive.
   { key: "mafoi", name: "Ma Foi", Icon: HandHeart },
   // Agent Business : produit à part (chatbot pour TES clients), visible à partir de Pro.
-  { key: "agent", name: "Agent Business", Icon: Bot },
+  { key: "agent", name: "Agents IA", Icon: Bot },
   // « Collaborateur » retiré du rail (doublon) : le même accès existe déjà
   // via le bouton « Collaborateur » en haut du chat IA, présent partout.
 ];
@@ -52,7 +54,7 @@ export function Sidebar() {
   // Agent Business : seulement pour les offres qui l'incluent.
   const visible = (key) => {
     if (key === "mafoi") return contexte?.parcours_foi === true;
-    if (key === "agent") return !!abo && OFFRES_AGENT.includes(abo.plan) && (abo.acces === undefined || abo.acces === "actif");
+    if (key === "agent") return !!abo && OFFRES_AGENTS_IA.includes(abo.plan) && (abo.acces === undefined || abo.acces === "actif");
     return true;
   };
   const itemsAvecAlerte = ITEMS.filter((item) => visible(item.key)).map((item) => item.key === "today" ? { ...item, alert: actualiteNonVue } : item);
@@ -62,7 +64,7 @@ export function Sidebar() {
     if (location.pathname.startsWith("/app/vision")) return "vision";
     if (location.pathname.startsWith("/app/bien-etre")) return "wellbeing";
     if (location.pathname.startsWith("/app/ma-foi")) return "mafoi";
-    if (location.pathname.startsWith("/app/chatbot-b2b")) return "agent";
+    if (location.pathname.startsWith("/app/chatbot-b2b") || location.pathname.startsWith("/app/agents")) return "agent";
     if (location.pathname.startsWith("/app/actions") || location.pathname.startsWith("/app/processus")
       || location.pathname.startsWith("/app/ideas") || location.pathname.startsWith("/app/sources")) return "actions";
     if (location.pathname.startsWith("/app/collaborateurs")) return "collab";
@@ -93,7 +95,7 @@ export function Sidebar() {
     else if (key === "review") navigate("/app/revue");
     else if (key === "wellbeing") navigate("/app/bien-etre");
     else if (key === "mafoi") navigate("/app/ma-foi");
-    else if (key === "agent") navigate("/app/chatbot-b2b");
+    else if (key === "agent") navigate("/app/agents");
   };
 
   return (

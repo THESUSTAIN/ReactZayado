@@ -15,7 +15,7 @@ const PRINCIPAUX = [
 const PLUS = [
   { key: "wellbeing", label: "Bien-être & Mindset", Icon: Heart, path: "/app/bien-etre" },
   { key: "mafoi", label: "Ma Foi", Icon: HandHeart, path: "/app/ma-foi" },
-  { key: "agent", label: "Agent Business", Icon: Bot, path: "/app/chatbot-b2b" },
+  { key: "agent", label: "Agents IA", Icon: Bot, path: "/app/agents" },
   { key: "review", label: "Revue hebdo", Icon: CalendarCheck, path: "/app/revue" },
   { key: "settings", label: "Paramètres", Icon: Settings, path: "/parametres" },
 ];
@@ -29,7 +29,7 @@ export function BottomNav() {
   const { contexte } = useKairos();
   useEffect(() => { chargerAbonnement().then((a) => { setPlan(a.plan); setAcces(a.acces); }).catch(() => {}); }, []);
   const visible = (k) => (k === "mafoi" ? contexte?.parcours_foi === true
-    : k === "agent" ? ["pro", "business", "entreprise"].includes(plan) && (acces == null || acces === "actif") : true);
+    : k === "agent" ? ["serenite", "pro", "business", "entreprise"].includes(plan) && (acces == null || acces === "actif") : true);
   const masque = pathname.startsWith("/app/vision") && new URLSearchParams(search).get("view");
   useEffect(() => {
     document.body.classList.toggle("avec-nav-bas", !masque);
