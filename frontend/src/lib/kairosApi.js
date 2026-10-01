@@ -545,6 +545,7 @@ export const deciderFoiSignalement = (postId, decision) => jsendMsg(`/admin/foi/
 // Admin : équipe Zayado, fiche 360°, à traiter, journal, actions en groupe, export
 export const fetchAdminEquipe = () => jget("/admin/equipe");
 // Espace Pro : collègues rattachés à l'entreprise (Admin › Équipe).
+export const testerEmailAdmin = () => jsendDetail("/admin/email/test", "POST", {});
 export const fetchMembresEntreprise = () => jsendDetail("/admin/entreprise/membres", "GET");
 export const ajouterMembreEntreprise = (data) => jsendDetail("/admin/entreprise/membres", "POST", data);
 export const retirerMembreEntreprise = (email) => jsendDetail(`/admin/entreprise/membres/${encodeURIComponent(email)}`, "DELETE");

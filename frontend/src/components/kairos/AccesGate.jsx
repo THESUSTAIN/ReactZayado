@@ -2,7 +2,8 @@ import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { fetchState, getToken } from "@/lib/kairosApi";
-import { chargerAbonnement, oublierAbonnement, pageAutorisee } from "@/lib/acces";
+import { chargerAbonnement, oublierAbonnement } from "@/lib/acces";
+import { aDroit, moduleDePage, NOMS_OFFRES, offreMin, planEffectif } from "@/lib/droits";
 import { accueilPro, chargerEspace, enPro, pagesPro } from "@/lib/espace";
 
 // Plus d'offre gratuite : sans offre active (ni rôle interne), l'espace /app
@@ -33,15 +34,17 @@ export default function AccesGate() {
           .catch(() => navigate("/activer", { replace: true }));
         return;
       }
-      if (!pageAutorisee(a.plan, pathname)) {
-        navigate("/app/vision", { replace: true });
-        if (pathname !== "/app") {
-          toast("Cette partie est incluse dans l'offre Solo", {
-            id: "reveur-verrou",
-            description: "Ton offre Rêveur comprend la Vision, les Idées et le chat IA.",
-            action: { label: "Voir Solo", onClick: () => navigate("/pricing") },
-          });
-        }
+      // Droits par offre : page au-dessus de l'offre → retour à une page autorisée + verrou expliqué.
+      const plan = planEffectif(a);
+      const mod = moduleDePage(pathname);
+      if (mod && !aDroit(plan, mod)) {
+        const repli = mod === "agent_business" && aDroit(plan, "agents") ? "/app/agents" : aDroit(plan, "cockpit") ? "/app" : "/app/vision";
+        navigate(repli, { replace: true });
+        toast(`Cette partie est incluse dès l'offre ${offreMin(mod)}`, {
+          id: `verrou-${mod}`,
+          description: `Ton offre actuelle : ${NOMS_OFFRES[plan] || plan}.`,
+          action: { label: "Voir les offres", onClick: () => navigate("/pricing") },
+        });
       }
     }).catch(() => {});
   }, [pathname, navigate]);

@@ -32,8 +32,10 @@ export const PLANS = [
     points: ["Tout Solo", "Radar : 90 vrais prospects / mois", "Agent Business : ton chatbot client, à ta marque", "Documents IA : brief, plan 30 j, SWOT", "Alertes WhatsApp & Telegram", "Support prioritaire"],
   },
   {
-    key: "business", nom: "Équipe", mensuel: 149, annuel: 1548, ttc: true,
-    pourQui: "Pour avancer à 2 ou 3 : associé, assistant, commercial",
+    // 99 € pour 3 personnes (Pro + 2 Solo) : 127 € si on les prenait séparément, soit −22 %.
+    key: "business", nom: "Équipe", mensuel: 99, annuel: 990, ttc: true,
+    pourQui: "Pour avancer à 3 : toi + associé, assistant ou commercial",
+    economie: "127 € si pris séparément",
     points: ["Tout Pro pour toi", "2 comptes Solo inclus pour ton équipe (chacun son cockpit, sa Vision et son Radar)", "Radar : 150 vrais prospects / mois pour toi", "3 chatbots clients", "Chatbot qui répond avec tes documents (FAQ, tarifs, procédures)", "Invite ou retire un coéquipier en 1 clic"],
   },
 ];

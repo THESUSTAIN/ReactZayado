@@ -220,14 +220,14 @@ function Ventes({ d }) {
 
 // « Sources du Radar » : état des branchements — réservé aux admins
 // (le backend n'envoie `sources` qu'à un compte admin).
-function Sources({ d }) {
+export function SourcesRadar({ d }) {
   const navigate = useNavigate();
   const icone = (s) => s.actif ? <CheckCircle2 size={16} className="text-emerald-300" />
     : s.etat === "inutile" ? <CircleSlash size={16} className="text-offwhite/35" />
     : <CircleDashed size={16} className="text-gold" />;
   return (
     <GlassCard className="mb-5" data-testid="radar-sources">
-      <p className="mb-3 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-offwhite/60"><Info size={13} /> Admin · branchements du Radar (invisible pour les utilisateurs)</p>
+      <p className="mb-3 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-offwhite/60"><Info size={13} /> Branchements du Radar (visible seulement dans la console admin)</p>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {d.sources.map((s) => (
           <div key={s.cle} data-testid={`radar-source-${s.cle}`} data-etat={s.etat}
@@ -329,7 +329,8 @@ export default function RadarSignaux({ onChange }) {
   return (
     <div data-testid="radar-signaux">
       <Reglages sig={sig} onSaved={apres} />
-      {src?.sources ? <Sources d={src} /> : <AFaire items={src?.a_faire} />}
+      {/* Les branchements techniques (clés, variables) ne s'affichent plus ici : Admin › Branchements. */}
+      <AFaire items={src?.a_faire} />
       <Contacts />
       {!src && sig.manque?.includes("zone") && sig.clientele !== "b2b" && (
         <p className="mb-5 rounded-xl border border-gold/30 bg-gold/10 px-4 py-3 text-[13px] text-offwhite/85">Indique ta ville ci-dessus : les recherches Google, la pub et les ventes seront calculées autour de chez toi.</p>

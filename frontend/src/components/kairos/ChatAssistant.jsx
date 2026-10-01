@@ -6,6 +6,7 @@ import {
   FileDown, UploadCloud, ImagePlus, ListPlus,
 } from "lucide-react";
 import CollaborateurModal from "./CollaborateurModal";
+import { aDroit, usePlanEffectif } from "@/lib/droits";
 import { prendreOngletEnAttente, prendrePromptEnAttente, discuterAvecIA } from "./GlobalChat";
 import CanauxCopilote from "@/components/kairos/CanauxCopilote";
 import { useKairos } from "@/context/KairosContext";
@@ -31,6 +32,19 @@ export async function ouvrirDossierDocuments() {
 }
 
 const URL_DOSSIER = /https:\/\/(drive\.google\.com\/drive\/[^\s]*folders\/[\w-]+[^\s]*|[\w-]+\.sharepoint\.com\/[^\s]+|onedrive\.live\.com\/[^\s]+|1drv\.ms\/[^\s]+)/i;
+// Le chat sert aussi de menu : quand on parle d'une page, un bouton l'ouvre (moins d'entrées dans le menu).
+const PAGES_CHAT = [
+  [/revue|hebdo|bilan de (la )?semaine/i, "Ouvrir ma revue de la semaine", "/app/revue"],
+  [/bien-?être|respiration|médit|rituel|stress|mindset/i, "Ouvrir Bien-être & Mindset", "/app/bien-etre"],
+  [/radar|prospect/i, "Ouvrir le Radar", "/app/radar"],
+  [/plan d'action|mes actions|tâches?|objectifs?|idées?/i, "Ouvrir le Plan d'action", "/app/actions"],
+  [/vision( board)?\b/i, "Ouvrir ma Vision", "/app/vision"],
+  [/agents?( ia)?|chatbot/i, "Ouvrir les Agents IA", "/app/agents"],
+  [/paramètres|réglages|connexions?|drive|onedrive|trello|teams/i, "Ouvrir les Paramètres", "/parametres"],
+  [/mon compte|factures?|abonnement|offre|fidélité|parrain/i, "Ouvrir Mon compte", "/compte"],
+  [/ma foi|prière|verset/i, "Ouvrir Ma Foi", "/app/ma-foi"],
+];
+const pagesCitees = (t) => PAGES_CHAT.filter(([re]) => re.test(t || "")).slice(0, 2);
 const DEMANDE_IMAGE = /\b(image|logo|visuel|illustration|photo|affiche|banni[eè]re|dessin)\b/i;
 const estDocument = (t) => (t || "").length > 450 || /(^|\n)#{1,3} |\n\|.+\|/.test(t || "");
 const titreDocument = (t) => ((t || "").split("\n").find((l) => l.trim()) || "Document").replace(/^#+\s*/, "").replace(/[*_`]/g, "").slice(0, 80);
@@ -40,6 +54,7 @@ const SHORTCUTS = [
   { key: "capture", icon: Lightbulb, label: "Capturer une idée", prompt: "J'ai une idée à capturer, aide-moi à la clarifier en une phrase." },
   { key: "recuperation", icon: BatteryLow, label: "Je suis à plat", prompt: "Je me sens à plat aujourd'hui. Aide-moi à alléger ma journée." },
   { key: "next", icon: Compass, label: "Que faire maintenant ?", prompt: "Compte tenu de mon énergie, que devrais-je faire maintenant ?" },
+  { key: "revue", icon: ListChecks, label: "Ma revue de la semaine", prompt: "Je veux faire ma revue de la semaine." },
   { key: "juridique", icon: Scale, label: "Question juridique", prompt: "J'ai une question juridique. Demande-moi ma situation, les faits utiles, les dates importantes et les documents concernés, puis réponds-moi avec les règles de droit applicables." },
 ];
 
@@ -153,8 +168,10 @@ export function ChatBody({ onClose, estElargi, onToggleTaille, grand = false }) 
 // ranger dans le Drive ; pour une demande d'image : la créer.
 function ActionsMessage({ m, demande, onCopier, onImage, i }) {
   const [envoi, setEnvoi] = useState(null);
+  const plan = usePlanEffectif();
+  const docsOk = !plan || aDroit(plan, "documents");
   const btn = "inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10.5px] font-medium text-offwhite/60 transition hover:border-gold/40 hover:text-gold disabled:opacity-50";
-  const doc = !m.image && estDocument(m.content);
+  const doc = docsOk && !m.image && estDocument(m.content);
   const faire = async (cle, f) => { setEnvoi(cle); try { await f(); } catch (e) { toast.error(e.detail || e.message || "Impossible pour le moment."); } finally { setEnvoi(null); } };
   const titre = titreDocument(m.content);
   const charge = (cle, Icone) => (envoi === cle ? <Loader2 size={11} className="animate-spin" /> : <Icone size={11} />);
@@ -180,7 +197,12 @@ function ActionsMessage({ m, demande, onCopier, onImage, i }) {
           toast.success(`« ${r.nom} » rangé dans ton Drive.`, r.url ? { action: { label: "Ouvrir", onClick: () => window.open(r.url, "_blank", "noopener") } } : undefined);
         })}>{charge("drive", UploadCloud)} Ranger dans mon Drive</button>
       </>)}
-      {DEMANDE_IMAGE.test(demande || "") && (
+      {pagesCitees(demande).map(([, label, chemin]) => (
+        <button key={chemin} className={`${btn} !border-gold/40 !text-gold`} onClick={() => window.location.assign(chemin)} data-testid={`chat-page-${chemin.replace(/\//g, "-")}`}>
+          <ExternalLink size={11} /> {label}
+        </button>
+      ))}
+      {docsOk && DEMANDE_IMAGE.test(demande || "") && (
         <button className={btn} disabled={!!envoi} data-testid={`chat-image-${i}`} onClick={() => faire("image", async () => {
           const r = await creerImageIA(`${demande}\n\nDétails : ${m.content.slice(0, 1200)}`);
           onImage({ src: `data:${r.mime};base64,${r.data}`, data: r.data, mime: r.mime, nom: r.nom, description: demande.slice(0, 120) });

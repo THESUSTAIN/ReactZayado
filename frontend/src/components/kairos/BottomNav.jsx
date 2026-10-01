@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Compass, Radar, CheckSquare, MoreHorizontal, Heart, CalendarCheck, Users, Settings, X, Lock, HandHeart, Bot } from "lucide-react";
-import { chargerAbonnement, MENU_REVEUR } from "@/lib/acces";
+import { chargerAbonnement } from "@/lib/acces";
+import { aDroit, planEffectif } from "@/lib/droits";
 import { useKairos } from "@/context/KairosContext";
 import { chargerEspace, enPro, menusPro } from "@/lib/espace";
 
@@ -17,7 +18,6 @@ const PLUS = [
   { key: "wellbeing", label: "Bien-être & Mindset", Icon: Heart, path: "/app/bien-etre" },
   { key: "mafoi", label: "Ma Foi", Icon: HandHeart, path: "/app/ma-foi" },
   { key: "agent", label: "Agents IA", Icon: Bot, path: "/app/agents" },
-  { key: "review", label: "Revue hebdo", Icon: CalendarCheck, path: "/app/revue" },
   { key: "settings", label: "Paramètres", Icon: Settings, path: "/parametres" },
 ];
 
@@ -28,11 +28,11 @@ export function BottomNav() {
   const [plan, setPlan] = useState(null);
   const [acces, setAcces] = useState(null);
   const { contexte } = useKairos();
-  useEffect(() => { chargerAbonnement().then((a) => { setPlan(a.plan); setAcces(a.acces); }).catch(() => {}); }, []);
+  useEffect(() => { chargerAbonnement().then((a) => { setPlan(planEffectif(a)); setAcces(a.acces); }).catch(() => {}); }, []);
   const [menusEntreprise, setMenusEntreprise] = useState(null);
   useEffect(() => { if (enPro()) chargerEspace().then((e) => setMenusEntreprise(e?.entreprise ? menusPro(e.entreprise.modules) : null)).catch(() => {}); }, []);
   const visible = (k) => menusEntreprise ? (menusEntreprise.includes(k) || k === "settings") : (k === "mafoi" ? contexte?.parcours_foi === true
-    : k === "agent" ? ["serenite", "pro", "business", "entreprise"].includes(plan) && (acces == null || acces === "actif") : true);
+    : true);
   const masque = pathname.startsWith("/app/vision") && new URLSearchParams(search).get("view");
   useEffect(() => {
     document.body.classList.toggle("avec-nav-bas", !masque);
@@ -41,7 +41,8 @@ export function BottomNav() {
   useEffect(() => { setPlus(false); }, [pathname]);
   if (masque) return null;
   const actif = (p) => (p === "/app" ? pathname === "/app" : pathname.startsWith(p));
-  const verrou = (k) => !menusEntreprise && plan === "reveur" && !MENU_REVEUR.includes(k) && k !== "settings";
+  const MOD_MENU = { today: "cockpit", vision: "vision", radar: "radar", actions: "idees", wellbeing: "bienetre", mafoi: "mafoi", agent: "agents" };
+  const verrou = (k) => !menusEntreprise && !!plan && k !== "settings" && !aDroit(plan, MOD_MENU[k]);
   const plusActif = PLUS.some((i) => actif(i.path));
   return (
     <>

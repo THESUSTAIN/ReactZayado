@@ -4,7 +4,8 @@ import {
   LayoutDashboard, Compass, CheckSquare, Heart, Settings, CalendarCheck, Radar, Lock, HandHeart, Bot,
 } from "lucide-react";
 import { chargerEspace, enPro, menusPro } from "@/lib/espace";
-import { chargerAbonnement, MENU_REVEUR } from "@/lib/acces";
+import { chargerAbonnement } from "@/lib/acces";
+import { aDroit, planEffectif } from "@/lib/droits";
 import { BottomNav } from "./BottomNav";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { useI18n } from "@/i18n";
@@ -25,7 +26,6 @@ const ITEMS = [
   { key: "today", name: "Aujourd'hui", Icon: LayoutDashboard },
   { key: "vision", name: "Vision", Icon: Compass },
   { key: "radar", name: "Radar", Icon: Radar },
-  { key: "review", name: "Revue hebdo", Icon: CalendarCheck },
   { key: "actions", name: "Plan d'action", Icon: CheckSquare },
   { key: "wellbeing", name: "Bien-être & Mindset", Icon: Heart },
   // ✝️ Ma Foi (par TheSustain) — module spirituel optionnel, ajouté de façon additive.
@@ -59,7 +59,7 @@ export function Sidebar() {
   const visible = (key) => {
     if (menusEntreprise) return menusEntreprise.includes(key);
     if (key === "mafoi") return contexte?.parcours_foi === true;
-    if (key === "agent") return !!abo && OFFRES_AGENTS_IA.includes(abo.plan) && (abo.acces === undefined || abo.acces === "actif");
+    if (key === "agent") return !!abo;
     return true;
   };
   const itemsAvecAlerte = ITEMS.filter((item) => visible(item.key)).map((item) => item.key === "today" ? { ...item, alert: actualiteNonVue } : item);
@@ -78,8 +78,10 @@ export function Sidebar() {
   }, [location.pathname]);
   const { t } = useI18n();
   const [planActuel, setPlanActuel] = useState(null);
-  useEffect(() => { chargerAbonnement().then((a) => setPlanActuel(a.plan)).catch(() => {}); }, []);
-  const verrouille = (key) => !menusEntreprise && planActuel === "reveur" && !MENU_REVEUR.includes(key);
+  useEffect(() => { chargerAbonnement().then((a) => setPlanActuel(planEffectif(a))).catch(() => {}); }, []);
+  // Verrou « Inclus dès … » selon l'offre (toutes les offres, plus seulement Rêveur).
+  const MOD_MENU = { today: "cockpit", vision: "vision", radar: "radar", actions: "idees", wellbeing: "bienetre", mafoi: "mafoi", agent: "agents" };
+  const verrouille = (key) => !menusEntreprise && !!planActuel && !aDroit(planActuel, MOD_MENU[key]);
   const [active, setActive] = useState(deriveActive());
   useEffect(() => { setActive(deriveActive()); }, [deriveActive]);
 

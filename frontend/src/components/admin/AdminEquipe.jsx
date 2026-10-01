@@ -4,7 +4,7 @@ import { Loader2, Send, Trash2, Search, Flag, Check, ShieldAlert, Building2 } fr
 import { Link } from "react-router-dom";
 import {
   fetchAdminEquipe, inviterEquipe, retirerEquipe, changerRoleUtilisateur,
-  fetchMembresEntreprise, ajouterMembreEntreprise, retirerMembreEntreprise,
+  fetchMembresEntreprise, ajouterMembreEntreprise, retirerMembreEntreprise, testerEmailAdmin,
   fetchAdminJournal, fetchAdminFoiSignalements, deciderFoiSignalement,
 } from "@/lib/kairosApi";
 import { Carte, MOTIFS_ACCES } from "./AdminGestion";
@@ -30,9 +30,12 @@ function EspaceEntreprise({ onPerso }) {
     if (!form.modules.length) { toast.error("Coche au moins un module."); return; }
     setEnvoi(true);
     try {
-      await ajouterMembreEntreprise(form);
-      if (form.perso_offert) await inviterEquipe({ email: form.email, plan: "serenite", motif: "equipe", note: "Collègue (espace perso offert)", envoyer_email: form.envoyer_email });
-      toast.success("Collègue rattaché à l'entreprise.");
+      const r = await ajouterMembreEntreprise(form);
+      // Un seul e-mail (celui de l'espace Pro, qui mentionne aussi l'espace perso offert).
+      if (form.perso_offert) await inviterEquipe({ email: form.email, plan: "serenite", motif: "equipe", note: "Collègue (espace perso offert)", envoyer_email: false });
+      if (!form.envoyer_email) toast.success("Collègue rattaché à l'entreprise.");
+      else if (r.email_envoye) toast.success("Collègue rattaché et prévenu par e-mail.");
+      else toast.warning(`Collègue rattaché, mais l'e-mail n'est PAS parti : ${r.raison_email || "service d'e-mail indisponible"}`, { duration: 10000 });
       setForm({ ...form, email: "" }); charger(); onPerso?.();
     } catch (err) { toast.error(err.detail || err.message || "Impossible."); }
     setEnvoi(false);
@@ -68,7 +71,10 @@ function EspaceEntreprise({ onPerso }) {
           ))}
         </div>
         <label className="flex items-center gap-2 text-xs text-offwhite/70"><input type="checkbox" checked={form.perso_offert} onChange={(e) => setForm({ ...form, perso_offert: e.target.checked })} data-testid="entreprise-perso" /> Lui offrir aussi un espace perso (offre Solo gratuite)</label>
-        <label className="flex items-center gap-2 text-xs text-offwhite/60"><input type="checkbox" checked={form.envoyer_email} onChange={(e) => setForm({ ...form, envoyer_email: e.target.checked })} /> Le prévenir par e-mail</label>
+        <div className="flex flex-wrap items-center gap-4">
+          <label className="flex items-center gap-2 text-xs text-offwhite/60"><input type="checkbox" checked={form.envoyer_email} onChange={(e) => setForm({ ...form, envoyer_email: e.target.checked })} /> Le prévenir par e-mail</label>
+          <button type="button" className={BTN} onClick={async () => { const r = await testerEmailAdmin().catch(() => ({ ok: false, message: "Test impossible." })); r.ok ? toast.success(r.message) : toast.error(r.message, { duration: 10000 }); }} data-testid="admin-email-test">Tester l'envoi d'e-mails</button>
+        </div>
       </form>
       {!!d?.items?.length && (
         <div className="mt-4 overflow-x-auto"><table className="w-full min-w-[640px] text-sm">
@@ -102,7 +108,11 @@ export function AdminEquipe() {
     e.preventDefault();
     if (!form.email.includes("@")) { toast.error("Indique une adresse e-mail."); return; }
     setEnvoi(true);
-    try { const r = await inviterEquipe(form); toast.success(r.message || "C'est fait."); setForm({ ...form, email: "", note: "" }); charger(); }
+    try {
+      const r = await inviterEquipe(form);
+      (r.message || "").includes("NON envoyé") ? toast.warning(r.message, { duration: 10000 }) : toast.success(r.message || "C'est fait.");
+      setForm({ ...form, email: "", note: "" }); charger();
+    }
     catch (err) { toast.error(err.message || "Invitation impossible."); }
     setEnvoi(false);
   };

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import { aDroit, usePlanEffectif } from "@/lib/droits";
 import {
   ArrowLeft, BellRing, Bot, Briefcase, CalendarClock, Loader2, Lock, MessageCircle, PenTool, Plus, Plug,
   Save, Scale, Search, Send, Sparkles, Trash2, TrendingUp, Users, RotateCcw,
@@ -25,6 +26,7 @@ function libelleMission(a) {
 }
 
 export default function MesAgents() {
+  const plan = usePlanEffectif();
   const [d, setD] = useState(null); // { agents, quota, modeles, competences }
   const [chatbots, setChatbots] = useState([]);
   const [ouvert, setOuvert] = useState(null);
@@ -63,7 +65,7 @@ export default function MesAgents() {
       onSupprime={async () => { setOuvert(null); await charger().catch(() => {}); }} />;
   }
 
-  if (d.quota === 0) {
+  if (d.quota === 0 || (plan && !aDroit(plan, "agents"))) {
     return (
       <div className="rounded-2xl border border-gold/30 bg-gold/[0.06] p-6" data-testid="mes-agents-verrou">
         <Lock size={20} style={{ color: GOLD }} />
@@ -78,13 +80,15 @@ export default function MesAgents() {
 
   return (
     <div className="space-y-6" data-testid="mes-agents">
-      <Link to="/app/chatbot-b2b" className="flex items-center gap-4 rounded-2xl border border-gold/30 bg-gold/[0.07] p-4 transition hover:border-gold/60" data-testid="mes-agents-business">
+      <Link to={plan && !aDroit(plan, "agent_business") ? "/pricing" : "/app/chatbot-b2b"} className="flex items-center gap-4 rounded-2xl border border-gold/30 bg-gold/[0.07] p-4 transition hover:border-gold/60" data-testid="mes-agents-business">
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl" style={{ background: `${GOLD}22` }}><MessageCircle size={20} style={{ color: GOLD }} /></span>
         <span className="min-w-0 flex-1">
           <span className="block font-display text-[15px] font-semibold text-white">Agent Business : ton chatbot client</span>
           <span className="block text-[12.5px] text-white/60">{chatbots.length ? `${chatbots[0].nom_marque || "Ton assistant"} répond à tes clients. Configure-le, teste-le, mets-le en ligne.` : "Un assistant à ta marque qui répond à tes clients sur ton site. Inclus dès l'offre Pro."}</span>
         </span>
-        <span className="text-[12.5px] font-semibold text-gold">Ouvrir →</span>
+        {plan && !aDroit(plan, "agent_business")
+          ? <span className="inline-flex items-center gap-1 rounded-full bg-gold/15 px-2.5 py-1 text-[11.5px] font-semibold text-gold" data-testid="mes-agents-business-verrou"><Lock size={12} /> Inclus dès Pro</span>
+          : <span className="text-[12.5px] font-semibold text-gold">Ouvrir →</span>}
       </Link>
       {d.agents.length > 0 && (
         <div>

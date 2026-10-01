@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { chargerAbonnement } from "@/lib/acces";
-import { BatteryMedium, Search, Moon, Sun, Mail, Bell, MessageCircle, Radio, CheckSquare, HelpCircle, Settings, LogOut, User, ChevronDown, CornerDownLeft, Compass, Flame, MailOpen, CalendarCheck } from "lucide-react";
+import { BatteryMedium, Search, Moon, Sun, Mail, Bell, MessageCircle, Radio, CheckSquare, HelpCircle, Settings, LogOut, User, ShieldCheck, ChevronDown, CornerDownLeft, Compass, Flame, MailOpen, CalendarCheck } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuGroup,
@@ -15,9 +15,10 @@ import { EnergyCheckin } from "./EnergyCheckin";
 import { getToken } from "@/lib/kairosApi";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import ChoixEspace from "./ChoixEspace";
+import { apercuPlan, setApercuPlan, NOMS_OFFRES } from "@/lib/droits";
 import { enPro } from "@/lib/espace";
 import { useI18n } from "@/i18n";
-import { fetchActualite, fetchDecisions, setToken, fetchRituels, fetchLettres } from "@/lib/kairosApi";
+import { fetchActualite, fetchDecisions, setToken, fetchRituels, fetchLettres, fetchMoi } from "@/lib/kairosApi";
 import { openChat } from "./GlobalChat";
 import { startTour } from "./GuidedTour";
 
@@ -56,6 +57,9 @@ export function Header() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
+  // Raccourci vers la console admin, en haut à côté des notifications (admins seulement).
+  const [estAdmin, setEstAdmin] = useState(false);
+  useEffect(() => { fetchMoi().then((m) => setEstAdmin(m?.role === "admin")).catch(() => {}); }, []);
   const rappelCheckin = loaded && !aCheckin && !!getToken() && (location.pathname.startsWith("/app") || location.pathname === "/parametres")
     // Sur « Aujourd'hui », la carte Énergie porte déjà le bouton : une seule entrée.
     && location.pathname !== "/app";
@@ -268,6 +272,18 @@ export function Header() {
 
 
 
+        {estAdmin && apercuPlan() && (
+          <button onClick={() => { setApercuPlan(null); window.location.reload(); }} data-testid="apercu-banniere"
+            className="rounded-xl border border-amber-300/50 bg-amber-300/15 px-2.5 py-2 text-[11.5px] font-semibold text-amber-200" title="Revenir à mon accès admin">
+            Aperçu {NOMS_OFFRES[apercuPlan()]} ✕
+          </button>
+        )}
+        {estAdmin && (
+          <button onClick={() => navigate("/admin")} title="Console admin" aria-label="Console admin" data-testid="header-admin"
+            className="rounded-xl border border-gold/30 bg-gold/10 p-2 text-gold transition-colors hover:bg-gold/20">
+            <ShieldCheck className="h-[18px] w-[18px]" />
+          </button>
+        )}
         <DropdownMenu>
           <DropdownMenuTrigger className="relative rounded-xl border border-white/10 bg-white/5 p-2 text-offwhite/70 transition-colors hover:bg-white/10" title={t("header.notifications")} aria-label={t("header.notifications")} data-testid="header-bell">
             <Bell className="h-[18px] w-[18px]" />
@@ -385,6 +401,16 @@ export function Header() {
             <DropdownMenuItem onClick={() => navigate("/parametres")} className="cursor-pointer gap-2 focus:bg-white/10 focus:text-offwhite" data-testid="profile-settings">
               <Settings className="h-4 w-4 text-gold" /> Paramètres
             </DropdownMenuItem>
+            {estAdmin && (
+              <div className="px-2 py-1.5" data-testid="apercu-offre">
+                <p className="px-1 pb-1 text-[10.5px] uppercase tracking-[0.16em] text-offwhite/45">Voir l'app comme</p>
+                <select value={apercuPlan() || ""} onChange={(e) => { setApercuPlan(e.target.value || null); window.location.reload(); }}
+                  className="w-full rounded-lg border border-white/15 bg-white/5 px-2 py-1.5 text-xs text-offwhite" data-testid="apercu-offre-select">
+                  <option value="" className="text-navy-900">Mon accès admin (tout)</option>
+                  {["reveur", "serenite", "pro", "business", "entreprise"].map((k) => <option key={k} value={k} className="text-navy-900">Offre {NOMS_OFFRES[k]}</option>)}
+                </select>
+              </div>
+            )}
             <DropdownMenuItem onClick={() => startTour()} className="cursor-pointer gap-2 focus:bg-white/10 focus:text-offwhite" data-testid="profile-tour">
               <HelpCircle className="h-4 w-4 text-gold" /> Visite guidée
             </DropdownMenuItem>

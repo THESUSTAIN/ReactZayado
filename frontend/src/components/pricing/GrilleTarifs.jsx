@@ -43,6 +43,7 @@ function Carte({ o, cycle, fondateur, embed, onPourquoi }) {
       {o.star && <p className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-gold px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-navy-900">{essai ? `${ESSAI.mois} mois pour ${ESSAI.prix} €` : "Le plus choisi"}</p>}
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">{o.nom}</p>
       <p className="mt-1 text-[12.5px] text-offwhite/60">{o.pourQui}</p>
+      {o.economie && <p className="mt-1 inline-flex rounded-full bg-emerald-400/15 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-300" data-testid={`economie-${o.key}`}>Au lieu de {o.economie}</p>}
       {essai ? (
         <>
           <p className="mt-4 flex items-baseline gap-2 font-display text-4xl font-extrabold" data-testid="pricing-essai">
