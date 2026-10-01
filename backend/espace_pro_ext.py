@@ -194,20 +194,35 @@ def install_espace_pro(g: dict) -> None:
         await db.commit()
         _vider_cache()
         u = (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
-        email_envoye = False
-        if body.envoyer_email and not body.perso_offert:  # avec accès perso, l'invitation « Équipe » part déjà
+        email_envoye, raison = False, None
+        if body.envoyer_email:
             base = g["_frontend_url"]() or f"{request.url.scheme}://{request.headers.get('host', 'app.zayado.net')}"
             lien = f"{base}/login?email={email}" + ("" if u else "&inscription=1")
             html = g["_email_wrap"](
                 f"<p>Bonjour,</p><p>{(moi.email if moi else 'Ton entreprise')} t’a ajouté·e à l’espace <b>{o.nom}</b> sur Zayado.</p>"
                 f"<p>Connecte-toi avec ton adresse habituelle ({email}) : l’espace de l’entreprise s’ouvre directement.</p>"
+                + ("<p>Un espace perso (offre Solo) t’est aussi offert : tu passes de l’un à l’autre en haut de l’écran.</p>" if body.perso_offert else "")
+                + 
                 f"<p><a href=\"{lien}\">Ouvrir l’espace {o.nom}</a></p>")
             try:
                 await g["send_email"](to=email, subject=f"Tu as accès à l'espace {o.nom} sur Zayado", html=html)
                 email_envoye = True
             except Exception as e:  # noqa: BLE001
-                log.warning("Invitation espace pro non envoyée à %s : %s", email, getattr(e, "detail", e))
-        return {"ok": True, "compte": bool(u), "email_envoye": email_envoye}
+                raison = getattr(e, "detail", None) or str(e)
+                log.warning("Invitation espace pro non envoyée à %s : %s", email, raison)
+        return {"ok": True, "compte": bool(u), "email_envoye": email_envoye, "raison_email": raison}
+
+    @api.post("/admin/email/test")
+    async def tester_email(db: AsyncSession = Depends(get_db), _r=admin):
+        """Envoie un e-mail de test à l'admin connecté : pour vérifier que les invitations partent."""
+        moi = await db.get(User, _uid())
+        if not moi or not moi.email:
+            raise HTTPException(400, "Compte sans e-mail.")
+        try:
+            await g["send_email"](to=moi.email, subject="Test d'envoi Zayado", html=g["_email_wrap"]("<p>Si tu lis ceci, les e-mails de Zayado (invitations, rappels) partent bien.</p>"))
+            return {"ok": True, "message": f"E-mail de test envoyé à {moi.email}."}
+        except Exception as e:  # noqa: BLE001
+            return {"ok": False, "message": f"Échec : {getattr(e, 'detail', None) or e}"}
 
     @api.delete("/admin/entreprise/membres/{email}")
     async def retirer_membre(email: str, db: AsyncSession = Depends(get_db), _r=admin):

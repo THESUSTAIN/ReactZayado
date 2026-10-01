@@ -195,7 +195,7 @@ def install_commerce(g: dict) -> None:
                           and p.contexte_metier.get("thesustain_sso"))
         base = {"plan_en_attente": attente, "essai": essai, "thesustain": thesustain,
                 "acces": "actif" if (actif or role_interne or equipe) else "aucun",
-                "en_essai": bool(actif and a.cycle == "essai"), "equipe": equipe}
+                "en_essai": bool(actif and a.cycle == "essai"), "equipe": equipe, "role_interne": role_interne}
         if not a:
             return {"plan": "serenite" if equipe else "essentielle", "fondateur": False, "fin": None, **base,
                     "renouvellement": None}

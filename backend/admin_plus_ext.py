@@ -215,23 +215,37 @@ def install_admin_plus(g: dict) -> None:
         else:
             acces.statut = "invite"
         await db.commit()
-        email_envoye = False
-        if body.envoyer_email and not u:
+        email_envoye, raison = False, None
+        if body.envoyer_email:
             base = g["_frontend_url"]() or f"{request.url.scheme}://{request.headers.get('host', 'app.zayado.net')}"
-            lien = f"{base}/login?email={email}&inscription=1"
             nom_offre = PRICING[body.plan].get("label") if isinstance(PRICING[body.plan], dict) else body.plan
-            html = g["_email_wrap"](
-                f"<p>Bonjour,</p><p>{(moi.email if moi else 'L’équipe Zayado')} t’a ouvert un accès <b>{nom_offre or body.plan}</b> à Zayado, "
-                f"offert, sans carte bancaire.</p><p>Crée ton compte avec cette adresse ({email}) et l’accès s’active tout seul :</p>"
-                f"<p><a href=\"{lien}\">Créer mon compte Zayado</a></p>")
+            de = moi.email if moi else "L’équipe Zayado"
+            if u:
+                # Avant : aucun e-mail quand la personne avait déjà un compte — elle ne savait rien.
+                lien = f"{base}/login?email={email}"
+                html = g["_email_wrap"](
+                    f"<p>Bonjour,</p><p>{de} t’a ouvert l’offre <b>{nom_offre or body.plan}</b> sur Zayado, offerte, sans carte bancaire.</p>"
+                    f"<p>Elle est déjà active sur ton compte ({email}) : il suffit de te connecter.</p>"
+                    f"<p><a href=\"{lien}\">Ouvrir Zayado</a></p>")
+                sujet = "Ton accès Zayado est activé"
+            else:
+                lien = f"{base}/login?email={email}&inscription=1"
+                html = g["_email_wrap"](
+                    f"<p>Bonjour,</p><p>{de} t’a ouvert un accès <b>{nom_offre or body.plan}</b> à Zayado, "
+                    f"offert, sans carte bancaire.</p><p>Crée ton compte avec cette adresse ({email}) et l’accès s’active tout seul :</p>"
+                    f"<p><a href=\"{lien}\">Créer mon compte Zayado</a></p>")
+                sujet = "Ton accès à Zayado est prêt"
             try:
-                await g["send_email"](to=email, subject="Ton accès à Zayado est prêt", html=html)
+                await g["send_email"](to=email, subject=sujet, html=html)
                 email_envoye = True
             except Exception as e:  # noqa: BLE001
+                raison = getattr(e, "detail", None) or str(e)
                 if log:
-                    log.warning("Invitation équipe non envoyée à %s : %s", email, getattr(e, "detail", e))
-        return {"ok": True, "statut": acces.statut, "email_envoye": email_envoye,
-                "message": "Accès activé sur son compte." if u else ("Invitation envoyée." if email_envoye else "Invitation enregistrée : l'accès s'activera dès qu'il créera son compte avec cette adresse.")}
+                    log.warning("Invitation équipe non envoyée à %s : %s", email, raison)
+        etat = "Accès activé sur son compte." if u else "Invitation enregistrée : l'accès s'activera à son inscription."
+        if body.envoyer_email:
+            etat += " E-mail envoyé." if email_envoye else f" ⚠ E-mail NON envoyé : {raison}"
+        return {"ok": True, "statut": acces.statut, "email_envoye": email_envoye, "raison_email": raison, "message": etat}
 
     @api.get("/admin/equipe")
     async def admin_equipe_liste(db: AsyncSession = Depends(get_db), _r=admin):

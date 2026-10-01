@@ -427,39 +427,44 @@ def _email_wrap(inner_html: str, *, logo_url: str = "") -> str:
 
 
 async def send_email(*, to: str, subject: str, html: str) -> Optional[str]:
+    """Envoie un e-mail : Brevo en priorité (fournisseur de production), relais Emergent en secours.
+
+    Avant : le relais Emergent passait en premier dès que EMERGENT_EMAIL_KEY existait ;
+    une fois ce relais coupé, les invitations partaient « dans le vide » sans que l'admin le sache.
+    """
     _assert_safe_email(subject, html)
-    if not EMAIL_KEY:
-        # Repli Brevo direct quand le relai Emergent n'est pas configuré
-        # (BREVO_API_KEY + BREVO_SENDER_EMAIL déjà validés sur /subscribe).
-        brevo_key = os.environ.get("BREVO_API_KEY", "")
-        if not brevo_key:
-            raise HTTPException(status_code=500, detail="Email non configuré")
+    brevo_key = os.environ.get("BREVO_API_KEY", "")
+    erreurs = []
+    if brevo_key:
         payload = {
             "sender": {"email": os.environ.get("BREVO_SENDER_EMAIL", "noreply@zayado.net"), "name": EMAIL_FROM_NAME},
-            "to": [{"email": to}],
-            "subject": subject,
-            "htmlContent": html,
+            "to": [{"email": to}], "subject": subject, "htmlContent": html,
         }
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            r = await client.post("https://api.brevo.com/v3/smtp/email", json=payload,
-                                  headers={"api-key": brevo_key, "content-type": "application/json"})
-        if r.status_code != 201:
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                r = await client.post("https://api.brevo.com/v3/smtp/email", json=payload,
+                                      headers={"api-key": brevo_key, "content-type": "application/json"})
+            if r.status_code in (200, 201, 202):
+                return r.json().get("messageId")
             logger.error("Brevo send failed: %s %s", r.status_code, r.text[:200])
-            raise HTTPException(status_code=502, detail="Échec de l'envoi de l'email")
-        return r.json().get("messageId")
-    payload = {"to": [to], "subject": subject, "html": html, "from_name": EMAIL_FROM_NAME}
-    try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.post(f"{EMAIL_BASE_URL}/api/v1/email/send",
-                                     headers={"X-Email-Key": EMAIL_KEY}, json=payload)
-        resp.raise_for_status()
-        return resp.json().get("id")
-    except httpx.HTTPStatusError as e:
-        logger.error(f"Email send failed: {e.response.status_code} {e.response.text}")
-        raise HTTPException(status_code=502, detail="Échec de l'envoi de l'email")
-    except Exception as e:  # noqa: BLE001
-        logger.error(f"Email send error: {e}")
-        raise HTTPException(status_code=500, detail="Échec de l'envoi de l'email")
+            erreurs.append(f"Brevo {r.status_code}")
+        except Exception as e:  # noqa: BLE001
+            logger.error("Brevo send error: %s", e)
+            erreurs.append("Brevo injoignable")
+    if EMAIL_KEY:
+        payload = {"to": [to], "subject": subject, "html": html, "from_name": EMAIL_FROM_NAME}
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                resp = await client.post(f"{EMAIL_BASE_URL}/api/v1/email/send", headers={"X-Email-Key": EMAIL_KEY}, json=payload)
+            resp.raise_for_status()
+            return resp.json().get("id")
+        except Exception as e:  # noqa: BLE001
+            logger.error("Email relais send error: %s", e)
+            erreurs.append("relais e-mail en échec")
+    if not erreurs:
+        raise HTTPException(status_code=500, detail="E-mail non configuré (ajoute BREVO_API_KEY et BREVO_SENDER_EMAIL).")
+    raise HTTPException(status_code=502, detail="Échec de l'envoi de l'e-mail (" + ", ".join(erreurs) + ").")
+
 
 engine = create_async_engine(DATABASE_URL, echo=False, future=True, **({} if DATABASE_URL.startswith("sqlite") else {"pool_pre_ping": True, "pool_recycle": 280}))  # MySQL distant : ferme les connexions inactives → on vérifie avant usage
 async_session = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
@@ -843,7 +848,9 @@ SYSTEM_PROMPT = (
     "Markdown ou CSV, ou de le ranger dans le Drive. Si le contexte indique qu'aucun dossier de rangement "
     "n'est choisi, demande UNE fois à la fin : « Où veux-tu que je range tes documents ? Colle l'adresse d'un "
     "dossier de ton Google Drive ou OneDrive, ou dis-moi d'utiliser le dossier Zayado. » "
-    "Pour une image, décris précisément ce qu'elle montre : l'application propose « Créer l'image »."
+    "Pour une image, décris précisément ce qu'elle montre : l'application propose « Créer l'image ». "
+    "Quand on te demande d'ouvrir une page (revue de la semaine, Radar, Plan d'action, Bien-être, Paramètres, Mon compte…), "
+    "réponds en une phrase : l'application affiche sous ta réponse un bouton qui ouvre la page. N'invente jamais d'adresse web."
 )
 
 
@@ -5239,7 +5246,8 @@ PRICING = {
                "desc": "Vision Board, Idées et chat IA"},
     "serenite": {"label": "Solo", "mensuel": 29.0, "annuel": 288.0, "desc": "Cockpit complet : Copilote IA, Radar, Pouls Business, Vision Boards illimités"},
     "pro": {"label": "Pro", "mensuel": 69.0, "annuel": 708.0, "desc": "Solo + chatbot client à ta marque, documents IA, alertes WhatsApp/Telegram"},
-    "business": {"label": "Équipe", "mensuel": 149.0, "annuel": 1548.0, "desc": "Pro pour toi + 2 comptes Solo pour ton équipe, 3 chatbots, chatbot sur tes documents"},
+    # Équipe : 99 €/mois pour 3 personnes (avant 149 €, plus cher que Pro + 2 Solo achetés séparément = 127 €).
+    "business": {"label": "Équipe", "mensuel": 99.0, "annuel": 990.0, "desc": "Pro pour toi + 2 comptes Solo pour ton équipe (3 personnes), 3 chatbots, chatbot sur tes documents"},
     # Entreprise : devis avec plancher, clé IA personnelle possible.
     "entreprise": {"label": "Entreprise", "mensuel": None, "annuel": None, "plancher": 299.0, "desc": "Équipe + comptes et chatbots illimités, sur devis, clé IA personnelle possible"},
 }
@@ -6033,7 +6041,7 @@ SEED_BOARDS_SPEC = [
             ("Rêveur — 15 €/mois", "Sans engagement."),
             ("Solo — 24 €/mois", "Tarif fondateur (29 € normal)."),
             ("Pro — 49 €/mois · LE PLUS CHOISI", "Tarif fondateur (69 € normal). Réservé aux 100 premiers clients."),
-            ("Équipe — 149 €/mois", "À reconfirmer."),
+            ("Équipe — 99 €/mois pour 3 personnes", "Moins cher que Pro + 2 Solo séparés (127 €)."),
             ("Entreprise — dès 299 €", "Sur devis. Les tarifs des Services sont fixés après diagnostic."),
         ]),
         ("Cadre de confiance", "#60A5FA", [
