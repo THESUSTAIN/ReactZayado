@@ -228,12 +228,13 @@ def install_part2(g: dict) -> None:
                                           "google/gemini-2.5-flash-image", "gemini-2.5-flash-image",
                                           "gemini-3.1-flash-image-preview") if m]
 
-    async def _generer_image_mammouth(prompt: str):
+    async def _generer_image_mammouth(prompt: str, libre: bool = False):
         """Images via Mammouth (la clé IA déjà en production) : modèle image Gemini
         appelé par /chat/completions, l'image revient dans
         choices[0].message.images[0].image_url.url (data:image/png;base64,…)."""
         base = os.environ.get("MAMMOTH_BASE_URL", "https://api.mammouth.ai/v1").rstrip("/")
-        consigne = (f"Generate one image for a vision board: inspiring, cohesive, photographic, "
+        consigne = (f"Generate one high-quality image. {prompt}" if libre else
+                    f"Generate one image for a vision board: inspiring, cohesive, photographic, "
                     f"no text or letters in the image. Subject: {prompt}")
         derniere = None
         for modele in dict.fromkeys(MAMMOUTH_MODELES_IMAGE):
@@ -262,9 +263,9 @@ def install_part2(g: dict) -> None:
 
     g["images_disponibles"] = images_disponibles
 
-    async def _generer_image_openai(prompt: str):
+    async def _generer_image_openai(prompt: str, libre: bool = False):
         cle, base, modele = _fournisseur_image_openai()
-        consigne = f"Vision board image, inspiring, cohesive, no text or letters in the image. Subject: {prompt}"
+        consigne = prompt if libre else f"Vision board image, inspiring, cohesive, no text or letters in the image. Subject: {prompt}"
         async with httpx.AsyncClient(timeout=90) as http:
             r = await http.post(f"{base}/images/generations",
                                 headers={"Authorization": f"Bearer {cle}"},
@@ -281,24 +282,24 @@ def install_part2(g: dict) -> None:
             return img.content, img.headers.get("content-type", "image/png")
         raise HTTPException(502, "Le modèle n'a renvoyé aucune image. Reformule ta description.")
 
-    async def _generer_image(prompt: str):
+    async def _generer_image(prompt: str, libre: bool = False):
         key = g.get("EMERGENT_LLM_KEY")
         if _cle_mammouth():
             try:
-                return await _generer_image_mammouth(prompt)
+                return await _generer_image_mammouth(prompt, libre)
             except Exception as e:  # noqa: BLE001 — on tente les autres fournisseurs
                 if not key and not _fournisseur_image_openai():
                     raise HTTPException(502, "La génération d'image a échoué chez le fournisseur IA. Réessaie dans un instant.") from e
         if not key:
             if _fournisseur_image_openai():
-                return await _generer_image_openai(prompt)
+                return await _generer_image_openai(prompt, libre)
             raise HTTPException(503, "Les images IA ne sont pas encore activées sur ce serveur. "
                                      "Tu peux ajouter tes propres photos en attendant.")
         try:
             from emergentintegrations.llm.chat import LlmChat, UserMessage
         except ImportError:
             if _fournisseur_image_openai():
-                return await _generer_image_openai(prompt)
+                return await _generer_image_openai(prompt, libre)
             raise HTTPException(503, "Les images IA ne sont pas disponibles sur ce serveur (module manquant).")
         chat = LlmChat(api_key=key, session_id=uuid.uuid4().hex,
                        system_message="You are a helpful AI image generation assistant.")
@@ -308,11 +309,13 @@ def install_part2(g: dict) -> None:
         if envoi is None:
             raise HTTPException(501, "La version d'emergentintegrations installée ne sait pas générer d'images "
                                      "(send_message_multimodal_response absente) : mets-la à jour.")
-        consigne = f"Vision board image, inspiring, cohesive, no text or letters in the image. Subject: {prompt}"
+        consigne = prompt if libre else f"Vision board image, inspiring, cohesive, no text or letters in the image. Subject: {prompt}"
         _texte, images = await asyncio.wait_for(envoi(UserMessage(text=consigne)), timeout=90)
         if not images:
             raise HTTPException(502, "Le modèle n'a renvoyé aucune image. Reformule ta description.")
         return base64.b64decode(images[0]["data"]), (images[0].get("mime_type") or "image/png")
+
+    g["_generer_image"] = _generer_image
 
     @api.post("/vision/image")
     async def vision_image(body: ImageIn, db: AsyncSession = Depends(get_db)):

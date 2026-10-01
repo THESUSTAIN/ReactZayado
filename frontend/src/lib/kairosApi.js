@@ -24,7 +24,7 @@ function _headers(extra) {
 function _versLogin() {
   // 401 = session absente/expirée : on renvoie vers /login, mais seulement depuis l'app (pas la landing).
   const p = window.location.pathname;
-  if (p.startsWith("/app") || p.startsWith("/onboarding") || p.startsWith("/parametres") || p.startsWith("/espace-vendeur") || p.startsWith("/mon-espace") || p.startsWith("/acheter")) window.location.assign("/login");
+  if (p.startsWith("/app") || p.startsWith("/onboarding") || p.startsWith("/parametres") || p.startsWith("/espace-vendeur") || p.startsWith("/compte") || p.startsWith("/acheter")) window.location.assign("/login");
 }
 
 // Plusieurs widgets demandent la même ressource au chargement d'une page
@@ -300,6 +300,26 @@ export const saveReglagesRadar = (patch) => jsend("/radar/reglages", "PUT", patc
 export const majProspect = (id, statut) => jsend(`/radar/prospects/${id}`, "PATCH", { statut });
 export const genererSwot = () => jsend("/radar/swot", "POST");
 export const fetchImpact = () => jget("/cockpit/impact");
+// Documents IA : Word, Excel, Markdown, CSV, texte, images — téléchargés ou rangés dans le Drive.
+export const fetchContexteCopilote = () => jsendDetail("/copilote/contexte", "GET");
+export const fetchDossierDocuments = () => jsendDetail("/documents/dossier", "GET");
+export const reglerDossierDocuments = (url) => jsendDetail("/documents/dossier", "PUT", { url });
+export const ouvrirMesDocuments = () => jsendDetail("/documents/ouvrir", "GET");
+export const rangerDocumentDrive = (titre, contenu, format) => jsendDetail("/documents/generer", "POST", { titre, contenu, format, destination: "drive" });
+export const creerImageIA = (description) => jsendDetail("/documents/image", "POST", { description });
+export const rangerFichierDrive = (nom, mime, data) => jsendDetail("/documents/ranger-fichier", "POST", { nom, mime, data });
+export async function telechargerDocument(titre, contenu, format) {
+  const r = await fetch(`${API}/documents/generer`, {
+    method: "POST", headers: _headers({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ titre, contenu, format, destination: "telecharger" }),
+  });
+  if (!r.ok) { const j = await r.json().catch(() => ({})); const e = new Error(j.detail || "Téléchargement impossible."); e.detail = j.detail; throw e; }
+  const blob = await r.blob();
+  const nom = decodeURIComponent((r.headers.get("content-disposition") || "").split("''")[1] || `document.${format}`);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = nom; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
 export const saveGeneratedDocument = (title, content, provider) => jsend("/documents/auto-save", "POST", { title, content, provider });
 
 // ── Admin (accès réservé au rôle admin — vérifié côté serveur, pas ici) ──

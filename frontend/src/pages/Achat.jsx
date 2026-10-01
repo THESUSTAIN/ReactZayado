@@ -30,7 +30,7 @@ export default function Achat() {
   };
 
   return <main className="min-h-screen px-4 py-10 text-offwhite sm:px-8"><div className="mx-auto max-w-lg">
-    <button onClick={() => navigate("/mon-espace")} className="mb-8 inline-flex items-center gap-2 text-xs text-offwhite/60 hover:text-offwhite"><ArrowLeft size={14} /> Mon espace</button>
+    <button onClick={() => navigate("/compte?vue=achats")} className="mb-8 inline-flex items-center gap-2 text-xs text-offwhite/60 hover:text-offwhite"><ArrowLeft size={14} /> Mon espace</button>
     <nav className="-mt-5 mb-8 flex flex-wrap gap-3 text-xs text-offwhite/55" data-testid="achat-nav">
       <Link to="/app" className="hover:text-offwhite">Cockpit</Link><span>·</span>
       <Link to="/pricing" className="hover:text-offwhite">Offres Zayado</Link><span>·</span>

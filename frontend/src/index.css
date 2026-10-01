@@ -643,3 +643,15 @@ body:not(.theme-clair) .zy-app :is(.bg-white\/\[0\.03\], .bg-white\/\[0\.04\], .
 body:not(.theme-clair) .zy-app :is(.bg-white\/\[0\.05\], .bg-white\/\[0\.06\], .bg-white\/\[0\.07\]):not(.be-clair *, .theme-creme *, .pro-clair *) { background-color: rgba(255, 255, 255, 0.11); }
 body:not(.theme-clair) .zy-app :is(.border-white\/10, .border-white\/\[0\.07\], .border-white\/\[0\.06\], .border-white\/5):not(.be-clair *, .theme-creme *, .pro-clair *) { border-color: rgba(255, 255, 255, 0.2); }
 body:not(.theme-clair) .zy-app :is(.border-white\/12, .border-white\/15):not(.be-clair *, .theme-creme *, .pro-clair *) { border-color: rgba(255, 255, 255, 0.24); }
+
+/* Chat en grand format : suit le thème du SaaS (sombre par défaut, crème en thème clair). */
+.chat-grand { background: linear-gradient(180deg, #172C5C 0%, #0E1B3E 55%, #0A1230 100%); color: #F5F1EA; }
+.chat-grand-carte { background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 0 18px 50px -20px rgba(3, 8, 24, 0.6); backdrop-filter: blur(18px); }
+.chat-grand .chat-bulle-moi { background: linear-gradient(135deg, #F1E2CC, #DEC2A3); color: #0f1b3a; border-bottom-right-radius: 6px; }
+.chat-grand .chat-bulle-ia { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.10); color: #F5F1EA; border-bottom-left-radius: 6px; }
+.chat-grand textarea { border-radius: 9999px !important; padding-left: 18px !important; }
+.chat-grand-clair.chat-grand { background: #F6F1E9; color: #1F2A44; }
+.chat-grand-clair .chat-grand-carte { background: #FFFFFF; border: 1px solid #ECE2D2; box-shadow: 0 2px 18px -8px rgba(31, 42, 68, 0.12); backdrop-filter: none; }
+.chat-grand-clair .chat-bulle-moi { background: #1f3a6e; color: #FFFFFF; }
+.chat-grand-clair .chat-bulle-ia { background: #FFFFFF; border: 1px solid #E7DCC9; color: #1F2A44; }
+.chat-grand-clair .bg-gold.text-navy-900 { color: #0f1b3a !important; }

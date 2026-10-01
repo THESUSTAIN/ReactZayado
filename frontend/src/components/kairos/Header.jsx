@@ -38,7 +38,7 @@ const PAGES = [
   { label: "Collaborateurs", path: "/app/collaborateurs", mots: "expert humain aide équipe zayado" },
   { label: "Agents IA", path: "/app/agents", mots: "ia automatisation" },
   { label: "Agent Business (chatbot)", path: "/app/chatbot-b2b", mots: "clients chatbot" },
-  { label: "Mon espace", path: "/mon-espace", mots: "commandes achats compte" },
+  { label: "Mon compte", path: "/compte", mots: "commandes achats compte espace factures fidélité" },
   { label: "Paramètres", path: "/parametres", mots: "réglages compte profil connexion" },
   { label: "Collaborateur IA (chat)", action: "chat", mots: "copilote assistant chat ia" },
   { label: "Visite guidée", action: "tour", mots: "aide tutoriel découvrir" },
@@ -384,9 +384,6 @@ export function Header() {
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate("/parametres")} className="cursor-pointer gap-2 focus:bg-white/10 focus:text-offwhite" data-testid="profile-settings">
               <Settings className="h-4 w-4 text-gold" /> Paramètres
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/mon-espace")} className="cursor-pointer gap-2 focus:bg-white/10 focus:text-offwhite" data-testid="profile-espace">
-              <User className="h-4 w-4 text-gold" /> Mon espace
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => startTour()} className="cursor-pointer gap-2 focus:bg-white/10 focus:text-offwhite" data-testid="profile-tour">
               <HelpCircle className="h-4 w-4 text-gold" /> Visite guidée

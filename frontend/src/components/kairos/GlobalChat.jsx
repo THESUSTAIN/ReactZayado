@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { ChatBody } from "./ChatAssistant";
+import { ChatBody, ChatGrand } from "./ChatAssistant";
 import { getToken } from "@/lib/kairosApi";
 
 /**
@@ -39,6 +39,7 @@ export const discuterAvecIA = (question) => {
 export default function GlobalChat() {
   const location = useLocation();
   const [open, setOpen] = useState(false);
+  const [grand, setGrand] = useState(false);
   const surCockpitLarge = () => location.pathname === "/app" && window.innerWidth >= 1280;
 
   useEffect(() => {
@@ -49,7 +50,7 @@ export default function GlobalChat() {
     return () => { window.removeEventListener("zayado:open-chat", onOpen); window.removeEventListener("keydown", onKey); };
   }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { setOpen(false); }, [location.pathname]);
+  useEffect(() => { setOpen(false); setGrand(false); }, [location.pathname]);
 
   if (!getToken() || !(location.pathname.startsWith("/app") || location.pathname === "/parametres")) return null;
   return (
@@ -65,8 +66,9 @@ export default function GlobalChat() {
         style={open ? undefined : { boxShadow: "none" }}
         data-testid="global-chat"
       >
-        {open && <ChatBody onClose={() => setOpen(false)} />}
+        {open && !grand && <ChatBody onClose={() => setOpen(false)} onToggleTaille={window.innerWidth >= 1024 ? () => setGrand(true) : undefined} />}
       </aside>
+      {open && grand && <ChatGrand onReduire={() => setGrand(false)} onClose={() => { setGrand(false); setOpen(false); }} />}
     </>
   );
 }

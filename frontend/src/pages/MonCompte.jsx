@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
-  LayoutDashboard, Users, ShieldCheck, Store, Handshake, ChevronRight, Building2, Receipt, User, Bell,
+  LayoutDashboard, Users, FolderOpen, ShieldCheck, Store, Handshake, ChevronRight, Building2, Receipt, User, Bell,
   Download, LifeBuoy, LogOut, Loader2, ShoppingBag, Compass, TrendingUp, Gift, ExternalLink, Crown,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -10,6 +10,7 @@ import {
   setToken, fetchLoginCarousel, mediaUrl,
 } from "@/lib/kairosApi";
 import { planNom, PLANS } from "@/lib/plans";
+import { ouvrirDossierDocuments } from "@/components/kairos/ChatAssistant";
 import { accueilPro, basculerEspace, chargerEspace, enPro } from "@/lib/espace";
 
 const RH_URL = process.env.REACT_APP_RH_URL || "https://rh.zayado.net";
@@ -93,6 +94,9 @@ export default function MonCompte() {
         </div>
 
         <main className="mx-auto w-full max-w-[560px] px-5 pb-20 pt-8 lg:px-10">
+          {params.get("vue") === "achats" ? (
+            <MesAchats commandes={d.commandes} c={c} clair={clair} onRetour={() => navigate("/compte")} />
+          ) : (<>
           <h1 className={`text-[26px] font-bold ${c.titre}`}>Bonjour {d.prenom || "à toi"}</h1>
           <p className={`mt-1 text-[15px] ${c.doux}`}>{d.moi.email}</p>
 
@@ -108,7 +112,7 @@ export default function MonCompte() {
           <Rubrique titre="Mes commandes">
             <Ligne Icone={ShoppingBag} label="Mes achats sur la boutique" sous="Commandes zayado.net : suivi, factures, retours" onClick={() => window.open(BOUTIQUE_COMPTE_URL, "_blank", "noopener")} externe testid="compte-boutique" />
             <Ligne Icone={Receipt} label="Mes factures d'abonnement" onClick={() => navigate("/parametres#offre")} testid="compte-factures" />
-            {d.commandes.length > 0 && <Ligne Icone={Gift} label={`Mes services achetés (${d.commandes.length})`} onClick={() => navigate("/mon-espace")} testid="compte-achats" />}
+            <Ligne Icone={Gift} label={`Mes services achetés${d.commandes.length ? ` (${d.commandes.length})` : ""}`} sous="Formations, accompagnements et services payés dans Zayado" onClick={() => navigate("/compte?vue=achats")} testid="compte-achats" />
           </Rubrique>
 
           <Rubrique titre="Mon espace fidélité">
@@ -142,6 +146,7 @@ export default function MonCompte() {
           </Rubrique>
 
           <Rubrique titre="Mon profil">
+            <Ligne Icone={FolderOpen} label="Mes documents" sous="Les fichiers créés par l'IA, dans ton Drive ou OneDrive" onClick={ouvrirDossierDocuments} externe testid="compte-documents" />
             <Ligne Icone={User} label="Informations" onClick={() => navigate("/parametres#compte")} testid="compte-infos" />
             <Ligne Icone={Building2} label={d.org?.nom ? `Mon entreprise · ${d.org.nom}` : "Déclarer mon entreprise"} onClick={() => navigate("/parametres#compte")} testid="compte-entreprise" />
             <Ligne Icone={Bell} label="Préférences et confidentialité" onClick={() => navigate("/parametres#notifications")} testid="compte-preferences" />
@@ -153,7 +158,39 @@ export default function MonCompte() {
           </Rubrique>
 
           <button onClick={deconnexion} className={`mt-10 inline-flex items-center gap-2 text-[15px] ${c.titre}`} data-testid="compte-deconnexion">Se déconnecter <LogOut size={17} /></button>
+          </>)}
         </main>
+      </div>
+    </div>
+  );
+}
+
+// Achats faits dans Zayado (services, accompagnements) — remplace l'ancienne page « Mon espace ».
+const STATUTS_ACHAT = { paid: ["Payé", "text-emerald-600"], authorized: ["Autorisé", "text-emerald-600"], pending: ["En attente", "text-amber-600"],
+  failed: ["Échec", "text-rose-600"], canceled: ["Annulé", "text-rose-600"], expired: ["Expiré", "text-rose-600"] };
+function MesAchats({ commandes, c, clair, onRetour }) {
+  return (
+    <div data-testid="compte-vue-achats">
+      <button onClick={onRetour} className={`mb-5 text-[13px] ${c.doux} hover:underline`}>← Mon compte</button>
+      <h1 className={`text-[26px] font-bold ${c.titre}`}>Mes services achetés</h1>
+      <p className={`mt-1 text-[14px] ${c.doux}`}>Confirmés automatiquement après validation du paiement.</p>
+      <div className="mt-6 space-y-3">
+        {!commandes.length && <p className={`rounded-xl p-6 text-center text-[14px] ${c.ligne} ${c.doux}`}>Aucun achat pour le moment.</p>}
+        {commandes.map((o) => {
+          const [libelle, couleur] = STATUTS_ACHAT[o.status] || STATUTS_ACHAT.pending;
+          return (
+            <div key={o.id} className={`rounded-xl px-5 py-4 ${c.ligne}`}>
+              <div className="flex items-start gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className={`text-[15px] font-semibold ${c.titre}`}>{o.title || "Commande"}</p>
+                  <p className={`mt-0.5 text-[12.5px] ${c.doux}`}>{o.amount} {o.currency} · {o.created_at ? new Date(o.created_at).toLocaleDateString("fr-FR") : ""}</p>
+                </div>
+                <span className={`text-[12.5px] font-semibold ${clair ? couleur : couleur.replace("600", "300")}`}>{libelle}</span>
+              </div>
+              {o.status === "paid" && o.access_url && <a href={o.access_url} target="_blank" rel="noreferrer" className={`mt-2 inline-block text-[13px] font-semibold underline ${c.titre}`}>Accéder</a>}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

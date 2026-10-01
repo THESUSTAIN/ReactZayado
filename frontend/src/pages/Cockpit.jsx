@@ -7,16 +7,12 @@ import { EnergyCheckin } from "@/components/kairos/EnergyCheckin";
 import { GlassCard } from "@/components/kairos/GlassCard";
 import { RingProgress } from "@/components/kairos/RingProgress";
 import { DurationChip } from "@/components/kairos/Chip";
-import { BalanceDial } from "@/components/kairos/BalanceDial";
-import { TrendChart } from "@/components/kairos/TrendChart";
 import { useKairos } from "@/context/KairosContext";
 import { GoalCountdown } from "@/components/kairos/GoalCountdown";
 import PoulsBusinessWidget from "@/components/kairos/PoulsBusinessWidget";
 import AiFallbackBanner from "@/components/kairos/AiFallbackBanner";
 import PlanEnAttenteBanner from "@/components/kairos/PlanEnAttenteBanner";
-import PratiqueDuJour from "@/components/mindset/PratiqueDuJour";
 import RadarWidget from "@/components/kairos/RadarWidget";
-import ImpactBanner from "@/components/kairos/ImpactBanner";
 import { useI18n } from "@/i18n";
 import PinnedVisionCards from "@/components/vision/PinnedVisionCards";
 import { fetchPointDuJour, fetchSerie } from "@/lib/kairosApi";
@@ -27,7 +23,7 @@ import {
 } from "lucide-react";
 
 export default function Cockpit() {
-  const { user, energy, balance, priorities, goal, victory, trend, mode, modeInfo, isRecovery, aCheckin } = useKairos();
+  const { user, energy, priorities, goal, victory, mode, modeInfo, isRecovery, aCheckin } = useKairos();
   const { t } = useI18n();
   const [checkinOpen, setCheckinOpen] = useState(false);
   const [serie, setSerie] = useState(null);
@@ -74,8 +70,13 @@ export default function Cockpit() {
             <RecoveryLayout modeInfo={modeInfo} priority={focusPriority} energyPercent={energyPercent} energyScore={energy.score} />
           ) : (
             <>
-              {/* Bento haut */}
-              <div className="mb-5 grid gap-4 sm:grid-cols-2 animate-fade-up" style={{ animationDelay: "60ms" }}>
+              {/* Aujourd'hui, allégé : 5 blocs au lieu de 13. L'équilibre pro/perso, la tendance
+                  d'énergie et la pratique mindset vivent dans Bien-être ; l'impact 7 jours est
+                  résumé dans « Ta semaine ». */}
+              <div className="mb-5 animate-fade-up"><AiFallbackBanner /></div>
+
+              {/* 1. Énergie + point du jour */}
+              <div className="mb-5 grid gap-4 lg:grid-cols-3 animate-fade-up" style={{ animationDelay: "60ms" }}>
                 <GlassCard data-testid="energy-card">
                   <p className="mb-2 text-center font-display text-base font-semibold text-offwhite">Énergie</p>
                   {aCheckin ? (
@@ -101,63 +102,7 @@ export default function Cockpit() {
                     </div>
                   )}
                 </GlassCard>
-
-                <GlassCard data-testid="balance-card">
-                  <p className="mb-2 text-center font-display text-base font-semibold text-offwhite">Équilibre vie pro / perso</p>
-                  {aCheckin && balance ? (
-                    <BalanceDial pro={balance.pro} perso={balance.perso} />
-                  ) : (
-                    <div className="flex h-full flex-col items-center justify-center py-2 text-center" data-testid="balance-empty">
-                      <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gold/15 text-gold"><Scale className="h-5 w-5" /></span>
-                      <p className="mt-3 text-sm font-medium text-offwhite">Pas encore de mesure</p>
-                      <p className="mt-1 max-w-[240px] text-xs text-offwhite/55">Ton équilibre pro/perso se calcule à partir de tes check-ins quotidiens.</p>
-                    </div>
-                  )}
-                </GlassCard>
-              </div>
-
-              {/* Objectif 3 ans + revue hebdomadaire */}
-              <div className="mb-5 grid gap-4 sm:grid-cols-2 animate-fade-up" style={{ animationDelay: "100ms" }}>
-                <GoalCountdown />
-                <button
-                  onClick={() => navigate("/app/revue")}
-                  data-testid="cockpit-weekly-review"
-                  className="glass flex flex-col items-start justify-center gap-2 rounded-2xl p-5 text-left transition hover:border-gold/40"
-                >
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gold/15 text-gold">
-                    <Sparkles className="h-[17px] w-[17px]" />
-                  </span>
-                  <p className="font-display text-base font-bold text-offwhite">{t("review.title")}</p>
-                  <p className="text-[12.5px] leading-relaxed text-offwhite/60">{t("review.intro")}</p>
-                  <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-gold">
-                    {t("review.open")} <ChevronRight className="h-3.5 w-3.5" />
-                  </span>
-                </button>
-              </div>
-
-              {/* Bien-être & Mindset : la carte du jour ou la suggestion du moment */}
-              <PratiqueDuJour />
-
-              {/* Cartes Live épinglées depuis le Vision Board */}
-              <PinnedVisionCards />
-
-              {/* Point du jour (brief IA, sur Aujourd'hui) */}
-              <PointDuJourCard modeInfo={modeInfo} />
-
-              {/* Nouveaux widgets business : Pouls + Radar */}
-              <div className="mb-5 grid gap-4 sm:grid-cols-2 animate-fade-up" style={{ animationDelay: "140ms" }}>
-                <PoulsBusinessWidget />
-                <RadarWidget />
-              </div>
-
-              {/* Bandeau d'alerte si l'IA tourne en repli */}
-              <div className="mb-5 animate-fade-up" style={{ animationDelay: "150ms" }}>
-                <AiFallbackBanner />
-              </div>
-
-              {/* Bandeau d'impact 7 jours */}
-              <div className="mb-5 animate-fade-up" style={{ animationDelay: "160ms" }}>
-                <ImpactBanner />
+                <div className="lg:col-span-2 [&>*]:!mb-0 [&>*]:h-full"><PointDuJourCard modeInfo={modeInfo} /></div>
               </div>
 
               {/* Tes 3 priorités */}
@@ -182,8 +127,14 @@ export default function Cockpit() {
                 )}
               </section>
 
-              {/* Objectif principal + Dernière victoire */}
-              <div className="mb-5 grid gap-4 sm:grid-cols-2 animate-fade-up" style={{ animationDelay: "240ms" }}>
+              {/* 3. Business : Pouls + Radar */}
+              <div className="mb-5 grid gap-4 sm:grid-cols-2 animate-fade-up" style={{ animationDelay: "140ms" }}>
+                <PoulsBusinessWidget />
+                <RadarWidget />
+              </div>
+
+              {/* 4. Cap : 90 jours + 3 ans */}
+              <div className="mb-5 grid gap-4 sm:grid-cols-2 animate-fade-up" style={{ animationDelay: "200ms" }}>
                 <GlassCard data-testid="goal-card">
                   <div className="mb-4 flex items-center gap-2">
                     <Target className="h-4 w-4 text-gold" />
@@ -217,48 +168,28 @@ export default function Cockpit() {
                     </div>
                   )}
                 </GlassCard>
-
-                <GlassCard className="relative overflow-hidden" data-testid="victory-card">
-                  <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-gold/10 blur-2xl" />
-                  <div className="mb-3 flex items-center gap-2">
-                    <Trophy className="h-4 w-4 text-gold" />
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Dernière victoire</p>
-                  </div>
-                  {victory.title ? (
-                    <>
-                      <p className="font-display text-lg font-bold text-offwhite">{victory.title}</p>
-                      <p className="mt-2 text-sm leading-relaxed text-offwhite/70">{victory.detail}</p>
-                      <p className="mt-4 text-xs text-offwhite/40">{victory.date}</p>
-                    </>
-                  ) : (
-                    <div className="py-3 text-center" data-testid="victory-empty">
-                      <p className="text-sm font-medium text-offwhite">Ta première victoire s'affichera ici</p>
-                      <p className="mx-auto mt-1 max-w-[250px] text-xs text-offwhite/55">Chaque étape accomplie est célébrée — même les petites.</p>
-                    </div>
-                  )}
-                </GlassCard>
+                <GoalCountdown />
               </div>
 
-              {/* Tendance énergie 14 jours — seulement avec de vraies mesures */}
-              {trend.length > 0 ? (
-                <GlassCard className="animate-fade-up" style={{ animationDelay: "300ms" }} data-testid="trend-card">
-                  <div className="mb-4 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4 text-gold" />
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Tendance énergie · {trend.length} jour{trend.length > 1 ? "s" : ""}</p>
-                    </div>
-                    <span className="text-sm text-offwhite/50">Moyenne {(trend.reduce((s, p) => s + (p.value || 0), 0) / trend.length).toFixed(1).replace(".", ",")} / 5</span>
+              {/* 5. Ta semaine : dernière victoire + revue hebdo */}
+              <GlassCard className="mb-5 animate-fade-up" style={{ animationDelay: "240ms" }} data-testid="victory-card">
+                <div className="flex flex-wrap items-center gap-4">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gold/15 text-gold"><Trophy className="h-5 w-5" /></span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Ta semaine · dernière victoire</p>
+                    {victory.title
+                      ? <p className="mt-1 text-sm text-offwhite"><b className="font-display">{victory.title}</b>{victory.detail ? <span className="text-offwhite/65"> — {victory.detail}</span> : null}</p>
+                      : <p className="mt-1 text-sm text-offwhite/65" data-testid="victory-empty">Ta première victoire s'affichera ici — même les petites comptent.</p>}
                   </div>
-                  <TrendChart data={trend} />
-                </GlassCard>
-              ) : (
-                <GlassCard className="animate-fade-up" style={{ animationDelay: "300ms" }} data-testid="trend-empty">
-                  <div className="flex items-center gap-3 py-1">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold/15 text-gold"><TrendingUp className="h-4 w-4" /></span>
-                    <p className="text-xs leading-relaxed text-offwhite/60">Ta tendance énergie sur 14 jours apparaîtra ici après quelques check-ins.</p>
-                  </div>
-                </GlassCard>
-              )}
+                  <button onClick={() => navigate("/app/revue")} data-testid="cockpit-weekly-review"
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-gold/40 px-4 py-2 text-xs font-semibold text-gold hover:bg-gold/10">
+                    <Sparkles className="h-3.5 w-3.5" /> {t("review.open")}
+                  </button>
+                </div>
+              </GlassCard>
+
+              {/* Cartes épinglées depuis le Vision Board (seulement s'il y en a) */}
+              <PinnedVisionCards />
             </>
           )}
         </main>

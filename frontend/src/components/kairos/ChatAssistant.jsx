@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   Sparkles, Send, Mic, Lightbulb, BatteryLow, Compass, X, Loader2,
   Sun, ListChecks, Newspaper, Check, Clock, XCircle, ExternalLink, RefreshCw, Mail, Bookmark,
-  Maximize2, Minimize2, CloudCheck, Users, Scale, Copy, PenLine,
+  Maximize2, Minimize2, CloudCheck, Users, Scale, Copy, PenLine, FolderOpen, FileText, FileSpreadsheet,
+  FileDown, UploadCloud, ImagePlus, ListPlus,
 } from "lucide-react";
 import CollaborateurModal from "./CollaborateurModal";
 import { prendreOngletEnAttente, prendrePromptEnAttente, discuterAvecIA } from "./GlobalChat";
@@ -10,12 +11,30 @@ import CanauxCopilote from "@/components/kairos/CanauxCopilote";
 import { useKairos } from "@/context/KairosContext";
 import {
   streamChat, fetchPointDuJour, fetchDecisions, suggererDecisions, patchDecision, fetchActualite, enregistrerArticle, fetchEnregistres, validerDecisionEmail,
-  saveProfile,
+  saveProfile, creerTache, telechargerDocument, rangerDocumentDrive, ouvrirMesDocuments, reglerDossierDocuments,
+  creerImageIA, rangerFichierDrive, fetchContexteCopilote,
 } from "@/lib/kairosApi";
 import { toast } from "sonner";
 
 // Derniers échanges du chat, joints (si on le souhaite) au message pour un collaborateur.
 const contexteChat = { texte: "" };
+// La conversation survit au passage petit ⇄ grand format (le composant est remonté).
+const memoireChat = { messages: null };
+
+// Ouvre le dossier des documents IA dans le Drive / OneDrive de l'utilisateur.
+export async function ouvrirDossierDocuments() {
+  try {
+    const r = await ouvrirMesDocuments();
+    if (r.url) window.open(r.url, "_blank", "noopener");
+    else toast("Relie d'abord ton Google Drive ou ton OneDrive", { action: { label: "Relier", onClick: () => window.location.assign("/parametres#connexions") } });
+  } catch { toast.error("Impossible d'ouvrir tes documents pour le moment."); }
+}
+
+const URL_DOSSIER = /https:\/\/(drive\.google\.com\/drive\/[^\s]*folders\/[\w-]+[^\s]*|[\w-]+\.sharepoint\.com\/[^\s]+|onedrive\.live\.com\/[^\s]+|1drv\.ms\/[^\s]+)/i;
+const DEMANDE_IMAGE = /\b(image|logo|visuel|illustration|photo|affiche|banni[eè]re|dessin)\b/i;
+const estDocument = (t) => (t || "").length > 450 || /(^|\n)#{1,3} |\n\|.+\|/.test(t || "");
+const titreDocument = (t) => ((t || "").split("\n").find((l) => l.trim()) || "Document").replace(/^#+\s*/, "").replace(/[*_`]/g, "").slice(0, 80);
+const heure = (d) => (d ? new Date(d).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "");
 
 const SHORTCUTS = [
   { key: "capture", icon: Lightbulb, label: "Capturer une idée", prompt: "J'ai une idée à capturer, aide-moi à la clarifier en une phrase." },
@@ -30,7 +49,7 @@ const TABS = [
   { key: "actu", label: "Actualité", icon: Newspaper },
 ];
 
-export function ChatBody({ onClose, estElargi, onToggleTaille }) {
+export function ChatBody({ onClose, estElargi, onToggleTaille, grand = false }) {
   const { user } = useKairos();
   // Onglet initial : celui demandé par openChat("actu" | "decisions" | "chat"),
   // consommé ici — fiable même si le panneau vient tout juste de se monter.
@@ -68,12 +87,12 @@ export function ChatBody({ onClose, estElargi, onToggleTaille }) {
       <CollaborateurModal open={!!collab} contexte={collab?.contexte || ""} onClose={() => setCollab(null)} />
       <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gold/15 ring-1 ring-gold/30">
-            <Sparkles className="h-4 w-4 text-gold" />
+          <div className={grand ? "flex h-10 w-10 items-center justify-center rounded-full bg-gold/15 ring-1 ring-gold/30" : "flex h-8 w-8 items-center justify-center rounded-xl bg-gold/15 ring-1 ring-gold/30"}>
+            <Sparkles className={grand ? "h-5 w-5 text-gold" : "h-4 w-4 text-gold"} />
           </div>
           <div className="leading-tight">
-            <div className="font-display text-sm font-bold text-offwhite">Copilote IA Zayado</div>
-            <div className="text-[10px] text-offwhite/50">Ton apaisé · IA</div>
+            <div className={`font-display font-bold text-offwhite ${grand ? "text-lg" : "text-sm"}`}>Copilote Zayado</div>
+            <div className={`flex items-center gap-1.5 text-offwhite/55 ${grand ? "text-[12.5px]" : "text-[10px]"}`}><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Connaît ton activité · Mémoire active</div>
           </div>
         </div>
         <div className="flex items-center gap-1">
@@ -82,6 +101,10 @@ export function ChatBody({ onClose, estElargi, onToggleTaille }) {
               <CloudCheck className="h-3.5 w-3.5" /> Transmis
             </span>
           )}
+          <button onClick={ouvrirDossierDocuments} title="Mes documents (Drive / OneDrive)" aria-label="Mes documents"
+            className="mr-1 inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] font-semibold text-offwhite/75 hover:border-gold/40 hover:text-gold" data-testid="chat-mes-documents">
+            <FolderOpen className="h-3.5 w-3.5" /> {grand ? "Mes documents" : <span className="sr-only">Mes documents</span>}
+          </button>
           <button onClick={() => setCollab({ contexte: contexteChat.texte })}
             className="mr-1 inline-flex items-center gap-1.5 rounded-lg border border-gold/30 bg-gold/10 px-2.5 py-1.5 text-[11px] font-semibold text-gold hover:bg-gold/20"
             title="Écrire à un collaborateur de l'équipe Zayado" data-testid="chat-collaborateur-btn">
@@ -118,10 +141,51 @@ export function ChatBody({ onClose, estElargi, onToggleTaille }) {
       </div>
 
       <div className="flex-1 overflow-hidden">
-        {tab === "chat" && <ChatTab firstName={user.firstName} />}
+        {tab === "chat" && <ChatTab firstName={user.firstName} grand={grand} />}
         {tab === "decisions" && <DecisionsTab />}
         {tab === "actu" && <ActuTab />}
       </div>
+    </div>
+  );
+}
+
+// Sous chaque réponse : copier, créer une tâche, et pour un document : Word / Excel / Markdown /
+// ranger dans le Drive ; pour une demande d'image : la créer.
+function ActionsMessage({ m, demande, onCopier, onImage, i }) {
+  const [envoi, setEnvoi] = useState(null);
+  const btn = "inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10.5px] font-medium text-offwhite/60 transition hover:border-gold/40 hover:text-gold disabled:opacity-50";
+  const doc = !m.image && estDocument(m.content);
+  const faire = async (cle, f) => { setEnvoi(cle); try { await f(); } catch (e) { toast.error(e.detail || e.message || "Impossible pour le moment."); } finally { setEnvoi(null); } };
+  const titre = titreDocument(m.content);
+  const charge = (cle, Icone) => (envoi === cle ? <Loader2 size={11} className="animate-spin" /> : <Icone size={11} />);
+  if (m.image) {
+    return (
+      <div className="flex flex-wrap gap-1.5">
+        <a href={m.image.src} download={m.image.nom} className={btn}><FileDown size={11} /> Télécharger</a>
+        <button className={btn} disabled={!!envoi} onClick={() => faire("drive", async () => { const r = await rangerFichierDrive(m.image.nom, m.image.mime, m.image.data); toast.success("Image rangée dans ton Drive.", r.url ? { action: { label: "Ouvrir", onClick: () => window.open(r.url, "_blank", "noopener") } } : undefined); })}>{charge("drive", UploadCloud)} Ranger dans mon Drive</button>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-wrap gap-1.5" data-testid={`chat-actions-${i}`}>
+      <button onClick={onCopier} data-testid={`chat-copy-${i}`} className={btn}><Copy size={11} /> Copier</button>
+      <button className={btn} disabled={!!envoi} onClick={() => faire("tache", async () => { await creerTache(titre.slice(0, 120)); toast.success("Tâche ajoutée à ton Plan d'action."); })} data-testid={`chat-tache-${i}`}>{charge("tache", ListPlus)} Créer une tâche</button>
+      {doc && (<>
+        <button className={btn} disabled={!!envoi} onClick={() => faire("docx", () => telechargerDocument(titre, m.content, "docx"))} data-testid={`chat-word-${i}`}>{charge("docx", FileText)} Word</button>
+        <button className={btn} disabled={!!envoi} onClick={() => faire("xlsx", () => telechargerDocument(titre, m.content, "xlsx"))}>{charge("xlsx", FileSpreadsheet)} Excel</button>
+        <button className={btn} disabled={!!envoi} onClick={() => faire("md", () => telechargerDocument(titre, m.content, "md"))}>{charge("md", FileDown)} Markdown</button>
+        <button className={btn} disabled={!!envoi} data-testid={`chat-drive-${i}`} onClick={() => faire("drive", async () => {
+          const r = await rangerDocumentDrive(titre, m.content, "docx");
+          window.dispatchEvent(new CustomEvent("zayado:cloud-sync", { detail: { provider: r.provider } }));
+          toast.success(`« ${r.nom} » rangé dans ton Drive.`, r.url ? { action: { label: "Ouvrir", onClick: () => window.open(r.url, "_blank", "noopener") } } : undefined);
+        })}>{charge("drive", UploadCloud)} Ranger dans mon Drive</button>
+      </>)}
+      {DEMANDE_IMAGE.test(demande || "") && (
+        <button className={btn} disabled={!!envoi} data-testid={`chat-image-${i}`} onClick={() => faire("image", async () => {
+          const r = await creerImageIA(`${demande}\n\nDétails : ${m.content.slice(0, 1200)}`);
+          onImage({ src: `data:${r.mime};base64,${r.data}`, data: r.data, mime: r.mime, nom: r.nom, description: demande.slice(0, 120) });
+        })}>{charge("image", ImagePlus)} Créer l'image</button>
+      )}
     </div>
   );
 }
@@ -184,7 +248,7 @@ function QuestionReglage({ q, onRepondre, onPlusTard }) {
   );
 }
 
-function ChatTab({ firstName }) {
+function ChatTab({ firstName, grand = false }) {
   const { mode, contexte, aCheckin, priorities, loaded } = useKairos();
   // Nouveau compte (aucun check-in, aucune action) : le Copilote se présente et
   // propose les 3 premiers pas, au lieu d'une simple formule de politesse.
@@ -192,7 +256,8 @@ function ChatTab({ firstName }) {
   const accueil = debutant
     ? `Bienvenue${firstName ? ` ${firstName}` : ""} 👋 Je suis ton Copilote Zayado. Pour bien démarrer, trois petits pas :\n1. Ton check-in du jour (30 secondes)\n2. Ton objectif principal\n3. Une première action de 15 minutes\nDis-moi par lequel on commence, je t'accompagne.`
     : `Bonjour${firstName ? ` ${firstName}` : ""}. Je suis le Copilote IA Zayado, là pour t'accompagner en douceur. Par quoi commence-t-on ?`;
-  const [messages, setMessages] = useState([{ role: "assistant", content: accueil }]);
+  const [messages, setMessages] = useState(() => memoireChat.messages || [{ role: "assistant", content: accueil }]);
+  useEffect(() => { memoireChat.messages = messages; }, [messages]);
   useEffect(() => {
     contexteChat.texte = messages.slice(1).slice(-8)
       .map((m) => `${m.role === "user" ? "Moi" : "Copilote"} : ${String(m.content || "").slice(0, 600)}`).join("\n");
@@ -218,7 +283,21 @@ function ChatTab({ firstName }) {
     setConversationLibre(true);
     if (streaming) { setInput(content); return; } // réponse en cours : le texte attend dans le champ
     setInput("");
-    setMessages((m) => [...m, { role: "user", content }, { role: "assistant", content: "" }]);
+    // Adresse d'un dossier Drive / OneDrive collée : c'est là que seront rangés les documents.
+    const dossier = content.match(URL_DOSSIER);
+    if (dossier) {
+      const maintenant = new Date().toISOString();
+      setMessages((m) => [...m, { role: "user", content, le: maintenant }]);
+      try {
+        await reglerDossierDocuments(dossier[0]);
+        setMessages((m) => [...m, { role: "assistant", le: new Date().toISOString(), content: "C'est noté : je rangerai tes documents dans ce dossier. Tu peux le changer à tout moment en me collant une autre adresse." }]);
+      } catch (e) {
+        setMessages((m) => [...m, { role: "assistant", le: new Date().toISOString(), content: `Je n'ai pas pu enregistrer ce dossier : ${e.detail || "réessaie avec l'adresse complète du dossier."}` }]);
+      }
+      return;
+    }
+    const le = new Date().toISOString();
+    setMessages((m) => [...m, { role: "user", content, le }, { role: "assistant", content: "", le }]);
     setStreaming(true);
     await streamChat({
       message: content, page: `mode:${mode}`,
@@ -290,15 +369,14 @@ function ChatTab({ firstName }) {
           <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`} data-testid={`chat-msg-${m.role}`}>
             <div className={`max-w-[85%] ${m.role === "assistant" ? "space-y-2" : ""}`}>
               <div className={`whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                m.role === "user" ? "bg-gold text-navy-900" : "border border-white/10 bg-white/5 text-offwhite"
+                m.role === "user" ? (grand ? "chat-bulle-moi" : "bg-gold text-navy-900") : (grand ? "chat-bulle-ia" : "border border-white/10 bg-white/5 text-offwhite")
               }`}>
-                {m.content || (streaming && i === messages.length - 1 ? <Loader2 className="h-4 w-4 animate-spin text-gold" /> : null)}
+                {m.image ? <img src={m.image.src} alt={m.content} className="max-h-80 rounded-xl" /> : (m.content || (streaming && i === messages.length - 1 ? <Loader2 className="h-4 w-4 animate-spin text-gold" /> : null))}
+                {grand && m.le && <span className={`mt-1.5 block text-[11px] ${m.role === "user" ? "opacity-60" : "text-offwhite/45"}`}>{heure(m.le)}</span>}
               </div>
-              {m.role === "assistant" && m.content && !(streaming && i === messages.length - 1) && (
-                <button onClick={() => copierReponse(m)} data-testid={`chat-copy-${i}`}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10.5px] font-medium text-offwhite/55 transition hover:border-gold/40 hover:text-gold">
-                  <Copy size={11} /> Copier la réponse
-                </button>
+              {m.role === "assistant" && m.content && i > 0 && !(streaming && i === messages.length - 1) && (
+                <ActionsMessage m={m} demande={messages[i - 1]?.role === "user" ? messages[i - 1].content : ""} onCopier={() => copierReponse(m)}
+                  onImage={(img) => setMessages((x) => [...x, { role: "assistant", content: img.description, image: img, le: new Date().toISOString() }])} i={i} />
               )}
               {m.juridique && (
                 <p className="rounded-xl border border-amber-300/25 bg-amber-300/5 px-3 py-2 text-[10.5px] italic leading-relaxed text-offwhite/60" data-testid="chat-juridique-mention">
@@ -547,23 +625,86 @@ function ActuTab() {
 }
 
 export function ChatPanel() {
-  // Un seul design de chat partout : le panneau marine OPAQUE (.chat-zayado),
-  // comme le chat global. L'ancien fond « verre » translucide (.fenetre)
-  // laissait voir la page derrière — retiré à la demande.
-  // Ajouté aussi le bouton réduire/agrandir demandé.
+  // Un seul design de chat partout : le panneau marine OPAQUE (.chat-zayado).
+  // « Agrandir » ouvre le grand format (chat + réglages + contexte), la conversation est conservée.
   const [estElargi, setEstElargi] = useState(false);
-  // Le contenu de la page se décale avec le panneau (avant : panneau élargi à
-  // 640 px par-dessus le cockpit, et les icônes de l'en-tête passaient sur le titre du chat).
   useEffect(() => {
-    document.documentElement.style.setProperty("--chat-w", estElargi ? "640px" : "360px");
+    document.documentElement.style.setProperty("--chat-w", "360px");
     return () => document.documentElement.style.removeProperty("--chat-w");
-  }, [estElargi]);
+  }, []);
   return (
-    <div
-      className={`chat-zayado hidden xl:flex fixed right-0 top-0 z-20 h-screen flex-col transition-[width] duration-200 ${estElargi ? "w-[640px]" : "w-[360px]"}`}
-      data-testid="chat-panel"
-    >
-      <ChatBody estElargi={estElargi} onToggleTaille={() => setEstElargi((v) => !v)} />
+    <>
+      <div className="chat-zayado hidden xl:flex fixed right-0 top-0 z-20 h-screen w-[360px] flex-col" data-testid="chat-panel">
+        {!estElargi && <ChatBody estElargi={false} onToggleTaille={() => setEstElargi(true)} />}
+      </div>
+      {estElargi && <ChatGrand onReduire={() => setEstElargi(false)} />}
+    </>
+  );
+}
+
+// Grand format (inspiré de la maquette) : la conversation à gauche, à droite les réglages
+// du Copilote (ton, format) et ce qu'il sait de ton activité.
+export function ChatGrand({ onReduire, onClose }) {
+  useEffect(() => {
+    const k = (e) => { if (e.key === "Escape") onReduire(); };
+    window.addEventListener("keydown", k);
+    return () => window.removeEventListener("keydown", k);
+  }, [onReduire]);
+  return (
+    <div className={`${typeof document !== "undefined" && document.body.classList.contains("theme-clair") ? "theme-creme chat-grand-clair" : ""} chat-grand fixed inset-0 z-[70] overflow-y-auto p-3 sm:p-6`} data-testid="chat-grand">
+      <div className="mx-auto grid h-full max-w-[1400px] gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]">
+        <div className="chat-grand-carte flex min-h-[70vh] flex-col overflow-hidden rounded-[28px] lg:h-[calc(100vh-48px)]">
+          <ChatBody grand estElargi onToggleTaille={onReduire} onClose={onClose} />
+        </div>
+        <PanneauCopilote />
+      </div>
+    </div>
+  );
+}
+
+function PanneauCopilote() {
+  const [ctx, setCtx] = useState(null);
+  const [ton, setTon] = useState("doux");
+  const [format, setFormat] = useState("concis");
+  const [sauve, setSauve] = useState(false);
+  useEffect(() => { fetchContexteCopilote().then((c) => { setCtx(c); setTon(c.ton); setFormat(c.format); }).catch(() => setCtx({ lignes: [] })); }, []);
+  const choix = (liste, val, set, testid) => (
+    <div className="mt-2 grid gap-1 rounded-full bg-white/10 p-1" style={{ gridTemplateColumns: `repeat(${liste.length}, minmax(0, 1fr))` }} data-testid={testid}>
+      {liste.map(([k, l]) => (
+        <button key={k} onClick={() => set(k)} className={`rounded-full py-2 text-[13px] font-medium transition ${val === k ? "bg-gold text-navy-900 shadow" : "text-offwhite/60 hover:text-offwhite"}`}>{l}</button>
+      ))}
+    </div>
+  );
+  const sauvegarder = async () => {
+    setSauve(true);
+    try { await saveProfile({ contexte_metier: { copilote_ton: ton, copilote_format: format } }); toast.success("Réglages du Copilote enregistrés."); }
+    catch { toast.error("Enregistrement impossible."); } finally { setSauve(false); }
+  };
+  return (
+    <div className="space-y-5 lg:h-[calc(100vh-48px)] lg:overflow-y-auto">
+      <div className="chat-grand-carte rounded-[28px] p-6">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-offwhite/55">Réglages du Copilote</p>
+        <p className="mt-4 text-[14px] font-medium text-offwhite">Ton</p>
+        {choix([["doux", "Soutien"], ["direct", "Direct"], ["coach", "Challenger"]], ton, setTon, "copilote-ton")}
+        <p className="mt-4 text-[14px] font-medium text-offwhite">Format</p>
+        {choix([["concis", "Concis"], ["detaille", "Détaillé"]], format, setFormat, "copilote-format")}
+        <button onClick={sauvegarder} disabled={sauve} className="mt-5 h-12 w-full rounded-full bg-gold text-[15px] font-semibold text-navy-900 disabled:opacity-60" data-testid="copilote-sauvegarder">
+          {sauve ? "Enregistrement…" : "Sauvegarder"}
+        </button>
+      </div>
+      <div className="chat-grand-carte rounded-[28px] p-6" data-testid="copilote-contexte">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-offwhite/55">Contexte chargé</p>
+        {!ctx ? <Loader2 className="mt-3 h-4 w-4 animate-spin text-offwhite/40" /> : ctx.lignes.length ? (
+          <ul className="mt-3 space-y-2">
+            {ctx.lignes.map((l) => <li key={l} className="text-[14px] leading-snug text-offwhite">· {l}</li>)}
+          </ul>
+        ) : <p className="mt-3 text-[14px] text-offwhite/60">Rien encore : remplis ta vision, tes objectifs et ton check-in, le Copilote s'en servira.</p>}
+        <p className="mt-4 text-[13px] italic text-offwhite/60">Le Copilote propose, tu décides. Jamais d'action sans ton accord.</p>
+      </div>
+      <button onClick={ouvrirDossierDocuments} className="chat-grand-carte flex w-full items-center gap-3 rounded-[28px] p-5 text-left" data-testid="copilote-documents">
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gold/15"><FolderOpen className="h-5 w-5 text-gold" /></span>
+        <span className="min-w-0 flex-1"><span className="block text-[15px] font-semibold text-offwhite">Mes documents</span><span className="block text-[12.5px] text-offwhite/60">Ouvrir le dossier où l'IA range tes fichiers</span></span>
+      </button>
     </div>
   );
 }

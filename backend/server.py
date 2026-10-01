@@ -267,7 +267,7 @@ def _noter_activite(uid: str) -> None:
 
 _IA_PAYANTE = ("/api/copilote/chat", "/api/vision/ai-doc", "/api/vision/generate-board", "/api/vision/inspire",
                "/api/revue-hebdo/synthese", "/api/radar/swot", "/api/sources/analyser", "/api/mindset/recadrer",
-               "/api/idees/suggestions")
+               "/api/idees/suggestions", "/api/documents/image")
 
 
 def _ia_payante(request) -> bool:
@@ -836,7 +836,14 @@ SYSTEM_PROMPT = (
     "le 3114, gratuit et 24h/24) et tu l'invites à contacter un proche ou un professionnel de santé.\n\n"
     "Tu t'appuies sur le contexte fourni plutôt que de répondre de façon générique. Quand l'énergie "
     "est basse (≤2), tu proposes UNE seule micro-action de 5 minutes et tu rappelles le pourquoi et "
-    "les dernières victoires, avec un ton chaleureux et factuel, sans slogan."
+    "les dernières victoires, avec un ton chaleureux et factuel, sans slogan.\n\n"
+    "Documents : quand on te demande un document (courrier, devis, plan, contrat type, compte rendu, "
+    "tableau, budget…), rédige-le EN ENTIER en Markdown (titre #, sous-titres ##, listes, tableaux | col | col |), "
+    "sans limite de longueur. Sous ta réponse, l'application propose de le télécharger en Word, Excel, "
+    "Markdown ou CSV, ou de le ranger dans le Drive. Si le contexte indique qu'aucun dossier de rangement "
+    "n'est choisi, demande UNE fois à la fin : « Où veux-tu que je range tes documents ? Colle l'adresse d'un "
+    "dossier de ton Google Drive ou OneDrive, ou dis-moi d'utiliser le dossier Zayado. » "
+    "Pour une image, décris précisément ce qu'elle montre : l'application propose « Créer l'image »."
 )
 
 
@@ -872,6 +879,10 @@ async def _contexte(db: AsyncSession, uid: str) -> str:
         lignes.append({"doux": "Ton souhaité : doux et bienveillant.",
                        "direct": "Ton souhaité : direct et concis, sans détour.",
                        "coach": "Ton souhaité : coach exigeant qui challenge (toujours respectueux)."}.get(cm_r["copilote_ton"], ""))
+    if cm_r.get("copilote_format") == "detaille":
+        lignes.append("Format souhaité : détaillé — réponses structurées (titres, listes), plus complètes.")
+    elif cm_r.get("copilote_format") == "concis":
+        lignes.append("Format souhaité : concis — l'essentiel en quelques phrases.")
     if cm_r.get("outils") and cm_r["outils"] != "aucun":
         lignes.append(f"Outils déjà utilisés : {cm_r['outils']} (propose des actions compatibles, n'invente pas d'intégration).")
     f_diag = globals().get("_diagnostic_resume_ia")
@@ -882,6 +893,10 @@ async def _contexte(db: AsyncSession, uid: str) -> str:
                 lignes.append(ligne_diag)
         except Exception:  # noqa: BLE001
             pass
+    if cm_r.get("documents_dossier") or cm_r.get("documents_dossier_auto"):
+        lignes.append("Dossier de rangement des documents : déjà choisi (ne le redemande pas).")
+    else:
+        lignes.append("Dossier de rangement des documents : pas encore choisi.")
     if cm_r.get("temps_quotidien"):
         lignes.append(f"Temps disponible pour Zayado : environ {cm_r['temps_quotidien']} min par jour (calibre les actions proposées).")
     if cm_r.get("jours_actifs"):
@@ -1927,6 +1942,26 @@ async def chat(body: ChatIn, db: AsyncSession = Depends(get_db)):
 
     return StreamingResponse(flux(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+@api.get("/copilote/contexte")
+async def copilote_contexte(db: AsyncSession = Depends(get_db)):
+    """Ce que le Copilote sait de toi (affiché à côté du chat agrandi), et ses réglages."""
+    uid = _uid()
+    texte = await _contexte(db, uid)
+    garder = ("Activité", "Vision", "Son pourquoi", "Objectifs actifs", "Objectif à 3 ans", "CA mensuel", "Dernier check-in",
+              "3 dernières victoires", "Tâches en cours", "Valeurs", "Ce qui le/la", "Entreprise")
+    lignes = [l for l in texte.splitlines() if l.startswith(garder)][:8]
+    f_org = globals().get("organisation_de")
+    if f_org:
+        try:
+            o, _ = await f_org(db, uid)
+            if o:
+                lignes.insert(0, f"Entreprise : {o.nom}")
+        except Exception:  # noqa: BLE001
+            pass
+    cm = (await _profil(db, uid)).contexte_metier or {}
+    return {"lignes": [l[:180] for l in lignes], "ton": cm.get("copilote_ton") or "doux", "format": cm.get("copilote_format") or "concis"}
 
 
 @api.get("/copilote/history")
@@ -5807,6 +5842,8 @@ async def admin_diagnostics():
     }
 
 
+from documents_ext import install_documents  # noqa: E402
+install_documents(globals())
 from espace_pro_ext import install_espace_pro  # noqa: E402
 install_espace_pro(globals())
 from comptes_admin_ext import install_comptes_admin  # noqa: E402

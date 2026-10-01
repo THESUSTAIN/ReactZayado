@@ -27,7 +27,6 @@ import Pricing from "@/pages/Pricing";
 import PricingSuccess from "@/pages/PricingSuccess";
 import Mockup from "@/pages/Mockup";
 import Marketplace from "@/pages/Marketplace";
-import MonEspace from "@/pages/MonEspace";
 import MonCompte from "@/pages/MonCompte";
 import Achat from "@/pages/Achat";
 import Parametres from "@/pages/Parametres";
@@ -144,7 +143,7 @@ function App() {
             {/* L'espace vendeur est privé et distinct de la marketplace publique Shopify. */}
             <Route path="/espace-vendeur" element={<ProtectedRoute><Marketplace /></ProtectedRoute>} />
             <Route path="/app/marketplace" element={<Navigate to="/espace-vendeur" replace />} />
-            <Route path="/mon-espace" element={<ProtectedRoute><MonEspace /></ProtectedRoute>} />
+            <Route path="/mon-espace" element={<Navigate to="/compte?vue=achats" replace />} />
             <Route path="/compte" element={<ProtectedRoute><MonCompte /></ProtectedRoute>} />
             <Route path="/acheter" element={<ProtectedRoute><Achat /></ProtectedRoute>} />
             <Route path="/parametres" element={<ProtectedRoute><Parametres /></ProtectedRoute>} />
