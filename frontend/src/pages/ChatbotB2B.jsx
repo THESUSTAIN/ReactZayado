@@ -344,7 +344,7 @@ function TestConversation({ agent, modifie, couleur, onEnregistrer }) {
     try {
       const r = await testerAgentBusiness(agent.id, q, historique);
       setMessages((m) => [...m, { role: "agent", texte: r.reponse }]);
-      if (r.ia === false) toast.warning("Réponse automatique : la clé Mammouth AI (MAMMOTH_API_KEY) n'est pas configurée sur le serveur.");
+      if (r.ia === false) toast.warning("Réponse automatique : l'IA est momentanément indisponible, réessaie dans un instant.");
     } catch {
       setMessages((m) => [...m, { role: "agent", texte: "(L'IA n'a pas répondu. Réessaie dans un instant.)", erreur: true }]);
     } finally { setAttente(false); }

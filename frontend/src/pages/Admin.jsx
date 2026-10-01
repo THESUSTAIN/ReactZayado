@@ -19,6 +19,7 @@ import EmailsIA from "@/components/admin/EmailsIA";
 import AdminNewsletters from "@/components/admin/AdminNewsletters";
 import AdminConnexions from "@/components/admin/AdminConnexions";
 import AdminAppLogs from "@/components/admin/AdminAppLogs";
+import AdminBranchements from "@/components/admin/AdminBranchements";
 import { Utilisateurs, ComptesVendeurs, CatalogueAdmin, Parrainage } from "@/components/admin/AdminGestion";
 import { useThemePro } from "@/lib/themePro";
 
@@ -46,6 +47,7 @@ const ONGLETS = [
   { key: "emails-ia", label: "Emails IA", groupe: "Contenus" },
   { key: "videos-ia", label: "Vidéos IA", groupe: "Contenus" },
   { key: "carrousel", label: "Carrousel login", groupe: "Contenus" },
+  { key: "branchements", label: "Branchements & clés", groupe: "Technique" },
   { key: "logs", label: "Logs applicatifs", groupe: "Technique" },
   { key: "compte-demo", label: "Compte démo", groupe: "Technique" },
 ];
@@ -97,6 +99,7 @@ export default function Admin() {
         {onglet === "newsletters" && <AdminNewsletters />}
         {onglet === "connexions" && <AdminConnexions />}
         {onglet === "logs" && <AdminAppLogs />}
+        {onglet === "branchements" && <AdminBranchements />}
         {onglet === "articles-seo" && <AVenir label="Articles SEO" description="Génération d'articles SEO par IA — même remarque : référence Sentriq disponible, pas encore de route serveur ici." />}
       </div>
       </div>

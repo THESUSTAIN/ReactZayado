@@ -13,6 +13,7 @@ import {
 } from "@/lib/kairosApi";
 import { ProcessusContenu } from "@/pages/Processus";
 import { IdeesContenu } from "@/pages/Ideas";
+import { aDroit, planEffectif } from "@/lib/droits";
 import { chargerAbonnement } from "@/lib/acces";
 
 // « Plan d'action » : un seul endroit pour ce qui était éparpillé (Objectifs dans
@@ -263,9 +264,9 @@ function Actions({ taches, objectifs, couleur, filtre, setFiltre, recharger, ide
 export default function PlanAction() {
   const [params, setParams] = useSearchParams();
   const [plan, setPlan] = useState(null);
-  useEffect(() => { chargerAbonnement().then((a) => setPlan(a.plan)).catch(() => {}); }, []);
-  const verrous = plan === "reveur" ? ["actions", "processus"] : [];
-  const onglet = ["idees", "objectifs", "actions", "processus"].includes(params.get("tab")) ? params.get("tab") : (plan === "reveur" ? "idees" : "actions");
+  useEffect(() => { chargerAbonnement().then((a) => setPlan(planEffectif(a))).catch(() => {}); }, []);
+  const verrous = plan && !aDroit(plan, "actions") ? ["actions", "processus"] : [];
+  const onglet = ["idees", "objectifs", "actions", "processus"].includes(params.get("tab")) ? params.get("tab") : (plan && !aDroit(plan, "actions") ? "idees" : "actions");
   const setOnglet = (t, extra = {}) => setParams({ tab: t, ...extra });
   const filtre = params.get("objectif") || "tous";
   const [taches, setTaches] = useState([]);

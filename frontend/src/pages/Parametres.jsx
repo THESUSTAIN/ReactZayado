@@ -20,7 +20,6 @@ import { ChoixPays } from "@/components/kairos/ChoixPays";
 import { libellePays } from "@/lib/marches";
 import { useI18n } from "@/i18n";
 import { Link, useNavigate } from "react-router-dom";
-import IntegrationsSection from "@/components/kairos/IntegrationsSection";
 import CanauxCopilote from "@/components/kairos/CanauxCopilote";
 import PoulsQonto from "@/components/kairos/PoulsQonto";
 
@@ -840,7 +839,6 @@ function SectionConnexions() {
 
       <CarteTeams />
       {equipe && <CarteZayadoRH equipe={equipe} />}
-      <IntegrationsSection />
     </>
   );
 }
