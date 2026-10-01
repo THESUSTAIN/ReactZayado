@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Send, Trash2, Search, Flag, Check, ShieldAlert } from "lucide-react";
+import { Loader2, Send, Trash2, Search, Flag, Check, ShieldAlert, Building2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import {
   fetchAdminEquipe, inviterEquipe, retirerEquipe, changerRoleUtilisateur,
+  fetchMembresEntreprise, ajouterMembreEntreprise, retirerMembreEntreprise,
   fetchAdminJournal, fetchAdminFoiSignalements, deciderFoiSignalement,
 } from "@/lib/kairosApi";
 import { Carte, MOTIFS_ACCES } from "./AdminGestion";
@@ -12,6 +14,81 @@ const INPUT = "h-9 rounded-lg border border-white/15 bg-navy-800 px-3 text-sm te
 const SELECT = "h-9 rounded-lg border border-white/15 bg-navy-800 px-2 text-sm";
 const BTN = "inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-2.5 py-1 text-xs hover:bg-white/10 disabled:opacity-50";
 const dateFr = (iso) => (iso ? new Date(iso).toLocaleDateString("fr-FR") : "—");
+const dateHeure = (iso) => (iso ? new Date(iso).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "jamais");
+
+/* Espace Pro : rattacher des collègues à l'entreprise (un seul compte, deux espaces). */
+function EspaceEntreprise({ onPerso }) {
+  const [d, setD] = useState(null);
+  const [form, setForm] = useState({ email: "", modules: ["actions", "agents"], perso_offert: false, envoyer_email: true });
+  const [envoi, setEnvoi] = useState(false);
+  const charger = () => fetchMembresEntreprise().then(setD).catch(() => setD({ items: [], erreur: true }));
+  useEffect(() => { charger(); }, []);
+  const basculerModule = (m) => setForm((f) => ({ ...f, modules: f.modules.includes(m) ? f.modules.filter((x) => x !== m) : [...f.modules, m] }));
+  const ajouter = async (e) => {
+    e.preventDefault();
+    if (!form.email.includes("@")) { toast.error("Indique une adresse e-mail."); return; }
+    if (!form.modules.length) { toast.error("Coche au moins un module."); return; }
+    setEnvoi(true);
+    try {
+      await ajouterMembreEntreprise(form);
+      if (form.perso_offert) await inviterEquipe({ email: form.email, plan: "serenite", motif: "equipe", note: "Collègue (espace perso offert)", envoyer_email: form.envoyer_email });
+      toast.success("Collègue rattaché à l'entreprise.");
+      setForm({ ...form, email: "" }); charger(); onPerso?.();
+    } catch (err) { toast.error(err.detail || err.message || "Impossible."); }
+    setEnvoi(false);
+  };
+  const retirer = async (x) => {
+    if (!window.confirm(`Retirer ${x.email} de l'espace de l'entreprise ? Ce qu'il y a créé reste dans l'entreprise.${x.perso_offert ? " Son accès perso offert est à retirer séparément dans « Accès offerts »." : ""}`)) return;
+    try { await retirerMembreEntreprise(x.email); toast.success("Retiré de l'entreprise."); charger(); } catch (err) { toast.error(err.detail || "Impossible."); }
+  };
+  if (d && !d.organisation && !d.erreur) {
+    return (
+      <Carte>
+        <p className="flex items-center gap-2 font-semibold"><Building2 size={16} className="text-gold" /> Espace Pro de l'entreprise</p>
+        <p className="mt-1 text-[12.5px] text-offwhite/60">Déclare d'abord ton entreprise (nom + SIRET) pour pouvoir y rattacher tes collègues.</p>
+        <Link to="/parametres#entreprise" className="mt-3 inline-flex text-sm font-semibold text-gold hover:underline">Déclarer mon entreprise →</Link>
+      </Carte>
+    );
+  }
+  return (
+    <Carte>
+      <p className="flex items-center gap-2 font-semibold" data-testid="admin-espace-pro"><Building2 size={16} className="text-gold" /> Espace Pro {d?.organisation ? `· ${d.organisation.nom}` : ""}</p>
+      <p className="mt-1 text-[12.5px] text-offwhite/60">Tes collègues gardent leur adresse habituelle (un seul compte). Ils basculent entre <b>Perso</b> et <b>l'entreprise</b> en haut de l'écran. Dans l'espace de l'entreprise, ils ne voient que les modules cochés ; ce qu'ils y créent appartient à l'entreprise.</p>
+      <form onSubmit={ajouter} className="mt-4 space-y-3">
+        <div className="flex flex-wrap gap-2">
+          <input className={`${INPUT} min-w-[240px] flex-1`} type="email" placeholder="adresse du collègue" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} data-testid="entreprise-email" />
+          <button className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-gold px-4 text-sm font-semibold text-navy-900 disabled:opacity-50" disabled={envoi} data-testid="entreprise-ajouter">
+            {envoi ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} Rattacher
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(d?.modules || {}).map(([k, l]) => (
+            <button type="button" key={k} onClick={() => basculerModule(k)} data-testid={`entreprise-module-${k}`}
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${form.modules.includes(k) ? "bg-gold text-navy-900" : "border border-white/20 text-offwhite/70"}`}>{l}</button>
+          ))}
+        </div>
+        <label className="flex items-center gap-2 text-xs text-offwhite/70"><input type="checkbox" checked={form.perso_offert} onChange={(e) => setForm({ ...form, perso_offert: e.target.checked })} data-testid="entreprise-perso" /> Lui offrir aussi un espace perso (offre Solo gratuite)</label>
+        <label className="flex items-center gap-2 text-xs text-offwhite/60"><input type="checkbox" checked={form.envoyer_email} onChange={(e) => setForm({ ...form, envoyer_email: e.target.checked })} /> Le prévenir par e-mail</label>
+      </form>
+      {!!d?.items?.length && (
+        <div className="mt-4 overflow-x-auto"><table className="w-full min-w-[640px] text-sm">
+          <thead><tr className="border-b border-white/10 text-left text-offwhite/50"><th className="pb-2">Collègue</th><th className="pb-2">Modules</th><th className="pb-2">Espace perso</th><th className="pb-2">Dernière connexion</th><th className="pb-2 text-right">Action</th></tr></thead>
+          <tbody>
+            {d.items.map((x) => (
+              <tr key={x.email} className="border-b border-white/5" data-testid={`entreprise-ligne-${x.email}`}>
+                <td className="py-2.5 pr-2">{x.email}{!x.compte && <p className="text-[11px] text-amber-200">pas encore inscrit</p>}</td>
+                <td className="py-2.5 text-xs text-offwhite/75">{x.modules.map((m) => d.modules[m] || m).join(" · ")}</td>
+                <td className="py-2.5 text-xs">{x.perso_offert ? "Offert" : "Non (pro seulement)"}</td>
+                <td className="py-2.5 text-xs text-offwhite/70">{dateHeure(x.derniere_connexion)}</td>
+                <td className="py-2.5 text-right"><button className={BTN} onClick={() => retirer(x)} data-testid={`entreprise-retirer-${x.email}`}><Trash2 size={12} /> Retirer</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table></div>
+      )}
+    </Carte>
+  );
+}
 
 /* Équipe Zayado & accès offerts : inviter un collaborateur, même sans compte. */
 export function AdminEquipe() {
@@ -41,6 +118,7 @@ export function AdminEquipe() {
 
   return (
     <div className="space-y-4" data-testid="admin-equipe">
+      <EspaceEntreprise onPerso={charger} />
       <Carte>
         <p className="font-semibold">Donner accès à quelqu'un</p>
         <p className="mt-1 text-[12.5px] text-offwhite/60">Collaborateur, partenaire, testeur : il reçoit l'offre choisie, gratuite et sans carte bancaire. S'il n'a pas encore de compte, l'accès s'active tout seul quand il s'inscrit avec cette adresse. L'accès à la console admin se donne ensuite, séparément, dans la liste ci-dessous.</p>
@@ -75,7 +153,7 @@ export function AdminEquipe() {
                   <td className="py-2.5 text-offwhite/70">{x.motif_label}</td>
                   <td className="py-2.5 text-xs">{x.statut === "invite"
                     ? <span className="rounded-full bg-amber-300/15 px-2 py-0.5 text-amber-200">Invité · pas encore inscrit</span>
-                    : <span className="rounded-full bg-emerald-400/15 px-2 py-0.5 text-emerald-300">Actif{x.derniere_connexion ? ` · vu le ${dateFr(x.derniere_connexion)}` : ""}</span>}</td>
+                    : <span className="rounded-full bg-emerald-400/15 px-2 py-0.5 text-emerald-300">Actif · vu le {dateHeure(x.derniere_connexion)}</span>}</td>
                   <td className="py-2.5">{x.user_id
                     ? <button className={BTN} onClick={() => basculerAdmin(x)} data-testid={`equipe-admin-${x.email}`}>{x.role === "admin" ? <><Check size={12} className="text-emerald-300" /> Oui · retirer</> : "Donner l'accès"}</button>
                     : <span className="text-xs text-offwhite/40">après inscription</span>}</td>

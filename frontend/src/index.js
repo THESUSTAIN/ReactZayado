@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "@/index.css";
 import App from "@/App";
 import { getToken } from "@/lib/kairosApi";
+import { enPro } from "@/lib/espace";
 
 // Ajoute automatiquement le jeton de connexion à TOUS les appels vers /api.
 // Plusieurs écrans utilisaient fetch() sans en-tête Authorization : le backend
@@ -25,6 +26,8 @@ import { getToken } from "@/lib/kairosApi";
     if (url && token && estApi(url)) {
       const headers = new Headers(init.headers || {});
       if (!headers.has("Authorization")) headers.set("Authorization", `Bearer ${token}`);
+      // Espace Pro (entreprise) : le backend l'applique aux seuls modules autorisés.
+      if (!headers.has("x-zayado-espace") && enPro()) headers.set("x-zayado-espace", "pro");
       return origFetch(input, { ...init, headers });
     }
     return origFetch(input, init);

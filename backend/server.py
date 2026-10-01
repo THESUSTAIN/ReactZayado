@@ -299,6 +299,20 @@ class _AuthMiddleware(BaseHTTPMiddleware):
         if (not jeton_valide and request.method != "OPTIONS" and path.startswith("/api")
                 and not _route_publique(path) and not _mode_apercu(request)):
             return JSONResponse(status_code=401, content={"detail": "Connexion requise."})
+        # Espace Pro (entreprise) : sur les routes des modules autorisés, on travaille
+        # avec l'identifiant de l'organisation ; l'accès payant est celui du titulaire.
+        espace = None
+        if jeton_valide:
+            f_espace = globals().get("_espace_pour_requete")
+            if f_espace is not None:
+                try:
+                    espace = await f_espace(request, uid)
+                except Exception:  # noqa: BLE001 — en cas de doute : espace perso
+                    espace = None
+        if jeton_valide:
+            f_bloque = globals().get("_compte_bloque")
+            if f_bloque is not None and await f_bloque(uid):
+                return JSONResponse(status_code=403, content={"detail": "Ton compte est suspendu. Écris à contact@zayado.net si tu penses que c'est une erreur.", "suspendu": True})
         if jeton_valide:
             _noter_activite(uid)
             # Paywall côté serveur (avant : seulement dans l'interface) : les appels IA
@@ -308,13 +322,14 @@ class _AuthMiddleware(BaseHTTPMiddleware):
                 if f_acces is not None:
                     try:
                         async with async_session() as db_acces:
-                            ok = await f_acces(db_acces, uid)
+                            ok = await f_acces(db_acces, espace["owner_id"] if espace else uid)
                     except Exception:  # noqa: BLE001 — en cas de doute on ne bloque pas
                         ok = True
                     if not ok:
                         return JSONResponse(status_code=402, content={"detail": "Active ton offre pour utiliser l'IA de Zayado.", "activer": "/activer"})
-        token_uid = _current_uid.set(uid)
-        token_role = _current_role.set(role)
+        token_uid = _current_uid.set(espace["org_id"] if espace else uid)
+        # En espace Pro, jamais de droits admin/vendeur hérités sur les données de l'entreprise.
+        token_role = _current_role.set(("client" if role in ("admin", "vendeur") and not espace.get("proprietaire") else role) if espace else role)
         try:
             return await call_next(request)
         finally:
@@ -654,6 +669,10 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     # Dernière connexion / activité (mise à jour au plus toutes les 10 min par requête authentifiée).
     derniere_connexion: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Compte suspendu par un admin : plus aucun accès (données conservées, réversible).
+    bloque: Mapped[Optional[bool]] = mapped_column(Boolean, default=False, nullable=True)
+    bloque_le: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    bloque_motif: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
 
 class Lead(Base):
@@ -1027,6 +1046,8 @@ async def login(body: AuthIn, db: AsyncSession = Depends(get_db)):
     email = body.email.strip().lower()
     _verifier_limite_login(email)
     user = (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
+    if user and getattr(user, "bloque", False) and _verifier_mdp(body.password, user.password_hash):
+        raise HTTPException(403, "Ton compte est suspendu. Écris à contact@zayado.net si tu penses que c'est une erreur.")
     if not user or not _verifier_mdp(body.password, user.password_hash):
         _enregistrer_echec_login(email)
         raise HTTPException(401, "Email ou mot de passe incorrect.")
@@ -1098,7 +1119,7 @@ async def lister_utilisateurs(page: int = 1, par_page: int = 25, q: Optional[str
     par_page = max(5, min(par_page, 100))
     page = max(1, page)
     Abo = globals().get("Abonnement")
-    base = select(User)
+    base = select(User).where(User.email.not_like("%@supprime.invalid"))
     if q and q.strip():
         base = base.where(User.email.ilike(f"%{q.strip().lower()}%"))
     if role in ("client", "vendeur", "admin"):
@@ -1132,6 +1153,7 @@ async def lister_utilisateurs(page: int = 1, par_page: int = 25, q: Optional[str
     return {"items": [{"id": u.id, "email": u.email, "role": u.role, "plan": plans.get(u.id, "essentielle"),
                        "inscrit_le": _iso_utc(u.created_at),
                        "derniere_connexion": _iso_utc(u.derniere_connexion),
+                       "bloque": bool(getattr(u, "bloque", False)),
                        "abonnement": _abo_resume(abos.get(u.id))} for u in rows],
             "total": total, "page": page, "par_page": par_page, "pages": max(1, -(-total // par_page)), "stats": stats}
 
@@ -5785,6 +5807,10 @@ async def admin_diagnostics():
     }
 
 
+from espace_pro_ext import install_espace_pro  # noqa: E402
+install_espace_pro(globals())
+from comptes_admin_ext import install_comptes_admin  # noqa: E402
+install_comptes_admin(globals())
 from agents_perso_ext import install_agents_perso  # noqa: E402
 install_agents_perso(globals())
 

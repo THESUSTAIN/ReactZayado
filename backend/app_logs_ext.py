@@ -68,6 +68,12 @@ def install_app_logs(g: dict) -> None:
         ne doit jamais faire échouer l'appelant."""
         try:
             async with async_session() as db:
+                if user_id and not user_email and g.get("User") is not None:
+                    try:
+                        u = await db.get(g["User"], user_id)
+                        user_email = u.email if u else None
+                    except Exception:  # noqa: BLE001
+                        pass
                 db.add(AppLog(
                     level=level.upper(), feature=feature, action=action,
                     user_id=user_id, user_email=user_email, message=message,
@@ -83,17 +89,69 @@ def install_app_logs(g: dict) -> None:
 
     # ── Instrumentation automatique, additive : erreurs non interceptées et
     # réponses 5xx. Ne touche aucune route existante. ──
+    # Événements métier journalisés automatiquement (avant : seules les erreurs 5xx l'étaient,
+    # d'où un journal vide pendant des jours alors que l'appli tournait normalement).
+    # (méthode, chemin ou préfixe) → (fonctionnalité, libellé)
+    EVENEMENTS = [
+        ("POST", "/api/auth/login", "auth", "Connexion par mot de passe"),
+        ("POST", "/api/auth/register", "auth", "Inscription"),
+        ("POST", "/api/connexion/verifier", "auth", "Connexion par lien magique"),
+        ("POST", "/api/connexion/lien", "auth", "Demande de lien magique"),
+        ("POST", "/api/connexion/oauth/", "oauth", "Connexion Google / Microsoft"),
+        ("POST", "/api/connexion/sso/token", "oauth", "Connexion TheSustain (SSO)"),
+        ("POST", "/api/checkout", "payment", "Paiement lancé"),
+        ("POST", "/api/mollie/webhook", "payment", "Notification Mollie"),
+        ("POST", "/api/agent-business/", "agent", "Test de l'Agent Business"),
+        ("POST", "/api/agents-perso/", "agent", "Agent IA"),
+        ("POST", "/api/public/chatbot/", "agent", "Message sur un chatbot publié"),
+    ]
+
+    def _evenement(methode: str, chemin: str):
+        for m, p, f, libelle in EVENEMENTS:
+            if methode == m and (chemin == p or (p.endswith("/") and chemin.startswith(p))):
+                return f, libelle
+        return None
+
+    async def _email_requete(request: Request) -> Optional[str]:
+        if not request.url.path.startswith(("/api/auth/", "/api/connexion/lien")):
+            return None
+        try:
+            corps = json.loads((await request.body()) or b"{}")
+            e = corps.get("email") if isinstance(corps, dict) else None
+            return str(e).strip().lower()[:255] if e else None
+        except Exception:  # noqa: BLE001
+            return None
+
     class _AppLogsMiddleware(BaseHTTPMiddleware):
         async def dispatch(self, request: Request, call_next):
+            ev = _evenement(request.method, request.url.path)
+            email = await _email_requete(request) if ev else None
+            debut = datetime.now(timezone.utc)
             try:
                 reponse = await call_next(request)
             except Exception as e:  # noqa: BLE001
                 await log_event("CRITICAL", "admin", f"Exception non interceptée : {e}",
                                  action=request.url.path, ip_address=request.client.host if request.client else None)
                 raise
+            ip = (request.headers.get("x-forwarded-for", "").split(",")[0].strip() or (request.client.host if request.client else None))
+            uid = None
+            try:
+                uid = g["_uid"]()
+                uid = None if uid == g.get("DEMO_USER_ID") else uid
+            except Exception:  # noqa: BLE001
+                pass
             if reponse.status_code >= 500 and request.url.path.startswith("/api"):
-                await log_event("ERROR", "admin", f"Réponse {reponse.status_code}",
-                                 action=request.url.path, ip_address=request.client.host if request.client else None)
+                await log_event("ERROR", ev[0] if ev else "admin", f"Erreur serveur {reponse.status_code}" + (f" · {ev[1]}" if ev else ""),
+                                 action=request.url.path, ip_address=ip, user_id=uid, user_email=email)
+            elif ev:
+                code = reponse.status_code
+                niveau = "INFO" if code < 400 else "WARNING"
+                suite = {401: " — refusée (identifiants)", 402: " — offre inactive", 403: " — refusée (accès / compte suspendu)",
+                         409: " — conflit", 422: " — données invalides", 429: " — trop d'essais"}.get(code, "" if code < 400 else f" — {code}")
+                await log_event(niveau, ev[0], ev[1] + suite, action=request.url.path, user_id=uid, user_email=email, ip_address=ip,
+                                 duration_ms=int((datetime.now(timezone.utc) - debut).total_seconds() * 1000))
+            elif reponse.status_code == 429:
+                await log_event("WARNING", "admin", "Trop de requêtes (limite atteinte)", action=request.url.path, ip_address=ip)
             return reponse
 
     app.add_middleware(_AppLogsMiddleware)

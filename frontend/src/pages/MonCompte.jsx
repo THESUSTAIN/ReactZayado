@@ -10,6 +10,7 @@ import {
   setToken, fetchLoginCarousel, mediaUrl,
 } from "@/lib/kairosApi";
 import { planNom, PLANS } from "@/lib/plans";
+import { accueilPro, basculerEspace, chargerEspace, enPro } from "@/lib/espace";
 
 const RH_URL = process.env.REACT_APP_RH_URL || "https://rh.zayado.net";
 // Commandes de la boutique (Shopify) : l'espace client de la boutique, jamais ouvert dans le cockpit.
@@ -28,6 +29,8 @@ export default function MonCompte() {
   const design = params.get("design") === "b" ? "b" : "a";
   const [d, setD] = useState(null);
 
+  const [esp, setEsp] = useState(null);
+  useEffect(() => { chargerEspace().then(setEsp).catch(() => {}); }, []);
   useEffect(() => {
     Promise.allSettled([fetchMoi(), fetchAbonnement(), fetchMesFilleuls(), fetchOrganisation(), fetchCommandes(), fetchState(), fetchLoginCarousel()])
       .then(([moi, abo, fil, org, cmd, st, car]) => setD({
@@ -94,7 +97,8 @@ export default function MonCompte() {
           <p className={`mt-1 text-[15px] ${c.doux}`}>{d.moi.email}</p>
 
           <Rubrique titre="Mes espaces">
-            <Ligne Icone={LayoutDashboard} label="Mon cockpit" sous={actif ? `Offre ${planNom(plan)}` : "Active ton offre pour y accéder"} onClick={() => navigate(actif ? "/app" : "/activer")} testid="compte-espace-cockpit" />
+            {(!esp?.entreprise || esp.perso) && <Ligne Icone={LayoutDashboard} label="Mon cockpit perso" sous={actif ? `Offre ${planNom(plan)}` : "Active ton offre pour y accéder"} onClick={() => (enPro() ? basculerEspace("perso") : navigate(actif ? "/app" : "/activer"))} testid="compte-espace-cockpit" />}
+            {esp?.entreprise && <Ligne Icone={Building2} label={`Espace ${esp.entreprise.nom}`} sous="Les outils partagés de l'entreprise" onClick={() => (enPro() ? navigate(accueilPro(esp.entreprise.modules)) : basculerEspace("pro", accueilPro(esp.entreprise.modules)))} testid="compte-espace-entreprise" />}
             {["business", "entreprise"].includes(plan) && actif && <Ligne Icone={Users} label="Zayado RH" sous="Planning, présence et absences de ton équipe" onClick={() => window.open(RH_URL, "_blank", "noopener")} externe testid="compte-espace-rh" />}
             {(role === "vendeur" || role === "admin") && <Ligne Icone={Store} label="Espace vendeur" sous="Tes produits sur la marketplace" onClick={() => navigate("/espace-vendeur")} testid="compte-espace-vendeur" />}
             {role === "admin" && <Ligne Icone={ShieldCheck} label="Console admin" sous="Utilisateurs, offres, contenus" onClick={() => navigate("/admin")} testid="compte-espace-admin" />}

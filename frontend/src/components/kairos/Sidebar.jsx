@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Compass, CheckSquare, Heart, Settings, CalendarCheck, Radar, Lock, HandHeart, Bot,
 } from "lucide-react";
+import { chargerEspace, enPro, menusPro } from "@/lib/espace";
 import { chargerAbonnement, MENU_REVEUR } from "@/lib/acces";
 import { BottomNav } from "./BottomNav";
 import { LanguageSwitcher } from "./LanguageSwitcher";
@@ -50,9 +51,13 @@ export function Sidebar() {
   const { contexte } = useKairos();
   const [abo, setAbo] = useState(null);
   useEffect(() => { chargerAbonnement().then(setAbo).catch(() => {}); }, []);
+  // Espace Pro : seules les entrées des modules ouverts par l'entreprise.
+  const [menusEntreprise, setMenusEntreprise] = useState(null);
+  useEffect(() => { if (enPro()) chargerEspace().then((e) => setMenusEntreprise(e?.entreprise ? menusPro(e.entreprise.modules) : null)).catch(() => {}); }, []);
   // Ma Foi est optionnelle : visible seulement si activée sur le compte (onboarding, Paramètres, Bien-être).
   // Agent Business : seulement pour les offres qui l'incluent.
   const visible = (key) => {
+    if (menusEntreprise) return menusEntreprise.includes(key);
     if (key === "mafoi") return contexte?.parcours_foi === true;
     if (key === "agent") return !!abo && OFFRES_AGENTS_IA.includes(abo.plan) && (abo.acces === undefined || abo.acces === "actif");
     return true;
@@ -74,7 +79,7 @@ export function Sidebar() {
   const { t } = useI18n();
   const [planActuel, setPlanActuel] = useState(null);
   useEffect(() => { chargerAbonnement().then((a) => setPlanActuel(a.plan)).catch(() => {}); }, []);
-  const verrouille = (key) => planActuel === "reveur" && !MENU_REVEUR.includes(key);
+  const verrouille = (key) => !menusEntreprise && planActuel === "reveur" && !MENU_REVEUR.includes(key);
   const [active, setActive] = useState(deriveActive());
   useEffect(() => { setActive(deriveActive()); }, [deriveActive]);
 

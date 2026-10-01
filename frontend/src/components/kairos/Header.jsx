@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { chargerAbonnement } from "@/lib/acces";
-import { BatteryMedium, Search, Moon, Sun, Mail, Grid3x3, Bell, MessageCircle, Workflow, Radio, CheckSquare, HelpCircle, Settings, LogOut, User, ChevronDown, CornerDownLeft, Compass, Flame, MailOpen, CalendarCheck } from "lucide-react";
+import { BatteryMedium, Search, Moon, Sun, Mail, Bell, MessageCircle, Radio, CheckSquare, HelpCircle, Settings, LogOut, User, ChevronDown, CornerDownLeft, Compass, Flame, MailOpen, CalendarCheck } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuGroup,
@@ -14,6 +14,8 @@ let _notifCache = null;
 import { EnergyCheckin } from "./EnergyCheckin";
 import { getToken } from "@/lib/kairosApi";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import ChoixEspace from "./ChoixEspace";
+import { enPro } from "@/lib/espace";
 import { useI18n } from "@/i18n";
 import { fetchActualite, fetchDecisions, setToken, fetchRituels, fetchLettres } from "@/lib/kairosApi";
 import { openChat } from "./GlobalChat";
@@ -43,10 +45,6 @@ const PAGES = [
 ];
 const norm = (x) => (x || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
-const MODULES = [
-  { name: "Agent Business",      icon: MessageCircle, path: "/app/chatbot-b2b",   badge: "Pro" },
-  { name: "Processus",           icon: Workflow,     path: "/app/actions?tab=processus" },
-];
 
 export function Header() {
   const { user, modeInfo, aCheckin, loaded, contexte } = useKairos();
@@ -130,7 +128,6 @@ export function Header() {
     </div>
   );
   // La marketplace publique est gérée par Shopify, pas dans le cockpit privé.
-  const modules = MODULES;
 
   // Thème clair/sombre — persisté en local, classe posée sur <body>.
   const [clair, setClair] = useState(() => {
@@ -230,8 +227,9 @@ export function Header() {
           <Search className="h-[18px] w-[18px]" />
         </button>
         <div className="hidden sm:block"><LanguageSwitcher /></div>
+        <ChoixEspace />
 
-        {rappelCheckin && (
+        {rappelCheckin && !enPro() && (
           <button onClick={() => setCheckinOuvert(true)} data-testid="header-rappel-checkin"
             className="relative inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-gold/50 bg-gradient-to-b from-[#F1E2CC] to-[#DEC2A3] px-2.5 py-2 text-[12px] font-semibold text-navy-900 shadow-[0_6px_18px_-6px_rgba(222,194,163,0.7)] transition hover:brightness-105"
             title="Ton check-in du jour n'est pas encore fait">
@@ -268,31 +266,7 @@ export function Header() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger className="hidden rounded-xl border border-white/10 bg-white/5 p-2 text-offwhite/70 transition-colors hover:bg-white/10 sm:block" title={t("header.ecosystem")} aria-label={t("header.ecosystem")} data-testid="header-ecosystem">
-            <Grid3x3 className="h-[18px] w-[18px]" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="glass-strong w-64 border-white/10 text-offwhite">
-            <DropdownMenuGroup><DropdownMenuLabel className="text-xs uppercase tracking-[0.2em] text-gold">Modules Zayado</DropdownMenuLabel></DropdownMenuGroup>
-            <DropdownMenuSeparator className="bg-white/10" />
-            {modules.map((e) => (
-              <DropdownMenuItem key={e.name} onClick={() => navigate(e.path)}
-                className="cursor-pointer gap-2 focus:bg-white/10 focus:text-offwhite" data-testid={`module-${e.name}`}>
-                <e.icon className="h-4 w-4 text-gold" />
-                <span className="flex-1">{e.name}</span>
-                {e.badge && (
-                  <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-widest text-gold">{e.badge}</span>
-                )}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
 
-        <button onClick={() => startTour()}
-          className="hidden rounded-xl border border-white/10 bg-white/5 p-2 text-offwhite/70 transition-colors hover:bg-white/10 sm:block"
-          title="Visite guidée" aria-label="Lancer la visite guidée" data-testid="header-help">
-          <HelpCircle className="h-[18px] w-[18px]" />
-        </button>
 
         <DropdownMenu>
           <DropdownMenuTrigger className="relative rounded-xl border border-white/10 bg-white/5 p-2 text-offwhite/70 transition-colors hover:bg-white/10" title={t("header.notifications")} aria-label={t("header.notifications")} data-testid="header-bell">

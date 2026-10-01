@@ -286,6 +286,8 @@ def install_admin_plus(g: dict) -> None:
         fiche = {
             "id": u.id, "email": u.email, "role": u.role, "inscrit_le": _iso(u.created_at),
             "derniere_connexion": _iso(getattr(u, "derniere_connexion", None)),
+            "bloque": bool(getattr(u, "bloque", False)), "bloque_le": _iso(getattr(u, "bloque_le", None)),
+            "bloque_motif": getattr(u, "bloque_motif", None),
             "prenom": p.prenom, "metier": cm.get("metier") or cm.get("activite"), "marche": cm.get("marche"),
             "ma_foi": bool(cm.get("parcours_foi")),
             "abonnement": g["_abo_resume"](await db.get(Abo, user_id)),

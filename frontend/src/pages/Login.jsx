@@ -1,3 +1,4 @@
+import { accueilPro, chargerEspace, oublierEspace, setEspace } from "@/lib/espace";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -155,11 +156,15 @@ export default function Login() {
       // /state renvoie « onboarded » à la racine (pas dans profile) : l'ancien test
       // lisait toujours undefined et renvoyait vers l'onboarding à chaque connexion.
       if (next) { navigate(next); return; }
+      // Collègue rattaché à une entreprise sans accès perso : directement l'espace de l'entreprise.
+      oublierEspace();
+      const esp = await chargerEspace().catch(() => null);
+      if (esp?.entreprise && !esp.perso) { setEspace("pro"); navigate(accueilPro(esp.entreprise.modules)); return; }
       if (!(d?.onboarded ?? d?.profile?.onboarded)) { navigate("/onboarding"); return; }
       // Plusieurs espaces (admin, vendeur, offre Équipe/Entreprise avec l'app RH) : page « Mon compte »
       // qui les regroupe ; sinon directement le cockpit.
       const [moi, abo] = await Promise.all([fetchMoi().catch(() => ({})), fetchAbonnement().catch(() => ({}))]);
-      const plusieurs = ["admin", "vendeur"].includes(moi?.role) || ["business", "entreprise"].includes(abo?.plan);
+      const plusieurs = ["admin", "vendeur"].includes(moi?.role) || ["business", "entreprise"].includes(abo?.plan) || !!esp?.entreprise;
       navigate(plusieurs ? "/compte" : "/app");
     } catch {
       navigate(next || "/onboarding");

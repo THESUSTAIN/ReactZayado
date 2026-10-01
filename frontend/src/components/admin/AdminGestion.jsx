@@ -8,6 +8,7 @@ import {
   fetchAdminParrainage, creerParrainageAdmin, modifierParrainageAdmin, supprimerParrainageAdmin,
   fetchAdminProgrammes, validerProgramme, payerCommission, crediterMoisAdmin, refuserProgrammeAdmin,
   inviterEquipe, actionGroupeUtilisateurs, exporterUtilisateursCsv, fetchAdminFiche,
+  bloquerUtilisateur, supprimerUtilisateur,
 } from "@/lib/kairosApi";
 
 export const MOTIFS_ACCES = { equipe: "Équipe Zayado", partenaire: "Partenaire", testeur: "Testeur", presse: "Presse", autre: "Autre" };
@@ -180,7 +181,7 @@ export function Utilisateurs() {
               return (
                 <tr key={u.id} className="border-b border-white/5" data-testid={`admin-user-${u.id}`}>
                   <td className="py-2.5"><input type="checkbox" aria-label={`Sélectionner ${u.email}`} checked={selection.includes(u.id)} onChange={() => basculer(u.id)} /></td>
-                  <td className="py-2.5 pr-2"><button className="text-left hover:text-gold hover:underline" onClick={() => setFiche(u.id)} data-testid={`admin-user-fiche-${u.id}`}>{u.email}</button></td>
+                  <td className="py-2.5 pr-2"><button className="text-left hover:text-gold hover:underline" onClick={() => setFiche(u.id)} data-testid={`admin-user-fiche-${u.id}`}>{u.email}</button>{u.bloque && <span className="ml-1.5 rounded-full bg-red-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-red-200">Suspendu</span>}</td>
                   <td className="py-2.5">
                     <select value={u.plan || "essentielle"} onChange={(e) => changerPlan(u, e.target.value)} disabled={offert}
                       data-testid={`admin-plan-select-${u.id}`} className={SELECT} title={offert ? "Compte gratuit : retire-le d'abord pour changer l'offre" : ""}>
@@ -198,7 +199,7 @@ export function Utilisateurs() {
                     ) : <span className="text-offwhite/35">—</span>}
                   </td>
                   <td className="py-2.5 text-offwhite/55">{dateFr(u.inscrit_le)}</td>
-                  <td className="py-2.5 text-offwhite/70" title={u.derniere_connexion ? new Date(u.derniere_connexion).toLocaleString("fr-FR") : ""} data-testid={`admin-derniere-connexion-${u.id}`}>{depuis(u.derniere_connexion)}</td>
+                  <td className="py-2.5 text-offwhite/70" title={u.derniere_connexion ? new Date(u.derniere_connexion).toLocaleString("fr-FR") : ""} data-testid={`admin-derniere-connexion-${u.id}`}>{depuis(u.derniere_connexion)}{u.derniere_connexion && <span className="block text-[10.5px] text-offwhite/40">{new Date(u.derniere_connexion).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>}</td>
                   <td className="py-2.5">
                     <select value={u.role} onChange={(e) => changerRole(u.id, e.target.value, u.email)} data-testid={`admin-role-select-${u.id}`} className={SELECT}>
                       <option value="client">client</option><option value="vendeur">vendeur</option><option value="admin">admin</option>
@@ -218,7 +219,7 @@ export function Utilisateurs() {
         <Pagination page={d.page} pages={d.pages} total={d.total} onPage={setPage} unite="utilisateur" />
       </Carte>
       {gratuitPour && <FenetreGratuit u={gratuitPour} onClose={() => setGratuitPour(null)} onOk={() => { setGratuitPour(null); charger(); }} />}
-      {fiche && <FicheUtilisateur id={fiche} onClose={() => setFiche(null)} />}
+      {fiche && <FicheUtilisateur id={fiche} onClose={() => setFiche(null)} onChange={charger} />}
     </div>
   );
 }
@@ -256,7 +257,38 @@ function FenetreGratuit({ u, onClose, onOk }) {
 
 /* ───────────────────────── Fiche 360° ───────────────────────── */
 const ETATS_ABO = { actif: "Actif", essai: "Essai", offert: "Offert", resilie: "Résilié", expire: "Expiré", aucun: "Aucun" };
-export function FicheUtilisateur({ id, onClose }) {
+function ActionsCompte({ f, onFait }) {
+  const [envoi, setEnvoi] = useState(false);
+  if (f.role === "admin") return <p className="mt-6 text-[12px] text-offwhite/45">Compte administrateur : retire d'abord le rôle admin pour le suspendre ou le supprimer.</p>;
+  const suspendre = async () => {
+    const bloque = !f.bloque;
+    const motif = bloque ? window.prompt(`Suspendre ${f.email} ? Il ne pourra plus se connecter (ses données sont conservées, c'est réversible).\nMotif (facultatif) :`, "") : null;
+    if (bloque && motif === null) return;
+    if (!bloque && !window.confirm(`Réactiver le compte de ${f.email} ?`)) return;
+    setEnvoi(true);
+    try { await bloquerUtilisateur(f.id, bloque, motif || undefined); toast.success(bloque ? "Compte suspendu." : "Compte réactivé."); onFait(); }
+    catch (e) { toast.error(e.detail || "Action impossible."); } finally { setEnvoi(false); }
+  };
+  const supprimer = async () => {
+    const saisie = window.prompt(`SUPPRESSION DÉFINITIVE de ${f.email} : toutes ses données seront effacées (sauf ses factures, gardées pour la comptabilité).\nPréfère « Suspendre » si tu n'es pas sûr.\n\nRecopie son adresse e-mail pour confirmer :`);
+    if (saisie === null) return;
+    setEnvoi(true);
+    try { await supprimerUtilisateur(f.id, saisie.trim()); toast.success("Compte supprimé."); onFait(); }
+    catch (e) { toast.error(e.detail || "Suppression impossible."); } finally { setEnvoi(false); }
+  };
+  return (
+    <div className="mt-6 border-t border-white/10 pt-4" data-testid="fiche-actions-compte">
+      <p className="mb-2 text-[11px] uppercase tracking-wide text-offwhite/45">Compte</p>
+      {f.bloque && <p className="mb-2 rounded-lg bg-red-500/15 px-3 py-2 text-xs text-red-200">Suspendu{f.bloque_le ? ` depuis le ${new Date(f.bloque_le).toLocaleDateString("fr-FR")}` : ""}{f.bloque_motif ? ` · ${f.bloque_motif}` : ""}</p>}
+      <div className="flex flex-wrap gap-2">
+        <button disabled={envoi} onClick={suspendre} className="rounded-lg border border-white/20 px-3 py-1.5 text-xs font-semibold hover:bg-white/10 disabled:opacity-50" data-testid="fiche-suspendre">{f.bloque ? "Réactiver le compte" : "Suspendre le compte"}</button>
+        <button disabled={envoi} onClick={supprimer} className="rounded-lg bg-red-500/80 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500 disabled:opacity-50" data-testid="fiche-supprimer">Supprimer définitivement</button>
+      </div>
+    </div>
+  );
+}
+
+export function FicheUtilisateur({ id, onClose, onChange }) {
   const [f, setF] = useState(null);
   useEffect(() => { fetchAdminFiche(id).then(setF).catch(() => setF({ erreur: true })); }, [id]);
   const Ligne = ({ label, children }) => <div className="flex justify-between gap-3 border-b border-white/[0.06] py-2 text-sm"><span className="text-offwhite/55">{label}</span><span className="text-right">{children}</span></div>;
@@ -277,7 +309,7 @@ export function FicheUtilisateur({ id, onClose }) {
             <p className="mb-1 mt-2 text-[11px] uppercase tracking-wide text-offwhite/45">Compte</p>
             <Ligne label="Rôle">{f.role}</Ligne>
             <Ligne label="Inscrit le">{dateFr(f.inscrit_le)}</Ligne>
-            <Ligne label="Dernière connexion">{depuis(f.derniere_connexion)}</Ligne>
+            <Ligne label="Dernière connexion">{f.derniere_connexion ? `${new Date(f.derniere_connexion).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })} (${depuis(f.derniere_connexion)})` : "jamais"}</Ligne>
             <Ligne label="Métier">{f.metier || "—"}</Ligne>
             <Ligne label="Ma Foi">{f.ma_foi ? "Activé" : "Non"}</Ligne>
             <p className="mb-1 mt-4 text-[11px] uppercase tracking-wide text-offwhite/45">Offre</p>
@@ -293,6 +325,7 @@ export function FicheUtilisateur({ id, onClose }) {
             <Ligne label="Publications Ma Foi">{f.foi?.publications ?? 0}</Ligne>
             <p className="mb-1 mt-4 text-[11px] uppercase tracking-wide text-offwhite/45">Dernières erreurs</p>
             {f.erreurs.length ? f.erreurs.map((e, i) => <div key={i} className="border-b border-white/[0.06] py-2 text-xs"><span className="text-offwhite/45">{new Date(e.le).toLocaleString("fr-FR")} · {e.feature}</span><p className="text-red-300/90">{e.message}</p></div>) : <p className="py-2 text-sm text-offwhite/45">Aucune erreur récente</p>}
+            <ActionsCompte f={f} onFait={() => { onClose(); onChange?.(); }} />
           </>
         )}
       </aside>

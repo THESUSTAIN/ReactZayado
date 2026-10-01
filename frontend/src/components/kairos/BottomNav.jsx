@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Compass, Radar, CheckSquare, MoreHorizontal, Heart, CalendarCheck, Users, Settings, X, Lock, HandHeart, Bot } from "lucide-react";
 import { chargerAbonnement, MENU_REVEUR } from "@/lib/acces";
 import { useKairos } from "@/context/KairosContext";
+import { chargerEspace, enPro, menusPro } from "@/lib/espace";
 
 // Menu mobile en bas d'écran (toutes les pages de l'app). Le chat reste dans l'en-tête
 // (pas de doublon). Masqué dans l'éditeur de Vision Board, qui a sa propre barre d'outils.
@@ -28,7 +29,9 @@ export function BottomNav() {
   const [acces, setAcces] = useState(null);
   const { contexte } = useKairos();
   useEffect(() => { chargerAbonnement().then((a) => { setPlan(a.plan); setAcces(a.acces); }).catch(() => {}); }, []);
-  const visible = (k) => (k === "mafoi" ? contexte?.parcours_foi === true
+  const [menusEntreprise, setMenusEntreprise] = useState(null);
+  useEffect(() => { if (enPro()) chargerEspace().then((e) => setMenusEntreprise(e?.entreprise ? menusPro(e.entreprise.modules) : null)).catch(() => {}); }, []);
+  const visible = (k) => menusEntreprise ? (menusEntreprise.includes(k) || k === "settings") : (k === "mafoi" ? contexte?.parcours_foi === true
     : k === "agent" ? ["serenite", "pro", "business", "entreprise"].includes(plan) && (acces == null || acces === "actif") : true);
   const masque = pathname.startsWith("/app/vision") && new URLSearchParams(search).get("view");
   useEffect(() => {
@@ -38,7 +41,7 @@ export function BottomNav() {
   useEffect(() => { setPlus(false); }, [pathname]);
   if (masque) return null;
   const actif = (p) => (p === "/app" ? pathname === "/app" : pathname.startsWith(p));
-  const verrou = (k) => plan === "reveur" && !MENU_REVEUR.includes(k) && k !== "settings";
+  const verrou = (k) => !menusEntreprise && plan === "reveur" && !MENU_REVEUR.includes(k) && k !== "settings";
   const plusActif = PLUS.some((i) => actif(i.path));
   return (
     <>
@@ -60,7 +63,7 @@ export function BottomNav() {
       )}
       <nav className="fixed inset-x-0 bottom-0 z-[56] border-t border-white/10 bg-[#0f1b3a]/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden" aria-label="Navigation principale" data-testid="bottomnav">
         <div className="mx-auto flex max-w-lg items-stretch justify-around">
-          {PRINCIPAUX.map(({ key, label, Icon, path }) => (
+          {(menusEntreprise ? [...PRINCIPAUX, ...PLUS].filter((i) => menusEntreprise.includes(i.key)) : PRINCIPAUX).map(({ key, label, Icon, path }) => (
             <button key={key} onClick={() => navigate(path)} data-testid={`bottomnav-${key}`} aria-current={actif(path) ? "page" : undefined}
               className={`relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[10.5px] font-medium ${actif(path) ? "text-white" : "text-offwhite/55"}`}>
               {actif(path) && <span className="absolute top-0 h-0.5 w-8 rounded-full bg-[#DEC2A3] shadow-[0_0_8px_rgba(222,194,163,0.8)]" />}
@@ -69,11 +72,11 @@ export function BottomNav() {
               {verrou(key) && <Lock size={9} className="absolute right-[28%] top-2 text-gold" />}
             </button>
           ))}
-          <button onClick={() => setPlus((v) => !v)} data-testid="bottomnav-plus" aria-expanded={plus}
+          {!menusEntreprise && <button onClick={() => setPlus((v) => !v)} data-testid="bottomnav-plus" aria-expanded={plus}
             className={`relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[10.5px] font-medium ${plus || plusActif ? "text-white" : "text-offwhite/55"}`}>
             {plusActif && <span className="absolute top-0 h-0.5 w-8 rounded-full bg-[#DEC2A3] shadow-[0_0_8px_rgba(222,194,163,0.8)]" />}
             <MoreHorizontal className="h-5 w-5" /> Plus
-          </button>
+          </button>}
         </div>
       </nav>
     </>
