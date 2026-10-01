@@ -14,19 +14,19 @@ export const startTour = () => window.dispatchEvent(new Event("zayado:start-tour
 
 const STEPS = [
   { title: "Bienvenue dans ton cockpit", text: "En une minute, on fait le tour des zones clés de Zayado. Tu peux passer la visite à tout moment et la relancer depuis ton profil." },
-  { sel: "[data-testid=nav-today]", title: "Aujourd'hui", text: "Ton point de départ : énergie, équilibre pro/perso, priorités et pouls business du jour." },
-  { sel: "[data-testid=nav-vision]", title: "Vision Board", text: "Ton tableau façon Storyflow : murs, cartes et cartes Live reliées à tes objectifs, tes actions et tes finances." },
-  { sel: "[data-testid=nav-radar]", title: "Radar", text: "Chaque matin : de vraies personnes à contacter (ou des partenaires qui recommandent), ce qu'on cherche sur Google près de chez toi et une pub prête à lancer." },
+  { sel: "[data-testid=nav-today]", title: "Aujourd'hui", text: "Ton point de départ chaque matin : énergie, point du jour, tes 3 priorités, ton pouls business et ton Radar." },
+  { sel: "[data-testid=nav-vision]", title: "Vision Board", text: "Tes murs de vision, avec des cartes reliées à tes objectifs, tes actions et tes finances." },
+  { sel: "[data-testid=nav-radar]", title: "Radar", text: "Chaque matin, de vraies personnes à contacter avec le message prêt, et les signaux de ton marché." },
   { sel: "[data-testid=nav-review]", title: "Revue hebdo", text: "Cinq minutes par semaine pour regarder en arrière sans te juger, puis choisir la suite." },
-  { sel: "[data-testid=nav-actions]", title: "Plan d'action", text: "De l'idée à l'action : tu notes tes idées, tu en fais des objectifs ou des actions, et l'avancement se calcule tout seul. Tes processus sont là aussi." },
-  { sel: "[data-testid=nav-wellbeing]", title: "Bien-être & Mindset", text: "Check-ins, respiration, une carte du jour et des parcours de 7 jours pour oser vendre, dire non ou rebondir. Tes réponses restent dans ton carnet privé." },
-  { sel: "[data-testid=nav-collab]", title: "Collaborateurs", text: "Demande de l'aide à un expert humain : faire avec toi, préparer ou exécuter après ta validation." },
+  { sel: "[data-testid=nav-actions]", title: "Plan d'action", text: "De l'idée à l'action : tes idées deviennent des objectifs ou des actions, et l'avancement se calcule tout seul. Tu peux le relier à Trello." },
+  { sel: "[data-testid=nav-wellbeing]", title: "Bien-être & Mindset", text: "Check-ins, rituels, respiration et parcours de 7 jours. Tes réponses restent privées." },
+  { sel: "[data-testid=nav-agent]", title: "Agents IA", text: "Crée tes propres agents (commercial, contenu, finances…), confie-leur une mission chaque jour, et ton chatbot client." },
   { sel: "[data-testid=mobile-nav]", title: "Navigation", text: "Toutes les sections de Zayado, à portée de pouce." },
   { sel: "[data-testid=header-search]", title: "Recherche rapide", text: "Tape le nom d'une page puis Entrée. Raccourci : Ctrl + K (⌘ + K sur Mac)." },
-  { sel: "[data-testid=header-chat]", title: "Collaborateur IA", text: "Ton copilote IA, sur toutes les pages : pose une question, valide ses décisions, lis l'actualité du jour." },
+  { sel: "[data-testid=chat-panel]", title: "Ton Copilote", text: "Après cette visite, il te pose quelques questions, une à la fois, pour se régler (ton, rangement des documents, outils). Tu peux le masquer avec la croix." },
+  { sel: "[data-testid=header-chat]", title: "Ton Copilote", text: "Ton copilote IA, sur toutes les pages : pose une question, fais-lui créer un document, valide ses décisions." },
   { sel: "[data-testid=header-bell]", title: "Notifications", text: "Actualité du jour et décisions qui attendent ton feu vert." },
-  { sel: "[data-testid=energy-card]", title: "Check-in énergie", text: "Chaque jour, note ton énergie : Zayado adapte le rythme et les conseils." },
-  { sel: "[data-testid=header-profile]", title: "Ton profil", text: "Paramètres, Mon espace, déconnexion… et cette visite, à relancer quand tu veux." },
+  { sel: "[data-testid=header-profile]", title: "Ton profil", text: "Mon compte, Paramètres, déconnexion… et cette visite, à relancer quand tu veux." },
 ];
 
 const visible = (el) => {
@@ -66,7 +66,7 @@ export default function GuidedTour() {
     if (fait) return;
     // Plus de voile plein écran d'office sur le cockpit (il masquait le centre
     // à la 1re connexion) : une petite invitation discrète, en bas, qu'on accepte ou non.
-    const t = setTimeout(() => setInvite(true), 1600);
+    const t = setTimeout(() => setInvite(true), 900);
     return () => clearTimeout(t);
   }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -91,6 +91,7 @@ export default function GuidedTour() {
   const close = useCallback(() => {
     try { localStorage.setItem(DONE_KEY, "1"); } catch { /* stockage indisponible */ }
     setSteps(null); setRect(null);
+    window.dispatchEvent(new Event("zayado:tour-fini"));
   }, []);
   const next = useCallback(() => (i + 1 >= steps.length ? close() : setI(i + 1)), [i, steps, close]);
   const prev = () => setI((v) => Math.max(0, v - 1));
@@ -107,14 +108,23 @@ export default function GuidedTour() {
   }, [steps, next, close]);
 
   if (invite && !steps) {
-    const refuser = () => { try { localStorage.setItem(DONE_KEY, "1"); } catch { /* */ } setInvite(false); };
+    // Première visite : fenêtre centrée sur fond assombri (avant : petite bulle en bas à gauche,
+    // qu'on ne voyait pas au milieu de tout le cockpit).
+    const refuser = () => {
+      try { localStorage.setItem(DONE_KEY, "1"); } catch { /* */ }
+      setInvite(false);
+      window.dispatchEvent(new Event("zayado:tour-fini"));
+    };
     return (
-      <div className="fenetre fixed bottom-24 left-4 z-[70] w-[min(340px,calc(100vw-32px))] rounded-2xl p-4 lg:bottom-6 lg:left-[112px]" data-testid="tour-invite" role="dialog" aria-label="Visite guidée">
-        <p className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-gold"><Sparkles className="h-3.5 w-3.5" /> Bienvenue</p>
-        <p className="mt-1.5 text-[13.5px] leading-relaxed text-offwhite/85">On fait le tour des zones clés de ton cockpit en une minute ?</p>
-        <div className="mt-3 flex items-center justify-end gap-2">
-          <button onClick={refuser} className="rounded-xl px-3 py-1.5 text-xs text-offwhite/65 hover:bg-white/10" data-testid="tour-invite-non">Plus tard</button>
-          <button onClick={() => { setInvite(false); begin(1); }} className="inline-flex items-center gap-1 rounded-xl bg-gold px-3.5 py-1.5 text-xs font-semibold text-navy-900" data-testid="tour-invite-oui">Découvrir <ArrowRight className="h-3.5 w-3.5" /></button>
+      <div className="fixed inset-0 z-[80] flex items-center justify-center bg-[#05081a]/75 p-4 backdrop-blur-sm" data-testid="tour-invite" role="dialog" aria-modal="true" aria-label="Visite guidée">
+        <div className="fenetre w-full max-w-md rounded-3xl p-7 text-center">
+          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gold/15 text-gold ring-1 ring-gold/30"><Sparkles className="h-7 w-7" /></span>
+          <h2 className="mt-4 font-display text-2xl font-bold text-offwhite">Bienvenue dans Zayado</h2>
+          <p className="mt-2 text-[14.5px] leading-relaxed text-offwhite/75">Ton cockpit est prêt. On en fait le tour en une minute ? Ensuite, ton Copilote te posera quelques questions, une à la fois, pour se régler sur toi.</p>
+          <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
+            <button onClick={() => { setInvite(false); begin(1); }} className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gold px-5 py-2.5 text-sm font-semibold text-navy-900" data-testid="tour-invite-oui">Faire la visite <ArrowRight className="h-4 w-4" /></button>
+            <button onClick={refuser} className="rounded-xl border border-white/15 px-5 py-2.5 text-sm text-offwhite/75 hover:bg-white/10" data-testid="tour-invite-non">Plus tard</button>
+          </div>
         </div>
       </div>
     );

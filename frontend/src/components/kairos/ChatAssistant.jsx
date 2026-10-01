@@ -11,8 +11,8 @@ import CanauxCopilote from "@/components/kairos/CanauxCopilote";
 import { useKairos } from "@/context/KairosContext";
 import {
   streamChat, fetchPointDuJour, fetchDecisions, suggererDecisions, patchDecision, fetchActualite, enregistrerArticle, fetchEnregistres, validerDecisionEmail,
-  saveProfile, creerTache, telechargerDocument, rangerDocumentDrive, ouvrirMesDocuments, reglerDossierDocuments,
-  creerImageIA, rangerFichierDrive, fetchContexteCopilote,
+  saveProfile, creerTache, oauthStockage, relierTrello, choisirListeTrello, telechargerDocument, rangerDocumentDrive, ouvrirMesDocuments, reglerDossierDocuments,
+  creerImageIA, rangerFichierDrive, fetchContexteCopilote, fetchDossierDocuments,
 } from "@/lib/kairosApi";
 import { toast } from "sonner";
 
@@ -91,8 +91,8 @@ export function ChatBody({ onClose, estElargi, onToggleTaille, grand = false }) 
             <Sparkles className={grand ? "h-5 w-5 text-gold" : "h-4 w-4 text-gold"} />
           </div>
           <div className="leading-tight">
-            <div className={`font-display font-bold text-offwhite ${grand ? "text-lg" : "text-sm"}`}>Copilote Zayado</div>
-            <div className={`flex items-center gap-1.5 text-offwhite/55 ${grand ? "text-[12.5px]" : "text-[10px]"}`}><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Connaît ton activité · Mémoire active</div>
+            <div className={`whitespace-nowrap font-display font-bold text-offwhite ${grand ? "text-lg" : "text-sm"}`}>Copilote Zayado</div>
+            <div className={`flex items-center gap-1.5 whitespace-nowrap text-offwhite/55 ${grand ? "text-[12.5px]" : "text-[10px]"}`}><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> {grand ? "Connaît ton activité · Mémoire active" : "Mémoire active"}</div>
           </div>
         </div>
         <div className="flex items-center gap-1">
@@ -108,7 +108,7 @@ export function ChatBody({ onClose, estElargi, onToggleTaille, grand = false }) 
           <button onClick={() => setCollab({ contexte: contexteChat.texte })}
             className="mr-1 inline-flex items-center gap-1.5 rounded-lg border border-gold/30 bg-gold/10 px-2.5 py-1.5 text-[11px] font-semibold text-gold hover:bg-gold/20"
             title="Écrire à un collaborateur de l'équipe Zayado" data-testid="chat-collaborateur-btn">
-            <Users className="h-3.5 w-3.5" /> Collaborateur
+            <Users className="h-3.5 w-3.5" /> {grand ? "Collaborateur" : <span className="sr-only">Collaborateur</span>}
           </button>
           {onToggleTaille && (
             <button onClick={onToggleTaille} className="rounded-lg p-1.5 text-offwhite/50 hover:bg-white/5 hover:text-offwhite" data-testid="chat-toggle-taille-btn" title={estElargi ? "Réduire" : "Agrandir"}>
@@ -202,48 +202,153 @@ const RYTHMES_ACTU = [
 // du chat (avant : seul le rythme des actualités était demandé). Tout est
 // enregistré dans le profil et modifiable dans Paramètres.
 const OUTILS = ["Trello", "Microsoft Teams", "Slack", "Notion", "Google Agenda", "Outlook", "Excel / Sheets"];
+// Mise en route : le Copilote pose ses questions UNE par UNE, comme dans une vraie
+// conversation (il « écrit », pose la question, attend la réponse, confirme, puis passe
+// à la suivante). « Plus tard » arrête jusqu'au lendemain. Tout reste modifiable dans Paramètres.
+const contient = (v, x) => String(v || "").includes(x);
 const REGLAGES = [
-  { key: "actu_rythme", question: <>Avant de commencer : à quel rythme veux-tu que la cloche te signale <b>l'actualité de ton marché</b> ?</>,
-    options: RYTHMES_ACTU.map((r) => ({ valeur: r.key, label: r.label, confirm: r.confirm })) },
-  { key: "copilote_ton", question: <>Comment préfères-tu que je te parle ?</>,
+  { key: "copilote_ton", texte: "Pour commencer : comment préfères-tu que je te parle ?",
     options: [
-      { valeur: "doux", label: "Doux et bienveillant", confirm: "Entendu — je reste doux et bienveillant. Tu peux changer ça dans Paramètres → Profil." },
-      { valeur: "direct", label: "Direct et concis", confirm: "Entendu — j'irai droit au but, réponses courtes." },
-      { valeur: "coach", label: "Coach qui me challenge", confirm: "Entendu — je te challengerai (toujours avec respect)." },
+      { valeur: "doux", label: "Doux et bienveillant", confirm: "Entendu, je reste doux et bienveillant." },
+      { valeur: "direct", label: "Direct et concis", confirm: "Entendu, j'irai droit au but." },
+      { valeur: "coach", label: "Coach qui me challenge", confirm: "Entendu, je te challengerai, toujours avec respect." },
     ] },
-  { key: "heure_point", question: <>À quelle heure veux-tu recevoir ton <b>point du jour</b> ?</>,
-    options: ["07:30", "08:30", "09:30", "12:00"].map((h) => ({ valeur: h, label: h.replace(":", "h"), confirm: `Noté — ton point du jour arrivera à ${h.replace(":", "h")}.` })) },
-  { key: "outils", multi: true, question: <>Quels outils utilises-tu déjà ? Je proposerai des actions qui s'y intègrent.</>, options: OUTILS.map((o) => ({ valeur: o, label: o })) },
-  { key: "canaux_vus", canaux: true },
+  { key: "documents_choix", type: "dossier", texte: "Je peux te créer des documents (devis, courriers, tableaux Word ou Excel). Où veux-tu que je les range ?",
+    fait: (val) => val("documents_dossier") || val("documents_dossier_auto") || val("documents_choix") },
+  { key: "outils", multi: true, texte: "Quels outils utilises-tu déjà ? Je relierai ton Plan d'action à ceux qui le permettent.",
+    options: OUTILS.map((o) => ({ valeur: o, label: o })) },
+  { key: "trello_vu", type: "trello", texte: "Tu utilises Trello : je peux envoyer chaque action de ton Plan d'action dans une liste Trello. On le relie ?",
+    si: (val) => contient(val("outils"), "Trello") },
+  { key: "teams_vu", type: "teams", texte: "Tu utilises Microsoft Teams : ajoute l'app Zayado dans Teams pour retrouver ton cockpit et ton Plan d'action dans un onglet.",
+    si: (val) => contient(val("outils"), "Teams") },
+  { key: "heure_point", texte: "À quelle heure veux-tu recevoir ton point du jour ?",
+    options: ["07:30", "08:30", "09:30", "12:00"].map((h) => ({ valeur: h, label: h.replace(":", "h"), confirm: `Noté, ton point du jour arrivera à ${h.replace(":", "h")}.` })) },
+  { key: "actu_rythme", texte: "À quel rythme veux-tu que je te signale l'actualité de ton marché ?",
+    options: RYTHMES_ACTU.map((r) => ({ valeur: r.key, label: r.label, confirm: r.confirm })) },
+  { key: "canaux_vus", type: "canaux", texte: "Dernière chose : veux-tu aussi me parler depuis ton téléphone (Telegram ou WhatsApp) ?" },
 ];
 const aujourdhuiIso = () => new Date().toISOString().slice(0, 10);
+const puce = "rounded-full border border-gold/30 bg-gold/10 px-3 py-1.5 text-xs font-medium text-gold transition-colors hover:bg-gold/20";
 
-function QuestionReglage({ q, onRepondre, onPlusTard }) {
-  const [choix, setChoix] = useState([]);
-  if (q.canaux) return <CanauxCopilote compact onFerme={() => onRepondre(q, "vu", "Plus tard")} />;
+function ChoixDossier({ onFini }) {
+  const [etat, setEtat] = useState(null);
+  const [saisie, setSaisie] = useState(false);
+  const [url, setUrl] = useState("");
+  const [envoi, setEnvoi] = useState(false);
+  useEffect(() => { fetchDossierDocuments().then(setEtat).catch(() => setEtat({})); }, []);
+  const relie = etat && (etat.google || etat.microsoft);
+  const relier = async (p) => {
+    try { const r = await oauthStockage(p); if (r.configured && r.authorization_url) { window.location.href = r.authorization_url; return; } toast("Cette connexion n'est pas encore activée."); }
+    catch { toast.error("Connexion impossible pour le moment."); }
+  };
+  const enregistrer = async () => {
+    setEnvoi(true);
+    try { await reglerDossierDocuments(url.trim()); onFini("url", "Voici l'adresse de mon dossier", "C'est noté, je rangerai tes documents dans ce dossier."); }
+    catch (e) { toast.error(e.detail || "Adresse non reconnue."); } finally { setEnvoi(false); }
+  };
+  if (!etat) return <Loader2 className="h-4 w-4 animate-spin text-gold" />;
   return (
-    <div className="rounded-2xl border border-gold/25 bg-gold/5 p-4" data-testid={`reglage-${q.key}`}>
-      <p className="text-sm leading-relaxed text-offwhite/90">{q.question}</p>
-      <div className="mt-3 flex flex-wrap gap-2">
+    <div className="space-y-2" data-testid="reglage-dossier">
+      <div className="flex flex-wrap gap-2">
+        {relie ? (
+          <button className={puce} onClick={() => onFini("auto", "Un dossier Zayado dans mon Drive", "Parfait, je créerai un dossier « Zayado » dans ton Drive au premier document.")} data-testid="reglage-dossier-auto">Un dossier « Zayado » dans mon Drive</button>
+        ) : (<>
+          <button className={puce} onClick={() => relier("google")} data-testid="reglage-dossier-google">Relier Google Drive</button>
+          <button className={puce} onClick={() => relier("microsoft")} data-testid="reglage-dossier-onedrive">Relier OneDrive</button>
+        </>)}
+        <button className={puce} onClick={() => setSaisie(true)} data-testid="reglage-dossier-url">Je colle l'adresse d'un dossier</button>
+        <button className={puce} onClick={() => onFini("telecharger", "Je les télécharge moi-même", "D'accord, je te proposerai de télécharger chaque document en Word, Excel ou Markdown.")}>Je les télécharge</button>
+      </div>
+      {saisie && (
+        <div className="flex gap-2">
+          <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://drive.google.com/drive/folders/…" className="min-w-0 flex-1 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-xs text-offwhite" data-testid="reglage-dossier-input" />
+          <button disabled={!url.trim() || envoi} onClick={enregistrer} className="rounded-xl bg-gold px-3 py-2 text-xs font-semibold text-navy-900 disabled:opacity-50">Enregistrer</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RelierTrello({ onFini }) {
+  const [cle, setCle] = useState("");
+  const [jeton, setJeton] = useState("");
+  const [tableaux, setTableaux] = useState(null);
+  const [liste, setListe] = useState("");
+  const [envoi, setEnvoi] = useState(false);
+  const champ = "w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-xs text-offwhite";
+  const verifier = async () => {
+    setEnvoi(true);
+    try { const r = await relierTrello(cle.trim(), jeton.trim()); setTableaux(r.tableaux); }
+    catch (e) { toast.error(e.detail || "Trello refuse ces identifiants."); } finally { setEnvoi(false); }
+  };
+  const choisir = async () => {
+    setEnvoi(true);
+    try { const r = await choisirListeTrello(liste); onFini("relie", `Liste « ${r.liste} »`, `C'est relié : chaque nouvelle action ira dans la liste « ${r.liste} » de ton tableau « ${r.tableau} ».`); }
+    catch (e) { toast.error(e.detail || "Impossible."); } finally { setEnvoi(false); }
+  };
+  if (tableaux) {
+    return (
+      <div className="flex gap-2" data-testid="reglage-trello-liste">
+        <select value={liste} onChange={(e) => setListe(e.target.value)} className={`${champ} min-w-0 flex-1`}>
+          <option value="" className="text-navy-900">Choisis la liste…</option>
+          {tableaux.map((b) => <optgroup key={b.id} label={b.nom} className="text-navy-900">{b.listes.map((l) => <option key={l.id} value={l.id} className="text-navy-900">{l.nom}</option>)}</optgroup>)}
+        </select>
+        <button disabled={!liste || envoi} onClick={choisir} className="rounded-xl bg-gold px-3 py-2 text-xs font-semibold text-navy-900 disabled:opacity-50">Valider</button>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-2" data-testid="reglage-trello">
+      <p className="text-[11.5px] text-offwhite/60">Ta clé et ton jeton se trouvent sur trello.com/power-ups/admin (onglet « Clé API »). Ils sont chiffrés chez Zayado.</p>
+      <input value={cle} onChange={(e) => setCle(e.target.value)} placeholder="Clé API Trello" className={champ} />
+      <input value={jeton} onChange={(e) => setJeton(e.target.value)} placeholder="Jeton Trello" type="password" className={champ} />
+      <div className="flex gap-2">
+        <button disabled={cle.length < 10 || jeton.length < 10 || envoi} onClick={verifier} className="rounded-xl bg-gold px-3 py-1.5 text-xs font-semibold text-navy-900 disabled:opacity-50">{envoi ? "Vérification…" : "Relier Trello"}</button>
+        <button className={puce} onClick={() => onFini("non", "Pas maintenant", "Pas de souci, tu pourras le faire plus tard en me le demandant.")}>Pas maintenant</button>
+      </div>
+    </div>
+  );
+}
+
+function ControlesReglage({ q, onRepondre, onPlusTard }) {
+  const [choix, setChoix] = useState([]);
+  const [canaux, setCanaux] = useState(false);
+  const fini = (valeur, label, confirm) => onRepondre(q, valeur, label, confirm);
+  let corps = null;
+  if (q.type === "dossier") corps = <ChoixDossier onFini={fini} />;
+  else if (q.type === "trello") corps = <RelierTrello onFini={fini} />;
+  else if (q.type === "teams") corps = (
+    <div className="flex flex-wrap gap-2">
+      <button className={puce} onClick={() => { fini("vu", "Je regarde le pack Teams", "Le pack Teams est dans Paramètres › Connexions : télécharge-le puis ajoute-le dans Teams (Applications › Gérer vos applications › Charger une application)."); window.location.assign("/parametres#connexions"); }}>Voir le pack Teams</button>
+      <button className={puce} onClick={() => fini("plus_tard", "Plus tard", "D'accord, demande-le-moi quand tu veux.")}>Plus tard</button>
+    </div>);
+  else if (q.type === "canaux") corps = canaux ? <CanauxCopilote compact onFerme={() => fini("vu", "C'est bon", "Parfait. On est prêts : dis-moi par quoi on commence.")} /> : (
+    <div className="flex flex-wrap gap-2">
+      <button className={puce} onClick={() => setCanaux(true)} data-testid="reglage-canaux-oui">Oui, montre-moi</button>
+      <button className={puce} onClick={() => fini("non", "Non merci", "Très bien. On est prêts : dis-moi par quoi on commence.")} data-testid="reglage-canaux-non">Non merci</button>
+    </div>);
+  else corps = (
+    <>
+      <div className="flex flex-wrap gap-2">
         {q.options.map((o) => {
           const pris = choix.includes(o.valeur);
           return (
             <button key={o.valeur} data-testid={`reglage-${q.key}-${o.valeur}`}
-              onClick={() => (q.multi ? setChoix((c) => (pris ? c.filter((x) => x !== o.valeur) : [...c, o.valeur])) : onRepondre(q, o.valeur, o.label, o.confirm))}
-              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${pris ? "border-gold bg-gold text-navy-900" : "border-gold/30 bg-gold/10 text-gold hover:bg-gold/20"}`}>
-              {o.label}
-            </button>
+              onClick={() => (q.multi ? setChoix((c) => (pris ? c.filter((x) => x !== o.valeur) : [...c, o.valeur])) : fini(o.valeur, o.label, o.confirm))}
+              className={pris ? "rounded-full border border-gold bg-gold px-3 py-1.5 text-xs font-medium text-navy-900" : puce}>{o.label}</button>
           );
         })}
       </div>
-      <div className="mt-3 flex items-center gap-3">
-        {q.multi && (
-          <button onClick={() => onRepondre(q, choix.length ? choix.join(", ") : "aucun", choix.length ? choix.join(", ") : "Aucun de ces outils",
-            choix.length ? `Noté : ${choix.join(", ")}. Je m'en servirai pour te proposer des actions compatibles.` : "Noté — pas d'outil externe pour l'instant.")}
-            className="rounded-full bg-gold px-3.5 py-1.5 text-xs font-semibold text-navy-900" data-testid={`reglage-${q.key}-valider`}>Valider</button>
-        )}
-        <button onClick={() => onPlusTard(q)} className="text-[11.5px] text-offwhite/50 hover:text-offwhite" data-testid={`reglage-${q.key}-plus-tard`}>Plus tard</button>
-      </div>
+      {q.multi && (
+        <button onClick={() => fini(choix.length ? choix.join(", ") : "aucun", choix.length ? choix.join(", ") : "Aucun de ces outils",
+          choix.length ? `Noté : ${choix.join(", ")}.` : "Noté, pas d'outil externe pour l'instant.")}
+          className="mt-2 rounded-full bg-gold px-3.5 py-1.5 text-xs font-semibold text-navy-900" data-testid={`reglage-${q.key}-valider`}>Valider</button>
+      )}
+    </>);
+  return (
+    <div className="space-y-2" data-testid={`reglage-${q.key}`}>
+      {corps}
+      <button onClick={onPlusTard} className="block text-[11.5px] text-offwhite/45 hover:text-offwhite" data-testid={`reglage-${q.key}-plus-tard`}>Plus tard (je te redemanderai demain)</button>
     </div>
   );
 }
@@ -254,7 +359,7 @@ function ChatTab({ firstName, grand = false }) {
   // propose les 3 premiers pas, au lieu d'une simple formule de politesse.
   const debutant = loaded && !aCheckin && !(priorities || []).length;
   const accueil = debutant
-    ? `Bienvenue${firstName ? ` ${firstName}` : ""} 👋 Je suis ton Copilote Zayado. Pour bien démarrer, trois petits pas :\n1. Ton check-in du jour (30 secondes)\n2. Ton objectif principal\n3. Une première action de 15 minutes\nDis-moi par lequel on commence, je t'accompagne.`
+    ? `Bienvenue${firstName ? ` ${firstName}` : ""} 👋 Je suis ton Copilote Zayado. Je vais te poser quelques questions rapides, une à la fois, pour me régler sur toi. Ensuite on fera ton premier check-in et ta première action.`
     : `Bonjour${firstName ? ` ${firstName}` : ""}. Je suis le Copilote IA Zayado, là pour t'accompagner en douceur. Par quoi commence-t-on ?`;
   const [messages, setMessages] = useState(() => memoireChat.messages || [{ role: "assistant", content: accueil }]);
   useEffect(() => { memoireChat.messages = messages; }, [messages]);
@@ -341,24 +446,45 @@ function ChatTab({ firstName, grand = false }) {
     return () => window.removeEventListener("kairos:prompt-chat", injecter);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 1ère connexion : le Copilote demande le rythme de l'alerte Actualité et
-  // l'enregistre lui-même (au lieu du défaut « tous les jours » silencieux).
+  // Mise en route conversationnelle : une question à la fois.
   const [reponses, setReponses] = useState({});
   const val = (k) => reponses[k] ?? contexte?.[k];
-  // Une question par ouverture ; « Plus tard » = plus de question aujourd'hui.
   const reporte = val("reglages_reportes_le") === aujourdhuiIso();
-  const questionEnCours = !reporte && contexte ? REGLAGES.find((q) => val(q.key) == null || val(q.key) === "") : null;
-  const [questionsPosees, setQuestionsPosees] = useState(0);
+  const faite = (q) => (q.si && !q.si(val)) || (q.fait ? !!q.fait(val) : !(val(q.key) == null || val(q.key) === ""));
+  const [ecrit, setEcrit] = useState(false);
+  // Les questions attendent la fin (ou le refus) de la visite guidée : une chose à la fois.
+  const [tourFini, setTourFini] = useState(() => { try { return localStorage.getItem("zayado_visite_guidee_v1") === "1"; } catch { return true; } });
+  useEffect(() => {
+    const f = () => setTourFini(true);
+    window.addEventListener("zayado:tour-fini", f);
+    return () => window.removeEventListener("zayado:tour-fini", f);
+  }, []);
+  const enAttente = messages.some((m) => m.reglage && !m.repondu);
+  useEffect(() => {
+    if (!tourFini || !contexte || reporte || conversationLibre || streaming || ecrit || enAttente) return undefined;
+    const q = REGLAGES.find((x) => !faite(x));
+    if (!q) return undefined;
+    setEcrit(true);
+    const t = setTimeout(() => {
+      setEcrit(false);
+      setMessages((m) => [...m, { role: "assistant", content: q.texte, reglage: q.key, le: new Date().toISOString() }]);
+    }, messages.length <= 1 ? 1400 : 1000);
+    return () => { clearTimeout(t); setEcrit(false); };
+  }, [tourFini, contexte, reporte, conversationLibre, streaming, enAttente, reponses]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const repondre = (q, valeur, label, confirm) => {
     setReponses((r) => ({ ...r, [q.key]: valeur }));
-    setQuestionsPosees((n) => n + 1);
     const patch = { contexte_metier: { [q.key]: valeur } };
     if (q.key === "heure_point") patch.heure_checkin = valeur;
     saveProfile(patch).catch(() => {});
-    if (!q.canaux) setMessages((m) => [...m, { role: "user", content: label }, ...(confirm ? [{ role: "assistant", content: confirm }] : [])]);
+    const le = new Date().toISOString();
+    setMessages((m) => [...m.map((x) => (x.reglage === q.key ? { ...x, repondu: true } : x)), { role: "user", content: label, le },
+      ...(confirm ? [{ role: "assistant", content: confirm, le, info: true }] : [])]);
   };
-  const plusTard = (q) => {
+  const plusTard = () => {
     setReponses((r) => ({ ...r, reglages_reportes_le: aujourdhuiIso() }));
+    setMessages((m) => [...m.map((x) => (x.reglage && !x.repondu ? { ...x, repondu: true } : x)),
+      { role: "assistant", content: "D'accord, on verra ça demain. Je suis là si tu as besoin.", info: true, le: new Date().toISOString() }]);
     saveProfile({ contexte_metier: { reglages_reportes_le: aujourdhuiIso() } }).catch(() => {});
   };
 
@@ -374,7 +500,8 @@ function ChatTab({ firstName, grand = false }) {
                 {m.image ? <img src={m.image.src} alt={m.content} className="max-h-80 rounded-xl" /> : (m.content || (streaming && i === messages.length - 1 ? <Loader2 className="h-4 w-4 animate-spin text-gold" /> : null))}
                 {grand && m.le && <span className={`mt-1.5 block text-[11px] ${m.role === "user" ? "opacity-60" : "text-offwhite/45"}`}>{heure(m.le)}</span>}
               </div>
-              {m.role === "assistant" && m.content && i > 0 && !(streaming && i === messages.length - 1) && (
+              {m.reglage && !m.repondu && <ControlesReglage q={REGLAGES.find((q) => q.key === m.reglage)} onRepondre={repondre} onPlusTard={plusTard} />}
+              {m.role === "assistant" && m.content && i > 0 && !m.reglage && !m.info && !(streaming && i === messages.length - 1) && (
                 <ActionsMessage m={m} demande={messages[i - 1]?.role === "user" ? messages[i - 1].content : ""} onCopier={() => copierReponse(m)}
                   onImage={(img) => setMessages((x) => [...x, { role: "assistant", content: img.description, image: img, le: new Date().toISOString() }])} i={i} />
               )}
@@ -400,10 +527,12 @@ function ChatTab({ firstName, grand = false }) {
             </div>
           </div>
         ))}
-        {/* Réglage demandé par le Copilote : au démarrage d'une conversation, et
-            jusqu'à 2 d'affilée (pas plus, pour ne pas transformer le chat en formulaire). */}
-        {questionEnCours && !streaming && !conversationLibre && questionsPosees < 2 && (
-          <QuestionReglage key={questionEnCours.key} q={questionEnCours} onRepondre={repondre} onPlusTard={plusTard} />
+        {ecrit && (
+          <div className="flex justify-start" data-testid="chat-ecrit">
+            <div className={`rounded-2xl px-4 py-3 ${grand ? "chat-bulle-ia" : "border border-white/10 bg-white/5"}`}>
+              <span className="chat-points" aria-label="Le Copilote écrit"><i /><i /><i /></span>
+            </div>
+          </div>
         )}
       </div>
       <div className="border-t border-white/10 px-4 py-3">
@@ -625,19 +754,35 @@ function ActuTab() {
 }
 
 export function ChatPanel() {
-  // Un seul design de chat partout : le panneau marine OPAQUE (.chat-zayado).
-  // « Agrandir » ouvre le grand format (chat + réglages + contexte), la conversation est conservée.
+  // Panneau du Copilote sur le cockpit (grand écran) : agrandissable ET masquable.
+  // Le choix « masqué » est retenu sur cet appareil ; un bouton flottant le rouvre.
   const [estElargi, setEstElargi] = useState(false);
+  const [masque, setMasque] = useState(() => { try { return localStorage.getItem("zayado_chat_masque") === "1"; } catch { return false; } });
+  const basculer = (v) => { setMasque(v); try { localStorage.setItem("zayado_chat_masque", v ? "1" : "0"); } catch { /* */ } };
   useEffect(() => {
-    document.documentElement.style.setProperty("--chat-w", "360px");
-    return () => document.documentElement.style.removeProperty("--chat-w");
+    // Le bouton « chat » de l'en-tête rouvre le panneau s'il était masqué.
+    const ouvrir = () => basculer(false);
+    window.addEventListener("zayado:open-chat", ouvrir);
+    return () => window.removeEventListener("zayado:open-chat", ouvrir);
   }, []);
+  useEffect(() => {
+    document.documentElement.style.setProperty("--chat-w", masque ? "0px" : "360px");
+    return () => document.documentElement.style.removeProperty("--chat-w");
+  }, [masque]);
   return (
     <>
-      <div className="chat-zayado hidden xl:flex fixed right-0 top-0 z-20 h-screen w-[360px] flex-col" data-testid="chat-panel">
-        {!estElargi && <ChatBody estElargi={false} onToggleTaille={() => setEstElargi(true)} />}
-      </div>
-      {estElargi && <ChatGrand onReduire={() => setEstElargi(false)} />}
+      {!masque && (
+        <div className="chat-zayado hidden xl:flex fixed right-0 top-0 z-20 h-screen w-[360px] flex-col" data-testid="chat-panel">
+          {!estElargi && <ChatBody estElargi={false} onToggleTaille={() => setEstElargi(true)} onClose={() => basculer(true)} />}
+        </div>
+      )}
+      {masque && (
+        <button onClick={() => basculer(false)} data-testid="chat-rouvrir"
+          className="fixed bottom-6 right-6 z-20 hidden items-center gap-2 rounded-full bg-gold px-4 py-3 text-sm font-semibold text-navy-900 shadow-lg xl:inline-flex">
+          <Sparkles className="h-4 w-4" /> Copilote
+        </button>
+      )}
+      {estElargi && <ChatGrand onReduire={() => setEstElargi(false)} onClose={() => { setEstElargi(false); basculer(true); }} />}
     </>
   );
 }

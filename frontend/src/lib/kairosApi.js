@@ -301,6 +301,9 @@ export const majProspect = (id, statut) => jsend(`/radar/prospects/${id}`, "PATC
 export const genererSwot = () => jsend("/radar/swot", "POST");
 export const fetchImpact = () => jget("/cockpit/impact");
 // Documents IA : Word, Excel, Markdown, CSV, texte, images — téléchargés ou rangés dans le Drive.
+export const relierTrello = (api_key, token) => jsendDetail("/plan-action/trello", "POST", { api_key, token });
+export const choisirListeTrello = (list_id) => jsendDetail("/plan-action/trello/liste", "PUT", { list_id });
+export const fetchTrello = () => jsendDetail("/plan-action/trello", "GET");
 export const fetchContexteCopilote = () => jsendDetail("/copilote/contexte", "GET");
 export const fetchDossierDocuments = () => jsendDetail("/documents/dossier", "GET");
 export const reglerDossierDocuments = (url) => jsendDetail("/documents/dossier", "PUT", { url });

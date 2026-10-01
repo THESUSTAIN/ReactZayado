@@ -70,7 +70,7 @@ function SwotSection({ manque, onReglages }) {
   };
 
   return (
-    <section className="pt-14" data-testid="radar-chapter-swot">
+    <section className="pt-6" data-testid="radar-chapter-swot">
       <Chapter sub="Vue d'ensemble" title="Ton SWOT, généré par l'IA" />
       {manque && manque.length > 0 && !swot && (
         <GlassCard className="p-6" data-testid="radar-swot-manque">
@@ -273,11 +273,15 @@ export default function Radar() {
     toast.success("Message copié — prêt à envoyer");
   };
   const versReglages = () => {
+    setVue("terrain");
     const el = reglagesRef.current;
     if (el && lenisRef.current) lenisRef.current.scrollTo(el, { offset: -90, duration: 1 });
   };
 
   const today = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+  // Une seule chose à la fois : opportunités, terrain ou SWOT (avant : tout sur une page).
+  const [vue, setVue] = useState(() => (window.location.hash === "#terrain" ? "terrain" : window.location.hash === "#swot" ? "swot" : "opportunites"));
+  const [ouverts, setOuverts] = useState({});
 
   return (
     <div className="min-h-screen" data-testid="radar-page">
@@ -329,8 +333,17 @@ export default function Radar() {
             )}
           </section>
 
+          {!premierAcces && (
+            <div className="mt-6 inline-flex flex-wrap rounded-full border border-white/15 bg-white/5 p-1" role="tablist" data-testid="radar-onglets">
+              {[["opportunites", `Opportunités${opportunities.length ? ` · ${opportunities.length}` : ""}`], ["terrain", "Signaux du terrain"], ["swot", "Analyse SWOT"]].map(([k, l]) => (
+                <button key={k} role="tab" aria-selected={vue === k} onClick={() => setVue(k)} data-testid={`radar-onglet-${k}`}
+                  className={`rounded-full px-4 py-2 text-[13px] font-semibold transition ${vue === k ? "bg-gold text-navy-900" : "text-offwhite/70 hover:text-offwhite"}`}>{l}</button>
+              ))}
+            </div>
+          )}
+
           {/* ── PREMIER ÉCRAN : premier scan, étape manquante ou opportunités ── */}
-          <section className="pt-8" data-testid="radar-chapter-opportunites">
+          {(premierAcces || vue === "opportunites") && <section className="pt-6" data-testid="radar-chapter-opportunites">
             {premierAcces ? (
               <PremierScan src={src} onLance={async () => { await chargerSources(); await load(true); }} />
             ) : loading && !data ? (
@@ -410,7 +423,8 @@ export default function Radar() {
                                 </p>
                                 <h3 className="mt-1 font-display text-lg font-bold text-offwhite sm:text-xl">{op.titre}</h3>
                                 {op.prospect && <FicheProspect p={op.prospect} message={op.message} />}
-                                <p className="mt-3 max-w-2xl border-l-2 border-gold/30 pl-4 font-serif-italic text-[15px] leading-relaxed text-offwhite/75">{op.message}</p>
+                                <p className={`mt-3 max-w-2xl border-l-2 border-gold/30 pl-4 font-serif-italic text-[15px] leading-relaxed text-offwhite/75 ${ouverts[i] ? "" : "line-clamp-3"}`}>{op.message}</p>
+                                {(op.message || "").length > 220 && <button onClick={() => setOuverts((o) => ({ ...o, [i]: !o[i] }))} className="mt-1 pl-4 text-xs font-semibold text-gold hover:underline" data-testid={`radar-op-voir-${i}`}>{ouverts[i] ? "Réduire" : "Lire le message en entier"}</button>}
                               </div>
                               <div className="flex shrink-0 sm:flex-col sm:items-end">
                                 <button onClick={() => copyMessage(op)} data-testid={`radar-copy-btn-${i}`}
@@ -427,18 +441,18 @@ export default function Radar() {
                 )}
               </>
             )}
-          </section>
+          </section>}
 
           {/* ── SIGNAUX DU TERRAIN + réglages ── */}
-          {!premierAcces && (
-            <section ref={reglagesRef} className="pt-14" data-testid="radar-chapter-signaux">
+          {!premierAcces && vue === "terrain" && (
+            <section ref={reglagesRef} className="pt-6" data-testid="radar-chapter-signaux">
               <Chapter sub="Le terrain" title="Signaux autour de toi" />
               <RadarSignaux onChange={() => { load(); chargerSources(); }} />
             </section>
           )}
 
           {/* ── SWOT (seulement s'il y a assez de données) ── */}
-          {!premierAcces && <SwotSection manque={src?.swot_manque} onReglages={versReglages} />}
+          {!premierAcces && vue === "swot" && <SwotSection manque={src?.swot_manque} onReglages={versReglages} />}
         </div>
       </div>
     </div>

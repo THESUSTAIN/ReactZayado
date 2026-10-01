@@ -2759,6 +2759,12 @@ async def creer_tache(body: TacheIn, db: AsyncSession = Depends(get_db)):
     await _recalculer_objectif(db, objectif_id)
     await db.commit()
     await db.refresh(t)
+    f_apres = globals().get("_apres_creation_tache")  # ex. carte Trello si le Plan d'action est relié
+    if f_apres:
+        try:
+            f_apres(t.user_id, t.titre, t.duree_min)
+        except Exception:  # noqa: BLE001
+            pass
     return {"id": t.id, "titre": t.titre, "statut": t.statut, "objectif_id": t.objectif_id}
 
 
@@ -5842,6 +5848,8 @@ async def admin_diagnostics():
     }
 
 
+from trello_ext import install_trello  # noqa: E402
+install_trello(globals())
 from documents_ext import install_documents  # noqa: E402
 install_documents(globals())
 from espace_pro_ext import install_espace_pro  # noqa: E402
