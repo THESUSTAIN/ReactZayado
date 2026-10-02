@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { GlassCard } from "@/components/kairos/GlassCard";
-import { fetchMoi } from "@/lib/kairosApi";
+import { fetchMoi, oauthStockage } from "@/lib/kairosApi";
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL || "";
 
@@ -146,8 +146,10 @@ function IntegrationsAdmin({ onOnboardingChange }) {
     if (it.oauth) {
       try {
         const storage = it.id === "google" || it.id === "microsoft";
-        const r = await fetch(`${BACKEND}/api/connexion/oauth/${it.id}/start${storage ? "?purpose=storage" : ""}`);
-        const d = await r.json();
+        // Stockage : l'appel doit porter le jeton (le Drive se rattache au compte connecté) → helper authentifié.
+        const d = storage
+          ? await oauthStockage(it.id)
+          : await (await fetch(`${BACKEND}/api/connexion/oauth/${it.id}/start`)).json();
         if (d.configured && d.authorization_url) window.location.href = d.authorization_url;
         else toast.error("Cette intégration n'est pas encore configurée côté serveur.");
       } catch { toast.error("Erreur OAuth"); }

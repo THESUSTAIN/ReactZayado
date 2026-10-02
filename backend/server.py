@@ -2615,11 +2615,15 @@ async def connexion_oauth_callback(provider: str, code: Optional[str] = None, st
     redirige vers le frontend avec le token en fragment d'URL (jamais en query)."""
     provider = provider.lower()
     frontend = _frontend_url()
+    storage = bool(state and state.startswith("storage|"))
     if error or not code:
+        if storage:
+            return RedirectResponse(f"{frontend}/parametres?cloud_erreur=refuse#connexions")
         return RedirectResponse(f"{frontend}/login?erreur=oauth_refuse")
     if not (os.environ.get(f"{provider.upper()}_CLIENT_ID") and os.environ.get(f"{provider.upper()}_CLIENT_SECRET")):
+        if storage:
+            return RedirectResponse(f"{frontend}/parametres?cloud_erreur=non_configure#connexions")
         return RedirectResponse(f"{frontend}/login?erreur=oauth_non_configure")
-    storage = bool(state and state.startswith("storage|"))
     uid_stockage = None
     if storage:
         try:
@@ -2655,6 +2659,8 @@ async def connexion_oauth_callback(provider: str, code: Optional[str] = None, st
         return RedirectResponse(f"{frontend}/login#access_token={jwt_token}")
     except Exception as e:  # noqa: BLE001 — jamais de 500 brut sur un retour de consentement utilisateur
         logger.warning("Échec callback OAuth %s : %s", provider, e)
+        if storage:
+            return RedirectResponse(f"{frontend}/parametres?cloud_erreur=echec#connexions")
         return RedirectResponse(f"{frontend}/login?erreur=oauth_echec")
 
 
@@ -5288,6 +5294,9 @@ async def _cloud_token(db: AsyncSession, provider: str) -> tuple[str, UserConnec
     if not conn or conn.status != "ready" or not conn.credentials_enc:
         raise HTTPException(409, "cloud_not_connected")
     credentials = json.loads(_dechiffrer(conn.credentials_enc))
+    if credentials.get("expires_at", 0) <= time.time() and not credentials.get("refresh_token"):
+        # Jeton expiré et impossible à renouveler : il faut relier le cloud (plutôt qu'un 401 Google opaque).
+        raise HTTPException(409, "cloud_not_connected")
     if credentials.get("expires_at", 0) <= time.time() and credentials.get("refresh_token"):
         cid = os.environ.get(f"{provider.upper()}_CLIENT_ID")
         csecret = os.environ.get(f"{provider.upper()}_CLIENT_SECRET")
@@ -5305,7 +5314,12 @@ async def _cloud_token(db: AsyncSession, provider: str) -> tuple[str, UserConnec
                     "client_id": cid, "client_secret": csecret, "refresh_token": credentials["refresh_token"],
                     "grant_type": "refresh_token", "scope": "Files.ReadWrite offline_access",
                 })
-        refreshed.raise_for_status()
+        if refreshed.status_code >= 400:
+            # Accès révoqué côté Google/Microsoft (ou mot de passe changé) : on marque la connexion à relier.
+            logger.warning("Refresh jeton %s refusé (%s) : %s", provider, refreshed.status_code, refreshed.text[:200])
+            conn.status = "expired"
+            await db.commit()
+            raise HTTPException(409, "cloud_not_connected")
         fresh = refreshed.json()
         credentials.update({"access_token": fresh["access_token"], "expires_at": time.time() + int(fresh.get("expires_in", 3600))})
         if fresh.get("refresh_token"):
@@ -5351,7 +5365,11 @@ async def auto_save_document(body: DocumentAutoSaveIn, db: AsyncSession = Depend
             )
     if response.status_code >= 400:
         logger.warning("Cloud document upload failed (%s): %s", response.status_code, response.text[:300])
-        raise HTTPException(response.status_code, "cloud_upload_failed")
+        # 401/403 côté Drive = accès à relier, PAS une session Zayado expirée : un 401 relayé
+        # déconnecterait l'utilisateur de l'app (le front vide le jeton sur tout 401).
+        if response.status_code in (401, 403):
+            raise HTTPException(409, "cloud_not_connected")
+        raise HTTPException(502, "cloud_upload_failed")
     data = response.json()
     return {"ok": True, "provider": provider, "name": filename, "id": data.get("id"),
             "url": data.get("webViewLink") or data.get("webUrl")}

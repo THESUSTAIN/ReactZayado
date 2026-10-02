@@ -113,7 +113,13 @@ export default function Parametres() {
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
     if (q.get("cloud")) toast.success(q.get("cloud") === "google" ? "Google Drive relié." : "OneDrive / SharePoint relié.");
-    if (q.get("cloud_erreur")) toast.error("Le lien a expiré : relance la connexion depuis Connexions.");
+    if (q.get("cloud_erreur")) {
+      const e = q.get("cloud_erreur");
+      toast.error(e === "refuse" ? "Autorisation refusée : relance la connexion et accepte les droits demandés."
+        : e === "non_configure" ? "Cette connexion n'est pas encore activée par Zayado."
+        : e === "echec" ? "La connexion au cloud a échoué (vérifie l'adresse de retour déclarée chez Google / Microsoft)."
+        : "Le lien a expiré : relance la connexion depuis Connexions.");
+    }
     if (q.get("cloud") || q.get("cloud_erreur")) window.history.replaceState(null, "", `/parametres${window.location.hash}`);
   }, []);
   const completion = useCompletion();
