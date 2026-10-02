@@ -14,7 +14,7 @@ const THEMES = [
   { icon: Cloud, titre: "Espérance", texte: "Garder le cap quand l'horizon se brouille." },
   { icon: HandHeart, titre: "Pardon & relations", texte: "Alléger ce qui pèse dans tes relations pro et perso." },
   { icon: Scale, titre: "Équilibre vie pro / perso", texte: "Sanctuariser ton temps et ton énergie." },
-  { icon: HeartHandshake, titre: "Épreuves & solitude du dirigeant", texte: "Traverser les turbulences sans rester seul." },
+  { icon: HeartHandshake, titre: "Épreuves & solitude de l'entrepreneur", texte: "Traverser les turbulences sans rester seul." },
   { icon: Quote, titre: "Témoignages", texte: "Des parcours d'entrepreneurs qui inspirent." },
 ];
 

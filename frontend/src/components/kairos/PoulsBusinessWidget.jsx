@@ -3,7 +3,6 @@ import { Activity, Landmark, Receipt, Wallet, PenLine, Loader2, ChevronRight } f
 import { toast } from "sonner";
 import { GlassCard } from "@/components/kairos/GlassCard";
 import { fetchPouls, savePouls } from "@/lib/kairosApi";
-import PoulsQonto from "@/components/kairos/PoulsQonto";
 
 const ALERTE_META = {
   vert:   { color: "#7A9E7E", label: "Rythme sain",     bg: "rgba(122,158,126,0.15)" },
@@ -106,14 +105,17 @@ export default function PoulsBusinessWidget() {
             <select value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })}
               className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-offwhite outline-none focus:border-gold/50">
               <option value="manuel">Manuel (je remplis)</option>
-              <option value="qonto">Qonto (auto)</option>
-              <option value="pennylane">Pennylane (auto)</option>
+              <option value="qonto">Qonto (banque · bientôt)</option>
+              <option value="pennylane">Pennylane (banque · bientôt)</option>
               <option value="drive">Google Drive (fichier)</option>
               <option value="sharepoint">SharePoint (fichier)</option>
             </select>
           </div>
-          {form.source === "qonto" && (
-            <PoulsQonto onSynced={(d) => { setData(d); setForm((f) => ({ ...f, ca_mensuel: d.ca_mensuel, tresorerie: d.tresorerie, source: "qonto" })); }} />
+          {(form.source === "qonto" || form.source === "pennylane") && (
+            <div className="flex items-center gap-2 rounded-xl border border-gold/25 bg-gold/8 px-3 py-2.5" data-testid="pouls-banque-bientot">
+              <Landmark size={15} className="text-gold" />
+              <p className="text-[12.5px] text-offwhite/75"><b className="text-offwhite">Connexion bancaire bientôt disponible.</b> En attendant, saisis ton CA et ta trésorerie manuellement.</p>
+            </div>
           )}
           <button onClick={save} disabled={saving} data-testid="pouls-save"
             className="w-full rounded-xl bg-gold px-4 py-2.5 text-sm font-bold text-navy-900 hover:opacity-90 disabled:opacity-60">

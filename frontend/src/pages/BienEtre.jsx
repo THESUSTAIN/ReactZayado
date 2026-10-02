@@ -8,6 +8,8 @@ import { Sidebar } from "@/components/kairos/Sidebar";
 import { Header } from "@/components/kairos/Header";
 import BreathingSession, { PROTOCOLES } from "@/components/kairos/BreathingSession";
 import { AMBIANCES_SON, jouerAmbiance, arreterAmbiance } from "@/lib/ambiance";
+import { usePlanEffectif } from "@/lib/droits";
+import { Lock as LockIcon, Sparkles as SparklesIcon } from "lucide-react";
 import {
   Heart, Battery, Activity, Moon, Wind, Coffee, BookOpen, Music,
   Sparkles, ChevronRight, Plus, Check, Waves, Cloud, Leaf, Play,
@@ -96,6 +98,12 @@ export default function BienEtre() {
   const onglet = ["aujourdhui", "rituels", "parcours", "outils", "carnet"].includes(brut) ? brut : "aujourdhui";
   const parcoursOuvert = params.get("p") || null;
   const allerA = (tab, p = null) => { setParams(p ? { tab, p } : { tab }); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  // Offre Rêveur (15 €) : seule la carte du jour est ouverte. Parcours, rituels,
+  // outils et carnet restent payants — on affiche un bel encart « Débloquer ».
+  const plan = usePlanEffectif();
+  const reveur = plan === "reveur";
+  const BE_VERROU = ["rituels", "parcours", "outils", "carnet"];
+  const ongletVerrou = reveur && BE_VERROU.includes(onglet);
 
   // Historique réel : les 7 derniers jours avec leur vrai jour de semaine (serveur).
   const semaine = courbe?.semaine || [];
@@ -187,14 +195,33 @@ export default function BienEtre() {
           </div>
 
           <nav className="be-tabs mt-6" data-testid="bienetre-onglets">
-            {ONGLETS.map(([k, l, court, Icone]) => (
-              <button key={k} onClick={() => allerA(k)} data-testid={`bienetre-onglet-${k}`} data-actif={onglet === k ? "true" : "false"} className="be-tab" aria-label={l}>
-                <Icone size={16} className="be-tab-icone" /><span className="hidden sm:inline">{l}</span><span className="sm:hidden">{court}</span>
-              </button>
-            ))}
+            {ONGLETS.map(([k, l, court, Icone]) => {
+              const verrou = reveur && BE_VERROU.includes(k);
+              return (
+                <button key={k} onClick={() => allerA(k)} data-testid={`bienetre-onglet-${k}`} data-actif={onglet === k ? "true" : "false"} className="be-tab" aria-label={l}>
+                  <Icone size={16} className="be-tab-icone" /><span className="hidden sm:inline">{l}</span><span className="sm:hidden">{court}</span>
+                  {verrou && <LockIcon size={11} className="ml-1 opacity-60" data-testid={`bienetre-verrou-${k}`} />}
+                </button>
+              );
+            })}
           </nav>
 
           <div className="mt-5">
+            {ongletVerrou ? (
+              <div className="mx-auto max-w-xl rounded-3xl border p-7 text-center" style={{ borderColor: "rgba(222,194,163,0.5)", background: "rgba(222,194,163,0.08)" }} data-testid="bienetre-upsell">
+                <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: "linear-gradient(to bottom,#F1E2CC,#DEC2A3)" }}>
+                  <SparklesIcon size={24} className="text-navy-900" />
+                </span>
+                <h2 className="font-display text-2xl font-bold" style={{ color: L_NAVY }}>Parcours, rituels & carnet</h2>
+                <p className="mx-auto mt-2 max-w-md text-sm" style={{ color: "rgba(11,20,48,0.7)" }}>
+                  Ta <b>carte du jour</b> est incluse dans Rêveur. Le parcours 7 jours, les rituels, les outils de respiration et le carnet sont inclus dès l'offre <b>Solo</b>.
+                </p>
+                <div className="mt-5 flex flex-wrap justify-center gap-2">
+                  <Link to="/pricing" className="inline-flex items-center rounded-full px-6 py-3 text-sm font-semibold text-navy-900" style={{ background: "linear-gradient(to bottom,#F1E2CC,#DEC2A3)" }} data-testid="bienetre-upsell-offres">Voir les offres</Link>
+                  <button onClick={() => allerA("aujourdhui")} className="inline-flex items-center rounded-full border px-6 py-3 text-sm font-semibold" style={{ borderColor: "rgba(11,20,48,0.2)", color: L_NAVY }}>Revenir à ma carte du jour</button>
+                </div>
+              </div>
+            ) : (<>
             {onglet === "parcours" && <MindsetParcours ouvert={parcoursOuvert} onOuvrir={(id) => allerA("parcours", id)} />}
             {onglet === "carnet" && <MindsetCarnet />}
 
@@ -330,6 +357,7 @@ export default function BienEtre() {
                 <SensEquilibre />
               </div>
             )}
+            </>)}
           </div>
         </main>
       </div>

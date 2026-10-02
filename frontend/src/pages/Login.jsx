@@ -131,6 +131,11 @@ export default function Login() {
   const [inscription, setInscription] = useState(false);
   const [motDePasse, setMotDePasse] = useState("");
   const [voirMdp, setVoirMdp] = useState(false);
+  const [consent, setConsent] = useState(false);
+  const exigerConsent = () => {
+    if (!consent) { toast.error("Merci d'accepter la politique de confidentialité pour continuer."); return false; }
+    return true;
+  };
 
   useEffect(() => {
     fetchConnexionOptions().then(setOptions).catch(() => {});
@@ -254,6 +259,7 @@ export default function Login() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const doOauth = async (provider, label) => {
+    if (!exigerConsent()) return;
     setRedirecting(label);
     try {
       const res = await oauthStart(provider, `${window.location.origin}/login`);
@@ -290,6 +296,7 @@ export default function Login() {
   };
 
   const envoyer = async () => {
+    if (!exigerConsent()) return;
     if (!email.includes("@")) { toast.error("Entre une adresse email valide."); return; }
     setSending(true);
     try {
@@ -302,6 +309,7 @@ export default function Login() {
   };
 
   const envoyerMdp = async () => {
+    if (!exigerConsent()) return;
     if (!email.includes("@")) { toast.error("Entre une adresse email valide."); return; }
     if (motDePasse.length < 8) { toast.error("Mot de passe : 8 caractères minimum."); return; }
     setSending(true);
@@ -343,6 +351,18 @@ export default function Login() {
             <p className="mt-4 text-sm text-offwhite/70">{DANS_TEAMS ? "Connecte-toi à ton espace Zayado depuis Microsoft Teams." : "Connecte-toi à ton espace privé Zayado — sans mot de passe à retenir."}</p>
             {DANS_TEAMS && <p className="mt-2 rounded-xl border border-gold/30 bg-gold/10 px-3 py-2 text-[12px] text-offwhite/80" data-testid="login-teams">Dans Teams, le plus simple : ton e-mail et ton mot de passe. Google et Microsoft s'ouvrent dans une petite fenêtre.</p>}
           </div>
+
+          {/* Consentement confidentialité — requis avant toute connexion */}
+          <label className="mb-3 flex cursor-pointer items-start gap-2.5 rounded-xl border border-white/12 bg-white/[0.03] px-3 py-2.5" data-testid="login-consent">
+            <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)}
+              data-testid="login-consent-checkbox"
+              className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-[#DEC2A3]" />
+            <span className="text-[12.5px] leading-relaxed text-offwhite/70">
+              J'ai lu et j'accepte la{" "}
+              <a href="/legal/confidentialite" target="_blank" rel="noreferrer" data-testid="login-consent-link"
+                className="font-semibold text-gold hover:underline">politique de confidentialité</a>.
+            </span>
+          </label>
 
           {/* Boutons sociaux */}
           <div className="grid grid-cols-2 gap-2.5">

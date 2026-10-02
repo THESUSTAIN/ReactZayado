@@ -16,6 +16,7 @@ Variables d'environnement :
 """
 import json
 import os
+import uuid
 from dataclasses import dataclass
 
 import httpx
@@ -94,4 +95,61 @@ class MammouthChat:
                     contenu = (morceau.get("choices") or [{}])[0].get("delta", {}).get("content")
                     if contenu:
                         yield TextDelta(contenu)
+        yield StreamDone()
+
+
+# ─── Repli IA via la clé universelle Emergent (emergentintegrations) ────────
+# Utilisé quand MAMMOTH_API_KEY est absente mais EMERGENT_LLM_KEY présente.
+# Additif : en production avec Mammouth configuré, rien ne change.
+EMERGENT_LLM_PROVIDER = os.environ.get("EMERGENT_LLM_PROVIDER", "anthropic")
+EMERGENT_LLM_MODEL = os.environ.get("EMERGENT_LLM_MODEL", "claude-sonnet-4-5-20250929")
+
+
+def cle_emergent() -> str:
+    return os.environ.get("EMERGENT_LLM_KEY", "")
+
+
+class EmergentChat:
+    """Même interface que MammouthChat, propulsé par la clé universelle Emergent
+    (emergentintegrations : OpenAI / Anthropic / Gemini). Permet au Copilote, au
+    Radar, à l'Agent Business, etc. de réellement assister sans clé Mammouth."""
+
+    def __init__(self, api_key: str = "", system_message: str = "", session_id: str = "",
+                 model: str = "", max_tokens: int = 4096):
+        self.api_key = api_key or cle_emergent()
+        self.system_message = system_message or ""
+        self.session_id = session_id or f"zayado-{uuid.uuid4().hex}"
+        self.provider = EMERGENT_LLM_PROVIDER
+        self.model = model or EMERGENT_LLM_MODEL
+        self.max_tokens = max_tokens
+
+    def _chat(self):
+        from emergentintegrations.llm.chat import LlmChat
+        return LlmChat(
+            api_key=self.api_key,
+            session_id=self.session_id,
+            system_message=self.system_message,
+        ).with_model(self.provider, self.model)
+
+    async def send_message(self, message) -> str:
+        from emergentintegrations.llm.chat import UserMessage as EUser
+        texte = message.text if hasattr(message, "text") else str(message)
+        try:
+            return (await self._chat().send_message(EUser(text=texte))) or ""
+        except Exception as e:  # noqa: BLE001
+            raise MammouthErreur(f"Emergent LLM a échoué : {e}") from e
+
+    async def stream_message(self, message):
+        from emergentintegrations.llm.chat import (
+            UserMessage as EUser, TextDelta as ETD, StreamDone as ESD,
+        )
+        texte = message.text if hasattr(message, "text") else str(message)
+        try:
+            async for ev in self._chat().stream_message(EUser(text=texte)):
+                if isinstance(ev, ETD):
+                    yield TextDelta(ev.content)
+                elif isinstance(ev, ESD):
+                    break
+        except Exception as e:  # noqa: BLE001
+            raise MammouthErreur(f"Emergent LLM (stream) a échoué : {e}") from e
         yield StreamDone()

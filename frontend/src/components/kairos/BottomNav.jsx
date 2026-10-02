@@ -1,24 +1,24 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Compass, Radar, CheckSquare, MoreHorizontal, Heart, CalendarCheck, Users, Settings, X, Lock, HandHeart, Bot } from "lucide-react";
+import { LayoutDashboard, Compass, Radar, CheckSquare, MoreHorizontal, Heart, Settings, X, Sparkles, HandHeart, Bot } from "lucide-react";
 import { chargerAbonnement } from "@/lib/acces";
 import { aDroit, planEffectif } from "@/lib/droits";
 import { useKairos } from "@/context/KairosContext";
 import { chargerEspace, enPro, menusPro } from "@/lib/espace";
 
-// Menu mobile en bas d'écran (toutes les pages de l'app). Le chat reste dans l'en-tête
-// (pas de doublon). Masqué dans l'éditeur de Vision Board, qui a sa propre barre d'outils.
-const PRINCIPAUX = [
-  { key: "today", label: "Aujourd'hui", Icon: LayoutDashboard, path: "/app" },
-  { key: "vision", label: "Vision", Icon: Compass, path: "/app/vision" },
-  { key: "radar", label: "Radar", Icon: Radar, path: "/app/radar" },
-  { key: "actions", label: "Plan d'action", Icon: CheckSquare, path: "/app/actions" },
-];
-const PLUS = [
-  { key: "wellbeing", label: "Bien-être & Mindset", Icon: Heart, path: "/app/bien-etre" },
-  { key: "mafoi", label: "Ma Foi", Icon: HandHeart, path: "/app/ma-foi" },
-  { key: "agent", label: "Agents IA", Icon: Bot, path: "/app/agents" },
-  { key: "settings", label: "Paramètres", Icon: Settings, path: "/parametres" },
+// Menu mobile en bas d'écran. Correction UX : on n'affiche plus de "tabs morts"
+// avec cadenas — uniquement les modules accessibles à l'offre, plus un bouton
+// "Plus" qui ouvre les autres entrées accessibles + un CTA "Débloquer" élégant.
+// Le chat reste dans l'en-tête (pas de doublon).
+const TOUS = [
+  { key: "today", label: "Aujourd'hui", Icon: LayoutDashboard, path: "/app", mod: "cockpit" },
+  { key: "vision", label: "Vision", Icon: Compass, path: "/app/vision", mod: "vision" },
+  { key: "radar", label: "Radar", Icon: Radar, path: "/app/radar", mod: "radar" },
+  { key: "actions", label: "Plan d'action", Icon: CheckSquare, path: "/app/actions", mod: "idees" },
+  { key: "wellbeing", label: "Bien-être", Icon: Heart, path: "/app/bien-etre", mod: "bienetre" },
+  { key: "mafoi", label: "Ma Foi", Icon: HandHeart, path: "/app/ma-foi", mod: "mafoi" },
+  { key: "agent", label: "Agents IA", Icon: Bot, path: "/app/agents", mod: "agents" },
+  { key: "settings", label: "Paramètres", Icon: Settings, path: "/parametres", mod: null },
 ];
 
 export function BottomNav() {
@@ -26,13 +26,11 @@ export function BottomNav() {
   const navigate = useNavigate();
   const [plus, setPlus] = useState(false);
   const [plan, setPlan] = useState(null);
-  const [acces, setAcces] = useState(null);
   const { contexte } = useKairos();
-  useEffect(() => { chargerAbonnement().then((a) => { setPlan(planEffectif(a)); setAcces(a.acces); }).catch(() => {}); }, []);
+  useEffect(() => { chargerAbonnement().then((a) => setPlan(planEffectif(a))).catch(() => {}); }, []);
   const [menusEntreprise, setMenusEntreprise] = useState(null);
   useEffect(() => { if (enPro()) chargerEspace().then((e) => setMenusEntreprise(e?.entreprise ? menusPro(e.entreprise.modules) : null)).catch(() => {}); }, []);
-  const visible = (k) => menusEntreprise ? (menusEntreprise.includes(k) || k === "settings") : (k === "mafoi" ? contexte?.parcours_foi === true
-    : true);
+
   const masque = pathname.startsWith("/app/vision") && new URLSearchParams(search).get("view");
   useEffect(() => {
     document.body.classList.toggle("avec-nav-bas", !masque);
@@ -40,10 +38,30 @@ export function BottomNav() {
   }, [masque]);
   useEffect(() => { setPlus(false); }, [pathname]);
   if (masque) return null;
+
   const actif = (p) => (p === "/app" ? pathname === "/app" : pathname.startsWith(p));
-  const MOD_MENU = { today: "cockpit", vision: "vision", radar: "radar", actions: "idees", wellbeing: "bienetre", mafoi: "mafoi", agent: "agents" };
-  const verrou = (k) => !menusEntreprise && !!plan && k !== "settings" && !aDroit(plan, MOD_MENU[k]);
-  const plusActif = PLUS.some((i) => actif(i.path));
+
+  // Visibilité de base (Ma Foi seulement si activée ; entreprise = menus ouverts).
+  const visible = (it) => menusEntreprise
+    ? (menusEntreprise.includes(it.key) || it.key === "settings")
+    : (it.key === "mafoi" ? contexte?.parcours_foi === true : true);
+  // Accessible selon l'offre (plan null = en cours de chargement → tout visible).
+  const accessible = (it) => menusEntreprise ? true : (it.mod == null || aDroit(plan, it.mod));
+
+  const dispo = TOUS.filter((it) => visible(it) && accessible(it));
+  const principaux = dispo.filter((it) => it.key !== "settings").slice(0, 4);
+  const reste = dispo.filter((it) => !principaux.includes(it));
+  const yAVerrou = !menusEntreprise && !!plan && TOUS.some((it) => visible(it) && it.mod && !aDroit(plan, it.mod));
+  const plusActif = reste.some((it) => actif(it.path)) || pathname.startsWith("/app/debloquer");
+
+  const Item = ({ it }) => (
+    <button key={it.key} onClick={() => navigate(it.path)} data-testid={`bottomnav-${it.key}`} aria-current={actif(it.path) ? "page" : undefined}
+      className={`relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[10.5px] font-medium ${actif(it.path) ? "text-white" : "text-offwhite/55"}`}>
+      {actif(it.path) && <span className="absolute top-0 h-0.5 w-8 rounded-full bg-[#DEC2A3] shadow-[0_0_8px_rgba(222,194,163,0.8)]" />}
+      <it.Icon className="h-5 w-5" /> {it.label}
+    </button>
+  );
+
   return (
     <>
       {plus && (
@@ -53,31 +71,30 @@ export function BottomNav() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-offwhite/55">Plus</p>
               <button onClick={() => setPlus(false)} aria-label="Fermer" className="rounded-lg p-1 text-offwhite/60"><X size={16} /></button>
             </div>
-            {PLUS.filter((i) => visible(i.key)).map(({ key, label, Icon, path }) => (
-              <button key={key} onClick={() => navigate(path)} data-testid={`bottomnav-${key}`}
-                className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-[14.5px] ${actif(path) ? "bg-white text-navy-900 ring-1 ring-[#DEC2A3]" : "text-offwhite/85"}`}>
-                <Icon size={18} /> <span className="flex-1">{label}</span>{verrou(key) && <Lock size={13} className="text-gold" />}
+            {reste.map((it) => (
+              <button key={it.key} onClick={() => navigate(it.path)} data-testid={`bottomnav-${it.key}`}
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-[14.5px] ${actif(it.path) ? "bg-white text-navy-900 ring-1 ring-[#DEC2A3]" : "text-offwhite/85"}`}>
+                <it.Icon size={18} /> <span className="flex-1">{it.label}</span>
               </button>
             ))}
+            {yAVerrou && (
+              <button onClick={() => navigate("/pricing")} data-testid="bottomnav-debloquer"
+                className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-[14.5px] font-semibold text-navy-900"
+                style={{ background: "linear-gradient(to bottom,#F1E2CC,#DEC2A3)" }}>
+                <Sparkles size={18} /> <span className="flex-1">Débloquer plus de modules</span>
+              </button>
+            )}
           </div>
         </div>
       )}
       <nav className="fixed inset-x-0 bottom-0 z-[56] border-t border-white/10 bg-[#0f1b3a]/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden" aria-label="Navigation principale" data-testid="bottomnav">
         <div className="mx-auto flex max-w-lg items-stretch justify-around">
-          {(menusEntreprise ? [...PRINCIPAUX, ...PLUS].filter((i) => menusEntreprise.includes(i.key)) : PRINCIPAUX).map(({ key, label, Icon, path }) => (
-            <button key={key} onClick={() => navigate(path)} data-testid={`bottomnav-${key}`} aria-current={actif(path) ? "page" : undefined}
-              className={`relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[10.5px] font-medium ${actif(path) ? "text-white" : "text-offwhite/55"}`}>
-              {actif(path) && <span className="absolute top-0 h-0.5 w-8 rounded-full bg-[#DEC2A3] shadow-[0_0_8px_rgba(222,194,163,0.8)]" />}
-              <Icon className={`h-5 w-5 ${verrou(key) ? "opacity-40" : ""}`} />
-              {label}
-              {verrou(key) && <Lock size={9} className="absolute right-[28%] top-2 text-gold" />}
-            </button>
-          ))}
-          {!menusEntreprise && <button onClick={() => setPlus((v) => !v)} data-testid="bottomnav-plus" aria-expanded={plus}
+          {principaux.map((it) => <Item key={it.key} it={it} />)}
+          <button onClick={() => setPlus((v) => !v)} data-testid="bottomnav-plus" aria-expanded={plus}
             className={`relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[10.5px] font-medium ${plus || plusActif ? "text-white" : "text-offwhite/55"}`}>
             {plusActif && <span className="absolute top-0 h-0.5 w-8 rounded-full bg-[#DEC2A3] shadow-[0_0_8px_rgba(222,194,163,0.8)]" />}
             <MoreHorizontal className="h-5 w-5" /> Plus
-          </button>}
+          </button>
         </div>
       </nav>
     </>

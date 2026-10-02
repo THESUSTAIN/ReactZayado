@@ -76,7 +76,7 @@ export const fr = {
       label: "Pensé pour toi", title1: "Un cockpit dédié aux", title2: "entrepreneurs sensibles",
       lead: "Tu construis seul(e) ou en petite équipe. Tu veux avancer sans t'épuiser. Tu as besoin d'un outil qui te respecte, pas d'un dashboard hostile.",
       a1: "Entrepreneurs solo", a2: "Freelances & consultants", a3: "Coachs & thérapeutes",
-      a4: "Créateurs & artistes", a5: "Fondatrices de studios", a6: "Dirigeants sensibles",
+      a4: "Créateurs & artistes", a5: "Fondatrices de studios", a6: "Entrepreneurs sensibles",
       q1: "On avance ensemble, doucement.", q2: "Un carnet, un thé, ma vision.", q3: "Le soir, je pose. Vraiment.",
     },
     refuge: {
@@ -158,7 +158,7 @@ export const fr = {
     },
     aiDoc: {
       title: "Document IA", lead: "Génère un document structuré (Claude)",
-      placeholder: "Ex : Cabinet de conseil pour dirigeants en transition, lancement Q2…",
+      placeholder: "Ex : Cabinet de conseil pour entrepreneurs en transition, lancement Q2…",
       generate: "Générer le document", generating: "",
       added: "Document IA ajouté au board",
       error: "Génération indisponible, réessaie dans un instant.",

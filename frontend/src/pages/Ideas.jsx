@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Loader2, Lightbulb, FolderSync, Plus, ChevronRight, Sparkles, Wand2, Target, Zap, Gauge } from "lucide-react";
 import { CaptureBar } from "@/components/ideas/CaptureBar";
@@ -16,6 +16,7 @@ export default function Ideas() {
 
 export function IdeesContenu({ onChange }) {
   const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
   const [idees, setIdees] = useState([]);
   const [objectifs, setObjectifs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,6 +30,27 @@ export function IdeesContenu({ onChange }) {
       .then(([i, o]) => { setIdees(i); setObjectifs(o); })
       .catch(() => toast.error("Chargement impossible."))
       .finally(() => setLoading(false));
+  }, []);
+
+  // Partage mobile (PWA Share Target) : une idée/un lien partagé depuis le téléphone
+  // arrive ici en paramètres d'URL → on la capture directement dans « Idées ».
+  useEffect(() => {
+    const t = params.get("title");
+    const txt = params.get("text");
+    const u = params.get("url");
+    if (!t && !txt && !u) return;
+    const titre = (t || txt || u || "").trim().slice(0, 300) || "Idée partagée";
+    const desc = [txt && txt !== titre ? txt : null, u].filter(Boolean).join("\n") || undefined;
+    createIdee({ titre, description: desc, source: "partage" })
+      .then((idee) => { setIdees((p) => [idee, ...p]); onChange?.(); toast.success("Idée capturée depuis le partage 📲"); })
+      .catch(() => toast.error("Impossible de capturer l'idée partagée."))
+      .finally(() => {
+        const np = new URLSearchParams(params);
+        ["title", "text", "url"].forEach((k) => np.delete(k));
+        np.set("tab", "idees");
+        setParams(np, { replace: true });
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const counts = useMemo(() => {

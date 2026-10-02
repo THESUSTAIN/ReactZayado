@@ -15,12 +15,19 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install --omit=dev
 COPY server.js ./server.js
-RUN mkdir -p /data/.wwebjs_auth && chown -R node:node /app /data
 
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+ENV WA_DATA_PATH=/data/.wwebjs_auth
 
-USER node
+# IMPORTANT (correctif Railway) : Railway monte le Volume sur /data en
+# appartenant a root. En tournant en USER node, whatsapp-web.js (LocalAuth) ne
+# peut pas ecrire dans /data -> EACCES -> crash en boucle ("error mode").
+# On reste donc root (Chromium tourne deja avec --no-sandbox, cf. server.js) et
+# on garantit l'existence du dossier de session AU DEMARRAGE (apres le montage
+# du volume), pas seulement au build.
+RUN mkdir -p /data/.wwebjs_auth
+
 EXPOSE 3000
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "mkdir -p \"$WA_DATA_PATH\" && exec node server.js"]

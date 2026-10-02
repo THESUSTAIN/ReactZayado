@@ -1,4 +1,5 @@
 {
+  "id": "/",
   "short_name": "Zayado",
   "name": "Zayado — Cockpit IA",
   "description": "Le cockpit IA privé de Zayado pour piloter son activité sans perdre son équilibre.",
@@ -22,9 +23,33 @@
       "purpose": "maskable"
     }
   ],
-  "start_url": ".",
+  "start_url": "/app?source=pwa",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "theme_color": "#0B0F19",
-  "background_color": "#0B0F19"
+  "background_color": "#0B0F19",
+  "shortcuts": [
+    {
+      "name": "Capturer une idée",
+      "short_name": "Idée",
+      "description": "Noter une idée en une phrase",
+      "url": "/app/actions?tab=idees"
+    },
+    {
+      "name": "Mon cockpit",
+      "short_name": "Cockpit",
+      "url": "/app"
+    }
+  ],
+  "share_target": {
+    "action": "/app/actions?tab=idees",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
 }

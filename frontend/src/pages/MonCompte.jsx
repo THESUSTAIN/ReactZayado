@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  fetchMoi, fetchAbonnement, fetchMesFilleuls, fetchOrganisation, fetchCommandes, fetchState, telechargerExport,
+  fetchMoi, fetchAbonnement, fetchMesFilleuls, fetchOrganisation, fetchCommandes, fetchCommandesBoutique, fetchState, telechargerExport,
   setToken, fetchLoginCarousel, mediaUrl,
 } from "@/lib/kairosApi";
 import { planNom, PLANS } from "@/lib/plans";
@@ -33,10 +33,10 @@ export default function MonCompte() {
   const [esp, setEsp] = useState(null);
   useEffect(() => { chargerEspace().then(setEsp).catch(() => {}); }, []);
   useEffect(() => {
-    Promise.allSettled([fetchMoi(), fetchAbonnement(), fetchMesFilleuls(), fetchOrganisation(), fetchCommandes(), fetchState(), fetchLoginCarousel()])
-      .then(([moi, abo, fil, org, cmd, st, car]) => setD({
+    Promise.allSettled([fetchMoi(), fetchAbonnement(), fetchMesFilleuls(), fetchOrganisation(), fetchCommandes(), fetchState(), fetchLoginCarousel(), fetchCommandesBoutique()])
+      .then(([moi, abo, fil, org, cmd, st, car, cb]) => setD({
         moi: moi.value || {}, abo: abo.value || {}, filleuls: fil.value?.items || [],
-        org: org.value?.organisation || null, commandes: cmd.value?.items || [],
+        org: org.value?.organisation || null, commandes: cmd.value?.items || [], commandesBoutique: cb.value?.items || [],
         prenom: st.value?.profile?.prenom || "",
         // L'image vient du carrousel de connexion (modifiable dans la console admin).
         image: car.value?.slides?.[0]?.src ? mediaUrl(car.value.slides[0].src) : "/presentation-poster.jpg",
@@ -94,7 +94,9 @@ export default function MonCompte() {
         </div>
 
         <main className="mx-auto w-full max-w-[560px] px-5 pb-20 pt-8 lg:px-10">
-          {params.get("vue") === "achats" ? (
+          {params.get("vue") === "commandes" ? (
+            <SuiviCommandes commandes={d.commandesBoutique} c={c} clair={clair} onRetour={() => navigate("/compte")} />
+          ) : params.get("vue") === "achats" ? (
             <MesAchats commandes={d.commandes} c={c} clair={clair} onRetour={() => navigate("/compte")} />
           ) : (<>
           <h1 className={`text-[26px] font-bold ${c.titre}`}>Bonjour {d.prenom || "à toi"}</h1>
@@ -110,7 +112,8 @@ export default function MonCompte() {
           </Rubrique>
 
           <Rubrique titre="Mes commandes">
-            <Ligne Icone={ShoppingBag} label="Mes achats sur la boutique" sous="Commandes zayado.net : suivi, factures, retours" onClick={() => window.open(BOUTIQUE_COMPTE_URL, "_blank", "noopener")} externe testid="compte-boutique" />
+            <Ligne Icone={ShoppingBag} label={`Suivi de mes commandes${d.commandesBoutique.length ? ` (${d.commandesBoutique.length})` : ""}`} sous="En attente, payé, expédié — boutique par boutique" onClick={() => navigate("/compte?vue=commandes")} testid="compte-suivi-commandes" />
+            <Ligne Icone={ShoppingBag} label="Factures et retours" sous="Espace client de la boutique zayado.net" onClick={() => window.open(BOUTIQUE_COMPTE_URL, "_blank", "noopener")} externe testid="compte-boutique" />
             <Ligne Icone={Receipt} label="Mes factures d'abonnement" onClick={() => navigate("/parametres#offre")} testid="compte-factures" />
             <Ligne Icone={Gift} label={`Mes services achetés${d.commandes.length ? ` (${d.commandes.length})` : ""}`} sous="Formations, accompagnements et services payés dans Zayado" onClick={() => navigate("/compte?vue=achats")} testid="compte-achats" />
           </Rubrique>
@@ -160,6 +163,46 @@ export default function MonCompte() {
           <button onClick={deconnexion} className={`mt-10 inline-flex items-center gap-2 text-[15px] ${c.titre}`} data-testid="compte-deconnexion">Se déconnecter <LogOut size={17} /></button>
           </>)}
         </main>
+      </div>
+    </div>
+  );
+}
+
+// Suivi des commandes de la boutique (Shopify) : statut par commande, rattaché à la boutique vendeuse.
+const STATUTS_BOUTIQUE = { en_attente: ["En attente", "text-amber-600"], autorise: ["Paiement autorisé", "text-emerald-600"],
+  paye: ["Payé · en préparation", "text-emerald-600"], expedie: ["Expédié", "text-sky-600"],
+  annule: ["Annulé", "text-rose-600"], rembourse: ["Remboursé", "text-rose-600"] };
+function SuiviCommandes({ commandes, c, clair, onRetour }) {
+  return (
+    <div data-testid="compte-vue-commandes">
+      <button onClick={onRetour} className={`mb-5 text-[13px] ${c.doux} hover:underline`}>← Mon compte</button>
+      <h1 className={`text-[26px] font-bold ${c.titre}`}>Suivi de mes commandes</h1>
+      <p className={`mt-1 text-[14px] ${c.doux}`}>Le statut se met à jour automatiquement, sans que tu aies à recharger quoi que ce soit.</p>
+      <div className="mt-6 space-y-3">
+        {!commandes.length && <p className={`rounded-xl p-6 text-center text-[14px] ${c.ligne} ${c.doux}`}>Aucune commande pour le moment.</p>}
+        {commandes.map((o) => {
+          const [libelle, couleur] = STATUTS_BOUTIQUE[o.statut] || STATUTS_BOUTIQUE.en_attente;
+          return (
+            <div key={o.id} className={`rounded-xl px-5 py-4 ${c.ligne}`} data-testid="commande-boutique">
+              <div className="flex items-start gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className={`text-[15px] font-semibold ${c.titre}`}>Commande {o.commande} · {o.boutique}</p>
+                  <p className={`mt-0.5 text-[12.5px] ${c.doux}`}>{o.montant} {o.devise} · {o.passee_le ? new Date(o.passee_le).toLocaleDateString("fr-FR") : ""}</p>
+                </div>
+                <span className={`text-[12.5px] font-semibold ${clair ? couleur : couleur.replace("600", "300")}`}>{libelle}</span>
+              </div>
+              {(o.lignes || []).length > 0 && (
+                <ul className={`mt-2 space-y-0.5 text-[13px] ${c.doux}`}>{o.lignes.map((l, i) => <li key={i}>{l.quantite} × {l.titre}</li>)}</ul>
+              )}
+              {(o.suivi || []).map((t, i) => (
+                <p key={i} className={`mt-2 text-[13px] ${c.doux}`}>
+                  {t.transporteur || "Colis"} {t.numero}{" "}
+                  {/^https?:\/\//.test(t.url) && <a href={t.url} target="_blank" rel="noreferrer" className={`font-semibold underline ${c.titre}`}>Suivre le colis</a>}
+                </p>
+              ))}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

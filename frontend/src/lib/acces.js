@@ -17,8 +17,8 @@ export function chargerAbonnement() {
 // Ma Foi n'est plus dans cette liste : elle suit désormais la même règle
 // d'accès payant que le reste de /app (voir AccesGate.jsx).
 // Idées est maintenant l'onglet du Plan d'action : Rêveur y accède (onglets Idées et Objectifs).
-export const PAGES_REVEUR = ["/app/vision", "/app/actions", "/app/ideas", "/app/sources"];
+export const PAGES_REVEUR = ["/app/vision", "/app/actions", "/app/ideas", "/app/sources", "/app/bien-etre", "/app/debloquer"];
 export const pageAutorisee = (plan, pathname) =>
   plan !== "reveur" || !pathname.startsWith("/app") || PAGES_REVEUR.some((p) => pathname.startsWith(p));
-// Clés du menu accessibles en Rêveur.
-export const MENU_REVEUR = ["vision", "actions"];
+// Clés du menu accessibles en Rêveur (Bien-être carte du jour incluse).
+export const MENU_REVEUR = ["vision", "actions", "wellbeing"];

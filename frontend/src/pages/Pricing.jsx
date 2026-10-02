@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, ShieldCheck, Server, Lock, FileText } from "lucide-react";
+import { ChevronDown, ShieldCheck, Server, Lock, FileText, Download } from "lucide-react";
 import { PLANS_GRILLE, COMPARATIF } from "@/lib/plans";
 import GrilleTarifs from "@/components/pricing/GrilleTarifs";
+import { telechargerOffresPdf } from "@/lib/offresPdf";
 import { toast } from "sonner";
 import { MarketingLayout } from "@/components/marketing/MarketingLayout";
 import { useSeo } from "@/lib/useSeo";
@@ -63,6 +64,11 @@ export default function Pricing() {
             Vision, priorités, énergie et chiffres de ton activité au même endroit, avec une IA qui connaît ton projet.
             Rêveur dès 15 € · Solo : 1 mois pour 1 €. Prix TTC, sans engagement.
           </p>
+
+          <button onClick={telechargerOffresPdf} data-testid="pricing-pdf-btn"
+            className="mx-auto mt-5 inline-flex items-center gap-2 rounded-full border border-gold/35 bg-gold/10 px-4 py-2 text-[13px] font-semibold text-gold transition hover:bg-gold/20">
+            <Download className="h-4 w-4" /> Télécharger les offres en PDF
+          </button>
 
         </div>
 

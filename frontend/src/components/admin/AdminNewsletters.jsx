@@ -83,13 +83,14 @@ export default function AdminNewsletters() {
             <RefreshCw size={13} className="inline mr-1.5 -mt-0.5" /> Rafraîchir
           </button>
         </div>
-        <div className="mt-3 flex items-start gap-2 rounded-xl border border-gold/20 bg-gold/[0.06] p-3 text-xs text-offwhite/70">
-          <Mail size={14} className="mt-0.5 shrink-0 text-gold" />
-          <p>
-            Abonne-toi à des newsletters externes avec l'email de veille configuré sur Brevo Inbound Parse.
-            Chaque email reçu est automatiquement reformulé par l'IA au ton Zayado et apparaît ici en brouillon —
-            valide, corrige si besoin, puis pousse vers Brevo pour l'envoi final (l'envoi se fait dans Brevo, pas ici).
-          </p>
+        <div className="mt-3 rounded-xl border border-gold/20 bg-gold/[0.06] p-3 text-xs text-offwhite/75">
+          <p className="mb-2 flex items-center gap-2 font-semibold text-offwhite"><Mail size={14} className="text-gold" /> Comment ça marche (rien à copier-coller)</p>
+          <ol className="ml-4 list-decimal space-y-1.5">
+            <li><b>Une adresse email de veille</b> (type <code className="rounded bg-black/30 px-1">veille@zayado.net</code>, configurée dans Brevo → Inbound Parse) sert de boîte de réception.</li>
+            <li>Tu <b>abonnes cette adresse</b> aux newsletters des concurrents (ou tu y <b>transfères</b> les emails intéressants). Chaque email arrive automatiquement ici.</li>
+            <li>L'IA <b>s'en inspire</b> et prépare un brouillon <b>original au ton Zayado</b>. Tu le <b>valides/corriges</b>, puis <b>« Pousser vers Brevo »</b> — l'envoi final se fait dans Brevo.</li>
+          </ol>
+          <p className="mt-2 text-offwhite/50">Besoin de coller un contenu à la main plutôt que par email ? Dis-le-moi, j'ajoute un bouton « Importer un texte ».</p>
         </div>
       </Carte>
 

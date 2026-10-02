@@ -928,12 +928,16 @@ async def _contexte(db: AsyncSession, uid: str) -> str:
 
 
 def _client_llm(session_id: str, systeme: str):
-    """Client IA texte : Mammouth AI (clé MAMMOTH_API_KEY). None si la clé manque."""
-    from llm_mammouth import MammouthChat, cle_mammouth
+    """Client IA texte : Mammouth AI (clé MAMMOTH_API_KEY) en priorité ; sinon
+    repli sur la clé universelle Emergent (EMERGENT_LLM_KEY) pour que l'IA
+    assiste réellement. None si aucune clé n'est configurée."""
+    from llm_mammouth import MammouthChat, EmergentChat, cle_mammouth, cle_emergent
     cle = cle_mammouth()
-    if not cle:
-        return None
-    return MammouthChat(api_key=cle, system_message=systeme)
+    if cle:
+        return MammouthChat(api_key=cle, system_message=systeme)
+    if cle_emergent():
+        return EmergentChat(system_message=systeme, session_id=session_id)
+    return None
 
 
 def _repli(message: str) -> str:
@@ -1297,6 +1301,82 @@ async def admin_vue_ensemble(db: AsyncSession = Depends(get_db), _role=Depends(e
             "abonnements": {"par_offre": par_offre, "essais_en_cours": essais, "resilies_en_cours": resilies,
                             "fondateurs": fondateurs, "mrr_ttc": round(mrr_ttc, 2),
                             "payants": sum(v for k, v in par_offre.items()) - essais}}
+
+
+@api.get("/admin/retention")
+async def admin_retention(db: AsyncSession = Depends(get_db), _role=Depends(exiger_role("admin"))):
+    """Rétention & acquisition : combien d'utilisateurs reviennent (DAU/WAU/MAU),
+    courbe d'inscriptions sur 8 semaines, rétention par cohorte d'inscription,
+    d'où viennent les utilisateurs (leads par source + parrainage) et indicateurs
+    d'usage (activation, adhésion). Tout est calculé en SQL (pas de souci de fuseau)."""
+    now = datetime.now(timezone.utc)
+
+    async def _actifs(days):
+        return (await db.execute(select(func.count()).select_from(User).where(
+            User.derniere_connexion >= now - timedelta(days=days)))).scalar_one()
+
+    total = (await db.execute(select(func.count()).select_from(User))).scalar_one()
+    dau, wau, mau = await _actifs(1), await _actifs(7), await _actifs(30)
+
+    # Inscriptions par semaine (8 dernières) + rétention de chaque cohorte
+    # (part des inscrits de la semaine encore actifs = connectés dans les 14 derniers jours).
+    lundi = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+    semaines = []
+    for i in range(7, -1, -1):
+        w0 = lundi - timedelta(days=7 * i)
+        w1 = w0 + timedelta(days=7)
+        inscrits = (await db.execute(select(func.count()).select_from(User).where(
+            User.created_at >= w0, User.created_at < w1))).scalar_one()
+        retenus = (await db.execute(select(func.count()).select_from(User).where(
+            User.created_at >= w0, User.created_at < w1,
+            User.derniere_connexion >= now - timedelta(days=14)))).scalar_one()
+        semaines.append({"semaine": w0.strftime("%d/%m"), "inscrits": int(inscrits),
+                         "retenus": int(retenus),
+                         "retention": round(100 * retenus / inscrits) if inscrits else 0})
+
+    # Sources d'acquisition : leads capturés (tunnels publics) regroupés par source.
+    src_rows = (await db.execute(select(Lead.source, func.count()).group_by(Lead.source))).all()
+    sources = sorted([{"source": (s or "inconnue"), "leads": int(c)} for s, c in src_rows],
+                     key=lambda x: -x["leads"])
+
+    # Conversion lead → compte (même e-mail) et acquisition par parrainage.
+    emails_users = {(e or "").lower() for (e,) in (await db.execute(select(User.email))).all() if e}
+    lead_emails = [e for (e,) in (await db.execute(select(Lead.email))).all() if e]
+    leads_total = len(lead_emails)
+    leads_convertis = sum(1 for e in lead_emails if e.lower() in emails_users)
+    Ref = globals().get("Referral")
+    filleuls_actifs = 0
+    if Ref is not None:
+        filleuls_actifs = (await db.execute(select(func.count()).select_from(Ref).where(
+            Ref.referred_id.isnot(None)))).scalar_one()
+    directs = max(0, total - leads_convertis - int(filleuls_actifs))
+    acquisition = [
+        {"canal": "Parrainage", "users": int(filleuls_actifs)},
+        {"canal": "Tunnels / Leads", "users": int(leads_convertis)},
+        {"canal": "Direct / autre", "users": int(directs)},
+    ]
+
+    # Usage : activation (onboarding terminé), adhésion de l'écran d'accueil.
+    VP = globals().get("VisionProfile")
+    onboarded = 0
+    if VP is not None:
+        onboarded = (await db.execute(select(func.count()).select_from(VP).where(
+            VP.onboarded.is_(True)))).scalar_one()
+    acc_oui = (await db.execute(select(func.count()).select_from(AccueilChoix).where(AccueilChoix.choix == "oui"))).scalar_one()
+    acc_total = (await db.execute(select(func.count()).select_from(AccueilChoix))).scalar_one()
+
+    return {
+        "actifs": {"dau": int(dau), "wau": int(wau), "mau": int(mau), "total": int(total),
+                   "taux_wau": round(100 * wau / total) if total else 0},
+        "semaines": semaines,
+        "sources": sources, "leads_total": leads_total, "leads_convertis": leads_convertis,
+        "taux_conversion_lead": round(100 * leads_convertis / leads_total) if leads_total else 0,
+        "acquisition": acquisition,
+        "usage": {"onboarded": int(onboarded), "total": int(total),
+                  "taux_activation": round(100 * onboarded / total) if total else 0,
+                  "adhesion_oui": int(acc_oui), "adhesion_total": int(acc_total),
+                  "taux_adhesion": round(100 * acc_oui / acc_total) if acc_total else 0},
+    }
 
 
 # Catalogue des notifications de l'app (inspiré de Zayado v13, restreint aux
@@ -1895,6 +1975,7 @@ async def completer_checkin(body: VitalsIn, db: AsyncSession = Depends(get_db)):
 class ChatIn(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
     page: Optional[str] = None
+    langue: Optional[str] = "fr"
 
 
 @api.post("/copilote/chat")
@@ -1902,6 +1983,14 @@ async def chat(body: ChatIn, db: AsyncSession = Depends(get_db)):
     uid = _uid()
     contexte = await _contexte(db, uid)
     systeme = f"{SYSTEM_PROMPT}\n\n--- Contexte de l'utilisatrice ---\n{contexte}"
+    # Langue : on répond TOUJOURS dans la langue du message de l'utilisateur
+    # (détection automatique), pas selon l'interface.
+    systeme += (
+        "\n\n--- LANGUE / LANGUAGE ---\n"
+        "Detecte automatiquement la langue du message de l'utilisateur et reponds EXACTEMENT dans cette meme langue "
+        "(francais -> francais, anglais -> anglais, espagnol -> espagnol, etc.), en gardant un ton chaleureux et concis. "
+        "Si la langue est incomprehensible ou ambigue, demande poliment de reformuler, en francais ET en anglais."
+    )
     # Support juridique (façon Kandbaz) : question de droit → prompt structuré
     # + sources officielles du pays jointes sous la réponse (juridique_ext).
     juridique = est_question_juridique(body.message)
@@ -2188,7 +2277,8 @@ async def actualite_options(db: AsyncSession = Depends(get_db)):
     uid = _uid()
     cm = (await _profil(db, uid)).contexte_metier or {}
     pays_compte = cm.get("marche") or "france"
-    org, _ = await organisation_de(db, uid)
+    _org_fn = globals().get("organisation_de")
+    org, _ = (await _org_fn(db, uid)) if _org_fn else (None, None)
     legal_pays = cm.get("actu_legal_pays") or (org.pays if org else None) or pays_compte
     return {
         "entreprise": {"nom": org.nom, "pays": org.pays} if org else None,
@@ -2228,7 +2318,8 @@ async def actualite(marche: str = "", filtre: str = "tout", db: AsyncSession = D
     veut_legal = cm.get("actu_legal") is not False
     # Légal : pays de l'ENTREPRISE déclarée (Paramètres › Mon entreprise), sinon celui du compte ;
     # l'utilisateur peut le changer lui-même (actu_legal_pays).
-    org, _ = await organisation_de(db, uid)
+    _org_fn = globals().get("organisation_de")
+    org, _ = (await _org_fn(db, uid)) if _org_fn else (None, None)
     legal_pays = cm.get("actu_legal_pays") or (org.pays if org else None) or pays_compte
     pays_suivis = [p for p in (cm.get("actu_pays_suivis") or [pays_compte]) if p][:4]
     secteurs = [s for s in (cm.get("actu_secteurs") or secteurs_par_defaut(cm, org)) if s in SECTEURS_ACTU][:6]
@@ -2565,6 +2656,42 @@ async def connexion_oauth_callback(provider: str, code: Optional[str] = None, st
     except Exception as e:  # noqa: BLE001 — jamais de 500 brut sur un retour de consentement utilisateur
         logger.warning("Échec callback OAuth %s : %s", provider, e)
         return RedirectResponse(f"{frontend}/login?erreur=oauth_echec")
+
+
+@api.get("/connexion/oauth/config")
+async def connexion_oauth_config(request: Request):
+    """Diagnostic SANS secret : indique si chaque fournisseur OAuth est configuré
+    et donne les redirect URIs EXACTES à enregistrer dans la console développeur
+    (Azure / Google Cloud). Évite les erreurs « redirect_uri_mismatch ».
+    Ouvrir : {BACKEND}/api/connexion/oauth/config"""
+    frontend = _frontend_url()
+
+    def _cfg(p: str) -> bool:
+        return bool(os.environ.get(f"{p.upper()}_CLIENT_ID") and os.environ.get(f"{p.upper()}_CLIENT_SECRET"))
+
+    return {
+        "frontend_url": frontend,
+        "backend_public_url": os.environ.get("BACKEND_PUBLIC_URL", "") or None,
+        "note": "Enregistrez EXACTEMENT ces URIs (login_sso = connexion ; storage_* = dépôt de documents par l'IA).",
+        "providers": {
+            "google": {
+                "configured": _cfg("google"),
+                "redirect_uris": {
+                    "login_sso": f"{frontend}/login",
+                    "storage_drive": _oauth_callback_url("google", request),
+                },
+            },
+            "microsoft": {
+                "configured": _cfg("microsoft"),
+                "tenant": os.environ.get("MICROSOFT_TENANT", "common"),
+                "redirect_uris": {
+                    "login_sso": f"{frontend}/login",
+                    "storage_onedrive": _oauth_callback_url("microsoft", request),
+                },
+            },
+        },
+    }
+
 
 
 class OAuthEchangeIn(BaseModel):
@@ -5284,6 +5411,10 @@ install_part2(globals())
 from commerce_ext import install_commerce  # noqa: E402
 install_commerce(globals())
 
+# ── Shopify × vendeurs : commandes par boutique (webhooks signés, synchro, suivi client/vendeur) ──
+from shopify_ext import install_shopify  # noqa: E402
+install_shopify(globals())
+
 # ── Vision+ : victoires, partage public en lecture seule, e-mail du lundi ──
 from vision_plus import install_vision_plus  # noqa: E402
 install_vision_plus(globals())
@@ -5319,6 +5450,10 @@ install_foi(globals())
 # ── Canaux du Copilote : Telegram (bot Zayado partagé) et WhatsApp, reliés par utilisateur ──
 from canaux_ext import install_canaux  # noqa: E402
 install_canaux(globals())
+from push_ext import install_push  # noqa: E402
+install_push(globals())
+from gamification_ext import install_gamification  # noqa: E402
+install_gamification(globals())
 
 # ── Diagnostic d'équilibre (pro / perso / spirituel) : page publique + app, alimente la roue ──
 from diagnostic_ext import install_diagnostic  # noqa: E402
@@ -5740,14 +5875,16 @@ async def ia_statut():
     sans que rien ne le signale à l'écran. Ne renvoie aucun secret —
     seulement un booléen et le nom du modèle.
     """
-    from llm_mammouth import MAMMOTH_MODEL, cle_mammouth
+    from llm_mammouth import MAMMOTH_MODEL, EMERGENT_LLM_MODEL, cle_mammouth, cle_emergent
 
-    active = bool(cle_mammouth())
+    mammouth = bool(cle_mammouth())
+    emergent = bool(cle_emergent())
+    active = mammouth or emergent
     f_img = globals().get("images_disponibles")
     return {
         "ia_active": active,
         "images_ia": bool(f_img()) if callable(f_img) else bool(EMERGENT_LLM_KEY),
-        "modele": MAMMOTH_MODEL if active else None,
+        "modele": MAMMOTH_MODEL if mammouth else (EMERGENT_LLM_MODEL if emergent else None),
         # Le détail technique (nom de variable) n'est montré qu'aux admins ;
         # un utilisateur voit une phrase neutre, sans jargon de branchement.
         "message": None
@@ -5755,7 +5892,7 @@ async def ia_statut():
         else (
             (
                 "L'IA est en mode repli : le Copilote, le Radar et l'Agent Business "
-                "répondent un texte générique. Configurez MAMMOTH_API_KEY pour "
+                "répondent un texte générique. Configurez MAMMOTH_API_KEY (ou EMERGENT_LLM_KEY) pour "
                 "réactiver les réponses personnalisées."
             )
             if _role_courant() == "admin"

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { LayoutDashboard, Users, Store, Gift, Ticket, Video, Mail, Newspaper, CheckCircle2, AlertTriangle, CircleDashed, Images, Inbox, UserCog, Link2, ScrollText, ShoppingBag, BadgeCheck, History, Flag, ChevronRight, Info } from "lucide-react";
+import { LayoutDashboard, Users, Store, Gift, Ticket, Video, Mail, Newspaper, CheckCircle2, AlertTriangle, CircleDashed, Images, Inbox, UserCog, Link2, ScrollText, ShoppingBag, BadgeCheck, History, Flag, ChevronRight, Info, TrendingUp, Globe } from "lucide-react";
 import CarrouselLoginAdmin from "@/components/admin/CarrouselLoginAdmin";
 import { SideMenuPro } from "@/components/pro/SideMenuPro";
 import {
@@ -15,12 +15,13 @@ import {
 import { toast } from "sonner";
 import { AdminEquipe, AdminJournal, AdminModerationFoi } from "@/components/admin/AdminEquipe";
 import { Bell } from "lucide-react";
-import EmailsIA from "@/components/admin/EmailsIA";
 import AdminNewsletters from "@/components/admin/AdminNewsletters";
+import AdminPagesPubliques from "@/components/admin/AdminPagesPubliques";
 import AdminConnexions from "@/components/admin/AdminConnexions";
 import AdminAppLogs from "@/components/admin/AdminAppLogs";
 import AdminBranchements from "@/components/admin/AdminBranchements";
 import { Utilisateurs, ComptesVendeurs, CatalogueAdmin, Parrainage } from "@/components/admin/AdminGestion";
+import AdminRetention from "@/components/admin/AdminRetention";
 import { useThemePro } from "@/lib/themePro";
 
 // Menu inspiré de la structure Sentriq (Vue d'ensemble / Utilisateurs / ...).
@@ -30,6 +31,7 @@ import { useThemePro } from "@/lib/themePro";
 // des onglets à venir — annoncés honnêtement comme tels.
 const ONGLETS = [
   { key: "vue", label: "Vue d'ensemble", groupe: "Pilotage" },
+  { key: "retention", label: "Rétention & Acquisition", groupe: "Pilotage" },
   { key: "journal", label: "Journal des actions", groupe: "Pilotage" },
   { key: "utilisateurs", label: "Utilisateurs", groupe: "Utilisateurs" },
   { key: "equipe", label: "Équipe & accès offerts", groupe: "Utilisateurs" },
@@ -44,7 +46,7 @@ const ONGLETS = [
   { key: "comptes-vendeurs", label: "Comptes vendeurs", groupe: "Ventes" },
   { key: "moderation-foi", label: "Modération Ma Foi", groupe: "Contenus" },
   { key: "newsletters", label: "Newsletters", groupe: "Contenus" },
-  { key: "emails-ia", label: "Emails IA", groupe: "Contenus" },
+  { key: "pages-pub", label: "Pages & Traductions", groupe: "Contenus" },
   { key: "videos-ia", label: "Vidéos IA", groupe: "Contenus" },
   { key: "carrousel", label: "Carrousel login", groupe: "Contenus" },
   { key: "branchements", label: "Branchements & clés", groupe: "Technique" },
@@ -58,6 +60,8 @@ export default function Admin() {
 
   const ICONS = {
     vue: <LayoutDashboard size={16} />, utilisateurs: <Users size={16} />, vendeurs: <Store size={16} />,
+    retention: <TrendingUp size={16} />,
+    "pages-pub": <Globe size={16} />,
     parrainage: <Gift size={16} />, "codes-promo": <Ticket size={16} />, commerce: <ShoppingBag size={16} />, catalogue: <Store size={16} />, "comptes-vendeurs": <Users size={16} />, "videos-ia": <Video size={16} />,
     "emails-ia": <Mail size={16} />, "articles-seo": <Newspaper size={16} />, notifications: <Bell size={16} />, carrousel: <Images size={16} />,
     demandes: <Inbox size={16} />, "compte-demo": <UserCog size={16} />, newsletters: <Newspaper size={16} />, connexions: <Link2 size={16} />, logs: <ScrollText size={16} />,
@@ -80,6 +84,7 @@ export default function Admin() {
 
       <div className="mt-6">
         {onglet === "vue" && <VueEnsemble allerA={setOnglet} />}
+        {onglet === "retention" && <AdminRetention />}
         {onglet === "equipe" && <AdminEquipe />}
         {onglet === "journal" && <AdminJournal />}
         {onglet === "moderation-foi" && <AdminModerationFoi />}
@@ -94,9 +99,9 @@ export default function Admin() {
         {onglet === "compte-demo" && <CompteDemo />}
         {onglet === "videos-ia" && <VideosIA />}
         {onglet === "notifications" && <NotificationsAdmin />}
-        {onglet === "emails-ia" && <EmailsIA />}
-        {onglet === "carrousel" && <CarrouselLoginAdmin />}
         {onglet === "newsletters" && <AdminNewsletters />}
+        {onglet === "carrousel" && <CarrouselLoginAdmin />}
+        {onglet === "pages-pub" && <AdminPagesPubliques />}
         {onglet === "connexions" && <AdminConnexions />}
         {onglet === "logs" && <AdminAppLogs />}
         {onglet === "branchements" && <AdminBranchements />}

@@ -24,6 +24,32 @@ import { startTour } from "./GuidedTour";
 
 const THEME_KEY = "kairos_theme";
 
+// Bouton d'ouverture du chat avec une pastille de notification tant que
+// l'utilisateur ne l'a pas ouvert dans la journée (nudge honnête, pas de mock).
+function BoutonChat() {
+  const aujourdhui = new Date().toDateString();
+  const [vu, setVu] = useState(() => { try { return localStorage.getItem("zayado_chat_vu") === aujourdhui; } catch { return false; } });
+  const ouvrir = () => {
+    try { localStorage.setItem("zayado_chat_vu", aujourdhui); } catch { /* */ }
+    setVu(true);
+    openChat();
+  };
+  return (
+    <button onClick={ouvrir}
+      className="relative rounded-xl border border-gold/30 bg-gold/10 p-2 text-gold transition-colors hover:bg-gold/20"
+      title="Collaborateur IA (chat)" aria-label="Ouvrir le Collaborateur IA" data-testid="header-chat">
+      <MessageCircle className="h-[18px] w-[18px]" />
+      {!vu && (
+        <span className="absolute -right-0.5 -top-0.5 flex h-2.5 w-2.5" data-testid="header-chat-badge">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-gold opacity-75" />
+          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-gold ring-2 ring-navy-900" />
+        </span>
+      )}
+    </button>
+  );
+}
+
+
 // Pages proposées par la recherche rapide (Ctrl/⌘ + K).
 const PAGES = [
   { label: "Aujourd'hui · Cockpit", path: "/app", mots: "accueil cockpit dashboard tableau" },
@@ -230,7 +256,7 @@ export function Header() {
           className="rounded-xl border border-white/10 bg-white/5 p-2 text-offwhite/70 transition-colors hover:bg-white/10 md:hidden" aria-label="Rechercher" data-testid="header-search-mobile">
           <Search className="h-[18px] w-[18px]" />
         </button>
-        <div className="hidden sm:block"><LanguageSwitcher /></div>
+        <div className="block"><LanguageSwitcher /></div>
         <ChoixEspace />
 
         {rappelCheckin && !enPro() && (
@@ -242,11 +268,7 @@ export function Header() {
           </button>
         )}
 
-        <button onClick={() => openChat()}
-          className={`rounded-xl border border-gold/30 bg-gold/10 p-2 text-gold transition-colors hover:bg-gold/20 ${location.pathname === "/app" ? "xl:hidden" : ""}`}
-          title="Collaborateur IA (chat)" aria-label="Ouvrir le Collaborateur IA" data-testid="header-chat">
-          <MessageCircle className="h-[18px] w-[18px]" />
-        </button>
+        <BoutonChat />
 
         <button
           onClick={() => setClair((v) => !v)}

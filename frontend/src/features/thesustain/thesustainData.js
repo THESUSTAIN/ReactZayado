@@ -10,7 +10,7 @@ export const modules = [
   { id: "lecture", emoji: "📜", title: "Lecture biblique", tagline: "Un verset à la fois, avec une aide à la mémoire pour le retenir." },
   { id: "discernement", emoji: "🕯️", title: "Discernement", tagline: "Un journal de décision éclairé par des valeurs bibliques." },
   { id: "cercle", emoji: "🤝", title: "Cercle", tagline: "Une communauté de bâtisseurs : prière, témoignages, entraide." },
-  { id: "repos", emoji: "🕊️", title: "Repos & Sabbat", tagline: "Pauses Psaumes et rythme de repos, contre l'épuisement du dirigeant." },
+  { id: "repos", emoji: "🕊️", title: "Repos & Sabbat", tagline: "Pauses Psaumes et rythme de repos, contre l'épuisement de l'entrepreneur." },
 ];
 
 // ───── SAGESSE ─────
@@ -61,7 +61,7 @@ export const psaumes = [
   { text: "« C'est en vain que vous vous levez matin, que vous vous couchez tard : il en donne autant à ses bien-aimés pendant leur sommeil. »", ref: "Psaume 127:2" },
 ];
 export const sabbat = {
-  intro: "Le Sabbat n'est pas une perte de temps : c'est reconnaître que l'œuvre ne dépend pas seulement de toi. Un dirigeant qui se repose témoigne de sa confiance.",
+  intro: "Le Sabbat n'est pas une perte de temps : c'est reconnaître que l'œuvre ne dépend pas seulement de toi. Un entrepreneur qui se repose témoigne de sa confiance.",
   engagements: [
     "Je bloque un temps de repos hebdomadaire, non négociable.",
     "Je coupe les notifications pro pendant ce temps.",
@@ -116,14 +116,14 @@ export const parcours = [
     d(6, "« Il vaut mieux donner que recevoir. »", "Actes 20:35", "L'abondance se mesure aussi à ce qu'on partage.", "Comment mon activité peut-elle bénir d'autres ?", "Fais de mon activité un canal de bien.", "Servir un client au-delà du contrat."),
     d(7, "« Mon Dieu pourvoira à tous vos besoins. »", "Philippiens 4:19", "La confiance remplace l'angoisse de manquer.", "Où ai-je besoin de faire confiance pour mes finances ?", "Je te confie mes besoins et mon avenir.", "Écrire une prière de confiance financière."),
   ]},
-  { id: "diriger", emoji: "🧗", title: "Diriger sans s'épuiser", subtitle: "7 jours contre le burn-out du dirigeant", days: [
+  { id: "diriger", emoji: "🧗", title: "Diriger sans s'épuiser", subtitle: "7 jours contre le burn-out de l'entrepreneur", days: [
     d(1, "« Venez à l'écart et reposez-vous un peu. »", "Marc 6:31", "Même Jésus invitait ses proches au repos au milieu de l'action.", "Quand me suis-je vraiment reposé(e) ?", "Apprends-moi à m'arrêter sans culpabilité.", "Planifier une vraie coupure cette semaine."),
     d(2, "« Choisis des hommes capables... et délègue. »", "Exode 18:21", "Vouloir tout porter seul mène à l'épuisement.", "Que pourrais-je déléguer dès demain ?", "Donne-moi l'humilité de partager la charge.", "Déléguer une tâche aujourd'hui."),
     d(3, "« Le sommeil du travailleur est doux. »", "Ecclésiaste 5:11", "Le corps a des limites que la volonté ne peut ignorer.", "Est-ce que je respecte mon corps ?", "Aide-moi à honorer mes limites.", "Se coucher plus tôt ce soir."),
     d(4, "« Ma grâce te suffit, ma puissance s'accomplit dans la faiblesse. »", "2 Corinthiens 12:9", "Reconnaître sa faiblesse, c'est s'ouvrir à la grâce.", "Où est-ce que je refuse de montrer ma faiblesse ?", "Que ta force agisse dans mes limites.", "Demander de l'aide sur un point."),
     d(5, "« Ne vous inquiétez pas du lendemain. »", "Matthieu 6:34", "L'anxiété du futur vole l'énergie du présent.", "Quelle inquiétude future me fatigue ?", "Aide-moi à vivre ce jour.", "Reporter une inquiétude à une date fixée."),
     d(6, "« Il restaure mon âme. »", "Psaume 23:3", "Diriger demande une âme restaurée, pas seulement un agenda plein.", "Qu'est-ce qui restaure vraiment mon âme ?", "Restaure ce qui est fatigué en moi.", "Faire une activité qui me ressource."),
-    d(7, "« Le fruit de l'Esprit, c'est... la paix. »", "Galates 5:22", "La paix intérieure est un indicateur de santé du dirigeant.", "Où puis-je cultiver plus de paix ?", "Donne-moi une paix qui dépasse mes circonstances.", "Choisir une habitude anti-épuisement à garder."),
+    d(7, "« Le fruit de l'Esprit, c'est... la paix. »", "Galates 5:22", "La paix intérieure est un indicateur de santé de l'entrepreneur.", "Où puis-je cultiver plus de paix ?", "Donne-moi une paix qui dépasse mes circonstances.", "Choisir une habitude anti-épuisement à garder."),
   ]},
   { id: "vocation", emoji: "🌱", title: "Trouver sa vocation", subtitle: "7 jours pour clarifier votre appel", days: [
     d(1, "« Avant que je te forme, je te connaissais. »", "Jérémie 1:5", "Votre vocation est enracinée dans votre identité, pas seulement vos compétences.", "Qui suis-je, au-delà de ce que je fais ?", "Révèle-moi qui tu m'as créé pour être.", "Écrire trois mots qui me définissent vraiment."),

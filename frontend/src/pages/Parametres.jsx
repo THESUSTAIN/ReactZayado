@@ -13,6 +13,7 @@ import {
   oauthStockage, deconnecterCanal, fetchActualiteOptions, fetchOrganisation, rechercherEntreprise, enregistrerOrganisation,
 } from "@/lib/kairosApi";
 import { oublierAbonnement } from "@/lib/acces";
+import { pushSupporte, pushStatut, activerPush, desactiverPush, testerPush } from "@/lib/push";
 import { useKairos } from "@/context/KairosContext";
 import { Sidebar } from "@/components/kairos/Sidebar";
 import { Header } from "@/components/kairos/Header";
@@ -561,6 +562,55 @@ function Interrupteur({ on, onClick, testid }) {
   );
 }
 
+function CartePush() {
+  const [st, setSt] = useState({ actif: false, disponible: false, supporte: true, loading: true });
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { pushStatut().then((d) => setSt({ ...d, loading: false })).catch(() => setSt((s) => ({ ...s, loading: false }))); }, []);
+  const activer = async () => {
+    setBusy(true);
+    try { await activerPush(); setSt((s) => ({ ...s, actif: true })); toast.success("Notifications push activées sur cet appareil."); }
+    catch (e) { toast.error(e.message || "Activation impossible."); }
+    finally { setBusy(false); }
+  };
+  const couper = async () => {
+    setBusy(true);
+    try { await desactiverPush(); setSt((s) => ({ ...s, actif: false })); toast.success("Notifications push coupées sur cet appareil."); }
+    finally { setBusy(false); }
+  };
+  const tester = async () => {
+    try { await testerPush(); toast.success("Notification de test envoyée 🔔"); }
+    catch (e) { toast.error(e.message || "Active d'abord les notifications."); }
+  };
+  return (
+    <Carte titre="Notifications push (mobile & bureau)" desc="Reçois les rappels de check-in et les opportunités du Radar, même l'app fermée.">
+      {!st.supporte ? (
+        <p className="text-sm text-offwhite/50" data-testid="push-non-supporte">Ton navigateur ne supporte pas les notifications push.</p>
+      ) : !st.disponible && !st.loading ? (
+        <p className="text-sm text-offwhite/50" data-testid="push-indispo">Les notifications ne sont pas encore configurées côté serveur.</p>
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium text-offwhite">Sur cet appareil</p>
+            <p className="text-xs text-offwhite/50">{st.actif ? "Activées — tu peux envoyer un test." : "Active pour recevoir les rappels push."}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {st.actif && (
+              <button onClick={tester} data-testid="push-test-btn"
+                className="rounded-xl border border-white/15 px-3 py-2 text-[12.5px] font-semibold text-offwhite/80 transition hover:bg-white/10">
+                Tester
+              </button>
+            )}
+            <button onClick={st.actif ? couper : activer} disabled={busy} data-testid="push-toggle-btn"
+              className={`rounded-xl px-4 py-2 text-[12.5px] font-semibold transition disabled:opacity-60 ${st.actif ? "border border-white/15 text-offwhite/80 hover:bg-white/10" : "bg-gold text-navy-900 hover:scale-[1.02]"}`}>
+              {busy ? "…" : st.actif ? "Désactiver" : "Activer les notifications"}
+            </button>
+          </div>
+        </div>
+      )}
+    </Carte>
+  );
+}
+
 function SectionNotifications() {
   const [profil, setProfil] = useState(null);
   const [cm, setCm] = useState({});
@@ -635,6 +685,7 @@ function SectionNotifications() {
       <p className="mt-4 text-xs text-offwhite/45">L'heure de ton point du jour se règle dans Mon Copilote. Telegram et WhatsApp se relient dans Connexions. Les décisions à valider arrivent aussi dans la cloche, en haut de l'écran.</p>
     </Carte>
 
+    <CartePush />
     <CarteVeille cm={cm} setCm={setCm} rythme={rythme} changerRythme={changerRythme} srcOn={srcOn} togglerSrc={togglerSrc} />
     </>
   );

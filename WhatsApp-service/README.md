@@ -26,7 +26,11 @@ Créer un service séparé depuis le même dépôt et définir :
 
 **Root Directory:** `/WhatsApp-service`
 
-Le service doit avoir un **Volume** monté sur `/data`, sinon `LocalAuth` perdra la session lors d'un redéploiement/restart. `whatsapp-web.js` recommande `LocalAuth` pour conserver l'authentification, mais précise que cela nécessite un filesystem persistant. Le mode Puppeteer sans sandbox est aussi requis dans les environnements root/headless ; ce Dockerfile exécute Chromium avec `--no-sandbox` et le conteneur en utilisateur non-root.  
+Le service doit avoir un **Volume** monté sur `/data`, sinon `LocalAuth` perdra la session lors d'un redéploiement/restart. `whatsapp-web.js` recommande `LocalAuth` pour conserver l'authentification, mais précise que cela nécessite un filesystem persistant. Le mode Puppeteer sans sandbox est aussi requis dans les environnements root/headless ; ce Dockerfile exécute Chromium avec `--no-sandbox` et le conteneur **en root** (Railway monte le volume `/data` en root ; tourner en non-root provoquait une erreur de permission `EACCES` et une boucle de crash).
+
+### Ressources Railway recommandées
+- **Mémoire : 1 Go minimum** (Chromium + whatsapp-web.js ; en dessous, risque d'OOM → crash).
+- **Volume** monté sur `/data` (obligatoire pour garder la session).
 
 ## Connexion avec le backend
 

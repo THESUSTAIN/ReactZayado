@@ -18,17 +18,17 @@ const FAQ = [
 
 export default function BienEtreDirigeant() {
   useSeo({
-    title: "Éviter le burn-out du dirigeant : énergie et charge mentale suivies | Zayado",
+    title: "Éviter le burn-out de l'entrepreneur : énergie et charge mentale suivies | Zayado",
     description: "Zayado suit l'énergie, le stress et la charge mentale de l'entrepreneur chaque jour et adapte ses priorités. L'anti-burn-out intégré à ton cockpit business.",
   });
 
   return (
     <MarketingLayout>
       <section className="mx-auto max-w-6xl px-5 pb-10 pt-14 sm:pt-20">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-gold">Fonctionnalité · Bien-être du dirigeant</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-gold">Fonctionnalité · Bien-être de l'entrepreneur</p>
         <div className="tiret-rouge mt-4" />
         <h1 className="mt-4 max-w-3xl font-display text-3xl font-extrabold leading-[1.1] sm:text-5xl" data-testid="bienetre-h1">
-          L'énergie du dirigeant d'abord. <span className="font-serif-italic font-normal text-gradient-gold">Le business suit.</span>
+          L'énergie de l'entrepreneur d'abord. <span className="font-serif-italic font-normal text-gradient-gold">Le business suit.</span>
         </h1>
         <p className="mt-5 max-w-2xl text-base leading-relaxed text-offwhite/70 sm:text-lg">
           Aucun outil de productivité ne te demande comment tu vas. Zayado, si — chaque matin — et il adapte ta journée
@@ -41,7 +41,7 @@ export default function BienEtreDirigeant() {
       </section>
 
       <section className="mx-auto grid max-w-6xl items-center gap-10 px-5 pb-16 lg:grid-cols-2">
-        <img src="/screenshots/bien-etre.png" alt="Suivi bien-être Zayado : énergie, stress, sommeil et charge du dirigeant avec rituels doux" data-testid="bienetre-img" className="w-full rounded-2xl border border-white/15 shadow-[0_30px_60px_-25px_rgba(0,0,0,0.7)]" loading="lazy" />
+        <img src="/screenshots/bien-etre.png" alt="Suivi bien-être Zayado : énergie, stress, sommeil et charge de l'entrepreneur avec rituels doux" data-testid="bienetre-img" className="w-full rounded-2xl border border-white/15 shadow-[0_30px_60px_-25px_rgba(0,0,0,0.7)]" loading="lazy" />
         <div className="space-y-6">
           {POINTS.map((p) => (
             <div key={p.titre} className="flex gap-4">
@@ -70,7 +70,7 @@ export default function BienEtreDirigeant() {
       </section>
 
       <section className="mx-auto max-w-4xl px-5 py-16 text-center">
-        <h2 className="font-display text-2xl font-bold sm:text-3xl">Un dirigeant en forme est la meilleure stratégie.</h2>
+        <h2 className="font-display text-2xl font-bold sm:text-3xl">Un entrepreneur en forme est la meilleure stratégie.</h2>
         <p className="mx-auto mt-3 max-w-xl text-sm text-offwhite/65 sm:text-base">
           Et quand l'énergie revient, la vision reprend le volant.
         </p>

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Loader2, Store, Plus, Send, Trash2, Pencil, ShieldCheck, Check, X, Package } from "lucide-react";
+import { Loader2, Store, Plus, Send, Trash2, Pencil, ShieldCheck, Check, X, Package, ShoppingBag, RefreshCw, Plug } from "lucide-react";
 import { GlassCard } from "@/components/kairos/GlassCard";
 import { SideMenuPro } from "@/components/pro/SideMenuPro";
 import { useThemePro } from "@/lib/themePro";
@@ -15,6 +15,14 @@ const STATUT = {
   en_attente: ["En vérification", "bg-amber-400/15 text-amber-300"],
   publie: ["Publié", "bg-emerald-400/15 text-emerald-300"],
   refuse: ["Refusé", "bg-rose-400/15 text-rose-300"],
+};
+const STATUT_CMD = {
+  en_attente: ["En attente", "bg-amber-400/15 text-amber-300"],
+  autorise: ["Autorisé", "bg-emerald-400/15 text-emerald-300"],
+  paye: ["Payé · à préparer", "bg-emerald-400/15 text-emerald-300"],
+  expedie: ["Expédié", "bg-sky-400/15 text-sky-300"],
+  annule: ["Annulé", "bg-rose-400/15 text-rose-300"],
+  rembourse: ["Remboursé", "bg-rose-400/15 text-rose-300"],
 };
 const VIDE = { titre: "", description: "", prix: "", stock: "", sku: "", categorie: "", images: [] };
 const RAYONS = ["Corps", "Âme", "Rituel", "Organisation", "Pack"];
@@ -54,6 +62,10 @@ export default function Marketplace() {
   const [profil, setProfil] = useState(null);
   const [form, setForm] = useState(null); // null = fermé ; {id?, ...champs}
   const [busy, setBusy] = useState(false);
+  const [cmd, setCmd] = useState({ items: [], compteurs: {} });
+  const [filtre, setFiltre] = useState("");
+  const [shop, setShop] = useState(null); // état de la connexion Shopify (détails réservés à l'admin côté serveur)
+  const [diag, setDiag] = useState(null);
 
   const charger = useCallback(async () => {
     try {
@@ -63,6 +75,8 @@ export default function Marketplace() {
       setProfil(e.profil);
       setProduits((await call("/vendeur/produits")).items);
       if (e.admin) setAttente((await call("/vendeur/moderation/attente")).items);
+      call("/vendeur/commandes").then(setCmd).catch(() => {});
+      call("/shopify/etat").then(setShop).catch(() => {});
     } catch (err) { montrerErreur(err); setEtat({ connecte: false }); }
   }, []);
   useEffect(() => { charger(); }, [charger]);
@@ -84,6 +98,19 @@ export default function Marketplace() {
     else await call("/vendeur/produits", "POST", corps);
     setForm(null);
   }, "Produit enregistré");
+
+  const synchroniser = () => agir(async () => {
+    const r = await call("/admin/shopify/synchroniser?jours=60", "POST");
+    toast.success(`${r.commandes} commande(s) relue(s) depuis Shopify`);
+  });
+  const brancherWebhooks = () => agir(async () => {
+    const r = await call("/admin/shopify/webhooks/enregistrer", "POST");
+    r.ok ? toast.success("Webhooks Shopify enregistrés") : toast.error("Certains webhooks ont été refusés", { description: Object.entries(r.topics).map(([k, v]) => `${k} : ${v}`).join(" · ") });
+  });
+  const verifierShopify = async () => {
+    setBusy(true);
+    try { setDiag(await call("/admin/shopify/verifier")); } catch (e) { setDiag(null); montrerErreur(e); } finally { setBusy(false); }
+  };
 
   const modifier = (p) => setForm({ ...p, stock: p.stock ?? "", sku: p.sku || "", categorie: p.categorie || "", images: [...(p.images || [])] });
 
@@ -116,6 +143,7 @@ export default function Marketplace() {
 
   const menuItems = [
     { key: "produits", label: "Mes produits", icon: <Package size={16} /> },
+    { key: "commandes", label: "Commandes", icon: <ShoppingBag size={16} />, badge: (cmd.compteurs?.paye || 0) },
     { key: "profil", label: "Profil vendeur", icon: <Store size={16} /> },
     ...(etat.admin ? [{ key: "moderation", label: "Modération", icon: <ShieldCheck size={16} />, badge: attente.length }] : []),
   ];
@@ -131,6 +159,56 @@ export default function Marketplace() {
         retour={{ to: "/app", label: "Retour au cockpit" }}
       />
     }>
+
+      {onglet === "commandes" && (
+        <>
+          {etat.admin && (
+            <GlassCard className="space-y-2" data-testid="shopify-branchement">
+              <p className="flex items-center gap-1.5 text-sm font-semibold text-offwhite"><Plug size={14} className="text-gold" /> Branchement Shopify</p>
+              <p className="text-xs text-offwhite/65">
+                {shop?.configure ? `Boutique : ${shop.boutique}` : "Boutique non configurée"} · Webhooks : {shop?.webhooks_prets ? "clé présente" : "clé manquante"} · {shop?.commandes_en_base ?? 0} commande(s) en base
+              </p>
+              {shop?.manquants?.length > 0 && <p className="text-xs text-amber-300">Variables Railway manquantes : {shop.manquants.join(", ")}</p>}
+              {shop?.webhook_url && <p className="break-all text-[11px] text-offwhite/50">Adresse de réception : {shop.webhook_url}</p>}
+              <div className="flex flex-wrap gap-2">
+                <button disabled={busy} className={`${BTN} border border-white/20 text-offwhite`} onClick={verifierShopify}>Vérifier la connexion</button>
+                <button disabled={busy} className={`${BTN} border border-white/20 text-offwhite`} onClick={brancherWebhooks}>Enregistrer les webhooks</button>
+                <button disabled={busy} className={`${BTN} inline-flex items-center gap-1 bg-gold text-navy-900`} onClick={synchroniser}><RefreshCw size={12} /> Synchroniser (60 j)</button>
+              </div>
+              {diag && (
+                <p className="text-xs text-offwhite/70">
+                  {diag.boutique} ({diag.domaine}) · droits manquants : {diag.droits_manquants.length ? diag.droits_manquants.join(", ") : "aucun"}
+                </p>
+              )}
+            </GlassCard>
+          )}
+          <div className="flex flex-wrap gap-2" data-testid="commandes-filtres">
+            <button className={`${BTN} ${filtre === "" ? "bg-gold text-navy-900" : "border border-white/20 text-offwhite/80"}`} onClick={() => setFiltre("")}>Toutes</button>
+            {Object.entries(STATUT_CMD).map(([k, [label]]) => (
+              <button key={k} className={`${BTN} ${filtre === k ? "bg-gold text-navy-900" : "border border-white/20 text-offwhite/80"}`} onClick={() => setFiltre(k)}>
+                {label} ({cmd.compteurs?.[k] || 0})
+              </button>
+            ))}
+          </div>
+          {cmd.items.filter((o) => !filtre || o.statut === filtre).length === 0 && <p className="text-sm text-offwhite/55">Aucune commande pour ce filtre.</p>}
+          {cmd.items.filter((o) => !filtre || o.statut === filtre).map((o) => {
+            const [label, cls] = STATUT_CMD[o.statut] || STATUT_CMD.en_attente;
+            return (
+              <GlassCard key={o.id} className="space-y-1.5" data-testid="vendeur-commande">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-semibold text-offwhite">{o.commande}</p>
+                  <span className="text-xs text-offwhite/55">{o.boutique}{o.client ? ` · ${o.client}` : ""}</span>
+                  <span className="ml-auto text-sm text-gold">{o.montant} {o.devise}</span>
+                  <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${cls}`}>{label}</span>
+                </div>
+                <ul className="text-xs text-offwhite/70">{(o.lignes || []).map((l, i) => <li key={i}>{l.quantite} × {l.titre}</li>)}</ul>
+                <p className="text-[11px] text-offwhite/45">{o.passee_le ? new Date(o.passee_le).toLocaleString("fr-FR") : ""}{(o.suivi || []).map((t) => ` · ${t.transporteur} ${t.numero}`).join("")}</p>
+              </GlassCard>
+            );
+          })}
+          <p className="text-[11px] text-offwhite/45">Les statuts viennent de Shopify en temps réel. L'expédition et le remboursement se gèrent dans Shopify.</p>
+        </>
+      )}
 
       {onglet === "profil" && profil && (
         <GlassCard className="space-y-3" data-testid="market-profil">

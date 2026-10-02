@@ -10,6 +10,7 @@ import { DurationChip } from "@/components/kairos/Chip";
 import { useKairos } from "@/context/KairosContext";
 import { GoalCountdown } from "@/components/kairos/GoalCountdown";
 import PoulsBusinessWidget from "@/components/kairos/PoulsBusinessWidget";
+import GamificationWidget from "@/components/kairos/GamificationWidget";
 import AiFallbackBanner from "@/components/kairos/AiFallbackBanner";
 import PlanEnAttenteBanner from "@/components/kairos/PlanEnAttenteBanner";
 import RadarWidget from "@/components/kairos/RadarWidget";
@@ -128,6 +129,7 @@ export default function Cockpit() {
               </section>
 
               {/* 3. Business : Pouls + Radar */}
+              <GamificationWidget />
               <div className="mb-5 grid gap-4 sm:grid-cols-2 animate-fade-up" style={{ animationDelay: "140ms" }}>
                 <PoulsBusinessWidget />
                 <RadarWidget />

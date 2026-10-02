@@ -231,11 +231,13 @@ export const fetchInspire = () => jsend("/vision/inspire", "POST");
 // joints aux réponses juridiques (support légal façon Kandbaz).
 export async function streamChat({ message, page, onDelta, onDone, onError, onSources }) {
   _GET_EN_COURS.clear();
+  let langue = "fr";
+  try { langue = localStorage.getItem("kairos_lang") || "fr"; } catch { /* */ }
   try {
     const resp = await fetch(`${API}/copilote/chat`, {
       method: "POST",
       headers: _headers({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ message, page }),
+      body: JSON.stringify({ message, page, langue }),
     });
     if (!resp.ok || !resp.body) {
       onError && onError(resp.status === 402 ? "Active ton offre pour discuter avec ton Copilote (Solo : 1 mois pour 1 €)." : "Réponse indisponible.");
@@ -327,6 +329,7 @@ export const saveGeneratedDocument = (title, content, provider) => jsend("/docum
 
 // ── Admin (accès réservé au rôle admin — vérifié côté serveur, pas ici) ──
 export const fetchAdminVueEnsemble = () => jget("/admin/vue-ensemble");
+export const fetchAdminRetention = () => jget("/admin/retention");
 export const fetchAdminDiagnostics = () => jget("/admin/diagnostics");
 export const fetchAdminUtilisateurs = (params = {}) => jget(`/admin/utilisateurs?${_qs(params)}`);
 export const changerRoleUtilisateur = (userId, role) => jsend(`/admin/utilisateurs/${userId}/role?nouveau_role=${encodeURIComponent(role)}`, "PATCH");
@@ -411,6 +414,7 @@ export const fetchEquipe = () => jget("/equipe");
 export const inviterCoequipier = (email) => jsend("/equipe", "POST", { email });
 export const retirerCoequipier = (id) => jsend(`/equipe/${id}`, "DELETE");
 export const fetchCommandes = () => jget("/commerce/orders");
+export const fetchCommandesBoutique = () => jget("/shopify/mes-commandes");
 /** Export RGPD : le lien direct n'envoyait pas le jeton (401). On télécharge avec l'en-tête. */
 export async function telechargerExport() {
   const r = await fetch(`${API}/export`, { headers: _headers() });

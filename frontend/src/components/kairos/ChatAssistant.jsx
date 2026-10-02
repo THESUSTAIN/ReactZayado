@@ -3,7 +3,7 @@ import {
   Sparkles, Send, Mic, Lightbulb, BatteryLow, Compass, X, Loader2,
   Sun, ListChecks, Newspaper, Check, Clock, XCircle, ExternalLink, RefreshCw, Mail, Bookmark,
   Maximize2, Minimize2, CloudCheck, Users, Scale, Copy, PenLine, FolderOpen, FileText, FileSpreadsheet,
-  FileDown, UploadCloud, ImagePlus, ListPlus,
+  FileDown, UploadCloud, ImagePlus, ListPlus, Settings,
 } from "lucide-react";
 import CollaborateurModal from "./CollaborateurModal";
 import { aDroit, usePlanEffectif } from "@/lib/droits";
@@ -49,6 +49,46 @@ const DEMANDE_IMAGE = /\b(image|logo|visuel|illustration|photo|affiche|banni[eè
 const estDocument = (t) => (t || "").length > 450 || /(^|\n)#{1,3} |\n\|.+\|/.test(t || "");
 const titreDocument = (t) => ((t || "").split("\n").find((l) => l.trim()) || "Document").replace(/^#+\s*/, "").replace(/[*_`]/g, "").slice(0, 80);
 const heure = (d) => (d ? new Date(d).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "");
+
+// Mise en forme légère des réponses IA : gras, titres, listes à puces et numérotées.
+// Évite d'afficher les symboles Markdown bruts (#, **, -) dans les bulles du Copilote.
+const rendreInline = (texte) =>
+  (texte || "").split(/(\*\*[^*]+\*\*)/g).map((p, i) =>
+    /^\*\*[^*]+\*\*$/.test(p)
+      ? <strong key={i} className="font-semibold text-offwhite">{p.slice(2, -2)}</strong>
+      : <span key={i}>{p.replace(/\*\*/g, "")}</span>,
+  );
+
+function TexteRiche({ texte }) {
+  const lignes = (texte || "").split("\n");
+  const blocs = [];
+  let puces = null;
+  const vider = () => { if (puces) { blocs.push({ type: "ul", items: puces }); puces = null; } };
+  lignes.forEach((brut) => {
+    const l = brut.replace(/\s+$/, "");
+    const h = l.match(/^(#{1,3})\s+(.*)$/);
+    const b = l.match(/^\s*[-*•]\s+(.*)$/);
+    const ol = l.match(/^\s*(\d+)[.)]\s+(.*)$/);
+    if (h) { vider(); blocs.push({ type: "h", text: h[2] }); }
+    else if (b) { (puces = puces || []).push(b[1]); }
+    else if (ol) { vider(); blocs.push({ type: "ol", num: ol[1], text: ol[2] }); }
+    else if (l.trim() === "") { vider(); blocs.push({ type: "br" }); }
+    else { vider(); blocs.push({ type: "p", text: l }); }
+  });
+  vider();
+  return (
+    <>
+      {blocs.map((bk, i) => {
+        if (bk.type === "h") return <p key={i} className="mb-1 mt-2 font-semibold text-offwhite first:mt-0">{rendreInline(bk.text)}</p>;
+        if (bk.type === "ul") return <ul key={i} className="my-1 space-y-1">{bk.items.map((it, k) => <li key={k} className="flex gap-2"><span className="mt-[3px] text-gold">•</span><span className="min-w-0 flex-1">{rendreInline(it)}</span></li>)}</ul>;
+        if (bk.type === "ol") return <p key={i} className="my-1 flex gap-2"><span className="font-semibold text-gold">{bk.num}.</span><span className="min-w-0 flex-1">{rendreInline(bk.text)}</span></p>;
+        if (bk.type === "br") return <div key={i} className="h-2" />;
+        return <p key={i} className="my-1 first:mt-0 last:mb-0">{rendreInline(bk.text)}</p>;
+      })}
+    </>
+  );
+}
+
 
 const SHORTCUTS = [
   { key: "capture", icon: Lightbulb, label: "Capturer une idée", prompt: "J'ai une idée à capturer, aide-moi à la clarifier en une phrase." },
@@ -166,8 +206,18 @@ export function ChatBody({ onClose, estElargi, onToggleTaille, grand = false }) 
 
 // Sous chaque réponse : copier, créer une tâche, et pour un document : Word / Excel / Markdown /
 // ranger dans le Drive ; pour une demande d'image : la créer.
+function ItemExport({ icon: Icone, label, onClick, testid }) {
+  return (
+    <button onClick={onClick} data-testid={testid}
+      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[12px] text-offwhite/80 transition hover:bg-white/8 hover:text-gold">
+      <Icone size={13} /> {label}
+    </button>
+  );
+}
+
 function ActionsMessage({ m, demande, onCopier, onImage, i }) {
   const [envoi, setEnvoi] = useState(null);
+  const [menu, setMenu] = useState(false);
   const plan = usePlanEffectif();
   const docsOk = !plan || aDroit(plan, "documents");
   const btn = "inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10.5px] font-medium text-offwhite/60 transition hover:border-gold/40 hover:text-gold disabled:opacity-50";
@@ -187,16 +237,29 @@ function ActionsMessage({ m, demande, onCopier, onImage, i }) {
     <div className="flex flex-wrap gap-1.5" data-testid={`chat-actions-${i}`}>
       <button onClick={onCopier} data-testid={`chat-copy-${i}`} className={btn}><Copy size={11} /> Copier</button>
       <button className={btn} disabled={!!envoi} onClick={() => faire("tache", async () => { await creerTache(titre.slice(0, 120)); toast.success("Tâche ajoutée à ton Plan d'action."); })} data-testid={`chat-tache-${i}`}>{charge("tache", ListPlus)} Créer une tâche</button>
-      {doc && (<>
-        <button className={btn} disabled={!!envoi} onClick={() => faire("docx", () => telechargerDocument(titre, m.content, "docx"))} data-testid={`chat-word-${i}`}>{charge("docx", FileText)} Word</button>
-        <button className={btn} disabled={!!envoi} onClick={() => faire("xlsx", () => telechargerDocument(titre, m.content, "xlsx"))}>{charge("xlsx", FileSpreadsheet)} Excel</button>
-        <button className={btn} disabled={!!envoi} onClick={() => faire("md", () => telechargerDocument(titre, m.content, "md"))}>{charge("md", FileDown)} Markdown</button>
-        <button className={btn} disabled={!!envoi} data-testid={`chat-drive-${i}`} onClick={() => faire("drive", async () => {
-          const r = await rangerDocumentDrive(titre, m.content, "docx");
-          window.dispatchEvent(new CustomEvent("zayado:cloud-sync", { detail: { provider: r.provider } }));
-          toast.success(`« ${r.nom} » rangé dans ton Drive.`, r.url ? { action: { label: "Ouvrir", onClick: () => window.open(r.url, "_blank", "noopener") } } : undefined);
-        })}>{charge("drive", UploadCloud)} Ranger dans mon Drive</button>
-      </>)}
+      {doc && (
+        <div className="relative">
+          <button className={btn} disabled={!!envoi} onClick={() => setMenu((v) => !v)} data-testid={`chat-export-${i}`} aria-expanded={menu}>
+            {charge("docx", FileDown)} Exporter <span className="opacity-60">▾</span>
+          </button>
+          {menu && (
+            <>
+              <div className="fixed inset-0 z-[60]" onClick={() => setMenu(false)} />
+              <div className="absolute left-0 z-[61] mt-1 w-52 overflow-hidden rounded-xl border border-white/12 bg-[#0b1430] p-1 shadow-xl" data-testid={`chat-export-menu-${i}`}>
+                <ItemExport icon={FileText} label="Word (.docx)" testid={`chat-word-${i}`} onClick={() => { setMenu(false); faire("docx", () => telechargerDocument(titre, m.content, "docx")); }} />
+                <ItemExport icon={FileSpreadsheet} label="Excel (.xlsx)" onClick={() => { setMenu(false); faire("xlsx", () => telechargerDocument(titre, m.content, "xlsx")); }} />
+                <ItemExport icon={FileDown} label="Markdown (.md)" onClick={() => { setMenu(false); faire("md", () => telechargerDocument(titre, m.content, "md")); }} />
+                <div className="my-1 h-px bg-white/10" />
+                <ItemExport icon={UploadCloud} label="Ranger dans mon Drive" testid={`chat-drive-${i}`} onClick={() => { setMenu(false); faire("drive", async () => {
+                  const r = await rangerDocumentDrive(titre, m.content, "docx");
+                  window.dispatchEvent(new CustomEvent("zayado:cloud-sync", { detail: { provider: r.provider } }));
+                  toast.success(`« ${r.nom} » rangé dans ton Drive.`, r.url ? { action: { label: "Ouvrir", onClick: () => window.open(r.url, "_blank", "noopener") } } : undefined);
+                }); }} />
+              </div>
+            </>
+          )}
+        </div>
+      )}
       {pagesCitees(demande).map(([, label, chemin]) => (
         <button key={chemin} className={`${btn} !border-gold/40 !text-gold`} onClick={() => window.location.assign(chemin)} data-testid={`chat-page-${chemin.replace(/\//g, "-")}`}>
           <ExternalLink size={11} /> {label}
@@ -519,7 +582,7 @@ function ChatTab({ firstName, grand = false }) {
               <div className={`whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                 m.role === "user" ? (grand ? "chat-bulle-moi" : "bg-gold text-navy-900") : (grand ? "chat-bulle-ia" : "border border-white/10 bg-white/5 text-offwhite")
               }`}>
-                {m.image ? <img src={m.image.src} alt={m.content} className="max-h-80 rounded-xl" /> : (m.content || (streaming && i === messages.length - 1 ? <Loader2 className="h-4 w-4 animate-spin text-gold" /> : null))}
+                {m.image ? <img src={m.image.src} alt={m.content} className="max-h-80 rounded-xl" /> : (m.content ? (m.role === "assistant" ? <TexteRiche texte={m.content} /> : m.content) : (streaming && i === messages.length - 1 ? <Loader2 className="h-4 w-4 animate-spin text-gold" /> : null))}
                 {grand && m.le && <span className={`mt-1.5 block text-[11px] ${m.role === "user" ? "opacity-60" : "text-offwhite/45"}`}>{heure(m.le)}</span>}
               </div>
               {m.reglage && !m.repondu && <ControlesReglage q={REGLAGES.find((q) => q.key === m.reglage)} onRepondre={repondre} onPlusTard={plusTard} />}
@@ -558,13 +621,10 @@ function ChatTab({ firstName, grand = false }) {
         )}
       </div>
       <div className="border-t border-white/10 px-4 py-3">
-        <div className="mb-3 flex flex-wrap gap-2">
-          {/* Bouton « Écrire à un collaborateur » retiré ici : doublon exact du bouton
-              « Collaborateur » déjà présent en permanence dans l'en-tête du chat
-              (même action, même modale — data-testid="chat-collaborateur-btn"). */}
+        <div className="mb-3 -mx-1 flex flex-wrap gap-2 px-1 pb-1">
           {SHORTCUTS.map((s) => (
             <button key={s.key} onClick={() => send(s.prompt)} disabled={streaming} data-testid={`ai-shortcut-${s.key}`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-offwhite/80 transition-colors hover:border-gold/40 hover:text-gold disabled:opacity-50">
+              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-offwhite/80 transition-colors hover:border-gold/40 hover:text-gold disabled:opacity-50">
               <s.icon className="h-3.5 w-3.5 text-gold" /> {s.label}
             </button>
           ))}
@@ -779,7 +839,7 @@ export function ChatPanel() {
   // Panneau du Copilote sur le cockpit (grand écran) : agrandissable ET masquable.
   // Le choix « masqué » est retenu sur cet appareil ; un bouton flottant le rouvre.
   const [estElargi, setEstElargi] = useState(false);
-  const [masque, setMasque] = useState(() => { try { return localStorage.getItem("zayado_chat_masque") === "1"; } catch { return false; } });
+  const [masque, setMasque] = useState(() => { try { return localStorage.getItem("zayado_chat_masque") !== "0"; } catch { return true; } });
   const basculer = (v) => { setMasque(v); try { localStorage.setItem("zayado_chat_masque", v ? "1" : "0"); } catch { /* */ } };
   useEffect(() => {
     // Le bouton « chat » de l'en-tête rouvre le panneau s'il était masqué.
@@ -812,19 +872,32 @@ export function ChatPanel() {
 // Grand format (inspiré de la maquette) : la conversation à gauche, à droite les réglages
 // du Copilote (ton, format) et ce qu'il sait de ton activité.
 export function ChatGrand({ onReduire, onClose }) {
+  const [reglages, setReglages] = useState(false);
   useEffect(() => {
-    const k = (e) => { if (e.key === "Escape") onReduire(); };
+    const k = (e) => { if (e.key === "Escape") (reglages ? setReglages(false) : onReduire()); };
     window.addEventListener("keydown", k);
     return () => window.removeEventListener("keydown", k);
-  }, [onReduire]);
+  }, [onReduire, reglages]);
   return (
-    <div className={`${typeof document !== "undefined" && document.body.classList.contains("theme-clair") ? "theme-creme chat-grand-clair" : ""} chat-grand fixed inset-0 z-[70] overflow-y-auto p-3 sm:p-6`} data-testid="chat-grand">
-      <div className="mx-auto grid h-full max-w-[1400px] gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]">
-        <div className="chat-grand-carte flex min-h-[70vh] flex-col overflow-hidden rounded-[28px] lg:h-[calc(100vh-48px)]">
+    <div className={`${typeof document !== "undefined" && document.body.classList.contains("theme-clair") ? "theme-creme chat-grand-clair" : ""} chat-grand fixed inset-0 z-[70] overflow-y-auto`} data-testid="chat-grand">
+      {/* Conversation centrée (inspiration ChatGPT / Claude) : une seule colonne, large respiration. */}
+      <div className="mx-auto flex min-h-full max-w-[860px] flex-col px-2 py-3 sm:px-6 sm:py-6">
+        <div className="chat-grand-carte relative flex min-h-[calc(100vh-24px)] flex-1 flex-col overflow-hidden rounded-[28px] sm:min-h-[calc(100vh-48px)]">
+          <button onClick={() => setReglages(true)} data-testid="chat-grand-reglages"
+            className="absolute right-16 top-3 z-10 hidden items-center gap-1.5 rounded-full border border-white/12 bg-white/5 px-3 py-1.5 text-[12px] font-medium text-offwhite/70 transition hover:text-gold sm:inline-flex">
+            <Settings className="h-3.5 w-3.5" /> Réglages
+          </button>
           <ChatBody grand estElargi onToggleTaille={onReduire} onClose={onClose} />
         </div>
-        <PanneauCopilote />
       </div>
+      {reglages && (
+        <div className="fixed inset-0 z-[71] flex justify-end bg-[#0b1a3d]/60 backdrop-blur-sm" onClick={() => setReglages(false)} data-testid="chat-grand-reglages-tiroir">
+          <div className="chat-zayado h-full w-full max-w-sm overflow-y-auto p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex justify-end"><button onClick={() => setReglages(false)} className="rounded-lg p-1.5 text-offwhite/60 hover:text-offwhite" aria-label="Fermer"><Minimize2 className="h-4 w-4" /></button></div>
+            <PanneauCopilote />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

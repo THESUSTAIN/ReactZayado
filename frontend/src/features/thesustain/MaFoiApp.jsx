@@ -651,7 +651,7 @@ function Repos() {
   };
   const faits = sabbat.engagements.filter((_, k) => checks[k]).length;
   return (
-    <Section title="Repos & Sabbat" subtitle="Pauses Psaumes et rythme de repos, contre l'épuisement du dirigeant.">
+    <Section title="Repos & Sabbat" subtitle="Pauses Psaumes et rythme de repos, contre l'épuisement de l'entrepreneur.">
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="p-6">
           <h3 className="flex items-center gap-2 font-display text-lg font-bold text-offwhite"><Wind className="h-4 w-4 text-gold" /> Pause Psaume</h3>

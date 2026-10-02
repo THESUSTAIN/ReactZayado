@@ -1,6 +1,7 @@
 import "@/App.css";
 import GlobalChat from "@/components/kairos/GlobalChat";
 import GuidedTour from "@/components/kairos/GuidedTour";
+import InstallBanner from "@/components/kairos/InstallBanner";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { KairosProvider } from "@/context/KairosContext";
@@ -18,6 +19,7 @@ import WeeklyReview from "@/pages/WeeklyReview";
 import Ideas from "@/pages/Ideas";
 import Sources from "@/pages/Sources";
 import BienEtre from "@/pages/BienEtre";
+import Debloquer from "@/pages/Debloquer";
 import MaFoi from "@/pages/MaFoi";
 import Agents from "@/pages/Agents";
 import ChatbotB2B from "@/pages/ChatbotB2B";
@@ -107,6 +109,7 @@ function App() {
           <BrowserRouter>
           <GlobalChat />
           <GuidedTour />
+          <InstallBanner />
           <AccesGate />
           <Routes>
             <Route path="/" element={getToken() ? <Navigate to="/app" replace /> : <Landing />} />
@@ -135,6 +138,8 @@ function App() {
             {/* L'ancienne Feuille de route est fusionnée dans le Plan d'action (plus de doublon). */}
             <Route path="/app/roadmap" element={<Navigate to="/app/actions?tab=objectifs" replace />} />
             <Route path="/app/bien-etre" element={<ProtectedRoute><BienEtre /></ProtectedRoute>} />
+            <Route path="/app/debloquer" element={<ProtectedRoute><Debloquer /></ProtectedRoute>} />
+            <Route path="/app/debloquer" element={<ProtectedRoute><Debloquer /></ProtectedRoute>} />
             <Route path="/app/ma-foi" element={<ProtectedRoute><MaFoi /></ProtectedRoute>} />
             <Route path="/app/agents" element={<ProtectedRoute><Agents /></ProtectedRoute>} />
             <Route path="/app/chatbot-b2b" element={<ProtectedRoute><ChatbotB2B /></ProtectedRoute>} />

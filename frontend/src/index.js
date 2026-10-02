@@ -52,13 +52,10 @@ root.render(
   </React.StrictMode>,
 );
 
-// Plus de service worker : on désinscrit tout ancien SW et on vide ses caches
-// (l'ancien sw.js provoquait un écran blanc).
+// Service worker pour l'installation PWA (écran d'accueil, partage mobile).
+// Network-first + coquille hors-ligne, sans mise en cache du JS/CSS (voir sw.js).
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.getRegistrations()
-    .then((regs) => regs.forEach((r) => r.unregister()))
-    .catch(() => {});
-  if (window.caches) {
-    caches.keys().then((keys) => keys.forEach((k) => caches.delete(k))).catch(() => {});
-  }
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
 }
