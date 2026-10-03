@@ -8,10 +8,11 @@ import { saveProfile, savePouls, postCheckin, fetchTarifsFondateur, fetchState }
 import { toast } from "sonner";
 import { PLANS, PLANS_LANCEMENT, PLAN_ENTREPRISE, prixFondateurMois, ESSAI, essaiDuree, essaiPeriode } from "@/lib/plans";
 import { lancerPaiement } from "@/lib/checkout";
+import { activerPush, pushSupporte } from "@/lib/push";
 import { THESUSTAIN_URL } from "@/components/kairos/TheSustainInfo";
 import {
   Sparkles, ArrowRight, ArrowLeft, Plus, Check, Loader2, Rocket, Briefcase, MessagesSquare, ShoppingBag,
-  Building2, Hammer, HeartPulse, Laptop, Palette, UtensilsCrossed, Flame, Zap, CalendarDays, Clock, Info, HeartHandshake, Lock,
+  Building2, Hammer, HeartPulse, Laptop, Palette, UtensilsCrossed, Flame, Zap, CalendarDays, Clock, Info, HeartHandshake, Lock, Bell,
 } from "lucide-react";
 
 // Onboarding « jeu » : une question par écran, des choix à toucher, très peu de
@@ -70,15 +71,22 @@ const PRESETS = {
 
 // Ce que le Copilote répond selon les choix (il « écoute »).
 const PHRASES_ACTIVITE = {
-  "Coaching & conseil": { b2b: "Coaching pour des pros ? Je vais te trouver des DRH et des dirigeants à contacter.", b2c: "Coaching pour des particuliers ? Je te montrerai ce que les gens cherchent près de chez toi.", mixte: "Pros et particuliers : je chercherai des décideurs ET ce que les gens tapent sur Google." },
-  "Services aux entreprises": { _: "Je te trouverai chaque matin de vraies entreprises à contacter, avec le message prêt." },
-  "Commerce & e-commerce": { _: "Commerce ? On va travailler ta visibilité locale, tes avis et tes pubs." },
-  "Immobilier": { _: "Immobilier ? Je suivrai les ventes réelles de ta commune et les notaires à contacter." },
-  "Artisanat & BTP": { _: "Artisan ? Je te trouverai des prescripteurs : architectes, agences, syndics." },
-  "Santé & bien-être": { _: "Je t'aiderai à être trouvé·e par ceux qui cherchent déjà un praticien près de chez eux." },
-  "Tech & digital": { _: "Je repérerai les entreprises qui recrutent ou qui lèvent des fonds : elles ont des besoins." },
-  "Création & contenu": { _: "On va rendre ton travail visible, sans t'épuiser à poster tous les jours." },
-  "Restauration": { _: "On va remplir tes tables avec Google, les avis et des idées d'événements." },
+  "Coaching & conseil": { b2b: "Coaching pour des pros ? Je pourrai te proposer des DRH et des dirigeants à contacter.", b2c: "Coaching pour des particuliers ? Je pourrai te montrer ce que les gens cherchent près de chez toi.", mixte: "Pros et particuliers : je pourrai chercher des décideurs ET ce que les gens tapent sur Google." },
+  "Services aux entreprises": { _: "Je pourrai te proposer de vraies entreprises à contacter, avec le message prêt. Le nombre dépend de ta formule." },
+  "Commerce & e-commerce": { _: "Commerce ? Je pourrai t'aider sur ta visibilité locale, tes avis et tes pubs." },
+  "Immobilier": { _: "Immobilier ? Je pourrai suivre les ventes réelles de ta commune et te suggérer des notaires à contacter." },
+  "Artisanat & BTP": { _: "Artisan ? Je pourrai te suggérer des prescripteurs : architectes, agences, syndics." },
+  "Santé & bien-être": { _: "Je pourrai t'aider à être trouvé·e par ceux qui cherchent déjà un praticien près de chez eux." },
+  "Tech & digital": { _: "Je pourrai repérer des entreprises qui recrutent ou qui lèvent des fonds : elles ont des besoins." },
+  "Création & contenu": { _: "Je pourrai t'aider à rendre ton travail visible, sans t'épuiser à poster tous les jours." },
+  "Restauration": { _: "Je pourrai t'aider à remplir tes tables avec Google, les avis et des idées d'événements." },
+};
+// Ce que le Radar fait réellement selon la formule (aligné sur backend/apollo_ext.py : QUOTAS_DEFAUT, 0 sans offre).
+const RADAR_PAR_PLAN = {
+  reveur: "Pas de Radar prospects : cette formule sert à poser ta vision et tes idées.",
+  serenite: "Radar : jusqu'à 30 vrais prospects par mois (quota réduit pendant l'essai).",
+  pro: "Radar : jusqu'à 90 vrais prospects par mois.",
+  business: "Radar : jusqu'à 150 vrais prospects par mois pour toi.",
 };
 const CLE_BROUILLON = "zayado_onboarding_brouillon";
 
@@ -132,6 +140,8 @@ export default function Onboarding() {
   const [rythme, setRythme] = useState(2);
   const [jours, setJours] = useState(["1", "2", "3", "4", "5"]);
   const [rappel, setRappel] = useState("08:00");
+  const [notifOk, setNotifOk] = useState(false);
+  const [notifEnCours, setNotifEnCours] = useState(false);
   const [values, setValues] = useState([]);
   const [moteur, setMoteur] = useState("");
   const [foiChoix, setFoiChoix] = useState(null);
@@ -208,10 +218,10 @@ export default function Onboarding() {
         return ph ? (ph[clientele] || ph._ || ph.b2b) : activite === "Autre" && activiteAutre.trim() ? `${activiteAutre.trim()} : je m'adapte, promis.` : "";
       }
       case "cap": return caObjectif ? `${fmtEur(caObjectif)} par mois, c'est environ ${fmtEur(Math.round(caObjectif / 21))} par jour ouvré. On y va pas à pas.` : "";
-      case "vision": return moteur ? `« ${moteur} » : je te le rappellerai les jours difficiles.` : visions.length ? "Beau cap. On va le découper en petites étapes." : "";
-      case "objectifs": return goals.length >= 3 ? "3 objectifs, parfait : pas un de plus." : goals.length ? "J'ai pré-coché selon ton métier, change si tu veux. Moins, mais mieux." : "";
+      case "vision": return visions.length ? "Beau cap. On va le découper en petites étapes." : "";
+      case "objectifs": if (moteur) return `« ${moteur} » : je te le rappellerai les jours difficiles.`; return goals.length >= 3 ? "3 objectifs, parfait : pas un de plus." : goals.length ? "J'ai pré-coché selon ton métier, change si tu veux. Moins, mais mieux." : "";
       case "energie": return !energieTouchee ? "" : energie <= 2 ? "On y va doucement aujourd'hui, promis." : energie >= 4 ? "Belle énergie ! On va en profiter." : "Noté, je cale ta journée là-dessus.";
-      case "rythme": return `${RYTHMES[rythme].min} min, ${jours.length} jour${jours.length > 1 ? "s" : ""} par semaine : c'est tenable, et c'est ce qui compte.`;
+      case "rythme": return `${RYTHMES[rythme].min} min de point du jour, ${jours.length} jour${jours.length > 1 ? "s" : ""} par semaine : c'est tenable, et c'est ce qui compte.`;
       case "valeurs": return values.length ? `${values[0]} en premier ? Je garde ça en tête pour mes conseils.` : "";
       case "sens": return foiChoix === "oui" ? "Je t'ajouterai la vie spirituelle dans ton diagnostic d'équilibre." : foiChoix === "non" ? "Entendu, rien de ce côté-là." : "";
       case "offre": return plan === ESSAI.plan ? `Bon choix : ${essaiDuree()} pour ${ESSAI.prix} € pour tout tester.` : "";
@@ -249,6 +259,7 @@ export default function Onboarding() {
         pourquoi: moteur || undefined,
         valeurs: values,
         heure_checkin: rappel,
+        ...(notifOk ? { notifications: true } : {}),
         plan,
         objectifs: goals,
         contexte_metier: {
@@ -297,6 +308,14 @@ export default function Onboarding() {
     return () => clearInterval(timer);
   }, [saving]);
 
+  // Le rappel n'existe vraiment que si le navigateur a donné son accord (geste de l'utilisateur obligatoire).
+  const activerRappel = async () => {
+    setNotifEnCours(true);
+    try { await activerPush(); setNotifOk(true); toast.success(`Rappel activé : ${rappel.replace(":", "h")} les jours choisis.`); }
+    catch (e) { setNotifOk(false); toast.error(e?.message || "Impossible d'activer les notifications."); }
+    setNotifEnCours(false);
+  };
+
   const basculer = (liste, setListe, v, max) =>
     setListe(liste.includes(v) ? liste.filter((x) => x !== v) : liste.length < max ? [...liste, v] : liste);
 
@@ -311,10 +330,10 @@ export default function Onboarding() {
     activite: ["Tu fais quoi, et pour qui ?", "Un tap suffit. Le Radar s'en sert pour tes opportunités."],
     cap: ["Ton cap pour le mois", "Pour ton Pouls Business. Tu pourras tout changer."],
     vision: ["Dans un an, tu veux…", "Choisis jusqu'à 2 réponses."],
-    objectifs: ["Tes objectifs à 90 jours", "Jusqu'à 3. Moins, mais mieux."],
+    objectifs: ["Tes objectifs à 90 jours", "Jusqu'à 3, puis ce qui te motive à les atteindre."],
     energie: ["Comment va ton énergie, là ?", "Je cale ta journée sur ton énergie réelle."],
-    rythme: ["Combien de temps par jour ?", "Donne-moi ton rythme, je cale ton point du jour dessus."],
-    valeurs: ["Qu'est-ce qui compte pour toi ?", "Jusqu'à 5 valeurs."],
+    rythme: ["Combien de temps pour Zayado par jour ?", "Ce n'est pas ton temps de travail : c'est le temps que tu veux passer sur ton point du jour. Je cale le nombre d'actions dessus."],
+    valeurs: ["Quelles valeurs guident tes décisions ?", "Les principes auxquels tu tiens, jusqu'à 5."],
     sens: ["Envie d'aller plus loin sur le sens ?", null],
     offre: ["Choisis ta formule", `Solo : ${essaiDuree()} pour ${ESSAI.prix} €, puis tarif fondateur. Sans engagement.`],
     pret: ["Ton récap", "Dernière étape : le paiement sécurisé. Ton cockpit se prépare dès qu'il est validé."],
@@ -435,11 +454,6 @@ export default function Onboarding() {
                 {VISIONS.map((v) => <Ligne key={v} actif={visions.includes(v)} onClick={() => basculer(visions, setVisions, v, 2)} multi>{v}</Ligne>)}
               </div>
               <Champ valeur={visionAutre} onChange={setVisionAutre} placeholder="Autre (facultatif)" testid="onboarding-vision-autre" />
-              <Bloc titre="Ce qui te fait avancer">
-                <div className="flex flex-wrap gap-2">
-                  {MOTEURS.map((m) => <Pastille key={m} actif={moteur === m} onClick={() => setMoteur(moteur === m ? "" : m)}>{m}</Pastille>)}
-                </div>
-              </Bloc>
             </div>
           )}
 
@@ -455,6 +469,11 @@ export default function Onboarding() {
                 </form>
               )}
               <p className="text-center text-xs text-offwhite/45">{goals.length} / 3 choisi{goals.length > 1 ? "s" : ""}</p>
+              <Bloc titre="Et ce qui te donne l'élan pour y arriver">
+                <div className="flex flex-wrap gap-2">
+                  {MOTEURS.map((m) => <Pastille key={m} actif={moteur === m} onClick={() => setMoteur(moteur === m ? "" : m)}>{m}</Pastille>)}
+                </div>
+              </Bloc>
             </div>
           )}
 
@@ -516,6 +535,17 @@ export default function Onboarding() {
                   <input type="time" value={rappel} onChange={(e) => e.target.value && setRappel(e.target.value)} data-testid="onboarding-checkin-time"
                     className="rounded-xl bg-transparent text-xl font-bold text-offwhite focus:outline-none" />
                 </label>
+                {pushSupporte() && (
+                  <button type="button" onClick={activerRappel} disabled={notifOk || notifEnCours} data-testid="onboarding-notifications"
+                    className={`mt-2 flex w-full items-center gap-3 rounded-3xl border p-3.5 text-left transition ${notifOk ? "border-gold/60 bg-gold/10" : "border-white/12 bg-white/[0.06] hover:border-white/25"}`}>
+                    <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gold/15 text-gold">{notifEnCours ? <Loader2 className="h-5 w-5 animate-spin" /> : <Bell className="h-5 w-5" />}</span>
+                    <span className="flex-1">
+                      <span className="block font-semibold text-offwhite">{notifOk ? "Rappel activé" : "Me rappeler par notification"}</span>
+                      <span className="text-xs text-offwhite/55">{notifOk ? "Tu le retrouves dans Paramètres." : "Sans ça, l'heure choisie ne déclenche aucun rappel."}</span>
+                    </span>
+                    <Rond actif={notifOk} />
+                  </button>
+                )}
               </Bloc>
             </div>
           )}
@@ -567,6 +597,7 @@ export default function Onboarding() {
                       {p.name} {p.highlight && <span className="ml-1 rounded-full bg-gold px-2 py-0.5 align-middle text-[10px] font-bold text-navy-900">Recommandé</span>}
                     </p>
                     <p className="mt-1 text-xs text-offwhite/55">{p.features.join(" · ")}</p>
+                    {RADAR_PAR_PLAN[p.key] && <p className="mt-1 text-xs text-gold/90">{RADAR_PAR_PLAN[p.key]}</p>}
                     <p className="mt-2">
                       {p.old && <span className="mr-1.5 text-xs text-offwhite/40 line-through">{p.old}</span>}
                       <span className="font-display text-lg font-extrabold text-offwhite">{p.price}</span>
@@ -586,7 +617,7 @@ export default function Onboarding() {
                 caObjectif ? `Objectif : ${fmtEur(caObjectif)} / mois` : "Objectif de CA à fixer plus tard",
                 `${goals.length} objectif${goals.length > 1 ? "s" : ""} à 90 jours`,
                 energieTouchee ? `Énergie du jour : ${ENERGIES[energie - 1].mot}` : "Premier check-in à faire",
-                `${RYTHMES[rythme].min} min par jour · rappel à ${rappel.replace(":", "h")}`,
+                `Point du jour : ${RYTHMES[rythme].min} min · rappel à ${rappel.replace(":", "h")}${notifOk ? " (notification activée)" : ""}`,
                 `Formule : ${LISTE_PLANS.find((p) => p.key === plan)?.name}`,
               ].map((t) => (
                 <div key={t} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-offwhite/85">
@@ -628,7 +659,7 @@ export default function Onboarding() {
           <div className="mx-auto max-w-lg">
             <div className="flex items-center gap-3"><Guide /><p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gold">Ton Radar vient de tourner</p></div>
             <h2 className="mt-4 font-display text-[28px] font-extrabold leading-tight text-offwhite">Ta première opportunité{prenom ? `, ${prenom}` : ""} 🎯</h2>
-            <p className="mt-2 text-[15px] text-offwhite/65">Tirée de tes réponses. Chaque matin, ton cockpit t'en prépare 3 comme celle-ci, avec le message prêt à envoyer.</p>
+            <p className="mt-2 text-[15px] text-offwhite/65">Tirée de tes réponses. Selon ta formule, ton cockpit pourra t'en proposer d'autres, avec le message prêt à envoyer.</p>
             <div className="mt-6 rounded-3xl border border-gold/40 bg-white/[0.06] p-5 shadow-[0_0_40px_-12px_rgba(222,194,163,0.5)]">
               <p className="text-[11px] uppercase tracking-[0.18em] text-offwhite/50">{waouh.canal || "email"}{waouh.objectif ? ` · pour « ${waouh.objectif} »` : ""}</p>
               <p className="mt-1.5 font-display text-xl font-bold text-offwhite">{waouh.titre}</p>

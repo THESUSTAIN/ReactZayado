@@ -187,6 +187,52 @@ export const youtubeId = (url = "") => {
   return m ? m[1] : null;
 };
 
+// Adresse web propre : http(s) uniquement (jamais « javascript: » : un board peut être partagé et modifié par d'autres).
+export const normaliserUrl = (v = "") => {
+  const t = String(v).trim();
+  if (!t || /\s/.test(t)) return "";
+  const u = /^[a-z][a-z0-9+.-]*:/i.test(t) ? t : `https://${t}`;
+  try { const p = new URL(u); return /^https?:$/.test(p.protocol) && p.hostname.includes(".") ? p.href : ""; } catch { return ""; }
+};
+export const domaineDe = (url = "") => { try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; } };
+export const ressembleImage = (url = "") => /\.(png|jpe?g|gif|webp|avif|svg)(\?|#|$)/i.test(url) || /(images\.unsplash\.com|images\.pexels\.com|i\.imgur\.com|pbs\.twimg\.com)/i.test(url);
+
+/* Carte « Lien » : un favori sur le board (titre + site), qui s'ouvre dans un nouvel onglet. */
+export function LinkCard({ card, editing, onPatch, onDone }) {
+  const [url, setUrl] = useState(card.url || "");
+  const [titre, setTitre] = useState(card.titre || "");
+  const propre = normaliserUrl(card.url);
+  const valider = () => {
+    const u = normaliserUrl(url);
+    if (!u) { toast.error("Cette adresse ne semble pas valide (ex. monsite.fr/page)."); return; }
+    onPatch({ url: u, titre: titre.trim() });
+    onDone();
+  };
+  if (editing || !propre) {
+    return (
+      <div className="sf-card sf-card-sel space-y-3" onPointerDown={(e) => e.stopPropagation()}>
+        <p className="sf-title">Lien</p>
+        <input autoFocus value={url} onChange={(e) => setUrl(e.target.value)} inputMode="url" enterKeyHint="done" placeholder="Colle l'adresse du lien" className="sf-field"
+          onKeyDown={(e) => e.key === "Enter" && valider()} />
+        <input value={titre} onChange={(e) => setTitre(e.target.value)} placeholder="Titre (facultatif)" className="sf-field" onKeyDown={(e) => e.key === "Enter" && valider()} />
+        <div className="flex justify-end"><button type="button" onClick={valider} className="sf-btn sf-btn-primary">Terminé</button></div>
+      </div>
+    );
+  }
+  const d = domaineDe(propre);
+  return (
+    <div className="sf-card flex items-center gap-3" style={{ padding: 14 }}>
+      <img src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(d)}&sz=64`} alt="" width={32} height={32} draggable={false} className="h-8 w-8 shrink-0 rounded-lg" />
+      <div className="min-w-0 flex-1">
+        <p className="sf-title truncate">{card.titre || d}</p>
+        <p className="truncate text-[12px] opacity-60">{d}</p>
+      </div>
+      <button type="button" onPointerDown={(e) => e.stopPropagation()} onClick={() => window.open(propre, "_blank", "noopener,noreferrer")}
+        className="sf-btn sf-btn-outline shrink-0" aria-label="Ouvrir le lien"><ExternalLink size={14} /> Ouvrir</button>
+    </div>
+  );
+}
+
 export function VideoCard({ card, editing, onPatch, onDone }) {
   const [playing, setPlaying] = useState(false);
   const id = youtubeId(card.url);

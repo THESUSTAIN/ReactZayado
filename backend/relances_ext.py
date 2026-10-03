@@ -5,7 +5,9 @@ Types de relance (ordre de priorité) :
   vision    — le lundi après 9 h : relire sa vision (chaque semaine si elle est vide, sinon toutes les 2 semaines)
   foi       — encouragement hebdomadaire, UNIQUEMENT si Ma Foi est activée
   teams     — une seule fois, à partir de J+2 : installer Zayado dans Teams
-  checkin   — chaque jour après l'heure de check-in choisie, s'il n'est pas fait
+  retour    — après 3 jours sans check-in : un mot doux pour revenir (au plus une fois par semaine)
+  checkin   — chaque jour après l'heure de check-in choisie, s'il n'est pas fait,
+              uniquement les jours d'activité choisis à l'inscription (« Quels jours ? »)
 
 Règles : 1 relance par jour au maximum, jamais la nuit (8 h – 21 h, heure locale du profil),
 uniquement si les notifications sont activées. Canal : push d'abord, Telegram en repli.
@@ -30,7 +32,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 log = logging.getLogger("kairos.relances")
 
 HEURE_MIN, HEURE_MAX = 8, 21  # fenêtre d'envoi (heure locale) : pas avant 8 h, pas à partir de 21 h
-TYPES = ("victoire", "vision", "foi", "teams", "checkin")
+TYPES = ("victoire", "vision", "foi", "teams", "retour", "checkin")
 
 
 def _heure_checkin(h: Optional[str]) -> tuple[int, int]:
@@ -44,9 +46,12 @@ def _heure_checkin(h: Optional[str]) -> tuple[int, int]:
 def choisir_relance(*, maintenant: datetime, heure_checkin: str = "08:30", checkin_fait: bool = False,
                     victoire_cette_semaine: bool = False, vision_vide: bool = False, foi: bool = False,
                     age_compte_jours: int = 0, derniers: Optional[dict] = None,
-                    deja_envoye_aujourdhui: bool = False) -> Optional[str]:
+                    deja_envoye_aujourdhui: bool = False,
+                    jours_actifs: Optional[set] = None, inactif_jours: int = 0) -> Optional[str]:
     """Décide quelle relance (ou aucune) envoyer. `maintenant` est en heure locale de l'utilisateur.
-    `derniers` : type -> date (datetime.date) de la dernière relance de ce type."""
+    `derniers` : type -> date (datetime.date) de la dernière relance de ce type.
+    `jours_actifs` : jours choisis à l'inscription, au format de l'appli (« 1 » = lundi … « 6 » = samedi,
+    « 0 » = dimanche) ; vide ou None = tous les jours. `inactif_jours` : jours depuis le dernier check-in."""
     derniers = derniers or {}
     if deja_envoye_aujourdhui:
         return None
@@ -74,7 +79,14 @@ def choisir_relance(*, maintenant: datetime, heure_checkin: str = "08:30", check
     if age_compte_jours >= 2 and "teams" not in derniers and jour_sem in (1, 2, 3) and maintenant.hour >= 10:
         return "teams"
     h, m = _heure_checkin(heure_checkin)
-    if not checkin_fait and (maintenant.hour, maintenant.minute) >= (h, m):
+    apres_heure = (maintenant.hour, maintenant.minute) >= (h, m)
+    jour_actif = (not jours_actifs) or str((jour_sem + 1) % 7) in {str(j) for j in jours_actifs}
+    # Retour : 3 jours sans check-in → un seul mot doux par semaine (jamais un harcèlement quotidien).
+    if inactif_jours >= 3 and not checkin_fait and apres_heure:
+        n = il_y_a("retour")
+        if n is None or n >= 7:
+            return "retour"
+    if not checkin_fait and apres_heure and jour_actif:
         return "checkin"
     return None
 
@@ -86,7 +98,8 @@ def _maj(t: str) -> str:
 def message_relance(type_: str, prenom: str = "") -> dict:
     p = f"{prenom.strip().split()[0]}, " if (prenom or "").strip() else ""
     return {
-        "checkin": {"titre": "C'est l'heure de ton check-in ✨", "corps": _maj(f"{p}note ton énergie en 30 secondes pour un point du jour adapté."), "url": "/app", "tag": "checkin"},
+        "checkin": {"titre": "Ton point du jour est prêt ☀️", "corps": _maj(f"{p}30 secondes pour noter ton énergie : je cale tes priorités et tes opportunités du jour dessus."), "url": "/app", "tag": "checkin"},
+        "retour": {"titre": "Ton cockpit t'attend 🌿", "corps": _maj(f"{p}pas de pression : une minute suffit pour reprendre, ton plan est là où tu l'as laissé."), "url": "/app", "tag": "retour"},
         "victoire": {"titre": "Ta victoire de la semaine 🏆", "corps": _maj(f"{p}qu'est-ce qui a avancé cette semaine ? Note-le, même petit."), "url": "/app", "tag": "victoire"},
         "vision": {"titre": "Relis ta vision 🧭", "corps": _maj(f"{p}deux minutes pour te reconnecter à ton pourquoi avant d'attaquer la semaine."), "url": "/app/vision", "tag": "vision"},
         "foi": {"titre": "Un mot pour toi 🙏", "corps": _maj(f"{p}tu n'avances pas seul(e). Respire, remets ta semaine entre de bonnes mains, puis reprends."), "url": "/app", "tag": "foi"},
@@ -164,15 +177,24 @@ def install_relances(g: dict) -> None:
             VisionCheckin.user_id == uid, VisionCheckin.date == auj).limit(1))).first() is not None
         victoire_sem = (await db.execute(select(VisionVictoire.id).where(
             VisionVictoire.user_id == uid, VisionVictoire.date >= lundi).limit(1))).first() is not None
+        dernier_checkin = (await db.execute(select(VisionCheckin.date).where(
+            VisionCheckin.user_id == uid).order_by(VisionCheckin.date.desc()).limit(1))).scalar()
         cree = profil.created_at
         if cree is not None and cree.tzinfo is None:
             cree = cree.replace(tzinfo=timezone.utc)
         age = (maintenant_utc - cree).days if cree else 0
+        try:
+            inactif = (loc.date() - date.fromisoformat(str(dernier_checkin))).days if dernier_checkin else age
+        except ValueError:
+            inactif = 0
+        cm = profil.contexte_metier or {}
+        jours_actifs = {j for j in str(cm.get("jours_actifs") or "").split(",") if j.strip() != ""}
         type_ = choisir_relance(
             maintenant=loc, heure_checkin=profil.heure_checkin or "08:30", checkin_fait=checkin_fait,
             victoire_cette_semaine=victoire_sem, vision_vide=not (profil.texte_vision or "").strip(),
-            foi=bool((profil.contexte_metier or {}).get("parcours_foi")), age_compte_jours=age,
-            derniers=derniers, deja_envoye_aujourdhui=False)
+            foi=bool(cm.get("parcours_foi")), age_compte_jours=age,
+            derniers=derniers, deja_envoye_aujourdhui=False,
+            jours_actifs=jours_actifs, inactif_jours=max(inactif, 0))
         if not type_:
             return None
         canal = await _remettre(db, uid, message_relance(type_, profil.prenom or ""))

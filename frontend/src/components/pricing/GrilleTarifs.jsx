@@ -59,7 +59,7 @@ function Carte({ o, cycle, fondateur, embed, onPourquoi, remise = 0 }) {
           </p>
           <p className="mt-1.5 text-[12.5px] text-offwhite/70" data-testid={`pricing-fondateur-${o.key}`}>
             puis {(prixFonda != null || membreGagne) && <span className="text-offwhite/40 line-through">{cycle === "annuel" ? `${o.annuel.toLocaleString("fr-FR")} €` : `${prixNormal} €`}</span>}{" "}
-            <b className="text-offwhite">{ensuite}</b>{prixFonda != null && <span className="text-gold"> · tarif fondateur garanti</span>}{membreGagne && <span className="text-gold"> · −{Math.round(remise * 100)} % membre TheSustain</span>}
+            <b className="text-offwhite">{ensuite}</b>{prixFonda != null && <span className="text-gold"> · tarif fondateur garanti</span>}{membreGagne && <span className="text-gold"> · −{Math.round(remise * 100)} % partenariat TheSustain</span>}
           </p>
         </>
       ) : (
@@ -71,7 +71,7 @@ function Carte({ o, cycle, fondateur, embed, onPourquoi, remise = 0 }) {
           )}
           {membreGagne && (
             <p className="mt-3 inline-flex w-fit rounded-full border border-gold/40 bg-gold/10 px-2.5 py-0.5 text-[10.5px] font-semibold text-gold" data-testid={`pricing-membre-${o.key}`}>
-              −{Math.round(remise * 100)} % membre TheSustain
+              −{Math.round(remise * 100)} % · partenariat TheSustain
             </p>
           )}
           <p className="mt-3 flex items-baseline gap-2 font-display text-4xl font-extrabold">
@@ -184,9 +184,13 @@ export default function GrilleTarifs({ embed = false, offres = null, contact = t
   return (
     <div>
       {remise > 0 && !embed && (
-        <p className="mx-auto mb-6 flex w-fit max-w-full items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-4 py-1.5 text-center text-[12.5px] font-semibold text-gold" data-testid="pricing-membre-thesustain">
-          <HandHeart size={14} className="shrink-0" /> Membre TheSustain : −{Math.round(remise * 100)} % sur toutes les offres, appliqué automatiquement
-        </p>
+        <div className="mx-auto mb-6 flex max-w-xl items-start gap-3 rounded-2xl border border-gold/40 bg-gold/10 px-4 py-3 text-left" data-testid="pricing-membre-thesustain">
+          <HandHeart size={18} className="mt-0.5 shrink-0 text-gold" />
+          <div className="text-[12.5px] leading-relaxed text-offwhite/80">
+            <p className="font-semibold text-gold">Partenariat Zayado × TheSustain : −{Math.round(remise * 100)} % sur toutes les offres</p>
+            <p className="mt-0.5">Tu es membre de <b className="text-offwhite">TheSustain</b>, l'association chrétienne pour entrepreneurs, qui est un service distinct de Zayado. Grâce à ce partenariat, Zayado applique cette remise automatiquement à ton compte connecté.</p>
+          </div>
+        </div>
       )}
       <div className="text-center">
         <div className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 p-1" data-testid="pricing-cycle-toggle">
@@ -215,6 +219,11 @@ export default function GrilleTarifs({ embed = false, offres = null, contact = t
         </p>
       )}
 
+      {!embed && (
+        <p className="mx-auto mt-6 max-w-xl text-center text-[11.5px] leading-relaxed text-offwhite/50" data-testid="pricing-partenariat-note">
+          Zayado et TheSustain sont deux services distincts, liés par un partenariat : les membres TheSustain qui connectent leur compte à Zayado bénéficient de −30 % sur toutes les offres.
+        </p>
+      )}
       <p className="mt-6 text-center text-[11.5px] text-offwhite/45">Tous les prix sont TTC (pas de TVA, entreprise non assujettie) · essai à {ESSAI.prix} € TTC · sans engagement, résiliable en 1 clic · paiement sécurisé Mollie</p>
     </div>
   );

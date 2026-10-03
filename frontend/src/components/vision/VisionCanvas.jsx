@@ -7,7 +7,7 @@ import {
   LayoutTemplate, Quote, FileDown, ArrowRight, Wand2, RefreshCw, Maximize2, Heart,
   Undo2, Redo2, Spline, PenTool, Trash2, LayoutGrid, Columns3, Table2, Video, Heading1,
   Activity, ChevronLeft, ChevronRight, Presentation, Download, RotateCcw, StickyNote,
-  Pencil, Pin, PinOff, Share2, Map as MapIcon, Copy, Filter, BookOpen, Search, Files, Upload, MoreHorizontal, Sparkles, UserPlus,
+  Pencil, Pin, PinOff, Share2, Map as MapIcon, Copy, Filter, BookOpen, Search, Files, Upload, MoreHorizontal, Sparkles, UserPlus, Link2,
 } from "lucide-react";
 import {
   fetchBoard, saveBoard, fetchStarterTemplates, generateAiDoc, generateBoard, fetchInspire, searchUnsplash,
@@ -22,7 +22,7 @@ import {
 import { BoardSwitcher } from "@/components/vision/BoardSwitcher";
 import { AiImageRow } from "@/components/vision/AiImageRow";
 import { VoiceCapture } from "@/components/vision/VoiceCapture";
-import { NoteCard, TableCard, VideoCard, LiveCard, LIVE_SOURCES, useVisionLive, visionScore, PALIERS } from "@/components/vision/SfCards";
+import { NoteCard, TableCard, VideoCard, LinkCard, LiveCard, LIVE_SOURCES, useVisionLive, visionScore, PALIERS, normaliserUrl, domaineDe, ressembleImage, youtubeId } from "@/components/vision/SfCards";
 import { cockpitTemplate, WALL_COLORS } from "@/components/vision/cockpitTemplate";
 import "./sf.css";
 
@@ -52,11 +52,26 @@ const clampZ = (z) => Math.min(MAX_Z, Math.max(MIN_Z, +z.toFixed(2)));
 const uid = (p = "u") => `${p}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
 /** Types qui peuvent vivre dans un mur. */
-const DROPPABLE = new Set(["note", "table", "video", "live", "image", "sticky", "polaroid", "kpi", "color", "ai-doc"]);
-const EDITABLE = new Set(["note", "table", "video", "heading", "wall", "image", "ai-doc", "sticky", "kpi", "polaroid"]);
+const DROPPABLE = new Set(["note", "table", "video", "link", "live", "image", "sticky", "polaroid", "kpi", "color", "ai-doc"]);
+const EDITABLE = new Set(["note", "table", "video", "link", "heading", "wall", "image", "ai-doc", "sticky", "kpi", "polaroid"]);
 
 const AI_DOC_TYPES = ["note", "brief", "plan", "positioning", "swot"];
 const AI_DOC_KEYS = { note: "t1", brief: "t2", plan: "t3", positioning: "t4", swot: "t5" };
+
+// Forme canonique d'un board (clés triées) : sert à savoir si quelqu'un d'autre l'a modifié.
+const canonique = (v) => JSON.stringify(v, (k, x) => (x && typeof x === "object" && !Array.isArray(x) ? Object.keys(x).sort().reduce((o, c) => { o[c] = x[c]; return o; }, {}) : x));
+
+function ChampAdresse({ placeholder, onSubmit, autoFocus = false, className = "" }) {
+  const [v, setV] = useState("");
+  const go = () => { if (!v.trim()) return; if (onSubmit(v) !== false) setV(""); };
+  return (
+    <div className={`flex gap-2 ${className}`}>
+      <input value={v} onChange={(e) => setV(e.target.value)} autoFocus={autoFocus} inputMode="url" enterKeyHint="go" placeholder={placeholder}
+        onKeyDown={(e) => e.key === "Enter" && go()} className="sf-field min-w-0 flex-1" />
+      <button type="button" onClick={go} disabled={!v.trim()} className="sf-btn sf-btn-primary shrink-0">Ajouter</button>
+    </div>
+  );
+}
 
 const itemName = (it, lang) => {
   if (it.type === "wall") return `Mur · ${it.title || "Sans titre"}`;
@@ -65,6 +80,7 @@ const itemName = (it, lang) => {
   if (it.type === "draw") return "Dessin";
   if (it.type === "table") return it.title || "Tableau";
   if (it.type === "video") return "Vidéo";
+  if (it.type === "link") return it.titre || domaineDe(it.url) || "Lien";
   return tv(it.title, lang) || it.label || it.caption || tv(it.body, lang).slice(0, 40) || it.type;
 };
 
@@ -330,6 +346,41 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
 
   useEffect(() => { loadBoard(boardKey); }, [boardKey, loadBoard]);
 
+  /* ── Collaboration en direct : on revérifie le board toutes les 5 s (onglet visible) et au retour sur l'onglet.
+     Avant : les modifications d'un collaborateur n'apparaissaient qu'après rechargement de la page.
+     Règle de prudence : on n'écrase JAMAIS ce que l'utilisateur est en train de faire (saisie, glisser, sauvegarde en cours). */
+  const derniereVersionRef = useRef("");
+  const occupeRef = useRef(false);
+  const dernierToastRef = useRef(0);
+  // Occupé = on ne touche pas au board affiché (saisie, glisser, redimensionnement, dessin, sauvegarde en cours).
+  occupeRef.current = !!(saving || draggingId || editingId || drawPts || lineFrom || dragRef.current || resizeRef.current || rotateRef.current || drawRef.current || panRef.current);
+  useEffect(() => {
+    if (readOnly || !loaded) return undefined;
+    let stop = false;
+    const canon = canonique;
+    derniereVersionRef.current = canon(itemsRef.current); // nouveau board / nouveau chargement : point de départ
+    const tick = async () => {
+      if (stop || document.visibilityState !== "visible" || occupeRef.current) return;
+      try {
+        const r = await chargerBoard(boardKey);
+        if (stop || occupeRef.current) return;
+        const distant = Array.isArray(r.cards) ? r.cards : [];
+        const cd = canon(distant);
+        if (!distant.length || cd === derniereVersionRef.current) return;      // rien de neuf (ou board vide : on ne vide jamais l'écran)
+        if (canon(itemsRef.current) !== derniereVersionRef.current) return;     // j'ai des modifications pas encore enregistrées : je ne les écrase pas
+        derniereVersionRef.current = cd;
+        skipSaveRef.current = true; histSkipRef.current = true;
+        setItems(distant);
+        if (Date.now() - dernierToastRef.current > 30000) { dernierToastRef.current = Date.now(); toast("Le board vient d'être mis à jour par un collaborateur."); }
+      } catch { /* réseau coupé : on réessaiera au prochain passage */ }
+    };
+    const id = setInterval(tick, 5000);
+    const retour = () => { if (document.visibilityState === "visible") tick(); };
+    document.addEventListener("visibilitychange", retour);
+    window.addEventListener("focus", retour);
+    return () => { stop = true; clearInterval(id); document.removeEventListener("visibilitychange", retour); window.removeEventListener("focus", retour); };
+  }, [boardKey, loaded, readOnly, partage, owner]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const switchBoard = (key) => {
     if (partage) return; // board partagé : la clé vient de l'URL, jamais du sélecteur (sinon PUT /partages/perso → 403)
     if (key === boardKey) return;
@@ -345,7 +396,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
     if (draggingId) return;
     setSaving(true);
     const id = setTimeout(() => {
-      sauverBoard(items, boardKey).then(() => setSaveError(false)).catch(() => setSaveError(true)).finally(() => setSaving(false));
+      sauverBoard(items, boardKey).then(() => { derniereVersionRef.current = canonique(items); setSaveError(false); }).catch(() => setSaveError(true)).finally(() => setSaving(false));
     }, 700);
     return () => clearTimeout(id);
   }, [items, loaded, boardKey, draggingId, readOnly]);
@@ -588,7 +639,9 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
         const k = Math.min(1, max / Math.max(img.width, img.height));
         const c = document.createElement("canvas");
         c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
-        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        const g2d = c.getContext("2d");
+        g2d.fillStyle = "#ffffff"; g2d.fillRect(0, 0, c.width, c.height);
+        g2d.drawImage(img, 0, 0, c.width, c.height);
         resolve({ url: c.toDataURL("image/jpeg", 0.82), ratio: c.height / c.width });
       };
       img.src = reader.result;
@@ -675,6 +728,8 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
         return addItem({ type: "table", w: 460, title: "Suivi mensuel", columns: ["Mois", "Revenu"], rows: [["Juillet", ""], ["Août", ""], ["Objectif", ""]] }, { edit: true });
       case "video":
         return addItem({ type: "video", w: 460, url: "" }, { edit: true });
+      case "link":
+        return addItem({ type: "link", w: 380, url: "", titre: "" }, { edit: true });
       case "polaroid":
         // Plus de photo aléatoire (picsum pouvait tirer n'importe quoi, animaux compris) :
         // cadre vide, l'utilisateur ajoute SA photo.
@@ -1103,10 +1158,39 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
     catch { setUnsplash((u) => ({ ...u, loading: false })); toast.error(t("vision.unsplash.unavailable")); }
   };
   const addImageFromUrl = (url) => {
-    if (!url?.trim()) return;
+    if (!url?.trim()) return false;
+    const propre = normaliserUrl(url);
+    if (!propre) { toast.error("Cette adresse ne semble pas valide. Colle le lien complet de l'image."); return false; }
     setMenu(null);
-    addItem({ type: "image", w: 420, h: 300, image: url.trim(), title: { fr: "", en: "" } });
+    addItem({ type: "image", w: 420, h: 300, image: propre, title: { fr: "", en: "" } });
+    return true;
   };
+
+  /* ── Coller dans le board : image du presse-papiers, adresse d'image, vidéo YouTube ou lien ── */
+  const ajouterDepuisTexte = (texte) => {
+    const u = normaliserUrl(texte);
+    if (!u) return false;
+    if (youtubeId(u)) addItem({ type: "video", w: 460, url: u });
+    else if (ressembleImage(u)) addItem({ type: "image", w: 420, h: 300, image: u, title: { fr: "", en: "" } });
+    else addItem({ type: "link", w: 380, url: u, titre: "" });
+    toast.success("Ajouté au board");
+    return true;
+  };
+  const collerRef = useRef(null);
+  collerRef.current = (e) => {
+    if (readOnly) return;
+    const cible = e.target;
+    if (cible && (cible.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(cible.tagName))) return; // on écrit : le collage reste du texte normal
+    const fichiers = Array.from(e.clipboardData?.files || []).filter((f) => /^image\//.test(f.type));
+    if (fichiers.length) { e.preventDefault(); addImageFiles(fichiers); return; }
+    const texte = e.clipboardData?.getData("text/plain") || "";
+    if (texte && ajouterDepuisTexte(texte.trim())) e.preventDefault();
+  };
+  useEffect(() => {
+    const h = (e) => collerRef.current && collerRef.current(e);
+    document.addEventListener("paste", h);
+    return () => document.removeEventListener("paste", h);
+  }, []);
 
   /* ── Vision Book : un PDF paysage, une page de garde puis un mur par page ── */
   const handleVisionBook = async () => {
@@ -1192,6 +1276,8 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
         return <TableCard card={card} editing={isEditing} onPatch={patch} onDone={done} />;
       case "video":
         return <VideoCard card={card} editing={isEditing} onPatch={patch} onDone={done} />;
+      case "link":
+        return <LinkCard card={card} editing={isEditing} onPatch={patch} onDone={done} />;
       case "live":
         return <LiveCard card={card} live={live} onOpen={openLiveModule} onPatch={patch} />;
       case "heading":
@@ -1497,6 +1583,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
     { id: "list", icon: ListChecks, label: "Liste à cocher", action: () => addByTool("list") },
     { id: "table", icon: Table2, label: "Tableau", action: () => addByTool("table") },
     { id: "video", icon: Video, label: "Vidéo YouTube", action: () => addByTool("video") },
+    { id: "link", icon: Link2, label: "Lien", action: () => addByTool("link") },
     { id: "live", icon: Activity, label: "Carte live (données pro)", action: () => setMenu("live"), accent: true },
     { title: "Inspiration" },
     { id: "sticky", icon: StickyNote, label: t("vision.tools.sticky"), action: () => addByTool("sticky") },
@@ -1696,7 +1783,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
               </div>
             )}
             <div className="mt-3"><AiImageRow onPick={addImageFromUrl} /></div>
-            <input placeholder="…ou colle l'URL d'une image" onKeyDown={(e) => e.key === "Enter" && addImageFromUrl(e.target.value)} className="sf-field mt-3" />
+            <ChampAdresse placeholder="…ou colle l'adresse d'une image" onSubmit={addImageFromUrl} className="mt-3" />
             <button onClick={() => fileInputRef.current?.click()} className="sf-btn sf-btn-outline mt-2 w-full justify-center" style={{ height: 34 }} data-testid="vision-import-image"><Upload size={14} /> Importer depuis l'ordinateur</button>
             <p className="sf-small mt-1.5 text-center" style={{ fontSize: 11.5 }}>Astuce : glisse une image directement sur le canvas.</p>
           </Popover>
@@ -1818,6 +1905,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
             { id: "heading", icon: Heading1, label: "Titre", action: () => addByTool("heading") },
             { id: "table", icon: Table2, label: "Tableau", action: () => addByTool("table") },
             { id: "video", icon: Video, label: "Vidéo", action: () => addByTool("video") },
+            { id: "link", icon: Link2, label: "Lien", action: () => addByTool("link") },
             { id: "live", icon: Activity, label: "Carte live", action: () => { setFeuille(null); setMenu("live"); } },
           ]}
           plus={[
@@ -1836,7 +1924,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
       {isSmall && (
         <>
           <Popover open={menu === "images-m"} onClose={() => setMenu(null)} className="inset-x-3 bottom-24 p-3" style={{ position: "fixed", zIndex: 70 }}>
-            <input autoFocus placeholder="Colle l'URL d'une image" onKeyDown={(e) => e.key === "Enter" && addImageFromUrl(e.target.value)} className="sf-field" />
+            <ChampAdresse autoFocus placeholder="Colle l'adresse d'une image" onSubmit={addImageFromUrl} />
             <button onClick={() => fileInputRef.current?.click()} className="sf-btn sf-btn-outline mt-2 w-full justify-center" style={{ height: 34 }}><Upload size={14} /> Importer une photo</button>
             <div className="mt-3"><AiImageRow onPick={addImageFromUrl} /></div>
           </Popover>
@@ -1889,7 +1977,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
             ])}
           </Popover>
           <Popover open={menu === "images-m"} onClose={() => setMenu(null)} className="bottom-full left-0 mb-2 w-[300px] p-3">
-            <input autoFocus placeholder="Colle l'URL d'une image" onKeyDown={(e) => e.key === "Enter" && addImageFromUrl(e.target.value)} className="sf-field" />
+            <ChampAdresse autoFocus placeholder="Colle l'adresse d'une image" onSubmit={addImageFromUrl} />
             <button onClick={() => fileInputRef.current?.click()} className="sf-btn sf-btn-outline mt-2 w-full justify-center" style={{ height: 34 }}><Upload size={14} /> Importer une photo</button>
             <div className="mt-3"><AiImageRow onPick={addImageFromUrl} /></div>
           </Popover>

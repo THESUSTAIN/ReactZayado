@@ -47,7 +47,7 @@ export default function TheSustainInfo({ open, onClose }) {
             </a>
           </div>
           <p className="mt-3 text-[11px] text-offwhite/45">
-            Zayado reste ouvert à tous. TheSustain est une invitation, jamais une obligation.
+            Zayado et TheSustain sont deux services distincts, liés par un partenariat. Zayado reste ouvert à tous : TheSustain est une invitation, jamais une obligation.
           </p>
         </div>
       </DialogContent>

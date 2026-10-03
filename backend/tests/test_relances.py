@@ -188,3 +188,28 @@ def test_whatsapp_message_exige_secret_et_identifiant(client, monkeypatch):
     assert client.post("/api/webhooks/whatsapp-web", json={"message": "salut", "agent_id": "x"}).status_code == 401
     r = client.post("/api/webhooks/whatsapp-web", headers={"x-service-secret": "secret-test"}, json={"message": "salut"})
     assert r.status_code == 400
+
+
+# ── Rétention : jours choisis à l'inscription + mot doux après 3 jours d'absence ──
+def test_checkin_respecte_les_jours_choisis():
+    # 2026-10-03 est un samedi → code « 6 ». L'utilisateur n'a choisi que lundi-vendredi.
+    assert choisir_relance(maintenant=loc(2026, 10, 3, 9, 0), jours_actifs={"1", "2", "3", "4", "5"}) is None
+    assert choisir_relance(maintenant=loc(2026, 10, 3, 9, 0), jours_actifs={"6"}) == "checkin"
+    # Dimanche = « 0 »
+    assert choisir_relance(maintenant=loc(2026, 10, 4, 9, 0), jours_actifs={"0"}) == "checkin"
+    # Aucun choix = tous les jours
+    assert choisir_relance(maintenant=loc(2026, 10, 3, 9, 0), jours_actifs=set()) == "checkin"
+
+
+def test_retour_apres_trois_jours_sans_checkin():
+    assert choisir_relance(maintenant=loc(2026, 10, 7, 9, 0), inactif_jours=3) == "retour"
+    assert choisir_relance(maintenant=loc(2026, 10, 7, 9, 0), inactif_jours=2) == "checkin"
+    # Pas de harcèlement : une fois par semaine au plus, puis retour au rythme normal.
+    from datetime import date
+    assert choisir_relance(maintenant=loc(2026, 10, 7, 9, 0), inactif_jours=5, derniers={"retour": date(2026, 10, 4)}) == "checkin"
+    assert choisir_relance(maintenant=loc(2026, 10, 14, 9, 0), inactif_jours=9, derniers={"retour": date(2026, 10, 7)}) == "retour"
+
+
+def test_message_retour_existe():
+    m = message_relance("retour", "Camille")
+    assert m["tag"] == "retour" and "Camille" in m["corps"]
