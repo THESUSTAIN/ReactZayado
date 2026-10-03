@@ -10,7 +10,7 @@ import {
   fetchState, saveProfile, fetchConnections, fetchMesFilleuls, inviterParrainage, appliquerCodePromo, fetchMoi,
   fetchAbonnement, fetchCommandes, telechargerExport, deleteData, fetchTarifsFondateur,
   resilierAbonnement, reprendreAbonnement, changerOffre, fetchEquipe, inviterCoequipier, retirerCoequipier,
-  oauthStockage, deconnecterCanal, fetchActualiteOptions, fetchOrganisation, rechercherEntreprise, enregistrerOrganisation,
+  oauthStockage, deconnecterCanal, fetchActualiteOptions, fetchActualiteStatut, testerActualite, fetchOrganisation, rechercherEntreprise, enregistrerOrganisation,
 } from "@/lib/kairosApi";
 import { oublierAbonnement } from "@/lib/acces";
 import { pushSupporte, pushStatut, activerPush, desactiverPush, testerPush } from "@/lib/push";
@@ -693,7 +693,91 @@ function SectionNotifications() {
 
     <CartePush />
     <CarteVeille cm={cm} setCm={setCm} rythme={rythme} changerRythme={changerRythme} srcOn={srcOn} togglerSrc={togglerSrc} />
+    <CarteActuEnvoi cm={cm} setCm={setCm} rythme={rythme} changerRythme={changerRythme} />
     </>
+  );
+}
+
+// Actualité envoyée : rythme, canal, nombre d'actus, heure + bouton « Envoyer un test maintenant »
+// (le test dit, canal par canal, pourquoi rien n'arrive : clé absente, aucun appareil abonné…).
+function CarteActuEnvoi({ cm, setCm, rythme, changerRythme }) {
+  const canaux = Array.isArray(cm.actu_canaux) ? cm.actu_canaux : ["email", "push"];
+  const nb = Math.max(1, Math.min(3, Number(cm.actu_nb) || 3));
+  const heure = cm.actu_heure || "08:00";
+  const [statut, setStatut] = useState(null);
+  const [test, setTest] = useState(null);
+  const [envoi, setEnvoi] = useState(false);
+  const charger = () => fetchActualiteStatut().then(setStatut).catch(() => setStatut(null));
+  useEffect(() => { charger(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const maj = async (patch) => {
+    const suivant = { ...cm, ...patch };
+    setCm(suivant);
+    try { await saveProfile({ contexte_metier: patch }); toast.success("Réglage enregistré."); charger(); }
+    catch { toast.error("Échec."); setCm(cm); }
+  };
+  const basculerCanal = (c) => {
+    const suivant = canaux.includes(c) ? canaux.filter((x) => x !== c) : [...canaux, c];
+    maj({ actu_canaux: suivant });
+  };
+  const lancerTest = async () => {
+    setEnvoi(true); setTest(null);
+    try { setTest(await testerActualite()); charger(); }
+    catch (e) { setTest({ erreur: e?.detail || "Test impossible pour le moment." }); }
+    setEnvoi(false);
+  };
+  const bouton = (actif) => `rounded-full border px-3 py-1.5 text-xs font-medium transition ${actif ? "border-gold bg-gold text-navy-900" : "border-white/15 text-offwhite/70 hover:border-gold/40"}`;
+  const NOMS = { email: "E-mail", push: "Notification" };
+  return (
+    <Carte titre="Actualité envoyée" desc="Reçois 1 à 3 actus, avec un résumé court, à l'heure que tu choisis.">
+      <div className="space-y-4" data-testid="parametres-actu-envoi">
+        <div>
+          <p className="mb-2 text-sm font-medium text-offwhite">Rythme</p>
+          <div className="flex flex-wrap gap-2">
+            {[["quotidien", "Chaque matin"], ["lundi", "Chaque lundi"], ["jamais", "À la demande"]].map(([k, l]) => (
+              <button key={k} onClick={() => changerRythme(k)} className={bouton(rythme === k)} data-testid={`actu-rythme-${k}`}>{l}</button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <p className="mb-2 text-sm font-medium text-offwhite">Canal</p>
+          <div className="flex flex-wrap gap-2">
+            {["email", "push"].map((c) => (
+              <button key={c} onClick={() => basculerCanal(c)} className={bouton(canaux.includes(c))} data-testid={`actu-canal-${c}`}>{canaux.includes(c) ? "✓ " : ""}{NOMS[c]}</button>
+            ))}
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-6">
+          <div>
+            <p className="mb-2 text-sm font-medium text-offwhite">Nombre d'actus</p>
+            <div className="flex gap-2">{[1, 2, 3].map((n) => <button key={n} onClick={() => maj({ actu_nb: n })} className={bouton(nb === n)} data-testid={`actu-nb-${n}`}>{n}</button>)}</div>
+          </div>
+          <div>
+            <p className="mb-2 text-sm font-medium text-offwhite">Heure d'envoi</p>
+            <input type="time" value={heure} onChange={(e) => e.target.value && maj({ actu_heure: e.target.value })}
+              className="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-sm text-offwhite focus:border-gold/50 focus:outline-none" data-testid="actu-heure" />
+          </div>
+        </div>
+        {statut && !statut.pret && (
+          <ul className="space-y-1 rounded-lg border border-amber-400/25 bg-amber-400/5 p-3 text-xs text-amber-200" data-testid="actu-manque">
+            {statut.manque.map((m) => <li key={m}>• {m}</li>)}
+          </ul>
+        )}
+        {statut?.pret && <p className="text-xs text-emerald-300">Tout est prêt : l'envoi du matin peut partir.</p>}
+        <div>
+          <button onClick={lancerTest} disabled={envoi} className="btn-gold px-4 py-2 text-sm disabled:opacity-50" data-testid="actu-test">
+            {envoi ? "Envoi…" : "Envoyer un test maintenant"}
+          </button>
+          {test?.erreur && <p className="mt-2 text-xs text-red-300">{test.erreur}</p>}
+          {test?.canaux && (
+            <ul className="mt-2 space-y-1 text-xs" data-testid="actu-test-resultat">
+              {Object.entries(test.canaux).map(([c, r]) => (
+                <li key={c} className={r.ok ? "text-emerald-300" : "text-red-300"}>{r.ok ? "✓" : "✗"} {NOMS[c] || c} : {r.detail}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </Carte>
   );
 }
 

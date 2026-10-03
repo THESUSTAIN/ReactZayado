@@ -128,6 +128,9 @@ export const patchDecision = (id, statut, canal) => jsend(`/copilote/decisions/$
 export const validerDecisionEmail = (id) => jsend(`/copilote/decisions/${id}/valider-email`, "POST");
 export const fetchActualite = (filtre = "") => jget(`/copilote/actualite${filtre ? `?filtre=${filtre}` : ""}`);
 export const fetchActualiteOptions = () => jget("/copilote/actualite/options");
+export const resumerActualites = (articles) => jsend("/copilote/actualite/resumes", "POST", { articles });
+export const testerActualite = () => jsend("/copilote/actualite/test", "POST");
+export const fetchActualiteStatut = () => jget("/copilote/actualite/statut");
 export const enregistrerArticle = (titre, lien) => jsend("/copilote/enregistres", "POST", { titre, lien });
 export const fetchEnregistres = () => jget("/copilote/enregistres");
 export const exportData = () => jget("/export");
@@ -229,8 +232,22 @@ export const fetchInspire = () => jsend("/vision/inspire", "POST");
 // Corrigé : le jeton JWT n'était JAMAIS envoyé — en production (hors aperçu),
 // le chat répondait 401 « Connexion requise ». onSources : liens officiels
 // joints aux réponses juridiques (support légal façon Kandbaz).
-export async function streamChat({ message, page, onDelta, onDone, onError, onSources }) {
+export async function streamChat({ message, page, onDelta: onDeltaBrut, onDone: onDoneBrut, onError, onSources }) {
   _GET_EN_COURS.clear();
+  // Affichage fluide : le texte reçu par paquets est écrit mot par mot, à vitesse régulière
+  // (plus vite si beaucoup de texte est en attente), au lieu d'apparaître d'un bloc.
+  let file = "", fini = false, timer = null, termine = false;
+  const vider = () => {
+    if (!file) { timer = null; if (fini && !termine) { termine = true; onDoneBrut && onDoneBrut(); } return; }
+    const salve = file.length > 400 ? 3 : file.length > 150 ? 2 : 1;
+    let sortie = "", k = 0, reste = file;
+    while (k < salve && reste) { const mm = reste.match(/^\s*\S+\s?/); const t = mm ? mm[0] : reste; sortie += t; reste = reste.slice(t.length); k++; }
+    file = reste;
+    onDeltaBrut && onDeltaBrut(sortie);
+    timer = setTimeout(vider, 28);
+  };
+  const onDelta = (d) => { file += d; if (!timer) timer = setTimeout(vider, 0); };
+  const onDone = () => { fini = true; if (!timer) vider(); };
   let langue = "fr";
   try { langue = localStorage.getItem("kairos_lang") || "fr"; } catch { /* */ }
   try {

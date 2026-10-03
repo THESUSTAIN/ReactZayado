@@ -1993,6 +1993,28 @@ async def chat(body: ChatIn, db: AsyncSession = Depends(get_db)):
     )
     # Support juridique (façon Kandbaz) : question de droit → prompt structuré
     # + sources officielles du pays jointes sous la réponse (juridique_ext).
+    # Historique récent (avant ce message) : le Copilote suit la conversation au lieu de répondre à chaque message isolé.
+    try:
+        recents = list((await db.execute(select(VisionChatMessage).where(VisionChatMessage.user_id == uid)
+                                         .order_by(VisionChatMessage.created_at.desc()).limit(10))).scalars())[::-1]
+        if recents:
+            systeme += "\n\n--- Conversation récente ---\n" + "\n".join(
+                f"{'Utilisateur' if m.role == 'user' else 'Copilote'} : {m.contenu[:600]}" for m in recents)
+    except Exception as e:  # noqa: BLE001
+        logger.info("Historique du chat indisponible : %s", e)
+    # Recherche web, actus du jour, texte d'un article collé : le Copilote peut AGIR sur l'actualité.
+    sources_web = []
+    try:
+        if "contexte_web_chat" in globals() and uid != DEMO_USER_ID:
+            texte_web, sources_web = await globals()["contexte_web_chat"](db, uid, body.message)
+            systeme += (
+                "\n\n--- RECHERCHE WEB ---\n"
+                "Tu as accès à une recherche web et à la lecture des liens. Ne dis JAMAIS que tu n'as pas accès à internet "
+                "ou aux articles. Appuie-toi sur les éléments ci-dessous ; s'ils sont vides ou insuffisants, dis que la recherche "
+                "n'a rien donné de fiable et propose d'ouvrir la source. Si on te demande « c'est quoi le plus intéressant ? », "
+                "réponds en 3 à 5 lignes avec UNE recommandation claire.\n" + (texte_web or "(aucun résultat pour cette demande)"))
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Contexte web indisponible : %s", e)
     juridique = est_question_juridique(body.message)
     sources = []
     if juridique:
@@ -2047,6 +2069,8 @@ async def chat(body: ChatIn, db: AsyncSession = Depends(get_db)):
                 logger.warning("Historique chat non enregistré : %s", e)
         if juridique and sources:
             yield f"data: {json.dumps({'sources': sources, 'juridique': True})}\n\n"
+        elif sources_web:
+            yield f"data: {json.dumps({'sources': sources_web})}\n\n"
         yield f"data: {json.dumps({'done': True})}\n\n"
 
     return StreamingResponse(flux(), media_type="text/event-stream",
@@ -2385,7 +2409,8 @@ async def actualite(marche: str = "", filtre: str = "tout", db: AsyncSession = D
     now = datetime.now(timezone.utc)
     return {"masque": False, "marche": pays_compte, "label": _libelle_marche(pays_compte, cm), "filtre": filtre,
             "marches": marches, "articles": articles[:limite], "limite": limite,
-            "genere_a": now.isoformat(), "rythme": cm.get("actu_rythme", "quotidien"),
+            "genere_a": now.isoformat(), "rythme": cm.get("actu_rythme", "quotidien"), "configure": bool(cm.get("actu_rythme")),
+            "prefs": {"canaux": cm.get("actu_canaux") if isinstance(cm.get("actu_canaux"), list) else ["email", "push"], "nb": cm.get("actu_nb") or 3},
             "prochaine_maj": (now + timedelta(minutes=30)).isoformat()}
 
 
@@ -5522,6 +5547,8 @@ from victoires_ext import install_victoires  # noqa: E402
 install_victoires(globals())
 from relances_ext import install_relances  # noqa: E402
 install_relances(globals())
+from actualite_ext import install_actualite  # noqa: E402
+install_actualite(globals())
 from organisation_ext import install_organisation  # noqa: E402
 install_organisation(globals())
 

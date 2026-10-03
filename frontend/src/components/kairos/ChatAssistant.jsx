@@ -3,7 +3,7 @@ import {
   Sparkles, Send, Mic, Lightbulb, BatteryLow, Compass, X, Loader2,
   Sun, ListChecks, Newspaper, Check, Clock, XCircle, ExternalLink, RefreshCw, Mail, Bookmark,
   Maximize2, Minimize2, CloudCheck, Users, Scale, Copy, PenLine, FolderOpen, FileText, FileSpreadsheet,
-  FileDown, UploadCloud, ImagePlus, ListPlus, Settings,
+  FileDown, UploadCloud, ImagePlus, ListPlus, Settings, Info,
 } from "lucide-react";
 import CollaborateurModal from "./CollaborateurModal";
 import { aDroit, usePlanEffectif } from "@/lib/droits";
@@ -11,7 +11,7 @@ import { prendreOngletEnAttente, prendrePromptEnAttente, discuterAvecIA } from "
 import CanauxCopilote from "@/components/kairos/CanauxCopilote";
 import { useKairos } from "@/context/KairosContext";
 import {
-  streamChat, fetchPointDuJour, fetchDecisions, suggererDecisions, patchDecision, fetchActualite, enregistrerArticle, fetchEnregistres, validerDecisionEmail,
+  streamChat, resumerActualites, fetchPointDuJour, fetchDecisions, suggererDecisions, patchDecision, fetchActualite, enregistrerArticle, fetchEnregistres, validerDecisionEmail,
   saveProfile, creerTache, oauthStockage, relierTrello, choisirListeTrello, telechargerDocument, rangerDocumentDrive, ouvrirMesDocuments, reglerDossierDocuments,
   creerImageIA, rangerFichierDrive, fetchContexteCopilote, fetchDossierDocuments,
 } from "@/lib/kairosApi";
@@ -108,7 +108,7 @@ export function ChatBody({ onClose, estElargi, onToggleTaille, grand = false }) 
   const { user } = useKairos();
   // Onglet initial : celui demandé par openChat("actu" | "decisions" | "chat"),
   // consommé ici — fiable même si le panneau vient tout juste de se monter.
-  const [tab, setTab] = useState(() => prendreOngletEnAttente() || "chat");
+  const [tab, setTab] = useState(() => prendreOngletEnAttente() || (() => { try { return new URLSearchParams(window.location.search).get("tab") === "actu" ? "actu" : null; } catch { return null; } })() || "chat");
   const [cloudSync, setCloudSync] = useState(null);
   // Bouton « Collaborateur » : message important à l'équipe humaine, avec le contexte du chat.
   const [collab, setCollab] = useState(null); // null = fermé, sinon { contexte }
@@ -582,7 +582,7 @@ function ChatTab({ firstName, grand = false }) {
               <div className={`whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                 m.role === "user" ? (grand ? "chat-bulle-moi" : "bg-gold text-navy-900") : (grand ? "chat-bulle-ia" : "border border-white/10 bg-white/5 text-offwhite")
               }`}>
-                {m.image ? <img src={m.image.src} alt={m.content} className="max-h-80 rounded-xl" /> : (m.content ? (m.role === "assistant" ? <TexteRiche texte={m.content} /> : m.content) : (streaming && i === messages.length - 1 ? <Loader2 className="h-4 w-4 animate-spin text-gold" /> : null))}
+                {m.image ? <img src={m.image.src} alt={m.content} className="max-h-80 rounded-xl" /> : (m.content ? (m.role === "assistant" ? <TexteRiche texte={m.content} /> : m.content) : (streaming && i === messages.length - 1 ? <span className="inline-flex items-center gap-2 text-xs text-offwhite/60" data-testid="chat-reflechit">l'IA réfléchit<span className="ia-points"><i /><i /><i /></span></span> : null))}
                 {grand && m.le && <span className={`mt-1.5 block text-[11px] ${m.role === "user" ? "opacity-60" : "text-offwhite/45"}`}>{heure(m.le)}</span>}
               </div>
               {m.reglage && !m.repondu && <ControlesReglage q={REGLAGES.find((q) => q.key === m.reglage)} onRepondre={repondre} onPlusTard={plusTard} />}
@@ -731,6 +731,44 @@ function DecisionsTab() {
   );
 }
 
+// ── Actualité : 3 questions en boutons (rythme, canal, nombre), enregistrées tout de suite ──
+const QUESTIONS_ACTU = [
+  { cle: "actu_rythme", texte: "À quel rythme veux-tu recevoir ton actualité ?",
+    options: [{ v: "quotidien", l: "Chaque matin", c: "C'est noté : une actu chaque matin." }, { v: "lundi", l: "Chaque semaine (lundi)", c: "C'est noté : ton actu arrivera chaque lundi." }, { v: "jamais", l: "À la demande", c: "C'est noté : rien ne sera envoyé, tu viens la chercher ici." }] },
+  { cle: "actu_canaux", texte: "Par quel canal ?",
+    options: [{ v: ["email"], l: "E-mail", c: "Parfait, par e-mail." }, { v: ["push"], l: "Notification", c: "Parfait, par notification." }, { v: ["email", "push"], l: "Les deux", c: "Parfait, par e-mail et notification." }] },
+  { cle: "actu_nb", texte: "Combien d'actus à chaque fois ?",
+    options: [{ v: 1, l: "1", c: "Une seule actu, la plus utile." }, { v: 2, l: "2", c: "Deux actus." }, { v: 3, l: "3", c: "Trois actus." }] },
+];
+
+function ActuSetup({ onFini }) {
+  const [etape, setEtape] = useState(0);
+  const [confirm, setConfirm] = useState("");
+  const [envoi, setEnvoi] = useState(false);
+  const q = QUESTIONS_ACTU[etape];
+  const choisir = async (o) => {
+    setEnvoi(true);
+    try {
+      await saveProfile({ contexte_metier: { [q.cle]: o.v } });
+      setConfirm(o.c);
+      if (etape + 1 >= QUESTIONS_ACTU.length) { onFini(); } else { setEtape(etape + 1); }
+    } catch { toast.error("Enregistrement impossible, réessaie."); }
+    setEnvoi(false);
+  };
+  return (
+    <div className="space-y-3 rounded-xl border border-gold/20 bg-gold/5 p-4" data-testid="actu-setup">
+      {confirm && <p className="text-xs text-offwhite/60" data-testid="actu-setup-confirm">{confirm}</p>}
+      <p className="text-sm font-medium text-offwhite">{q.texte}</p>
+      <div className="flex flex-wrap gap-2">
+        {q.options.map((o) => (
+          <button key={o.l} disabled={envoi} onClick={() => choisir(o)} className={puce} data-testid={`actu-setup-${q.cle}-${o.l}`}>{o.l}</button>
+        ))}
+      </div>
+      <p className="text-[11px] text-offwhite/40">Question {etape + 1} sur {QUESTIONS_ACTU.length} · modifiable dans Paramètres › Notifications</p>
+    </div>
+  );
+}
+
 // ── Onglet Actualité (digest piloté par l'énergie) ──
 function ActuTab() {
   const [data, setData] = useState(null);
@@ -738,7 +776,21 @@ function ActuTab() {
   const [enregistres, setEnregistres] = useState([]);
   // Filtre : tout / légal (pays du compte) / ma veille (pays, secteurs et mots-clés choisis dans Paramètres).
   const [filtre, setFiltre] = useState(() => { try { return localStorage.getItem("zayado_actu_filtre") || "tout"; } catch { return "tout"; } });
-  const load = async (f = filtre) => { setLoading(true); try { setData(await fetchActualite(f)); } catch { setData({ erreur: true, articles: [] }); } setLoading(false); };
+  const load = async (f = filtre) => {
+    setLoading(true);
+    try {
+      const d = await fetchActualite(f);
+      // 1 à 3 actus (choix de l'utilisateur) en vue « Tout » ; le reste reste accessible via les filtres.
+      if (f === "tout" && d?.articles) d.articles = d.articles.slice(0, Math.max(1, Math.min(3, Number(d?.prefs?.nb) || 3)));
+      setData(d); setLoading(false);
+      // Description de 2 lignes écrite par l'IA : arrive après, sans bloquer l'affichage.
+      if (d?.articles?.length) {
+        resumerActualites(d.articles.slice(0, 3).map((a) => ({ titre: a.titre, lien: a.lien, resume: a.resume })))
+          .then((r) => setData((cur) => cur && cur.articles ? { ...cur, articles: cur.articles.map((a, i) => ({ ...a, description: r?.resumes?.[i] || a.description })) } : cur))
+          .catch(() => { /* on garde le résumé du flux */ });
+      }
+    } catch { setData({ erreur: true, articles: [] }); setLoading(false); }
+  };
   const chargerEnregistres = async () => { try { const d = await fetchEnregistres(); setEnregistres(d?.articles || []); } catch { /* silencieux */ } };
   useEffect(() => { load(); chargerEnregistres(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const changerFiltre = (f) => { setFiltre(f); try { localStorage.setItem("zayado_actu_filtre", f); } catch { /* */ } load(f); };
@@ -763,7 +815,9 @@ function ActuTab() {
           {data.prochaine_maj && <> · prochaine actualisation vers {new Date(data.prochaine_maj).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</>}
         </p>
       )}
-      {loading ? <Loader2 className="h-5 w-5 animate-spin text-gold" /> : data?.masque ? (
+      {!loading && data && !data.erreur && !data.masque && data.configure === false ? (
+        <ActuSetup onFini={() => load()} />
+      ) : loading ? <Loader2 className="h-5 w-5 animate-spin text-gold" /> : data?.masque ? (
         <div className="rounded-xl border border-[#14B8A6]/30 bg-[#14B8A6]/10 p-4 text-sm leading-relaxed text-offwhite/85" data-testid="actu-masque">
           {data.raison}
         </div>
@@ -773,44 +827,37 @@ function ActuTab() {
         <div className="space-y-2.5">
           {(data?.articles || []).map((a, i) => {
             const dejaSauve = enregistres.some((e) => e.titre === a.titre);
+            const dateTxt = (() => { try { return a.date ? new Date(a.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : ""; } catch { return ""; } })();
             return (
-            <div key={i}
-              onClick={() => discuterAvecIA(`Fais-moi un résumé clair et actionnable de cette actualité, en 4 points : ce qui se passe, pourquoi c'est important, ce que ça change pour un indépendant, et ce que je devrais faire : « ${a.titre} » (${a.lien})`)}
-              className="cursor-pointer rounded-xl border border-white/10 bg-white/5 p-3 transition-colors hover:border-gold/30 hover:bg-white/[0.07]"
-              title="Cliquer pour ouvrir le résumé IA"
-              data-testid={`actu-item-${i}`}>
+            <div key={i} className="actu-carte rounded-xl border border-white/10 bg-white/5 p-3" style={{ animationDelay: `${i * 140}ms` }} data-testid={`actu-item-${i}`}>
               {a.source && a.source !== "presse" && (
                 <span className={`mb-1.5 inline-flex max-w-full items-center gap-1 truncate rounded-full px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.14em] ${a.source === "officiel" || a.source === "legal" ? "bg-gold/15 text-gold" : "bg-sky-400/15 text-sky-200"}`} data-testid={`actu-${a.source === "officiel" ? "officiel" : "etiquette"}-${i}`}>
                   {ETIQUETTES[a.source]}{a.source_label ? ` · ${a.source_label}` : ""}
                 </span>
               )}
               <p className="text-sm font-medium leading-snug text-offwhite">{a.titre}</p>
-              {a.resume && <p className="mt-1 line-clamp-2 text-xs text-offwhite/55">{a.resume}</p>}
-              <div className="mt-2 flex items-center justify-between">
-                <a href={a.lien} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-[10px] text-gold" data-testid={`actu-lire-${i}`}>Lire <ExternalLink className="h-3 w-3" /></a>
+              {(a.description || a.resume) && <p className="mt-1 line-clamp-2 text-xs text-offwhite/60" data-testid={`actu-description-${i}`}>{a.description || a.resume}</p>}
+              <p className="mt-1.5 text-[10.5px] text-offwhite/40">{[a.source_label, dateTxt].filter(Boolean).join(" · ")}</p>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <button
+                  onClick={() => discuterAvecIA(`Parle-moi de cette actualité et de ce qu'elle change concrètement pour mon activité : « ${a.titre} » (${a.lien})`)}
+                  className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/10 px-2.5 py-1 text-[11px] font-medium text-gold hover:bg-gold/20"
+                  data-testid={`actu-discuter-${i}`}
+                >
+                  <Sparkles className="h-3 w-3" /> Discuter avec l'IA
+                </button>
                 <div className="flex items-center gap-1.5">
+                  <a href={a.lien} target="_blank" rel="noopener noreferrer" title="Ouvrir la source dans un nouvel onglet" aria-label="Ouvrir la source"
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/10 text-offwhite/70 hover:border-gold/40 hover:text-gold" data-testid={`actu-info-${i}`}>
+                    <Info className="h-3.5 w-3.5" />
+                  </a>
                   <button
-                    onClick={(e) => { e.stopPropagation(); discuterAvecIA(`Parle-moi de cette actualité et de ce qu'elle change concrètement pour mon activité : « ${a.titre} » (${a.lien})`); }}
-                    className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/10 px-2 py-1 text-[10px] font-medium text-gold hover:bg-gold/20"
-                    data-testid={`actu-discuter-${i}`}
-                  >
-                    <Sparkles className="h-3 w-3" /> En parler à l'IA
-                  </button>
-                  {a.source !== "officiel" && a.source !== "legal" && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); discuterAvecIA(`Écris-moi un post LinkedIn (150 mots, ton expert et accessible, une accroche forte, mon avis de professionnel et une question pour lancer la discussion) à partir de cette actualité : « ${a.titre} » (${a.lien})`); }}
-                      className="inline-flex items-center gap-1 rounded-full border border-white/10 px-2 py-1 text-[10px] text-offwhite/70 hover:border-gold/40 hover:text-gold"
-                      data-testid={`actu-post-${i}`}>
-                      <PenLine className="h-3 w-3" /> Post
-                    </button>
-                  )}
-                  <button
-                    onClick={async (e) => { e.stopPropagation(); if (dejaSauve) return; try { await enregistrerArticle(a.titre, a.lien); toast.success("Article enregistré — retrouve-le dans « Tes articles enregistrés » ci-dessous."); chargerEnregistres(); } catch { toast.error("Enregistrement impossible."); } }}
-                    disabled={dejaSauve}
-                    className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] ${dejaSauve ? "border-emerald-500/40 text-emerald-300" : "border-white/10 text-offwhite/70 hover:border-gold/40 hover:text-gold"}`}
+                    onClick={async () => { if (dejaSauve) return; try { await enregistrerArticle(a.titre, a.lien); toast.success("Article enregistré."); chargerEnregistres(); } catch { toast.error("Enregistrement impossible."); } }}
+                    disabled={dejaSauve} title={dejaSauve ? "Enregistré" : "Enregistrer"} aria-label="Enregistrer l'article"
+                    className={`inline-flex h-7 w-7 items-center justify-center rounded-full border ${dejaSauve ? "border-emerald-500/40 text-emerald-300" : "border-white/10 text-offwhite/70 hover:border-gold/40 hover:text-gold"}`}
                     data-testid={`actu-save-${i}`}
                   >
-                    {dejaSauve ? <Check className="h-3 w-3" /> : <Bookmark className="h-3 w-3" />} {dejaSauve ? "Enregistré" : "Enregistrer"}
+                    {dejaSauve ? <Check className="h-3.5 w-3.5" /> : <Bookmark className="h-3.5 w-3.5" />}
                   </button>
                 </div>
               </div>
