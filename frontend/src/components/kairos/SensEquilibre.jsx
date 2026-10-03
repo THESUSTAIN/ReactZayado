@@ -67,12 +67,7 @@ export default function SensEquilibre() {
             </a>
           </div>
         </section>
-      ) : (
-        <p className="flex flex-wrap items-center gap-2 text-[12.5px] text-offwhite/55" data-testid="sens-inspiration-discrete">
-          <Cross size={13} className="text-gold" /> Envie d'une dimension chrétienne ?
-          <button onClick={() => navigate("/app/ma-foi")} className="font-semibold text-gold hover:underline" data-testid="sens-decouvrir-thesustain">Découvrir Ma Foi par TheSustain</button>
-        </p>
-      )}
+      ) : null}
 
     </div>
   );

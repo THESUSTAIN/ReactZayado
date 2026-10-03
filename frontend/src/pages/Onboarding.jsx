@@ -536,8 +536,8 @@ export default function Onboarding() {
           {etape === "sens" && (
             <div data-testid="onboarding-sens-foi">
               <p className="text-[15px] leading-relaxed text-offwhite/70">
-                <b className="text-offwhite">TheSustain</b>, partenaire de Zayado, t'accompagne sur le sens, les valeurs et la foi (perspective chrétienne).
-                Ouvert à tous. Tu peux changer d'avis quand tu veux.
+                Zayado peut aussi t'accompagner sur le sens et la foi (perspective chrétienne), avec <b className="text-offwhite">TheSustain</b>.
+                C'est facultatif et tu peux changer d'avis quand tu veux. Les membres TheSustain ont −30 % sur les offres.
               </p>
               <div className="mt-5 space-y-2.5">
                 <Ligne actif={foiChoix === "non"} onClick={() => setFoiChoix("non")} testid="onboarding-foi-non">Non merci</Ligne>

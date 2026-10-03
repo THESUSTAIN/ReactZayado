@@ -14,13 +14,190 @@ import {
   Heart, Battery, Activity, Moon, Wind, Coffee, BookOpen, Music,
   Sparkles, ChevronRight, Plus, Check, Waves, Cloud, Leaf, Play,
   TrendingUp, Zap, Flame, Volume2, Square, Smile, PenLine, Loader2,
-  Sun, Route, Wrench, NotebookPen, CalendarPlus, X,
+  Sun, Route, Wrench, NotebookPen, CalendarPlus, X, ShoppingBag, ExternalLink, FileDown, ListChecks, ClipboardCheck,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useKairos } from "@/context/KairosContext";
 import { EnergyCheckin } from "@/components/kairos/EnergyCheckin";
+import { telechargerBilanPdf } from "@/lib/bilanPdf";
 import { fetchState, completerCheckin, fetchRituels, basculerRituel, fetchCourbeEnergie, fetchWheel, saveProfile, bloquerPause } from "@/lib/kairosApi";
+
+// ── Recommandations boutique (reliées à la boutique Zayado) ──
+// Tant que la boutique n'est pas lancée : section « Bientôt », sans lien actif ni faux produit.
+// Le jour du lancement : passer BOUTIQUE_OUVERTE à true, le bouton ouvre la boutique.
+const BOUTIQUE_URL = "https://zayado.net/boutique";
+const BOUTIQUE_OUVERTE = false;
+
+function BoutiqueRecos() {
+  return (
+    <section data-testid="boutique-recos">
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: L_MUTED }}>Recommandations boutique</p>
+          <h2 className="font-display text-[22px] font-semibold" style={{ color: L_NAVY }}>Ce que ton énergie suggère</h2>
+        </div>
+        {BOUTIQUE_OUVERTE ? (
+          <a href={BOUTIQUE_URL} target="_blank" rel="noopener noreferrer" className="be-btn-navy inline-flex items-center gap-1.5" data-testid="visit-shop-btn">
+            <ShoppingBag size={13} /> Visiter la boutique <ExternalLink size={12} />
+          </a>
+        ) : (
+          <button type="button" disabled aria-disabled="true" className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-full border px-4 py-2 text-[13px] font-semibold opacity-60"
+            style={{ borderColor: "var(--be-card-border)", color: L_NAVY }} data-testid="visit-shop-btn">
+            <ShoppingBag size={13} /> Visiter la boutique · bientôt
+          </button>
+        )}
+      </div>
+      <div className="be-card flex items-start gap-4" data-testid="boutique-recos-bientot">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl" style={{ background: "var(--be-accent-soft)", color: L_GOLD }}><ShoppingBag size={20} /></span>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-[15px] font-semibold" style={{ color: L_NAVY }}>Des produits choisis selon ton énergie et ton stress</p>
+            {!BOUTIQUE_OUVERTE && <span className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em]" style={{ background: "var(--be-accent-soft)", color: L_GOLD }} data-testid="boutique-bientot">Bientôt</span>}
+          </div>
+          <p className="mt-1 text-[13px]" style={{ color: L_MUTED }}>La boutique Zayado ouvre prochainement. Tes recommandations, avec la raison de chaque conseil, apparaîtront ici.</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── Verdict du co-pilote : règle simple et lisible, à partir du check-in du jour (aucun chiffre inventé) ──
+function verdictDuJour(vitals) {
+  const { energy: e, clarte: c, stress: st } = vitals || {};
+  if (e == null) return null;
+  if (e <= 2 || (st != null && st >= 4)) {
+    return { charge: "Légère", couleur: "#B9524E", phrase: "Énergie basse ou stress élevé : on protège ta journée.", conseils: ["Aucune décision importante aujourd'hui", "Une seule tâche essentielle", "Une vraie pause de 20 min"], mot: "On ralentit pour mieux repartir." };
+  }
+  if (e >= 4 && (c == null || c >= 4) && (st == null || st <= 2)) {
+    return { charge: "Soutenue", couleur: "#3E7D5A", phrase: "Énergie et clarté au rendez-vous : c'est ta fenêtre pour le sérieux.", conseils: ["Ta décision stratégique, avant midi", "Confie 3 tâches répétitives à l'IA", "Protège 2 h sans notifications"], mot: "Ce soir, tu seras content·e d'avoir osé." };
+  }
+  return { charge: "Modérée", couleur: "#B38A4E", phrase: "Une journée correcte : garde l'important pour ta meilleure heure.", conseils: ["1 décision importante maximum", "3 tâches à valider (15 min)", "Garde l'après-midi pour le léger"], mot: "On ralentit pour décider juste." };
+}
+
+function VerdictCopilote({ vitals, onVital, onCheckin }) {
+  const v = verdictDuJour(vitals);
+  return (
+    <section className="be-card" data-testid="bienetre-verdict">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: L_MUTED }}>Ton verdict du jour</p>
+      {!v ? (
+        <div className="py-4">
+          <p className="font-display text-[20px] font-semibold" style={{ color: L_NAVY }}>Comment te sens-tu aujourd'hui ?</p>
+          <p className="mt-1 text-[13px]" style={{ color: L_MUTED }}>Ton check-in (30 secondes) permet au co-pilote d'adapter la charge de ta journée.</p>
+          <button onClick={onCheckin} className="be-btn-navy mt-3" data-testid="bienetre-verdict-checkin">Faire mon check-in</button>
+        </div>
+      ) : (
+        <div className="grid gap-5 md:grid-cols-[1fr_1.2fr]">
+          <div>
+            <p className="mt-1 font-display text-[22px] font-semibold" style={{ color: L_NAVY }}>Charge suggérée : <span style={{ color: v.couleur }} data-testid="bienetre-verdict-charge">{v.charge}</span></p>
+            <p className="mt-1 text-[13px]" style={{ color: L_MUTED }}>{v.phrase}</p>
+            <p className="mt-4 text-[11.5px] font-semibold uppercase tracking-[0.14em]" style={{ color: L_MUTED }}>Clarté mentale</p>
+            <div className="mt-1.5 flex gap-1.5" data-testid="bienetre-clarte">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button key={n} onClick={() => onVital("clarte", n)} aria-label={`Clarté ${n} sur 5`}
+                  className="h-9 w-9 rounded-full border text-[13px] font-semibold transition"
+                  style={{ borderColor: "var(--be-card-border)", color: vitals?.clarte === n ? "#fff" : L_NAVY, background: vitals?.clarte === n ? "var(--be-ink)" : "transparent" }}>{n}</button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <ul className="space-y-1.5">
+              {v.conseils.map((t) => <li key={t} className="flex items-start gap-2 text-[14px]" style={{ color: L_NAVY }}><Check size={14} className="mt-1 shrink-0" style={{ color: L_GOLD }} />{t}</li>)}
+            </ul>
+            <p className="mt-3 text-[12.5px] italic" style={{ color: L_MUTED }}>« {v.mot} »</p>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ── Bandeau Plan d'action : relie Bien-être aux actions (compteurs réels) ──
+function BandeauTaches({ taches, vitals }) {
+  if (!taches || taches.faites + taches.en_cours + taches.a_faire === 0) return null;
+  const basse = vitals?.energy != null && (vitals.energy <= 2 || (vitals.stress != null && vitals.stress >= 4));
+  return (
+    <div className="be-card flex flex-wrap items-center justify-between gap-3" data-testid="bienetre-bandeau-taches">
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl" style={{ background: "var(--be-accent-soft)", color: L_GOLD }}><ListChecks size={18} /></span>
+        <div className="min-w-0">
+          <p className="text-[14px] font-semibold" style={{ color: L_NAVY }}>{taches.faites} action{taches.faites > 1 ? "s" : ""} faite{taches.faites > 1 ? "s" : ""} · {taches.en_cours} en cours · {taches.a_faire} à faire</p>
+          <p className="text-[12.5px]" style={{ color: L_MUTED }}>{basse ? "Énergie ou stress à surveiller : choisis une seule action aujourd'hui." : "Choisis tes priorités du jour dans ton Plan d'action."}</p>
+        </div>
+      </div>
+      <Link to="/app/actions" className="rounded-full border px-4 py-2 text-[13px] font-semibold" style={{ borderColor: "var(--be-card-border)", color: L_NAVY }} data-testid="bienetre-bandeau-actions">Voir mes actions</Link>
+    </div>
+  );
+}
+
+// ── Courbe énergie & stress, 7 ou 30 jours (vraies mesures ; un jour sans check-in reste vide) ──
+function CourbeCard({ courbe, onPdf }) {
+  const [duree, setDuree] = useState(7);
+  const pts = (courbe?.jours30 || []).slice(-duree);
+  const W = 600, H = 170, PX = 28, PY = 14;
+  const x = (i) => PX + (i / Math.max(pts.length - 1, 1)) * (W - 2 * PX);
+  const y = (v) => H - PY - ((v - 1) / 4) * (H - 2 * PY);
+  const chemin = (cle) => {
+    let d = "", ouvert = false;
+    pts.forEach((p, i) => { const v = p[cle]; if (v == null) { ouvert = false; return; } d += `${ouvert ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)} `; ouvert = true; });
+    return d;
+  };
+  const mesures = pts.filter((p) => p.energie != null).length;
+  return (
+    <section className="be-card" data-testid="bienetre-courbe-30">
+      <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: L_MUTED }}>Énergie & stress · {duree} derniers jours</p>
+          <h2 className="font-display text-[22px] font-semibold" style={{ color: L_NAVY }}>Voir où tu en es vraiment</h2>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="inline-flex rounded-full border p-0.5" style={{ borderColor: "var(--be-card-border)" }} data-testid="bienetre-courbe-toggle">
+            {[7, 30].map((n) => (
+              <button key={n} onClick={() => setDuree(n)} className="rounded-full px-3 py-1 text-[12px] font-semibold"
+                style={{ background: duree === n ? "var(--be-ink)" : "transparent", color: duree === n ? "#fff" : L_NAVY }} data-testid={`bienetre-courbe-${n}j`}>{n} j</button>
+            ))}
+          </div>
+          <button onClick={onPdf} className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-semibold" style={{ borderColor: "var(--be-card-border)", color: L_NAVY }} data-testid="bienetre-bilan-pdf">
+            <FileDown size={13} /> Bilan PDF
+          </button>
+        </div>
+      </div>
+      {mesures === 0 ? (
+        <p className="py-10 text-center text-[13px]" style={{ color: L_MUTED }}>Ta courbe se dessine ici après tes premiers check-ins.</p>
+      ) : (
+        <>
+          <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Courbe d'énergie et de stress">
+            {[1, 3, 5].map((v) => <g key={v}><line x1={PX} x2={W - PX} y1={y(v)} y2={y(v)} stroke="currentColor" strokeOpacity="0.12" strokeDasharray="3 4" /><text x={4} y={y(v) + 3} fontSize="10" fill="currentColor" opacity="0.5">{v}</text></g>)}
+            <path d={chemin("stress")} fill="none" stroke="#B9524E" strokeWidth="2" strokeDasharray="4 4" />
+            <path d={chemin("energie")} fill="none" stroke="#1F3A68" strokeWidth="2.5" />
+            {pts.map((p, i) => p.energie != null && <circle key={p.date} cx={x(i)} cy={y(p.energie)} r="3" fill="#1F3A68"><title>{`${p.date} · énergie ${p.energie}/5`}</title></circle>)}
+          </svg>
+          <div className="mt-1 flex items-center justify-between text-[11.5px]" style={{ color: L_MUTED }}>
+            <span>{mesures} jour{mesures > 1 ? "s" : ""} mesuré{mesures > 1 ? "s" : ""} sur {duree}</span>
+            <span className="flex items-center gap-3"><span><span style={{ color: "#1F3A68" }}>●</span> Énergie</span><span><span style={{ color: "#B9524E" }}>●</span> Stress</span></span>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+// ── Bilan de semaine : c'est la Revue hebdomadaire (pas de doublon) ──
+function CarteVendredi() {
+  const vendredi = new Date().getDay() === 5;
+  return (
+    <section className="be-card flex flex-wrap items-center justify-between gap-3" data-testid="bienetre-carte-vendredi">
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl" style={{ background: "var(--be-accent-soft)", color: L_GOLD }}><ClipboardCheck size={18} /></span>
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: L_MUTED }}>Bilan de semaine · vendredi</p>
+          <p className="text-[15px] font-semibold" style={{ color: L_NAVY }}>{vendredi ? "C'est vendredi : 5 minutes pour faire le point." : "Chaque vendredi, 5 minutes pour faire le point."}</p>
+        </div>
+      </div>
+      <Link to="/app/revue" className={vendredi ? "be-btn-navy" : "rounded-full border px-4 py-2 text-[13px] font-semibold"} style={vendredi ? undefined : { borderColor: "var(--be-card-border)", color: L_NAVY }} data-testid="bienetre-vendredi-lien">Ouvrir ma revue hebdo</Link>
+    </section>
+  );
+}
 
 const GOLD = "#DEC2A3";
 const MOOD_FACES = ["😞", "🙁", "😐", "🙂", "😊"];
@@ -115,7 +292,7 @@ export default function BienEtre() {
     const duJour = v && v.date === today;
     setVitals({
       energy: d.energy?.a_checkin && duJour ? d.energy.score : null,
-      stress: duJour ? v.stress : null, sleep: duJour ? v.sommeil : null, load: duJour ? v.charge : null,
+      stress: duJour ? v.stress : null, sleep: duJour ? v.sommeil : null, load: duJour ? v.charge : null, clarte: duJour ? (v.clarte ?? null) : null,
     });
   }).catch(() => setVitals({}));
 
@@ -139,11 +316,20 @@ export default function BienEtre() {
   };
 
   const saveVital = async (k, v) => {
-    const champ = { stress: "stress", sleep: "sommeil", load: "charge" }[k];
+    const champ = { stress: "stress", sleep: "sommeil", load: "charge", clarte: "clarte" }[k];
     if (!champ) return;
     setVitals((x) => ({ ...x, [k]: v }));
     try { await completerCheckin({ [champ]: v }); }
     catch { toast.error("Fais d'abord ton check-in énergie du jour."); setEnergieOpen(true); chargerVitals(); }
+  };
+
+  // Clarté mentale : un seul geste (comme stress/sommeil), après le check-in du jour.
+  const ouvrirClarte = (k, v) => { if (vitals?.energy == null) { setEnergieOpen(true); return; } saveVital(k, v); };
+  const exporterBilan = async () => {
+    try {
+      const st = await fetchState().catch(() => null);
+      telechargerBilanPdf({ prenom: st?.profile?.prenom || "", jours30: courbe?.jours30 || [], taches: courbe?.taches || null, serie, verdict: verdictDuJour(vitals) });
+    } catch { toast.error("Impossible de créer le PDF pour le moment."); }
   };
 
   const toggleRitual = async (id) => {
@@ -232,6 +418,10 @@ export default function BienEtre() {
                   <RoueCard />
                 </div>
 
+                <VerdictCopilote vitals={vitals} onVital={ouvrirClarte} onCheckin={() => setEnergieOpen(true)} />
+                <BandeauTaches taches={courbe?.taches} vitals={vitals} />
+                <CourbeCard courbe={courbe} onPdf={exporterBilan} />
+
                 <div className="be-suggestion" data-testid="bienetre-suggestion">
                   <div className="min-w-0">
                     <p className="font-display text-[20px] font-semibold" style={{ color: L_NAVY }}>Suggestion du moment</p>
@@ -290,6 +480,10 @@ export default function BienEtre() {
                 </div>
 
                 <MindsetAujourdhui onOuvrirParcours={(id) => allerA("parcours", id)} onOuvrirCarnet={() => allerA("carnet")} />
+
+                <CarteVendredi />
+
+                <BoutiqueRecos />
               </div>
             )}
 

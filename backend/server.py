@@ -558,6 +558,7 @@ class VisionCheckin(Base):
     sommeil: Mapped[int] = mapped_column(Integer, default=3)
     charge: Mapped[int] = mapped_column(Integer, default=3)
     mood: Mapped[str] = mapped_column(String(30), nullable=True)
+    clarte: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # clarté mentale 1-5 (page Bien-être)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
@@ -1848,7 +1849,7 @@ async def get_state(db: AsyncSession = Depends(get_db)):
         "profile": {"prenom": profil.prenom or "", "heure_checkin": profil.heure_checkin, "plan": profil.plan, "notifications": bool(profil.notifications), "fuseau": profil.fuseau, "email": profil.email or "", "plan_en_attente": plan_attente},
         "vision": {"texte": profil.texte_vision or "", "pourquoi": profil.pourquoi or "", "valeurs": profil.valeurs or [], "contexte_metier": getattr(profil, "contexte_metier", None) or {}},
         "energy": {"score": energie, "mood": (dernier.mood if dernier else "aligné"), "mode": mode_energie(energie), "recuperation": est_recup(energie), "a_checkin": dernier is not None,
-                   "vitals": ({"date": dernier.date, "stress": dernier.stress or None, "sommeil": dernier.sommeil or None, "charge": dernier.charge or None} if dernier else None)},
+                   "vitals": ({"date": dernier.date, "stress": dernier.stress or None, "sommeil": dernier.sommeil or None, "charge": dernier.charge or None, "clarte": getattr(dernier, "clarte", None)} if dernier else None)},
         "balance": _equilibre_reel(balance, checkins),
         "priorities": [
             {"id": t.id, "title": t.titre, "duration": t.duree_min, "progress": t.progression, "icon": t.icon, "done": t.statut == "fait"}
@@ -1932,6 +1933,7 @@ class CheckinIn(BaseModel):
 
 
 class VitalsIn(BaseModel):
+    clarte: Optional[int] = Field(default=None, ge=1, le=5)
     stress: Optional[int] = Field(default=None, ge=1, le=5)
     sommeil: Optional[int] = Field(default=None, ge=1, le=5)
     charge: Optional[int] = Field(default=None, ge=1, le=5)
@@ -1963,7 +1965,7 @@ async def completer_checkin(body: VitalsIn, db: AsyncSession = Depends(get_db)):
     existant = (await db.execute(select(VisionCheckin).where(VisionCheckin.user_id == uid, VisionCheckin.date == today_iso()))).scalar_one_or_none()
     if not existant:
         raise HTTPException(409, "Fais d'abord ton check-in énergie du jour.")
-    for champ in ("charge", "stress", "sommeil"):
+    for champ in ("charge", "stress", "sommeil", "clarte"):
         if getattr(body, champ) is not None:
             setattr(existant, champ, getattr(body, champ))
     await db.commit()
@@ -4682,6 +4684,7 @@ async def _migrer_colonnes() -> None:
         ("users", "mois_offerts_dus", "INTEGER DEFAULT 0"),
         ("referrals", "recompense_type", "VARCHAR(20) DEFAULT 'mois_offert'"),
         ("referrals", "recompense_valeur", "FLOAT DEFAULT 0"),
+        ("vision_checkins", "clarte", "INTEGER"),
     ]
     for table, col, typ in ajouts:
         try:

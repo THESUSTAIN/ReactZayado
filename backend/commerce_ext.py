@@ -194,6 +194,7 @@ def install_commerce(g: dict) -> None:
         thesustain = bool(p is not None and isinstance(getattr(p, "contexte_metier", None), dict)
                           and p.contexte_metier.get("thesustain_sso"))
         base = {"plan_en_attente": attente, "essai": essai, "thesustain": thesustain,
+                "remise_thesustain": _remise_thesustain() if thesustain else 0,
                 "acces": "actif" if (actif or role_interne or equipe) else "aucun",
                 "en_essai": bool(actif and a.cycle == "essai"), "equipe": equipe, "role_interne": role_interne}
         if not a:
@@ -242,6 +243,24 @@ def install_commerce(g: dict) -> None:
         # (TTC = HT ici). On ne rajoute plus de TVA dessus, quoi que contienne
         # une éventuelle variable TVA_TAUX historique sur Railway.
         return 0.0
+
+    def _remise_thesustain() -> float:
+        """Remise automatique des membres TheSustain (connexion SSO) sur la grille : 30 % par défaut.
+        Réglable sur Railway (THESUSTAIN_REMISE_PCT, 0 pour couper), sans toucher au code."""
+        try:
+            v = float(os.environ.get("THESUSTAIN_REMISE_PCT", "30"))
+        except ValueError:
+            v = 30.0
+        return min(max(v, 0.0), 90.0) / 100.0
+
+    async def _remise_membre(db, uid: str) -> float:
+        """Remise applicable à CE compte : celle de TheSustain si le compte s'est connecté via TheSustain."""
+        VP = g.get("VisionProfile")
+        if VP is None or not uid or uid == DEMO_USER_ID:
+            return 0.0
+        p = (await db.execute(select(VP).where(VP.user_id == uid))).scalar_one_or_none()
+        cm = (getattr(p, "contexte_metier", None) or {}) if p else {}
+        return _remise_thesustain() if isinstance(cm, dict) and cm.get("thesustain_sso") else 0.0
 
     def _frontend_url() -> str:
         return os.environ.get("PUBLIC_FRONTEND_URL", "https://app.zayado.net").rstrip("/")
@@ -379,11 +398,20 @@ def install_commerce(g: dict) -> None:
         user = None if uid == DEMO_USER_ID else await db.get(User, uid)
         if not user:
             raise HTTPException(401, "Connecte-toi avant de souscrire.")
+        # Membre TheSustain : -30 % automatique sur la grille. Jamais cumulé avec le tarif fondateur :
+        # on encaisse le prix le plus bas des deux.
+        remise = await _remise_membre(db, uid)
+        membre = False
+        if remise > 0:
+            brut = float(plan["ttc"][body.cycle]) if plan.get("ttc") else round(float(plan[body.cycle]) * (1 + tva), 2)
+            remisé = round(brut * (1 - remise), 2)
+            if remisé < amount:
+                amount, amount_ht, membre = remisé, round(remisé / (1 + tva), 2), True
         order = CommerceOrder(user_id=uid, email=(body.email or user.email).strip().lower(), kind="saas",
-                              title=f"Zayado {plan['label']}{' (tarif fondateur)' if fondateur else ''} · {body.cycle} · TTC", amount=f"{amount:.2f}",
+                              title=f"Zayado {plan['label']}{' (tarif fondateur)' if fondateur and not membre else ''}{' (membre TheSustain -' + str(round(remise * 100)) + ' %)' if membre else ''} · {body.cycle} · TTC", amount=f"{amount:.2f}",
                               access_url=f"{_frontend_url()}/app",
                               metadata_json={"plan": body.plan.lower(), "cycle": body.cycle, "montant_ht": f"{amount_ht:.2f}", "tva_taux": tva,
-                                             "fondateur": fondateur, "recurrent_ttc": f"{amount:.2f}",
+                                             "fondateur": fondateur and not membre, "membre_thesustain": membre, "recurrent_ttc": f"{amount:.2f}",
                                              "intervalle": "12 months" if body.cycle == "annuel" else "1 month"})
         db.add(order)
         await db.flush()
@@ -414,6 +442,10 @@ def install_commerce(g: dict) -> None:
         # Après l'essai : prélèvement mensuel automatique (tarif fondateur s'il est réservé).
         ht_suite = PRIX_FONDATEUR[conf["plan"]]["mensuel"] if fondateur else float(pricing.get(conf["plan"], {}).get("mensuel") or 0)
         suite = round(ht_suite * (1 + _tva()), 2)
+        remise = await _remise_membre(db, uid)
+        if remise > 0:
+            brut = round(float(pricing.get(conf["plan"], {}).get("mensuel") or 0) * (1 + _tva()), 2)
+            suite = min(suite, round(brut * (1 - remise), 2))
         order = CommerceOrder(user_id=uid, email=(body.email or user.email).strip().lower(), kind="saas",
                               title=f"Zayado {label} · essai {conf['jours'] // 30} mois · TTC", amount=f"{prix:.2f}",
                               access_url=f"{_frontend_url()}/app",

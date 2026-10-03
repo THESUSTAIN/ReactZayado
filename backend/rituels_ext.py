@@ -143,9 +143,31 @@ def install_rituels(g: dict) -> None:
             VisionCheckin.user_id == uid, VisionCheckin.date >= (auj - timedelta(days=27)).isoformat())
             .order_by(VisionCheckin.date))).scalars())
         par_date = {r.date: r.energie for r in rows}
-        par_date_stress = {r.date: r.stress for r in rows}
+        # stress / clarté : 0 ou vide = non renseigné (jamais un faux chiffre).
+        par_date_stress = {r.date: (r.stress or None) for r in rows}
+        par_date_clarte = {r.date: getattr(r, "clarte", None) for r in rows}
         semaine = []
         for i in range(6, -1, -1):
             d = auj - timedelta(days=i)
             semaine.append({"date": d.isoformat(), "jour": JOURS[d.weekday()][:3], "energie": par_date.get(d.isoformat()), "stress": par_date_stress.get(d.isoformat())})
-        return {"semaine": semaine, "analyse": analyse_semaine([(r.date, r.energie) for r in rows])}
+        # 30 derniers jours (courbe énergie + stress) : seulement les vraies mesures.
+        rows30 = list((await db.execute(select(VisionCheckin).where(
+            VisionCheckin.user_id == uid, VisionCheckin.date >= (auj - timedelta(days=29)).isoformat())
+            .order_by(VisionCheckin.date))).scalars())
+        p30 = {r.date: r for r in rows30}
+        jours30 = []
+        for i in range(29, -1, -1):
+            d = auj - timedelta(days=i)
+            r = p30.get(d.isoformat())
+            jours30.append({"date": d.isoformat(), "energie": r.energie if r else None,
+                            "stress": (r.stress or None) if r else None,
+                            "clarte": getattr(r, "clarte", None) if r else None})
+        # Actions du Plan d'action (compteurs réels ; pas de date de validation en base).
+        taches = {"faites": 0, "en_cours": 0, "a_faire": 0}
+        VT = g.get("VisionTache")
+        if VT is not None:
+            for st in (await db.execute(select(VT.statut).where(VT.user_id == uid))).scalars():
+                cle = {"fait": "faites", "en_cours": "en_cours"}.get(st, "a_faire")
+                taches[cle] += 1
+        return {"semaine": semaine, "jours30": jours30, "taches": taches,
+                "analyse": analyse_semaine([(r.date, r.energie) for r in rows])}

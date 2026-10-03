@@ -383,7 +383,7 @@ export default function Login() {
             {!options.thesustain && <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-offwhite/60">bientôt</span>}
           </button>
           <p className="mt-1.5 text-center text-[10.5px] leading-relaxed text-offwhite/45" data-testid="login-thesustain-note">
-            TheSustain est la plateforme partenaire de Zayado — un espace « sens & valeurs » ouvert à tous, chrétiens comme simples curieux.
+            Membre TheSustain ? −30 % sur les offres Zayado, appliqué automatiquement dès ta première connexion.
           </p>
 
           <div className="my-4 flex items-center gap-3 text-[11px] uppercase tracking-[0.2em] text-offwhite/40">

@@ -60,7 +60,13 @@ export default function Activer() {
   }, [validation, pret]);
 
   const essayer = async () => { setEnvoi(true); if (!(await lancerPaiement(ESSAI.plan, { essai: true }))) setEnvoi(false); };
-  const apres = fonda?.ouverte ? prixFondateurMois(solo, "mensuel") : solo.mensuel;
+  // Membre TheSustain : -X % automatique (valeur du serveur), jamais cumulé avec le tarif fondateur.
+  const remise = abo?.thesustain ? Number(abo.remise_thesustain) || 0 : 0;
+  const prixApres = (p) => {
+    const normal = fonda?.ouverte && p.fondateur ? p.fondateur.mensuel : p.mensuel;
+    return remise > 0 ? Math.min(normal, Math.round(p.mensuel * (1 - remise) * 100) / 100) : normal;
+  };
+  const apres = prixApres(solo);
   // Formule déjà choisie à l'onboarding : on ne repropose pas les tarifs, on finalise.
   const choisi = abo?.plan_en_attente && abo.plan_en_attente !== "essentielle" ? abo.plan_en_attente : null;
   const offreChoisie = choisi ? PLANS.find((p) => p.key === choisi) : null;
@@ -163,7 +169,7 @@ export default function Activer() {
             <p className="mt-2 text-[14px] text-offwhite/70">
               {choisi === "entreprise" ? "L'équipe Zayado te recontacte pour préparer ton offre."
                 : choixEssai ? `${ESSAI.prix} € ${essaiPeriode()}, puis ${apres} € ${taxe(solo)} / mois. Sans engagement, résiliable en 1 clic.`
-                : offreChoisie ? `${fonda?.ouverte ? prixFondateurMois(offreChoisie, "mensuel") : offreChoisie.mensuel} € ${taxe(offreChoisie)} / mois. Sans engagement.` : ""}
+                : offreChoisie ? `${prixApres(offreChoisie)} € ${taxe(offreChoisie)} / mois. Sans engagement.` : ""}
             </p>
             {choisi !== "entreprise" && (
               <button onClick={finaliser} disabled={envoi} className="mt-5 inline-flex h-12 items-center gap-2 rounded-full bg-gradient-to-b from-[#F1E2CC] to-[#DEC2A3] px-7 text-[15px] font-semibold text-navy-900 disabled:opacity-60" data-testid="activer-finaliser">
@@ -180,7 +186,7 @@ export default function Activer() {
           <div className="mt-8 rounded-[24px] border border-gold/45 bg-white/[0.10] p-6 backdrop-blur-xl sm:p-8" data-testid="activer-essai">
             <p className="inline-flex rounded-full bg-gold px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-navy-900">Essai Solo</p>
             <p className="mt-4 font-display text-5xl font-extrabold">{ESSAI.prix} €<span className="ml-2 text-lg font-normal text-offwhite/60">{essaiPeriode()}</span></p>
-            <p className="mt-2 text-[14px] text-offwhite/70">puis {apres} € {taxe(solo)} / mois{fonda?.ouverte ? " — tarif fondateur réservé dès ton essai et garanti tant que tu restes abonné" : ""}. Le prélèvement démarre automatiquement à la fin de l'essai : tu reçois un rappel 7 jours avant et tu peux résilier en 1 clic.</p>
+            <p className="mt-2 text-[14px] text-offwhite/70">puis {apres} € {taxe(solo)} / mois{remise > 0 ? ` — −${Math.round(remise * 100)} % membre TheSustain appliqué` : fonda?.ouverte ? " — tarif fondateur réservé dès ton essai et garanti tant que tu restes abonné" : ""}. Le prélèvement démarre automatiquement à la fin de l'essai : tu reçois un rappel 7 jours avant et tu peux résilier en 1 clic.</p>
             <ul className="mt-5 grid gap-2 sm:grid-cols-2">
               {solo.points.slice(0, 6).map((pt) => <li key={pt} className="flex gap-2 text-[13.5px] text-offwhite/80"><Check size={15} className="mt-0.5 shrink-0 text-gold" />{pt}</li>)}
             </ul>

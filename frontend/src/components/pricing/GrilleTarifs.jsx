@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Check, ArrowRight, Loader2, Users, X, HelpCircle } from "lucide-react";
+import { Check, ArrowRight, Loader2, Users, X, HelpCircle, HandHeart } from "lucide-react";
 import { PLANS, PLANS_LANCEMENT, prixMois, prixFondateurMois, dateFinFr, ESSAI, essaiPeriode, taxe } from "@/lib/plans";
 import { fetchTarifsFondateur, getToken } from "@/lib/kairosApi";
 import { lancerPaiement } from "@/lib/checkout";
+import { chargerAbonnement } from "@/lib/acces";
 import Economies from "@/components/pricing/Economies";
 
 // Grille tarifaire UNIQUE : utilisée par la page /pricing de l'application et
@@ -29,15 +30,22 @@ function BoutonOffre({ o, cycle, essai, embed, className, children }) {
   return <Link to={chemin} data-testid={`pricing-cta-${o.key}`} className={className}>{children}</Link>;
 }
 
-function Carte({ o, cycle, fondateur, embed, onPourquoi }) {
+function Carte({ o, cycle, fondateur, embed, onPourquoi, remise = 0 }) {
   const prixNormal = prixMois(o, cycle);
-  const prixFonda = fondateur?.ouverte ? prixFondateurMois(o, cycle) : null;
-  const prix = prixFonda ?? prixNormal;
+  const prixFondaBrut = fondateur?.ouverte ? prixFondateurMois(o, cycle) : null;
+  // Membre TheSustain : -X % sur le prix normal, jamais cumulé avec le tarif fondateur (le plus bas l'emporte).
+  const remAn = remise > 0 ? Math.round(o.annuel * (1 - remise) * 100) / 100 : null;
+  const remMois = remise > 0 ? Math.round(o.mensuel * (1 - remise) * 100) / 100 : null;
+  const remCycle = remise > 0 ? (cycle === "annuel" ? remAn / 12 : remMois) : null;
+  const membreGagne = remCycle != null && (prixFondaBrut == null || remCycle < prixFondaBrut);
+  const prixFonda = membreGagne ? null : prixFondaBrut;
+  const prix = membreGagne ? remCycle : (prixFonda ?? prixNormal);
   const essai = o.key === ESSAI.plan;
-  const factureAn = prixFonda != null ? o.fondateur.annuel : o.annuel;
+  const factureAn = membreGagne ? remAn : (prixFonda != null ? o.fondateur.annuel : o.annuel);
+  const fmt = (n) => (Number.isInteger(n) ? String(n) : n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
   const classeBouton = `mt-5 w-full text-center ${o.star ? "btn-gold justify-center" : "btn-ghost justify-center"}`;
   const libelle = essai ? `Essayer ${ESSAI.mois} mois pour ${ESSAI.prix} €` : `Choisir ${o.nom}`;
-  const ensuite = cycle === "annuel" ? `${factureAn.toLocaleString("fr-FR")} € ${taxe(o)} / an` : `${prix} € ${taxe(o)} / mois`;
+  const ensuite = cycle === "annuel" ? `${factureAn.toLocaleString("fr-FR")} € ${taxe(o)} / an` : `${fmt(prix)} € ${taxe(o)} / mois`;
   return (
     <div className={`glass relative flex flex-col rounded-2xl p-6 ${o.star ? "border-gold/50 shadow-[0_20px_50px_-20px_rgba(222,194,163,0.3)] lg:-mt-3 lg:pb-9" : ""}`} data-testid={`pricing-${o.key}`}>
       {o.star && <p className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-gold px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-navy-900">{essai ? `${ESSAI.mois} mois pour ${ESSAI.prix} €` : "Le plus choisi"}</p>}
@@ -50,8 +58,8 @@ function Carte({ o, cycle, fondateur, embed, onPourquoi }) {
             {ESSAI.prix} €<span className="text-sm font-normal text-offwhite/60">{essaiPeriode()}</span>
           </p>
           <p className="mt-1.5 text-[12.5px] text-offwhite/70" data-testid={`pricing-fondateur-${o.key}`}>
-            puis {prixFonda != null && <span className="text-offwhite/40 line-through">{cycle === "annuel" ? `${o.annuel.toLocaleString("fr-FR")} €` : `${prixNormal} €`}</span>}{" "}
-            <b className="text-offwhite">{ensuite}</b>{prixFonda != null && <span className="text-gold"> · tarif fondateur garanti</span>}
+            puis {(prixFonda != null || membreGagne) && <span className="text-offwhite/40 line-through">{cycle === "annuel" ? `${o.annuel.toLocaleString("fr-FR")} €` : `${prixNormal} €`}</span>}{" "}
+            <b className="text-offwhite">{ensuite}</b>{prixFonda != null && <span className="text-gold"> · tarif fondateur garanti</span>}{membreGagne && <span className="text-gold"> · −{Math.round(remise * 100)} % membre TheSustain</span>}
           </p>
         </>
       ) : (
@@ -61,12 +69,17 @@ function Carte({ o, cycle, fondateur, embed, onPourquoi }) {
               Tarif fondateur · garanti tant que tu restes abonné
             </p>
           )}
+          {membreGagne && (
+            <p className="mt-3 inline-flex w-fit rounded-full border border-gold/40 bg-gold/10 px-2.5 py-0.5 text-[10.5px] font-semibold text-gold" data-testid={`pricing-membre-${o.key}`}>
+              −{Math.round(remise * 100)} % membre TheSustain
+            </p>
+          )}
           <p className="mt-3 flex items-baseline gap-2 font-display text-4xl font-extrabold">
-            {prixFonda != null && <span className="text-xl font-semibold text-offwhite/40 line-through decoration-2">{prixNormal} €</span>}
-            <span>{prix} €<span className="ml-1 text-sm font-normal text-offwhite/50">{taxe(o)} / mois</span></span>
+            {(prixFonda != null || membreGagne) && <span className="text-xl font-semibold text-offwhite/40 line-through decoration-2">{prixNormal} €</span>}
+            <span>{fmt(prix)} €<span className="ml-1 text-sm font-normal text-offwhite/50">{taxe(o)} / mois</span></span>
           </p>
           <p className="mt-1 text-[11px] text-offwhite/45" data-testid={`pricing-equivalent-${o.key}`}>
-            {cycle === "annuel" ? `facturé ${factureAn.toLocaleString("fr-FR")} € ${taxe(o)} / an` : `ou ${prixFonda != null ? prixFondateurMois(o, "annuel") : prixMois(o, "annuel")} € / mois en annuel`}
+            {cycle === "annuel" ? `facturé ${factureAn.toLocaleString("fr-FR")} € ${taxe(o)} / an` : `ou ${membreGagne ? fmt(remAn / 12) : prixFonda != null ? prixFondateurMois(o, "annuel") : prixMois(o, "annuel")} € / mois en annuel`}
           </p>
         </>
       )}
@@ -126,9 +139,11 @@ export function PourquoiPro({ onClose }) {
   );
 }
 
-function BandeauEquipe({ cycle, embed }) {
+function BandeauEquipe({ cycle, embed, remise = 0 }) {
   const eq = PLANS.find((p) => p.key === "business");
-  const prix = prixMois(eq, cycle);
+  const brut = prixMois(eq, cycle);
+  const prixR = remise > 0 ? Math.round((cycle === "annuel" ? eq.annuel / 12 : eq.mensuel) * (1 - remise) * 100) / 100 : null;
+  const prix = prixR != null ? prixR.toLocaleString("fr-FR", { maximumFractionDigits: 2 }) : brut;
   return (
     <div className="mx-auto mt-6 grid max-w-5xl gap-5 rounded-2xl border border-white/15 bg-white/[0.06] p-6 backdrop-blur-xl md:grid-cols-[1.3fr_1fr]" data-testid="pricing-equipe">
       <div>
@@ -156,12 +171,23 @@ export default function GrilleTarifs({ embed = false, offres = null, contact = t
   const [cycle, setCycle] = useState(cycleInitial);
   const [fondateur, setFondateur] = useState(null);
   const [pourquoi, setPourquoi] = useState(false);
+  // Membre TheSustain (connexion SSO) : remise automatique sur la grille, appliquée aussi à l'encaissement (serveur).
+  const [remise, setRemise] = useState(0);   // 0,3 = -30 % pour les membres TheSustain (valeur du serveur)
   useEffect(() => { fetchTarifsFondateur().then(setFondateur).catch(() => setFondateur(null)); }, []);
+  useEffect(() => {
+    if (embed || !getToken()) return;
+    chargerAbonnement().then((a) => setRemise(a?.thesustain ? Number(a.remise_thesustain) || 0 : 0)).catch(() => {});
+  }, [embed]);
   const liste = offres ? PLANS_LANCEMENT.filter((p) => offres.includes(p.key)) : PLANS_LANCEMENT;
   const colonnes = liste.length >= 3 ? "sm:grid-cols-2 lg:grid-cols-3 max-w-5xl" : liste.length === 2 ? "sm:grid-cols-2 max-w-3xl" : "max-w-md";
 
   return (
     <div>
+      {remise > 0 && !embed && (
+        <p className="mx-auto mb-6 flex w-fit max-w-full items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-4 py-1.5 text-center text-[12.5px] font-semibold text-gold" data-testid="pricing-membre-thesustain">
+          <HandHeart size={14} className="shrink-0" /> Membre TheSustain : −{Math.round(remise * 100)} % sur toutes les offres, appliqué automatiquement
+        </p>
+      )}
       <div className="text-center">
         <div className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 p-1" data-testid="pricing-cycle-toggle">
           <button onClick={() => setCycle("mensuel")} className={`rounded-full px-4 py-2 text-[12.5px] font-semibold transition ${cycle === "mensuel" ? "bg-gold text-navy-900" : "text-white/70"}`} data-testid="pricing-cycle-mensuel">Mensuel</button>
@@ -178,11 +204,11 @@ export default function GrilleTarifs({ embed = false, offres = null, contact = t
       )}
 
       <div className={`mx-auto mt-10 grid gap-5 ${colonnes}`}>
-        {liste.map((o) => <Carte key={o.key} o={o} cycle={cycle} fondateur={fondateur} embed={embed} onPourquoi={embed ? null : () => setPourquoi(true)} />)}
+        {liste.map((o) => <Carte key={o.key} o={o} cycle={cycle} fondateur={fondateur} embed={embed} remise={remise} onPourquoi={embed ? null : () => setPourquoi(true)} />)}
       </div>
       {pourquoi && <PourquoiPro onClose={() => setPourquoi(false)} />}
 
-      {contact && <BandeauEquipe cycle={cycle} embed={embed} />}
+      {contact && <BandeauEquipe cycle={cycle} embed={embed} remise={remise} />}
       {contact && (
         <p className="mx-auto mt-4 max-w-5xl text-center text-[12.5px] text-offwhite/55" data-testid="pricing-plus-entreprise">
           Plus de 3 personnes ? <a href="mailto:contact@zayado.net?subject=Offre Entreprise" target={embed ? "_top" : undefined} className="font-semibold text-gold hover:underline" data-testid="pricing-plus-cta-entreprise">Offre Entreprise sur devis</a>
