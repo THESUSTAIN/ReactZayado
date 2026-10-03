@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { chargerAbonnement } from "@/lib/acces";
-import { BatteryMedium, Search, Moon, Sun, Mail, Bell, MessageCircle, Radio, CheckSquare, HelpCircle, Settings, LogOut, User, ShieldCheck, ChevronDown, CornerDownLeft, Compass, Flame, MailOpen, CalendarCheck } from "lucide-react";
+import { BatteryMedium, Search, Moon, Sun, Mail, Bell, MessageCircle, Radio, CheckSquare, HelpCircle, Settings, LogOut, User, ShieldCheck, ChevronDown, CornerDownLeft, Compass, Flame, MailOpen, CalendarCheck, CheckCheck } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuGroup,
@@ -11,6 +11,19 @@ import { useKairos } from "@/context/KairosContext";
 // Cache des indicateurs de la cloche (partagé entre les montages du Header,
 // qui change à chaque page) — évite que le compteur « saute ».
 let _notifCache = null;
+// Boîte de notifications du serveur (réponses de l'IA, actu du jour, relances) : même principe de cache,
+// + mémoire des identifiants déjà vus pour ne sonner qu'une fois par nouvelle notification.
+let _inboxCache = null;
+let _inboxIds = null;
+const ilYa = (iso) => {
+  const min = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (!Number.isFinite(min)) return "";
+  if (min < 1) return "à l'instant";
+  if (min < 60) return `il y a ${min} min`;
+  if (min < 1440) return `il y a ${Math.round(min / 60)} h`;
+  const j = Math.round(min / 1440);
+  return j === 1 ? "hier" : `il y a ${j} j`;
+};
 import { EnergyCheckin } from "./EnergyCheckin";
 import { getToken } from "@/lib/kairosApi";
 import { LanguageSwitcher } from "./LanguageSwitcher";
@@ -18,7 +31,10 @@ import ChoixEspace from "./ChoixEspace";
 import { apercuPlan, setApercuPlan, NOMS_OFFRES } from "@/lib/droits";
 import { enPro } from "@/lib/espace";
 import { useI18n } from "@/i18n";
-import { fetchActualite, fetchDecisions, setToken, fetchRituels, fetchLettres, fetchMoi } from "@/lib/kairosApi";
+import { fetchActualite, fetchDecisions, setToken, fetchRituels, fetchLettres, fetchMoi, fetchNotifications, marquerNotifLue, toutMarquerLu } from "@/lib/kairosApi";
+import { prechargerActu } from "@/lib/actuCache";
+import { signaler, signalRecent, ouvrirAdresse } from "@/lib/alertes";
+import NotifsAppareil from "./NotifsAppareil";
 import { openChat } from "./GlobalChat";
 import { startTour } from "./GuidedTour";
 
@@ -214,10 +230,56 @@ export function Header() {
     });
     return () => { on = false; };
   }, []);
-  const notifCount = enRepos
+  // Notifications du serveur. Sondage toutes les 45 s tant que l'onglet est visible, et au retour sur l'onglet :
+  // une nouvelle notification fait un petit son + un bandeau (c'est ce qui manquait quand l'app est ouverte sur PC).
+  const [inbox, setInbox] = useState(() => _inboxCache ?? { items: [], non_lues: 0 });
+  const rafraichirInbox = useCallback(async () => {
+    if (!getToken()) return;
+    try {
+      const d = await fetchNotifications();
+      const items = d?.items || [];
+      const premiere = _inboxIds === null;
+      const nouvelles = items.filter((i) => !i.lu && !(_inboxIds && _inboxIds.has(i.id)));
+      _inboxIds = new Set([...(_inboxIds || []), ...items.map((i) => i.id)]);
+      if (!premiere && nouvelles.length && !signalRecent()) {
+        const n = nouvelles[0];
+        signaler({ titre: n.titre, corps: n.corps, url: n.url, tag: n.kind });
+      }
+      _inboxCache = { items, non_lues: d?.non_lues || 0 };
+      setInbox(_inboxCache);
+    } catch { /* réseau coupé : on réessaiera */ }
+  }, []);
+  useEffect(() => {
+    if (!getToken()) return undefined;
+    rafraichirInbox();
+    const id = setInterval(() => { if (document.visibilityState === "visible") rafraichirInbox(); }, 45000);
+    const retour = () => { if (document.visibilityState === "visible") rafraichirInbox(); };
+    document.addEventListener("visibilitychange", retour);
+    window.addEventListener("focus", retour);
+    return () => { clearInterval(id); document.removeEventListener("visibilitychange", retour); window.removeEventListener("focus", retour); };
+  }, [rafraichirInbox]);
+  // Le bref du jour est préparé dès l'ouverture de l'app : le chat l'affiche tout de suite, sans attente.
+  useEffect(() => { if (loaded && getToken()) prechargerActu(contexte); }, [loaded]); // eslint-disable-line react-hooks/exhaustive-deps
+  const inboxNonLues = inbox.items.filter((n) => !n.lu);
+  const actuDansInbox = inboxNonLues.some((n) => n.kind === "actu");
+  const ouvrirNotif = (n) => {
+    if (!n.lu) {
+      marquerNotifLue(n.id).catch(() => {});
+      const maj = { items: inbox.items.map((x) => (x.id === n.id ? { ...x, lu: true } : x)), non_lues: Math.max(0, inbox.non_lues - 1) };
+      _inboxCache = maj; setInbox(maj);
+    }
+    if (n.kind === "actu") { localStorage.setItem("actualite_vue_le", new Date().toISOString().slice(0, 10)); setActuNonVue(false); }
+    ouvrirAdresse(n.url);
+  };
+  const toutLu = () => {
+    toutMarquerLu().catch(() => {});
+    const maj = { items: inbox.items.map((x) => ({ ...x, lu: true })), non_lues: 0 };
+    _inboxCache = maj; setInbox(maj);
+  };
+  const notifCount = inboxNonLues.length + (actuNonVue && actuDansInbox ? -1 : 0) + (enRepos
     ? (actuNonVue ? 1 : 0) + decisionsEnAttente + (lettrePrete ? 1 : 0)
     : (actuNonVue ? 1 : 0) + decisionsEnAttente + (rappelCheckin ? 1 : 0)
-      + (lettrePrete ? 1 : 0) + (serieEnDanger ? 1 : 0) + (visionDue ? 1 : 0) + (revueDue ? 1 : 0);
+      + (lettrePrete ? 1 : 0) + (serieEnDanger ? 1 : 0) + (visionDue ? 1 : 0) + (revueDue ? 1 : 0));
 
   const mobileItems = [
     ["today", "Aujourd'hui", "/app"], ["vision", "Vision", "/app/vision"],
@@ -321,7 +383,33 @@ export function Header() {
               </p>
             )}
             <DropdownMenuSeparator className="bg-white/10" />
-            {actuNonVue && (
+            {inbox.items.length > 0 && (
+              <>
+                {inboxNonLues.length > 1 && (
+                  <button onClick={toutLu} data-testid="notif-tout-lu"
+                    className="ml-auto flex items-center gap-1 px-3 pb-1 pt-0.5 text-[11px] text-offwhite/55 hover:text-gold">
+                    <CheckCheck className="h-3 w-3" /> Tout marquer comme lu
+                  </button>
+                )}
+                {inbox.items.slice(0, 8).map((n) => {
+                  const Icone = n.kind === "chat" ? MessageCircle : n.kind === "actu" ? Radio : Bell;
+                  return (
+                    <DropdownMenuItem key={n.id} className="flex cursor-pointer items-start gap-3 py-3 focus:bg-white/10" data-testid={`notif-inbox-${n.kind}`}
+                      onClick={() => ouvrirNotif(n)}>
+                      <Icone className={`mt-0.5 h-4 w-4 shrink-0 ${n.lu ? "text-offwhite/40" : "text-gold"}`} />
+                      <div className="min-w-0 flex-1">
+                        <p className={`text-sm ${n.lu ? "text-offwhite/65" : "font-semibold text-offwhite"}`}>{n.titre}</p>
+                        {n.corps && <p className="line-clamp-2 text-xs text-offwhite/60">{n.corps}</p>}
+                        <p className="mt-0.5 text-[10.5px] text-offwhite/40">{ilYa(n.le)}</p>
+                      </div>
+                      {!n.lu && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-gold" aria-label="Non lue" />}
+                    </DropdownMenuItem>
+                  );
+                })}
+                <DropdownMenuSeparator className="bg-white/10" />
+              </>
+            )}
+            {actuNonVue && !actuDansInbox && (
               <DropdownMenuItem className="flex cursor-pointer items-start gap-3 py-3 focus:bg-white/10" data-testid="notif-actu"
                 onClick={() => { localStorage.setItem("actualite_vue_le", new Date().toISOString().slice(0, 10)); setActuNonVue(false); openChat("actu"); }}>
                 <Radio className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
@@ -395,11 +483,12 @@ export function Header() {
                 </div>
               </DropdownMenuItem>
             )}
-            {notifCount === 0 && (
+            {notifCount === 0 && inbox.items.length === 0 && (
               <div className="px-3 py-5 text-center" data-testid="notif-empty">
-                <p className="text-xs text-offwhite/60">Aucune notification — tout est à jour.</p>
+                <p className="text-xs text-offwhite/60">Rien de nouveau pour l'instant. Tu seras prévenu ici dès que ton Copilote répond ou qu'une actu arrive.</p>
               </div>
             )}
+            <NotifsAppareil />
           </DropdownMenuContent>
         </DropdownMenu>
 

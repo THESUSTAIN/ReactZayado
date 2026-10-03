@@ -197,7 +197,13 @@ def install_relances(g: dict) -> None:
             jours_actifs=jours_actifs, inactif_jours=max(inactif, 0))
         if not type_:
             return None
-        canal = await _remettre(db, uid, message_relance(type_, profil.prenom or ""))
+        msg = message_relance(type_, profil.prenom or "")
+        # Dans la cloche d'abord (une seule fois par type et par jour) : même sans appareil abonné, la personne
+        # qui revient trouve un message qui l'attend, plutôt que « 0 notification ».
+        if g.get("notifier"):
+            await g["notifier"](db, uid, "relance", msg["titre"], msg["corps"], msg["url"], tag=msg["tag"],
+                                cle=f"relance:{type_}:{auj}", push=False)
+        canal = await _remettre(db, uid, msg)
         if not canal:
             return None
         db.add(Relance(user_id=uid, type=type_, canal=canal, jour=auj))

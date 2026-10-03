@@ -26,6 +26,7 @@ export const openChat = (onglet) => {
   // il fait basculer l'onglet sans fermer/rouvrir.
   if (onglet === "decisions") setTimeout(() => window.dispatchEvent(new Event("kairos:ouvrir-decisions")), 80);
   if (onglet === "actu") setTimeout(() => window.dispatchEvent(new Event("kairos:ouvrir-actu")), 80);
+  if (onglet === "chat") setTimeout(() => window.dispatchEvent(new Event("kairos:ouvrir-chat")), 80);
 };
 
 /** Ouvre le chat sur l'Assistant avec une question déjà prête à envoyer. */
@@ -51,6 +52,19 @@ export default function GlobalChat() {
   }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { setOpen(false); setGrand(false); }, [location.pathname]);
+
+  // Arrivée depuis une notification (« /app?tab=chat » ou « /app?tab=actu », app fermée au moment du clic) :
+  // on ouvre directement le bon onglet du chat.
+  useEffect(() => {
+    try {
+      const t = new URLSearchParams(window.location.search).get("tab");
+      if (getToken() && ["chat", "actu", "decisions"].includes(t)) {
+        const id = setTimeout(() => openChat(t), 700);
+        return () => clearTimeout(id);
+      }
+    } catch { /* adresse illisible : rien à ouvrir */ }
+    return undefined;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!getToken() || !(location.pathname.startsWith("/app") || location.pathname === "/parametres")) return null;
   return (

@@ -144,3 +144,17 @@ export function activerPushAuto({ notificationsActives = true } = {}) {
     window.removeEventListener("keydown", surPremierGeste);
   };
 }
+
+// État réel des notifications sur CET appareil, pour l'afficher (et le réparer) depuis la cloche :
+// l'activation automatique échoue en silence (fenêtre ignorée, navigateur qui la masque, iPhone sans l'app installée…),
+// et la personne ne savait jamais pourquoi elle ne recevait rien.
+export async function etatNotifications() {
+  if (!supporte()) return { supporte: false, permission: "unsupported", abonne: false, serveurPret: false };
+  let abonne = false;
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    abonne = !!(await registration.pushManager.getSubscription());
+  } catch { /* service worker indisponible */ }
+  const st = await pushStatut();
+  return { supporte: true, permission: Notification.permission, abonne, serveurPret: !!st.disponible, abonneServeur: !!st.actif, enPwa: enPwa() };
+}

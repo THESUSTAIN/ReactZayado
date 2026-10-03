@@ -127,10 +127,15 @@ export const suggererDecisions = () => jsend("/copilote/decisions/suggerer", "PO
 export const patchDecision = (id, statut, canal) => jsend(`/copilote/decisions/${id}`, "PATCH", { statut, canal });
 export const validerDecisionEmail = (id) => jsend(`/copilote/decisions/${id}/valider-email`, "POST");
 // bref:false = sans résumé IA (juste savoir s'il y a du contenu : pastille de la cloche).
-export const fetchActualite = (filtre = "", { bref = true } = {}) => {
-  const q = [filtre ? `filtre=${filtre}` : "", bref ? "" : "bref=0"].filter(Boolean).join("&");
+// force:true = bouton « Actualiser » (le serveur garde sinon le bref du jour, stable jusqu'à demain).
+export const fetchActualite = (filtre = "", { bref = true, force = false } = {}) => {
+  const q = [filtre ? `filtre=${filtre}` : "", bref ? "" : "bref=0", force ? "force=1" : ""].filter(Boolean).join("&");
   return jget(`/copilote/actualite${q ? `?${q}` : ""}`);
 };
+// Boîte de notifications de la cloche (tout ce que le serveur a envoyé : réponses de l'IA, actu du jour, relances).
+export const fetchNotifications = () => jget("/notifications");
+export const marquerNotifLue = (id) => jsend(`/notifications/${id}/lu`, "POST");
+export const toutMarquerLu = () => jsend("/notifications/tout-lu", "POST");
 // Les 100 derniers messages du Copilote (conservés côté serveur) : la conversation se retrouve après un rechargement.
 export const fetchHistoriqueChat = () => jget("/copilote/history");
 export const fetchActualiteOptions = () => jget("/copilote/actualite/options");
@@ -289,7 +294,9 @@ export async function streamChat({ message, page, onDelta: onDeltaBrut, onDone: 
     }
     onDone && onDone();
   } catch (e) {
-    onError && onError("Connexion à l'assistant impossible.");
+    // coupee:true = la connexion a lâché (réseau, téléphone verrouillé, onglet en veille). Le serveur continue d'écrire
+    // la réponse de son côté : l'appelant peut la récupérer dans l'historique au lieu d'afficher une erreur.
+    onError && onError("Connexion à l'assistant impossible.", { coupee: true });
   }
 }
 

@@ -347,12 +347,16 @@ def install_actualite(g: dict) -> None:
     async def actus_utilisateur(db, uid: str, nb: int) -> list:
         jeton = g["_current_uid"].set(uid)
         try:
-            rep = await g["actualite"](marche="", filtre="tout", bref=False, db=db)
+            # Même bref que celui affiché dans le chat (calculé une fois par jour) : l'e-mail, la notification
+            # et l'onglet Actualité racontent la même chose, sans nouvel appel IA.
+            rep = await g["actualite"](marche="", filtre="tout", bref=True, db=db)
         finally:
             g["_current_uid"].reset(jeton)
         if rep.get("masque") or rep.get("erreur"):
             return []
-        arts = await enrichir((rep.get("articles") or [])[:nb])
+        arts = (rep.get("articles") or [])[:nb]
+        if any(not a.get("description") for a in arts):
+            arts = await enrichir(arts)
         return [{"titre": a["titre"], "lien": a.get("lien", ""), "date": nettoyer(a.get("date", ""), 25),
                  "source_label": a.get("source_label") or "",
                  "description": "" if a.get("description_origine") == "titre" else a["description"]} for a in arts]
@@ -397,12 +401,18 @@ def install_actualite(g: dict) -> None:
         db.add(ActuEnvoi(user_id=uid, jour=jour, origine=origine, canal=canal, ok=ok, detail=detail[:400]))
         await db.commit()
 
-    async def envoyer_a(db, profil, prefs: dict, loc_jour: str, origine: str) -> dict:
+    async def envoyer_a(db, profil, prefs: dict, loc_jour: str, origine: str, canaux: Optional[list] = None) -> dict:
         arts = await actus_utilisateur(db, profil.user_id, prefs["nb"])
         if not arts:
             return {"articles": 0, "canaux": {}, "raison": "aucune_actu"}
+        # Dans la cloche, quoi qu'il arrive aux autres canaux : l'actu du jour y est toujours (une seule fois par jour).
+        if g.get("notifier"):
+            premier = arts[0]
+            corps = premier["titre"] + (f" (+{len(arts) - 1} autre{'s' if len(arts) > 2 else ''})" if len(arts) > 1 else "")
+            await g["notifier"](db, profil.user_id, "actu", "Ton actualité du jour", corps, "/app?tab=actu",
+                                tag="actu", cle=f"actu:{loc_jour}" if origine == "cron" else None, push=False)
         res = {}
-        for canal in prefs["canaux"]:
+        for canal in (canaux if canaux is not None else prefs["canaux"]):
             ok, detail = await (envoyer_email(profil, arts) if canal == "email" else envoyer_notif(db, profil.user_id, arts))
             res[canal] = {"ok": ok, "detail": detail}
             await journaliser(db, profil.user_id, loc_jour, origine, canal, ok, detail)
@@ -428,11 +438,18 @@ def install_actualite(g: dict) -> None:
                     prefs = lire_prefs(p.contexte_metier)
                     loc = heure_locale(p, maintenant_utc)
                     auj = loc.date().isoformat()
-                    deja = (await db.execute(select(ActuEnvoi.id).where(
-                        ActuEnvoi.user_id == p.user_id, ActuEnvoi.jour == auj, ActuEnvoi.origine == "cron").limit(1))).first() is not None
+                    # Avant : UNE tentative ratée (aucun appareil abonné, clé e-mail absente…) était comptée comme « envoyé »
+                    # et bloquait toute la journée, d'où « je ne reçois jamais rien ». Maintenant on ne compte que les
+                    # envois RÉUSSIS, canal par canal ; un canal en échec est retenté à chaque passage (6 échecs max par jour).
+                    lignes = (await db.execute(select(ActuEnvoi.canal, ActuEnvoi.ok).where(
+                        ActuEnvoi.user_id == p.user_id, ActuEnvoi.jour == auj, ActuEnvoi.origine == "cron"))).all()
+                    canaux_ok = {c for c, ok in lignes if ok}
+                    echecs = sum(1 for _c, ok in lignes if not ok)
+                    restants = [c for c in prefs["canaux"] if c not in canaux_ok]
+                    deja = (not restants) or echecs >= 6
                     if doit_envoyer(prefs, loc, deja):
                         continue
-                    r = await envoyer_a(db, p, prefs, auj, "cron")
+                    r = await envoyer_a(db, p, prefs, auj, "cron", canaux=restants)
                     if r["canaux"]:
                         envoyes.append({"user_id": p.user_id, **r})
                 except Exception as e:  # noqa: BLE001

@@ -19,6 +19,7 @@ from datetime import date, datetime, timedelta, timezone
 from html import escape
 from html.parser import HTMLParser
 from typing import List, Optional
+from zoneinfo import ZoneInfo
 from urllib.parse import quote, urlparse
 
 import httpx
@@ -1980,6 +1981,9 @@ class ChatIn(BaseModel):
     langue: Optional[str] = "fr"
 
 
+_TACHES_CHAT: set = set()   # références fortes : une tâche sans référence peut être ramassée avant la fin
+
+
 @api.post("/copilote/chat")
 async def chat(body: ChatIn, db: AsyncSession = Depends(get_db)):
     uid = _uid()
@@ -2050,10 +2054,28 @@ async def chat(body: ChatIn, db: AsyncSession = Depends(get_db)):
         except Exception as e:  # noqa: BLE001
             logger.warning("Historique chat non enregistré : %s", e)
 
-    async def flux():
+    async def _prevenir(texte: str):
+        """Le navigateur n'écoutait plus quand la réponse est arrivée : notification (cloche + push)."""
+        try:
+            extrait = re.sub(r"[#*_`>]+", "", texte).strip().replace("\n", " ")
+            extrait = (extrait[:140].rsplit(" ", 1)[0] + "…") if len(extrait) > 140 else extrait
+            if "notifier" in globals():
+                async with async_session() as s:
+                    await globals()["notifier"](s, uid, "chat", "Ton Copilote t'a répondu 💬", extrait,
+                                                "/app?tab=chat", tag="chat-reponse")
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Notification de réponse du chat non envoyée : %s", e)
+
+    # La réponse de l'IA est écrite par une tâche DÉTACHÉE de la connexion du navigateur.
+    # Avant, tout était dans le générateur du flux : fermer l'onglet, verrouiller le téléphone ou
+    # changer de page coupait la génération en plein milieu (et rien ne prévenait l'utilisateur).
+    # Maintenant la tâche va au bout quoi qu'il arrive, enregistre la réponse complète, et si plus
+    # personne n'écoute, envoie une notification (cloche + push) « ton Copilote t'a répondu ».
+    file_sse: asyncio.Queue = asyncio.Queue()
+    etat = {"connecte": True, "fini": False, "complet": "", "prevenu": False}
+
+    async def _generer():
         morceaux = []
-        if victoire_notee:
-            yield f"data: {json.dumps({'victoire': victoire_notee})}\n\n"
         try:
             try:
                 client = _client_llm(f"copilote-{uid}", systeme)
@@ -2063,25 +2085,56 @@ async def chat(body: ChatIn, db: AsyncSession = Depends(get_db)):
                 async for ev in client.stream_message(UserMessage(text=body.message)):
                     if isinstance(ev, TextDelta):
                         morceaux.append(ev.content)
-                        yield f"data: {json.dumps({'delta': ev.content})}\n\n"
+                        file_sse.put_nowait(("delta", ev.content))
                     elif isinstance(ev, StreamDone):
                         break
             except Exception as e:  # noqa: BLE001
                 logger.warning("Copilote IA indisponible (%s) — repli local", e)
                 texte = repli_juridique() if juridique else _repli(body.message)
                 morceaux = [texte]
-                yield f"data: {json.dumps({'delta': texte})}\n\n"
+                file_sse.put_nowait(("delta", texte))
         finally:
-            # Même si la page est fermée ou rechargée en plein flux, ce qui a déjà été écrit est gardé :
-            # la conversation retrouvée au retour n'a plus de réponse manquante. Tâche détachée : elle survit à l'annulation.
             complet = "".join(morceaux).strip()
             if complet:
-                asyncio.ensure_future(_sauver_reponse(complet))
-        if juridique and sources:
-            yield f"data: {json.dumps({'sources': sources, 'juridique': True})}\n\n"
-        elif sources_web:
-            yield f"data: {json.dumps({'sources': sources_web})}\n\n"
-        yield f"data: {json.dumps({'done': True})}\n\n"
+                await _sauver_reponse(complet)
+            etat["fini"], etat["complet"] = True, complet
+            file_sse.put_nowait(("fin", None))
+            if complet and not etat["connecte"] and not etat["prevenu"]:
+                etat["prevenu"] = True
+                await _prevenir(complet)
+
+    tache = asyncio.ensure_future(_generer())
+    _TACHES_CHAT.add(tache)
+    tache.add_done_callback(_TACHES_CHAT.discard)
+
+    async def flux():
+        fin_lue = False
+        try:
+            if victoire_notee:
+                yield f"data: {json.dumps({'victoire': victoire_notee})}\n\n"
+            while True:
+                try:
+                    genre, valeur = await asyncio.wait_for(file_sse.get(), timeout=15)
+                except asyncio.TimeoutError:
+                    yield ": ping\n\n"   # garde la connexion ouverte pendant que l'IA réfléchit
+                    continue
+                if genre == "delta":
+                    yield f"data: {json.dumps({'delta': valeur})}\n\n"
+                else:
+                    fin_lue = True
+                    break
+            if juridique and sources:
+                yield f"data: {json.dumps({'sources': sources, 'juridique': True})}\n\n"
+            elif sources_web:
+                yield f"data: {json.dumps({'sources': sources_web})}\n\n"
+            yield f"data: {json.dumps({'done': True})}\n\n"
+        finally:
+            if not fin_lue:
+                # Le navigateur est parti avant la fin : la tâche continue seule ; si elle a déjà fini, on prévient ici.
+                etat["connecte"] = False
+                if etat["fini"] and etat["complet"] and not etat["prevenu"]:
+                    etat["prevenu"] = True
+                    asyncio.ensure_future(_prevenir(etat["complet"]))
 
     return StreamingResponse(flux(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
@@ -2348,15 +2401,39 @@ async def actualite_options(db: AsyncSession = Depends(get_db)):
     }
 
 
+_digests_actu: dict = {}   # (utilisateur, réglages, jour local) -> {"t", "expire", "rep"} : le bref du jour, stable
+
+
+def _prochaine_actu(cm: dict, loc: datetime) -> datetime:
+    """Prochaine actualisation prévue, en heure locale : l'heure d'actu choisie (08:00 par défaut), demain ou lundi."""
+    heure = str((cm or {}).get("actu_heure") or "08:00")
+    try:
+        h, m = (int(x) for x in heure.split(":"))
+    except Exception:  # noqa: BLE001
+        h, m = 8, 0
+    cand = loc.replace(hour=h, minute=m, second=0, microsecond=0)
+    if cand <= loc:
+        cand += timedelta(days=1)
+    if (cm or {}).get("actu_rythme") == "lundi":
+        while cand.weekday() != 0:
+            cand += timedelta(days=1)
+    return cand
+
+
 @api.get("/copilote/actualite")
-async def actualite(marche: str = "", filtre: str = "tout", bref: bool = True, db: AsyncSession = Depends(get_db)):
+async def actualite(marche: str = "", filtre: str = "tout", bref: bool = True, force: bool = False, db: AsyncSession = Depends(get_db)):
     """Veille du jour, PILOTÉE PAR L'ÉNERGIE (3 à 5 items, masquée en récupération).
     - Légal : rattaché au pays du compte (sauf si l'utilisateur choisit un autre pays pour le légal) ;
       source officielle quand elle existe (service-public, OHADA), sinon presse juridique du pays.
     - Personnalisé : pays suivis, secteurs choisis et mots-clés de veille de l'utilisateur.
     filtre = tout | legal | perso (le filtre du chat).
     Le nombre d'actus suit le choix de l'utilisateur (actu_nb : 1 à 3). bref=False : pas de résumé IA (pastille de la cloche).
-    Chaque actu revient avec `description` (bref de 2 à 4 phrases complètes) et `description_origine` (ia | page | flux | titre)."""
+    Chaque actu revient avec `description` (bref de 2 à 4 phrases complètes) et `description_origine` (ia | page | flux | titre).
+
+    STABLE DANS LA JOURNÉE : le bref est calculé une fois, puis gardé jusqu'à la prochaine actualisation prévue
+    (le lendemain à l'heure d'actu choisie). Avant, la liste était recalculée toutes les 30 min : les actus
+    changeaient en cours de journée et l'ouverture du chat attendait l'IA à chaque fois. `force=true` (bouton
+    « Actualiser ») recalcule, au plus une fois toutes les 2 minutes."""
     uid = _uid()
     dernier = list((await db.execute(select(VisionCheckin).where(VisionCheckin.user_id == uid).order_by(VisionCheckin.date.desc()).limit(1))).scalars())
     energie = dernier[0].energie if dernier else 4
@@ -2411,6 +2488,20 @@ async def actualite(marche: str = "", filtre: str = "tout", bref: bool = True, d
     if not sources:
         return {"masque": False, "erreur": False, "marche": pays_compte, "label": _libelle_marche(pays_compte, cm),
                 "marches": marches, "articles": [], "limite": limite, "vide_pref": True, "filtre": filtre}
+    # ── Bref du jour déjà prêt ? On le rend tout de suite (aucune attente, aucun appel IA). ──
+    try:
+        _tz = ZoneInfo(profil.fuseau or "Europe/Paris")
+    except Exception:  # noqa: BLE001
+        _tz = ZoneInfo("Europe/Paris")
+    _loc = datetime.now(timezone.utc).astimezone(_tz)
+    _sig = json.dumps([filtre, pays_compte, legal_pays, pays_suivis, secteurs, mots, limite, veut_pays, veut_eco, veut_legal],
+                      sort_keys=True, default=str, ensure_ascii=False)
+    _cle = (uid, _sig, _loc.date().isoformat())
+    _c = _digests_actu.get(_cle)
+    _maintenant = datetime.now(timezone.utc)
+    if _c and _c["expire"] > _maintenant:
+        if not force or (_maintenant - _c["t"]).total_seconds() < 120:
+            return {**_c["rep"], "du_cache": True}
     listes = await asyncio.gather(*[_flux_cache(u) for u, _, _ in sources])
     vus, par_source = set(), []
     for (url, type_, lib), liste in zip(sources, listes):
@@ -2436,12 +2527,23 @@ async def actualite(marche: str = "", filtre: str = "tout", bref: bool = True, d
             articles = await globals()["enrichir_actus"](articles)
         except Exception as e:  # noqa: BLE001
             logger.warning("Bref des actus indisponible : %s", e)
-    return {"masque": False, "marche": pays_compte, "label": _libelle_marche(pays_compte, cm), "filtre": filtre,
-            "marches": marches, "articles": articles, "limite": limite,
-            "ia": any(a.get("description_origine") == "ia" for a in articles),
-            "genere_a": now.isoformat(), "rythme": cm.get("actu_rythme", "quotidien"), "configure": True,   # actualité active par défaut (rythme quotidien) : plus d'écran de configuration bloquant
-            "prefs": {"canaux": cm.get("actu_canaux") if isinstance(cm.get("actu_canaux"), list) else ["email", "push"], "nb": cm.get("actu_nb") or 3},
-            "prochaine_maj": (now + timedelta(minutes=30)).isoformat()}
+    rythme = cm.get("actu_rythme", "quotidien")
+    rep = {"masque": False, "marche": pays_compte, "label": _libelle_marche(pays_compte, cm), "filtre": filtre,
+           "marches": marches, "articles": articles, "limite": limite,
+           "ia": any(a.get("description_origine") == "ia" for a in articles),
+           "genere_a": now.isoformat(), "rythme": rythme, "configure": True,   # actualité active par défaut (rythme quotidien) : plus d'écran de configuration bloquant
+           "prefs": {"canaux": cm.get("actu_canaux") if isinstance(cm.get("actu_canaux"), list) else ["email", "push"], "nb": cm.get("actu_nb") or 3},
+           # Vraie prochaine actualisation : demain (ou lundi) à l'heure d'actu choisie. Avant : « maintenant + 30 min »,
+           # recalculé à chaque requête, donc l'heure affichée glissait sans jamais arriver.
+           "prochaine_maj": _prochaine_actu(cm, _loc).isoformat() if rythme != "jamais" else None}
+    if bref and articles:
+        # Bref IA réussi : gardé jusqu'à demain. Repli sans IA : on réessaie dans 15 min pour obtenir le vrai bref.
+        expire = (_prochaine_actu(cm, _loc).astimezone(timezone.utc) if rep["ia"] else now + timedelta(minutes=15))
+        if len(_digests_actu) >= 400:
+            for k in sorted(_digests_actu, key=lambda k: _digests_actu[k]["t"])[:150]:
+                _digests_actu.pop(k, None)
+        _digests_actu[_cle] = {"t": now, "expire": expire, "rep": rep}
+    return rep
 
 
 # ─────────────── Connexion (lien magique + accès aperçu) ───────────────
@@ -5544,6 +5646,8 @@ from canaux_ext import install_canaux  # noqa: E402
 install_canaux(globals())
 from push_ext import install_push  # noqa: E402
 install_push(globals())
+from notifications_ext import install_notifications  # noqa: E402
+install_notifications(globals())
 from gamification_ext import install_gamification  # noqa: E402
 install_gamification(globals())
 

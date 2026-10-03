@@ -12,11 +12,13 @@ import { prendreOngletEnAttente, prendrePromptEnAttente, discuterAvecIA } from "
 import CanauxCopilote from "@/components/kairos/CanauxCopilote";
 import { useKairos } from "@/context/KairosContext";
 import {
-  streamChat, fetchHistoriqueChat, fetchPointDuJour, fetchDecisions, suggererDecisions, patchDecision, fetchActualite, enregistrerArticle, fetchEnregistres, validerDecisionEmail,
+  streamChat, fetchHistoriqueChat, fetchPointDuJour, fetchDecisions, suggererDecisions, patchDecision, enregistrerArticle, fetchEnregistres, validerDecisionEmail,
   saveProfile, creerTache, oauthStockage, relierTrello, choisirListeTrello, telechargerDocument, rangerDocumentDrive, ouvrirMesDocuments, reglerDossierDocuments,
   creerImageIA, rangerFichierDrive, fetchContexteCopilote, fetchDossierDocuments,
 } from "@/lib/kairosApi";
 import { toast } from "sonner";
+import { actuConnue, chargerActu, oublierActu, signatureActu } from "@/lib/actuCache";
+import { signaler } from "@/lib/alertes";
 
 // Derniers échanges du chat, joints (si on le souhaite) au message pour un collaborateur.
 const contexteChat = { texte: "" };
@@ -33,6 +35,37 @@ const majStreaming = (v) => { memoireChat.streaming = v; diffuserChat(); };
 // Nouvelle connexion (autre compte) : on repart d'une conversation vide, sans voir celle de la personne précédente.
 if (typeof window !== "undefined") {
   window.addEventListener("zayado:token", () => { Object.assign(memoireChat, { messages: null, streaming: false, libre: false, historiqueCharge: false }); });
+}
+
+// Personne ne regarde le chat (panneau fermé, onglet en arrière-plan, fenêtre inactive) ?
+const chatNonVu = () => memoireChat.abonnes.size === 0 || document.visibilityState !== "visible" || !document.hasFocus();
+// Alerte « ton Copilote t'a répondu » (son + bandeau, ou notification système si l'app est en arrière-plan).
+const alerterReponse = () => {
+  if (!chatNonVu()) return;
+  const m = memoireChat.messages || [];
+  const texte = String(m[m.length - 1]?.content || "").replace(/[#*_`>]+/g, "").replace(/\s+/g, " ").trim();
+  signaler({ titre: "Ton Copilote t'a répondu 💬", corps: texte.length > 140 ? `${texte.slice(0, 140).replace(/\s\S*$/, "")}…` : texte, url: "/app?tab=chat", tag: "chat-reponse" });
+};
+// La réponse de l'IA s'écrit côté SERVEUR, même si la page est fermée ou la connexion coupée. On la retrouve
+// dans l'historique : « prete » (texte), « attente » (le serveur écrit encore) ou « absent » (message jamais arrivé).
+async function lireReponseServeur(contenu, depuisMs) {
+  let h;
+  try { h = await fetchHistoriqueChat(); } catch { return { etat: "attente" }; }
+  const liste = Array.isArray(h) ? h : [];
+  let idx = -1;
+  liste.forEach((x, i) => { if (x.role === "user" && x.contenu === contenu && new Date(x.le).getTime() >= depuisMs - 60000) idx = i; });
+  if (idx < 0) return { etat: "absent" };
+  const suite = liste[idx + 1];
+  return suite && suite.role !== "user" && suite.contenu ? { etat: "prete", texte: suite.contenu } : { etat: "attente" };
+}
+async function reprendreDepuisServeur(contenu, depuisMs) {
+  for (let essai = 0; essai < 30; essai++) {
+    await new Promise((r) => setTimeout(r, 3000));
+    const r = await lireReponseServeur(contenu, depuisMs);
+    if (r.etat === "prete") return r.texte;
+    if (r.etat === "absent" && essai >= 1) return null;   // le message n'est jamais arrivé jusqu'au serveur
+  }
+  return null;
 }
 
 // Ouvre le dossier des documents IA dans le Drive / OneDrive de l'utilisateur.
@@ -135,13 +168,15 @@ export function ChatBody({ onClose, estElargi, onToggleTaille, grand = false }) 
   useEffect(() => {
     const ouvrir = () => setTab("actu");
     const decisions = () => setTab("decisions");
+    const chat = () => setTab("chat");
+    window.addEventListener("kairos:ouvrir-chat", chat);
     // « En parler à l'IA » depuis un article : bascule sur l'Assistant —
     // le texte est consommé par ChatTab au montage (ou via l'événement si déjà monté).
     const prompt = () => setTab("chat");
     window.addEventListener("kairos:ouvrir-actu", ouvrir);
     window.addEventListener("kairos:ouvrir-decisions", decisions);
     window.addEventListener("kairos:prompt-chat", prompt);
-    return () => { window.removeEventListener("kairos:ouvrir-actu", ouvrir); window.removeEventListener("kairos:ouvrir-decisions", decisions); window.removeEventListener("kairos:prompt-chat", prompt); };
+    return () => { window.removeEventListener("kairos:ouvrir-chat", chat); window.removeEventListener("kairos:ouvrir-actu", ouvrir); window.removeEventListener("kairos:ouvrir-decisions", decisions); window.removeEventListener("kairos:prompt-chat", prompt); };
   }, []);
 
   useEffect(() => {
@@ -490,6 +525,24 @@ function ChatTab({ firstName, grand = false }) {
         // Seulement si rien n'a encore été dit dans cette session (sinon on risquerait des doublons).
         if (passe.length) majMessages((cur) => (cur.length === 1 ? [cur[0], ...passe] : cur));
         setHistoriqueOk(true);
+        // Dernier message = le tien, envoyé il y a moins de 3 min, sans réponse : l'IA écrit encore côté serveur
+        // (tu as fermé la page entre-temps). On le montre au lieu de laisser croire que rien ne se passe.
+        const dernier = passe[passe.length - 1];
+        const depuis = dernier?.le ? new Date(dernier.le).getTime() : 0;
+        if (dernier && dernier.role === "user" && depuis && Date.now() - depuis < 180000 && !memoireChat.streaming) {
+          majMessages((cur) => [...cur, { role: "assistant", content: "", le: new Date().toISOString() }]);
+          majStreaming(true);
+          reprendreDepuisServeur(dernier.content, depuis).then((texte) => {
+            if (texte) {
+              majMessages((cur) => { const c = [...cur]; c[c.length - 1] = { role: "assistant", content: texte, le: new Date().toISOString() }; return c; });
+              majStreaming(false);
+              alerterReponse();
+            } else {
+              majMessages((cur) => (cur.length && cur[cur.length - 1].role === "assistant" && !cur[cur.length - 1].content ? cur.slice(0, -1) : cur));
+              majStreaming(false);
+            }
+          });
+        }
       })
       .catch(() => { if (!annule) { memoireChat.historiqueCharge = true; setHistoriqueOk(true); } });
     return () => { annule = true; };
@@ -543,8 +596,21 @@ function ChatTab({ firstName, grand = false }) {
       onSources: (sources, juridique) => setMessages((m) => {
         const c = [...m]; c[c.length - 1] = { ...c[c.length - 1], sources, juridique }; return c;
       }),
-      onDone: () => setStreaming(false),
-      onError: (err) => { setMessages((m) => { const c = [...m]; c[c.length - 1] = { role: "assistant", content: `Désolé, ${err}` }; return c; }); setStreaming(false); },
+      onDone: () => { setStreaming(false); alerterReponse(); },
+      onError: async (err, info) => {
+        if (info?.coupee) {
+          // Connexion coupée en cours de route : le serveur continue ; on va chercher la réponse complète.
+          const texte = await reprendreDepuisServeur(content, Date.parse(le));
+          if (texte) {
+            setMessages((m) => { const c = [...m]; c[c.length - 1] = { role: "assistant", content: texte, le: new Date().toISOString() }; return c; });
+            setStreaming(false);
+            alerterReponse();
+            return;
+          }
+        }
+        setMessages((m) => { const c = [...m]; c[c.length - 1] = { role: "assistant", content: `Désolé, ${err}` }; return c; });
+        setStreaming(false);
+      },
     });
   };
 
@@ -817,32 +883,44 @@ function ActuSetup({ onFini }) {
 }
 
 // ── Onglet Actualité (digest piloté par l'énergie) ──
-// Dernier résultat par filtre, gardé 5 min : changer de page ou d'onglet ne relance ni le chargement ni le bref IA.
-// La clé tient compte des réglages « actu_* » : si on les change dans Paramètres, on recharge.
-const memoireActu = {};
-const VALIDITE_ACTU = 5 * 60 * 1000;
+// Le bref est préparé dès l'ouverture de l'app (Header → prechargerActu) et gardé par lib/actuCache :
+// ici on affiche TOUJOURS ce qu'on a déjà, tout de suite, puis on rafraîchit discrètement si c'est vieux.
+// Le serveur, lui, garde le même bref toute la journée (prochaine actualisation = demain à l'heure choisie).
+const heureCourte = (iso) => new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+const quand = (iso) => {
+  const d = new Date(iso);
+  return d.toDateString() === new Date().toDateString() ? `à ${heureCourte(iso)}` : `le ${d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} à ${heureCourte(iso)}`;
+};
+const quandFutur = (iso) => {
+  const d = new Date();
+  const cible = new Date(iso);
+  const demain = new Date(); demain.setDate(d.getDate() + 1);
+  const jour = cible.toDateString() === d.toDateString() ? "aujourd'hui" : cible.toDateString() === demain.toDateString() ? "demain" : cible.toLocaleDateString("fr-FR", { weekday: "long" });
+  return `${jour} à ${heureCourte(iso)}`;
+};
 
 function ActuTab() {
   const { contexte } = useKairos();
-  const signature = JSON.stringify(Object.entries(contexte || {}).filter(([k]) => k.startsWith("actu_")).sort());
+  const signature = signatureActu(contexte);
   const [filtre, setFiltre] = useState(() => { try { return localStorage.getItem("zayado_actu_filtre") || "tout"; } catch { return "tout"; } });
-  const enCache = (f) => { const m = memoireActu[f]; return m && m.sig === signature && Date.now() - m.t < VALIDITE_ACTU ? m.data : null; };
-  const [data, setData] = useState(() => enCache(filtre));
-  const [loading, setLoading] = useState(() => !enCache(filtre));
+  const [data, setData] = useState(() => actuConnue(filtre, signature)?.data || null);
+  const [loading, setLoading] = useState(() => !actuConnue(filtre, signature));
+  const [actualisation, setActualisation] = useState(false);
   const [enregistres, setEnregistres] = useState([]);
   // Filtre : tout / légal (pays du compte) / ma veille (pays, secteurs et mots-clés choisis dans Paramètres).
-  const load = async (f = filtre) => {
-    const c = enCache(f);
-    if (c) { setData(c); setLoading(false); return; }
-    setLoading(true);
+  const load = async (f = filtre, { force = false } = {}) => {
+    const c = actuConnue(f, signature);
+    if (c) {
+      setData(c.data); setLoading(false);
+      if (!force && !c.perime) return;      // déjà à jour : aucune requête
+      setActualisation(true);               // sinon : mise à jour discrète, sans effacer ce qui est affiché
+    } else {
+      setLoading(true);
+    }
     try {
-      // Le serveur renvoie déjà le bref de chaque actu (2 à 4 phrases complètes, écrit par l'IA).
-      const d = await fetchActualite(f);
-      // 1 à 3 actus (choix de l'utilisateur), dans toutes les vues.
-      if (d?.articles) d.articles = d.articles.slice(0, Math.max(1, Math.min(3, Number(d?.prefs?.nb) || Number(d?.limite) || 3)));
-      if (!d?.masque && !d?.erreur && d?.configure !== false) memoireActu[f] = { t: Date.now(), sig: signature, data: d };
-      setData(d); setLoading(false);
-    } catch { setData({ erreur: true, articles: [] }); setLoading(false); }
+      setData(await chargerActu(f, { signature, force }));
+    } catch { if (!c) setData({ erreur: true, articles: [] }); }
+    setLoading(false); setActualisation(false);
   };
   const chargerEnregistres = async () => { try { const d = await fetchEnregistres(); setEnregistres(d?.articles || []); } catch { /* silencieux */ } };
   useEffect(() => { load(); chargerEnregistres(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -863,15 +941,18 @@ function ActuTab() {
       </div>
       <p className="mb-3 px-1 text-xs text-offwhite/55">{filtre === "legal" ? `Ce qui change pour les entreprises${data?.label ? ` (${data.label})` : ""} : lois, impôts, social.` : filtre === "perso" ? "Tes pays, tes secteurs et tes mots-clés : de quoi publier avant tout le monde." : "Un résumé court, jamais un fil d'actus infini."}</p>
       {data?.genere_a && !data?.masque && !data?.erreur && (
-        <p className="mb-3 px-1 text-[10.5px] text-offwhite/40" data-testid="actu-dates">
-          Généré le {new Date(data.genere_a).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-          {data.prochaine_maj && <> · prochaine actualisation vers {new Date(data.prochaine_maj).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</>}
+        <p className="mb-3 flex items-center justify-between gap-2 px-1 text-[11px] text-offwhite/45" data-testid="actu-dates">
+          <span>Mis à jour {quand(data.genere_a)}{data.prochaine_maj && <> · prochaine actu {quandFutur(data.prochaine_maj)}</>}</span>
+          <button onClick={() => load(filtre, { force: true })} disabled={actualisation} data-testid="actu-actualiser"
+            className="inline-flex shrink-0 items-center gap-1 rounded-full border border-white/10 px-2 py-0.5 text-[11px] text-offwhite/65 hover:border-gold/40 hover:text-gold disabled:opacity-60">
+            <RefreshCw className={`h-3 w-3 ${actualisation ? "animate-spin" : ""}`} /> {actualisation ? "Mise à jour…" : "Actualiser"}
+          </button>
         </p>
       )}
       {!loading && data && !data.erreur && !data.masque && data.configure === false ? (
-        <ActuSetup onFini={() => { Object.keys(memoireActu).forEach((k) => delete memoireActu[k]); load(); }} />
+        <ActuSetup onFini={() => { oublierActu(); load(); }} />
       ) : loading ? (
-        <div className="flex items-center gap-2 text-xs text-offwhite/60" data-testid="actu-chargement"><Loader2 className="h-4 w-4 animate-spin text-gold" /> L'IA prépare ton bref du jour…</div>
+        <div className="flex items-center gap-2 text-xs text-offwhite/60" data-testid="actu-chargement"><Loader2 className="h-4 w-4 animate-spin text-gold" /> Je prépare ton bref du jour (c'est instantané ensuite)…</div>
       ) : data?.masque ? (
         <div className="rounded-xl border border-[#14B8A6]/30 bg-[#14B8A6]/10 p-4 text-sm leading-relaxed text-offwhite/85" data-testid="actu-masque">
           {data.raison}
