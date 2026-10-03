@@ -2004,9 +2004,22 @@ async def chat(body: ChatIn, db: AsyncSession = Depends(get_db)):
         systeme += f"\n\n{prompt_juridique(pays)}"
     db.add(VisionChatMessage(user_id=uid, role="user", contenu=body.message))
     await db.commit()
+    # Victoire annoncée au Copilote (« j'ai signé mon premier client ») : rangée automatiquement.
+    victoire_notee = None
+    try:
+        if uid != DEMO_USER_ID and "detecter_victoire" in globals():
+            texte_v = globals()["detecter_victoire"](body.message)
+            if texte_v:
+                v = await globals()["ajouter_victoire"](db, uid, texte_v)
+                if v:
+                    victoire_notee = {"id": v.id, "texte": v.texte, "date": v.date}
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Victoire non enregistrée depuis le chat : %s", e)
 
     async def flux():
         morceaux = []
+        if victoire_notee:
+            yield f"data: {json.dumps({'victoire': victoire_notee})}\n\n"
         try:
             client = _client_llm(f"copilote-{uid}", systeme)
             if client is None:
@@ -4724,12 +4737,15 @@ async def whatsapp_web_message(request: Request, db: AsyncSession = Depends(get_
     Génère la réponse avec le même moteur IA que le Copilote (contexte
     utilisateur inclus) et la renvoie pour que le microservice la poste
     sur WhatsApp."""
-    if WA_SERVICE_SECRET and request.headers.get("x-service-secret", "") != WA_SERVICE_SECRET:
+    if not WA_SERVICE_SECRET or request.headers.get("x-service-secret", "") != WA_SERVICE_SECRET:
         raise HTTPException(401, "Non autorisé")
     body = await request.json()
     message = (body.get("message") or "").strip()
     if not message:
         return {"ok": True}
+    if not body.get("agent_id"):
+        # Sans identifiant d'utilisateur on ne répond jamais (plus de repli sur le compte démo).
+        raise HTTPException(400, "agent_id manquant")
 
     # Pas de JWT sur cet appel (serveur-à-serveur, secret de service
     # uniquement) : l'identité vient de agent_id, transmis par le
@@ -4766,10 +4782,12 @@ async def whatsapp_web_message(request: Request, db: AsyncSession = Depends(get_
 @api.post("/webhooks/whatsapp-web-ready")
 async def whatsapp_web_ready(request: Request, db: AsyncSession = Depends(get_db)):
     """Appelé par le microservice quand le QR a été scanné et la session est active."""
-    if WA_SERVICE_SECRET and request.headers.get("x-service-secret", "") != WA_SERVICE_SECRET:
+    if not WA_SERVICE_SECRET or request.headers.get("x-service-secret", "") != WA_SERVICE_SECRET:
         raise HTTPException(401, "Non autorisé")
     body = await request.json()
-    wa_uid = body.get("agent_id") or DEMO_USER_ID
+    wa_uid = body.get("agent_id")
+    if not wa_uid:
+        raise HTTPException(400, "agent_id manquant")
     conn = await _get_connection(db, "whatsapp", uid=wa_uid)
     if not conn:
         conn = UserConnection(user_id=wa_uid, provider="whatsapp", label="WhatsApp Web")
@@ -5500,6 +5518,10 @@ from admin_plus_ext import install_admin_plus  # noqa: E402
 install_admin_plus(globals())
 from rappels_ext import install_rappels  # noqa: E402
 install_rappels(globals())
+from victoires_ext import install_victoires  # noqa: E402
+install_victoires(globals())
+from relances_ext import install_relances  # noqa: E402
+install_relances(globals())
 from organisation_ext import install_organisation  # noqa: E402
 install_organisation(globals())
 

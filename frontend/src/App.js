@@ -37,6 +37,8 @@ import ConsoleLogin from "@/pages/console/ConsoleLogin";
 import PublicVision from "@/pages/PublicVision";
 import TarifsEmbed from "@/pages/TarifsEmbed";
 import ExerciceEmbed from "@/pages/ExerciceEmbed";
+import Confidentialite from "@/pages/Confidentialite";
+import ConfidentialiteEmbed from "@/pages/ConfidentialiteEmbed";
 import Landing from "@/pages/Landing";
 import Activer from "@/pages/Activer";
 import DecouvrirZayado from "@/pages/DecouvrirZayado";
@@ -94,6 +96,7 @@ function App() {
         <Routes>
           <Route path="/embed/tarifs" element={<TarifsEmbed />} />
           <Route path="/embed/exercice/:slug" element={<ExerciceEmbed />} />
+          <Route path="/embed/confidentialite" element={<ConfidentialiteEmbed />} />
           <Route path="*" element={<TarifsEmbed />} />
         </Routes>
       </BrowserRouter>
@@ -121,6 +124,7 @@ function App() {
             <Route path="/fonctionnalites/prospection-croissance" element={<ProspectionCroissance />} />
             <Route path="/fonctionnalites/bien-etre-dirigeant" element={<BienEtreDirigeant />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/legal/confidentialite" element={<Confidentialite />} />
             <Route path="/diagnostic" element={<Diagnostic />} />
             <Route path="/connexion-externe" element={<ProtectedRoute><ConnexionExterne /></ProtectedRoute>} />
             <Route path="/app/diagnostic" element={<ProtectedRoute><Diagnostic enApp /></ProtectedRoute>} />

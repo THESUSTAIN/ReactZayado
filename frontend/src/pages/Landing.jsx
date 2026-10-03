@@ -344,7 +344,7 @@ export default function Landing() {
           <Link to="/pricing" className="hover:text-gold">Tarifs</Link>
           <a href={`${SHOP}/decouvrir-zayado`} className="hover:text-gold">Découvrir Zayado</a>
           <a href="https://zayado.net/policies/terms-of-service" className="hover:text-gold">CGV</a>
-          <a href="https://zayado.net/policies/privacy-policy" className="hover:text-gold">Confidentialité</a>
+          <Link to="/legal/confidentialite" className="hover:text-gold">Confidentialité</Link>
           <Link to="/login" className="hover:text-gold">Se connecter</Link>
           <a href="mailto:contact@zayado.net" className="hover:text-gold">Contact</a>
         </div>

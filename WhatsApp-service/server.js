@@ -13,6 +13,12 @@ const SERVICE_SECRET = process.env.WA_SERVICE_SECRET || '';
 const BACKEND_URL = (process.env.BACKEND_URL || process.env.ZAYADO_BACKEND_URL || '').replace(/\/$/, '');
 const DATA_PATH = process.env.WA_DATA_PATH || '/data/.wwebjs_auth';
 const START_ON_BOOT = process.env.WA_START_ON_BOOT === 'true';
+// Numéros (hors toi) autorisés à parler au bot, séparés par des virgules. Vide = personne d'autre.
+const ALLOWED_NUMBERS = (process.env.WA_ALLOWED_NUMBERS || '')
+  .split(',').map((n) => n.replace(/\D/g, '')).filter(Boolean);
+// Préfixe des réponses du bot : évite qu'il se réponde à lui-même dans « Moi-même ».
+const BOT_PREFIX = '🤖 ';
+const handled = new Set();
 const sessions = new Map();
 
 function requireSecret(req, res, next) {
@@ -22,20 +28,20 @@ function requireSecret(req, res, next) {
   next();
 }
 
-function backendWebhookUrl(token) {
+function backendWebhookUrl() {
   if (!BACKEND_URL) return '';
-  return `${BACKEND_URL}/api/agent-webhook/${encodeURIComponent(token)}/whatsapp-web`;
+  return `${BACKEND_URL}/api/webhooks/whatsapp-web`;
 }
 
-function backendReadyUrl(token) {
+function backendReadyUrl() {
   if (!BACKEND_URL) return '';
-  return `${BACKEND_URL}/api/agent-webhook/${encodeURIComponent(token)}/whatsapp-web-ready`;
+  return `${BACKEND_URL}/api/webhooks/whatsapp-web-ready`;
 }
 
 async function notifyBackendReady(session) {
-  if (!session.agentWebhookToken || !BACKEND_URL) return;
+  if (!BACKEND_URL) return;
   try {
-    await axios.post(backendReadyUrl(session.agentWebhookToken), {
+    await axios.post(backendReadyUrl(), {
       agent_id: session.agentId,
       phone_number: session.phoneNumber || null
     }, {
@@ -48,10 +54,11 @@ async function notifyBackendReady(session) {
 }
 
 async function relayInboundMessage(session, message) {
-  const url = backendWebhookUrl(session.agentWebhookToken);
+  const url = backendWebhookUrl();
   if (!url) return null;
   try {
     const response = await axios.post(url, {
+      agent_id: session.agentId,
       from: (message.from || '').replace('@c.us', ''),
       message: message.body || ''
     }, {
@@ -136,18 +143,31 @@ function buildSession(agentId, agentWebhookToken) {
     session.waState = state;
   });
 
-  client.on('message', async (message) => {
-    if (message.fromMe || message.isStatus) return;
-    if (!message.body?.trim()) return;
-    if (!session.agentWebhookToken) return;
-
-    const reply = await relayInboundMessage(session, message);
-    if (reply && session.status === 'ready') {
-      try {
-        await message.reply(reply);
-      } catch (error) {
-        console.error('[WA] reply failed:', error.message);
+  // « message_create » couvre aussi tes propres messages (conversation « Moi-même »).
+  client.on('message_create', async (message) => {
+    try {
+      if (message.isStatus) return;
+      const body = (message.body || '').trim();
+      if (!body || body.startsWith(BOT_PREFIX.trim())) return;
+      const id = message.id?._serialized;
+      if (id) {
+        if (handled.has(id)) return;
+        handled.add(id);
+        if (handled.size > 500) handled.delete(handled.values().next().value);
       }
+      const selfId = client.info?.wid?._serialized;
+      const selfChat = message.fromMe && selfId && message.to === selfId;
+      const sender = (message.from || '').replace(/@.*$/, '');
+      const allowedContact = !message.fromMe && ALLOWED_NUMBERS.includes(sender);
+      if (!selfChat && !allowedContact) return; // jamais les autres contacts
+      if (session.status !== 'ready') return;
+
+      const reply = await relayInboundMessage(session, message);
+      if (reply) {
+        await client.sendMessage(selfChat ? selfId : message.from, BOT_PREFIX + reply);
+      }
+    } catch (error) {
+      console.error('[WA] message handling failed:', error.message);
     }
   });
 

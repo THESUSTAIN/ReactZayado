@@ -34,8 +34,16 @@ Le service doit avoir un **Volume** monté sur `/data`, sinon `LocalAuth` perdra
 
 ## Connexion avec le backend
 
-Le backend utilise `WA_SERVICE_URL` et `WA_SERVICE_SECRET` pour appeler ce service. Il lui fournit `agent_id` + `agent_webhook_token`. Le service renvoie le QR, puis transmet les messages entrants au webhook :
+Le backend utilise `WA_SERVICE_URL` et `WA_SERVICE_SECRET` pour appeler ce service. Il lui fournit `agent_id` (l'identifiant de l'utilisateur) + `agent_webhook_token`. Le service renvoie le QR, puis appelle le backend (en-tête `x-service-secret`) :
 
-`POST https://myextension-ai.com/api/agent-webhook/{token}/whatsapp-web`
+- `POST {BACKEND_URL}/api/webhooks/whatsapp-web` — message reçu, avec `agent_id`, `from`, `message` ; le backend répond `{"reply":"..."}`.
+- `POST {BACKEND_URL}/api/webhooks/whatsapp-web-ready` — QR scanné : le backend enregistre la connexion « connectée ».
 
-Le backend renvoie `{"reply":"..."}` et le microservice l'envoie au contact WhatsApp.
+### Qui peut parler au bot
+Le bot répond **uniquement** dans ta conversation « Moi-même », et aux numéros listés dans `WA_ALLOWED_NUMBERS` (chiffres seuls, séparés par des virgules, ex. `33612345678,33698765432`). Tes autres contacts sont ignorés. Les réponses commencent par 🤖 pour que le bot ne se réponde pas à lui-même.
+
+### Réglages Railway
+- `WA_SERVICE_URL` (backend) = adresse **privée** du service WhatsApp.
+- `WA_SERVICE_SECRET` identique des deux côtés.
+- `BACKEND_URL` (service WhatsApp) = adresse du backend.
+- Volume sur `/data`.

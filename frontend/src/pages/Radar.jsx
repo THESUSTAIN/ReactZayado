@@ -39,7 +39,7 @@ function Reveal({ children, delay = 0, className = "" }) {
 function Chapter({ title, sub }) {
   return (
     <div className="mb-5">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold">{sub}</p>
+      <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-gold">{sub}</p>
       <h2 className="mt-1 font-display text-xl font-bold text-offwhite sm:text-2xl">{title}</h2>
     </div>
   );
@@ -74,11 +74,11 @@ function SwotSection({ manque, onReglages }) {
       <Chapter sub="Vue d'ensemble" title="Ton SWOT, généré par l'IA" />
       {manque && manque.length > 0 && !swot && (
         <GlassCard className="p-6" data-testid="radar-swot-manque">
-          <p className="text-sm text-offwhite/75">Pour un SWOT utile (et pas un modèle générique), il manque encore :</p>
+          <p className="text-sm text-offwhite/85">Pour un SWOT utile (et pas un modèle générique), il manque encore :</p>
           <ul className="mt-3 space-y-2">
             {manque.map((m) => (
               <li key={m.cle} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5">
-                <span className="text-sm text-offwhite/80">{m.texte}</span>
+                <span className="text-sm text-offwhite/90">{m.texte}</span>
                 <button onClick={() => (m.lien ? navigate(m.lien) : onReglages())}
                   className="shrink-0 text-xs font-semibold text-gold hover:underline">Compléter</button>
               </li>
@@ -105,11 +105,11 @@ function SwotSection({ manque, onReglages }) {
           <div className="grid gap-4 sm:grid-cols-2">
             {SWOT_QUADRANTS.map((q) => (
               <GlassCard key={q.cle} className="p-5" data-testid={`radar-swot-${q.cle}`}>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: q.couleur }}>{q.label}</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: q.couleur }}>{q.label}</p>
                 <ul className="mt-2.5 space-y-1.5">
-                  {(swot[q.cle] || []).length === 0 && <li className="text-sm text-offwhite/45">Rien de notable identifié.</li>}
+                  {(swot[q.cle] || []).length === 0 && <li className="text-sm text-offwhite/70">Rien de notable identifié.</li>}
                   {(swot[q.cle] || []).map((item, i) => (
-                    <li key={i} className="text-sm leading-relaxed text-offwhite/75">• {item}</li>
+                    <li key={i} className="text-sm leading-relaxed text-offwhite/85">• {item}</li>
                   ))}
                 </ul>
               </GlassCard>
@@ -117,12 +117,12 @@ function SwotSection({ manque, onReglages }) {
           </div>
           {swot.synthese && (
             <GlassCard className="mt-4 p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gold">Synthèse</p>
-              <p className="mt-1.5 text-sm leading-relaxed text-offwhite/80">{swot.synthese}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-gold">Synthèse</p>
+              <p className="mt-1.5 text-sm leading-relaxed text-offwhite/90">{swot.synthese}</p>
             </GlassCard>
           )}
           <div className="mt-3 flex items-center justify-between">
-            <p className="text-[11px] text-offwhite/40">Généré le {new Date(swot.genere_a).toLocaleString("fr-FR")}</p>
+            <p className="text-[12px] text-offwhite/65">Généré le {new Date(swot.genere_a).toLocaleString("fr-FR")}</p>
             <button onClick={generer} data-testid="radar-swot-regenerer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-gold hover:underline">
               <RefreshCw size={12} /> Régénérer
             </button>
@@ -155,7 +155,7 @@ function FicheProspect({ p, message }) {
         {(p.prenom || "?").slice(0, 1)}{(p.nom || "").slice(0, 1)}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[14.5px] font-semibold text-offwhite">{nom || "Contact"}{p.role === "partenaire" && <span className="ml-2 rounded-full bg-gold/15 px-2 py-0.5 align-middle text-[10px] font-semibold text-gold">Prescripteur</span>}</p>
+        <p className="truncate text-[14.5px] font-semibold text-offwhite">{nom || "Contact"}{p.role === "partenaire" && <span className="ml-2 rounded-full bg-gold/15 px-2 py-0.5 align-middle text-[12px] font-semibold text-gold">Prescripteur</span>}</p>
         <p className="truncate text-[12.5px] text-offwhite/60">{[p.titre, p.entreprise, p.ville].filter(Boolean).join(" · ")}</p>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -196,26 +196,26 @@ function PremierScan({ src, onLance }) {
   };
   return (
     <GlassCard gold className="p-6 sm:p-8" data-testid="radar-premier-scan">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold">Premier scan</p>
+      <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-gold">Premier scan</p>
       <h2 className="mt-1 font-display text-xl font-bold text-offwhite sm:text-2xl">Deux infos et ton Radar démarre</h2>
       <form onSubmit={lancer} className="mt-5 space-y-5">
         <div>
-          <p className="mb-2 text-sm font-medium text-offwhite/80">Tu vends surtout à…</p>
+          <p className="mb-2 text-sm font-medium text-offwhite/90">Tu vends surtout à…</p>
           <div className="flex flex-wrap gap-2">
             {CLIENTELES.map((c) => (
               <button type="button" key={c.cle} onClick={() => setClientele(c.cle)} data-testid={`radar-premier-${c.cle}`}
                 className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${clientele === c.cle
-                  ? "border-gold/60 bg-gold/15 text-gold" : "border-white/15 bg-white/5 text-offwhite/75 hover:border-white/30"}`}>
+                  ? "border-gold/60 bg-gold/15 text-gold" : "border-white/15 bg-white/5 text-offwhite/85 hover:border-white/30"}`}>
                 {c.label}
               </button>
             ))}
           </div>
         </div>
         <label className="block">
-          <span className="mb-2 block text-sm font-medium text-offwhite/80">Ta ville ou ta zone</span>
+          <span className="mb-2 block text-sm font-medium text-offwhite/90">Ta ville ou ta zone</span>
           <input value={zone} onChange={(e) => setZone(e.target.value)} placeholder="Ex. Lyon, 69003, Île-de-France…"
             data-testid="radar-premier-zone"
-            className="h-11 w-full max-w-sm rounded-xl border border-white/15 bg-white/5 px-4 text-sm text-offwhite placeholder:text-offwhite/40 focus:border-gold/50 focus:outline-none" />
+            className="h-11 w-full max-w-sm rounded-xl border border-white/15 bg-white/5 px-4 text-sm text-offwhite placeholder:text-offwhite/65 focus:border-gold/50 focus:outline-none" />
         </label>
         <button disabled={!pret || envoi} data-testid="radar-premier-lancer" className="btn-gold disabled:opacity-50">
           {envoi ? <Loader2 size={15} className="animate-spin" /> : <RadarGlyph size={15} />} Lancer mon premier scan
@@ -302,7 +302,7 @@ export default function Radar() {
                 </span>
                 <div className="min-w-0">
                   <h1 className="font-display text-2xl font-extrabold text-offwhite sm:text-3xl" data-testid="radar-hero-title">
-                    Radar <span className="font-serif-italic font-normal text-offwhite/75">du jour</span>
+                    Radar <span className="font-serif-italic font-normal text-offwhite/85">du jour</span>
                   </h1>
                   <p className="mt-0.5 text-xs capitalize text-offwhite/55">Scan · {today}</p>
                 </div>
@@ -319,13 +319,13 @@ export default function Radar() {
               </div>
             </div>
             {!premierAcces && !sansObjectif && data?.phrase_ia && (
-              <p className="relative mt-4 font-serif-italic text-base leading-relaxed text-offwhite/80" data-testid="radar-phrase-card">« {data.phrase_ia} »</p>
+              <p className="relative mt-4 text-base leading-relaxed text-offwhite/90" data-testid="radar-phrase-card">« {data.phrase_ia} »</p>
             )}
             {!premierAcces && (data?.objectifs_utilises || []).length > 0 && (
               <div className="relative mt-3 flex flex-wrap gap-2">
                 {data.objectifs_utilises.map((o, i) => (
                   <span key={i} data-testid={`radar-objectif-${i}`}
-                    className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full border border-white/12 bg-white/5 px-3 py-1 text-[11px] text-offwhite/75">
+                    className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full border border-white/12 bg-white/5 px-3 py-1 text-[12px] text-offwhite/85">
                     <Zap size={11} className="shrink-0 text-gold" /> <span className="truncate">{o}</span>
                   </span>
                 ))}
@@ -352,7 +352,7 @@ export default function Radar() {
               </div>
             ) : sansObjectif && opportunities.length === 0 ? (
               <GlassCard gold className="p-6 sm:p-8" data-testid="radar-empty-state">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold">Étape manquante</p>
+                <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-gold">Étape manquante</p>
                 <h2 className="mt-1 font-display text-xl font-bold text-offwhite">Donne un cap à ton Radar</h2>
                 <p className="mt-2 max-w-xl text-sm text-offwhite/65">
                   N'importe quel objectif suffit : un objectif à 90 jours, ton objectif à 3 ans ou quelques lignes de Vision.
@@ -382,7 +382,7 @@ export default function Radar() {
                               ? "border-gold/60 bg-gold/15 text-gold" : "border-white/12 bg-white/5 text-offwhite/60 hover:text-offwhite"}`}>
                             {meta && React.createElement(meta.icon, { size: 12, style: { color: meta.color } })}
                             {c === "tous" ? "Tous" : meta.label}
-                            <span className="rounded-full bg-white/10 px-1.5 text-[10px]">{counts[c] || 0}</span>
+                            <span className="rounded-full bg-white/10 px-1.5 text-[12px]">{counts[c] || 0}</span>
                           </button>
                         );
                       })}
@@ -411,19 +411,19 @@ export default function Radar() {
                                 {op.score != null ? (
                                   <div className="text-center">
                                     <p className="font-display text-xl font-extrabold text-gold" data-testid={`radar-op-score-${i}`}>{op.score}</p>
-                                    <p className="text-[9px] uppercase tracking-[0.2em] text-offwhite/45">score</p>
+                                    <p className="text-[12px] uppercase tracking-[0.08em] text-offwhite/70">score</p>
                                   </div>
                                 ) : (
-                                  <p className="text-center text-[9px] uppercase tracking-[0.2em] text-offwhite/45" data-testid={`radar-op-piste-${i}`}>piste</p>
+                                  <p className="text-center text-[12px] uppercase tracking-[0.08em] text-offwhite/70" data-testid={`radar-op-piste-${i}`}>piste</p>
                                 )}
                               </div>
                               <div className="min-w-0 flex-1">
-                                <p className="text-[10px] uppercase tracking-[0.2em] text-offwhite/50">
+                                <p className="text-[12px] uppercase tracking-[0.08em] text-offwhite/70">
                                   {meta.label}{op.objectif ? <> · relié à « {op.objectif} »</> : null}
                                 </p>
                                 <h3 className="mt-1 font-display text-lg font-bold text-offwhite sm:text-xl">{op.titre}</h3>
                                 {op.prospect && <FicheProspect p={op.prospect} message={op.message} />}
-                                <p className={`mt-3 max-w-2xl border-l-2 border-gold/30 pl-4 font-serif-italic text-[15px] leading-relaxed text-offwhite/75 ${ouverts[i] ? "" : "line-clamp-3"}`}>{op.message}</p>
+                                <p className={`mt-3 max-w-2xl border-l-2 border-gold/30 pl-4 text-[15px] leading-relaxed text-offwhite/85 ${ouverts[i] ? "" : "line-clamp-3"}`}>{op.message}</p>
                                 {(op.message || "").length > 220 && <button onClick={() => setOuverts((o) => ({ ...o, [i]: !o[i] }))} className="mt-1 pl-4 text-xs font-semibold text-gold hover:underline" data-testid={`radar-op-voir-${i}`}>{ouverts[i] ? "Réduire" : "Lire le message en entier"}</button>}
                               </div>
                               <div className="flex shrink-0 sm:flex-col sm:items-end">
