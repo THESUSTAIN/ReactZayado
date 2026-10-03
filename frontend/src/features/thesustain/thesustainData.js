@@ -8,6 +8,7 @@ export const modules = [
   { id: "priere", emoji: "🙏", title: "Prière", tagline: "Prière personnelle, intentions, intercession — et un mur de prière." },
   { id: "parcours", emoji: "🧭", title: "Parcours bibliques", tagline: "Bible & entrepreneuriat, en parcours guidés de 7 jours." },
   { id: "lecture", emoji: "📜", title: "Lecture biblique", tagline: "Un verset à la fois, avec une aide à la mémoire pour le retenir." },
+  { id: "memoire", emoji: "🧠", title: "Mémoire", tagline: "Apprends des versets par cœur : quêtes du jour, niveaux et révision espacée." },
   { id: "discernement", emoji: "🕯️", title: "Discernement", tagline: "Un journal de décision éclairé par des valeurs bibliques." },
   { id: "cercle", emoji: "🤝", title: "Cercle", tagline: "Une communauté de bâtisseurs : prière, témoignages, entraide." },
   { id: "repos", emoji: "🕊️", title: "Repos & Sabbat", tagline: "Pauses Psaumes et rythme de repos, contre l'épuisement de l'entrepreneur." },

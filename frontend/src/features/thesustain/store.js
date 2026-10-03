@@ -19,7 +19,7 @@ export function setMaFoiActive(v) {
 // (avant : uniquement dans ce navigateur — perdues sur un autre appareil).
 // Un seul chargement serveur partagé par tous les hooks de la page.
 let _etatServeur = null;
-const chargerEtat = () => {
+export const chargerEtat = () => {
   if (!getToken()) return Promise.resolve({});
   if (!_etatServeur) _etatServeur = fetchFoiEtat().catch(() => { _etatServeur = null; return {}; });
   return _etatServeur;

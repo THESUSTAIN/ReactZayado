@@ -27,7 +27,7 @@ CATEGORIES = ("prieres", "questions", "bible", "foi-travail", "temoignages", "en
 CLES_ETAT = {
     "sagesse_application", "lecture_index", "lecture_favoris", "priere_personal", "priere_intentions",
     "priere_saved", "priere_decharges", "parcours_progress", "discernement_saved", "sabbat_checks",
-    "memoire_progress", "choix_modules", "palais_lieux",
+    "memoire_progress", "memoire_jeu", "choix_modules", "palais_lieux",
     "sagesse_journal", "discernement_brouillon", "priere_exaucees", "pour_moi_vu",
 }
 SEUIL_MASQUAGE = 3  # signalements ouverts à partir desquels une publication est masquée en attendant l'admin

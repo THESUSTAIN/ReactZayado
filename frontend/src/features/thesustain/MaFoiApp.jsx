@@ -4,7 +4,7 @@ import {
   BookOpen, HandHeart, Compass, Users, ShieldCheck, Sparkles, ArrowLeft, ArrowRight,
   ArrowUpRight, Heart, Plus, Check, Wind, Quote, MessageCircle, Send, Bot, CalendarClock,
   Star, ChevronRight, Target, Moon, Feather, Cloud, ScrollText, Trash2, Loader2, Flag, ListChecks,
-  Power, Share2,
+  Power, Share2, Brain,
 } from "lucide-react";
 import {
   fetchFoiPosts, publierFoiPost, soutenirFoiPost, repondreFoiPost, supprimerFoiPost, supprimerFoiReponse,
@@ -17,9 +17,12 @@ import {
   themeDuJour, cleDuJour,
 } from "./thesustainData";
 import { useLocal, uid } from "./store";
-import { AideMemoire, useMemoireProgress, versetsARevoir } from "./MemoireAide";
+import { AideMemoire } from "./MemoireAide";
+import Memoire from "./MemoirePage";
+import { useMemoire } from "./memoireStore";
+import { versetsARevoir } from "./memoireLogic";
 
-const ICONS = { sagesse: BookOpen, priere: HandHeart, parcours: Compass, discernement: ShieldCheck, cercle: Users, repos: Moon, lecture: ScrollText };
+const ICONS = { sagesse: BookOpen, priere: HandHeart, parcours: Compass, discernement: ShieldCheck, cercle: Users, repos: Moon, lecture: ScrollText, memoire: Brain };
 const openSustain = () => { window.open(THESUSTAIN_URL, "_blank", "noopener"); };
 
 // Date relative lisible (« à l'instant », « il y a 2 h », « hier »…).
@@ -128,12 +131,14 @@ function useResumeFoi() {
   const [intentions] = useLocal("priere_intentions", []);
   const [decisions] = useLocal("discernement_saved", []);
   const [journal] = useLocal("sagesse_journal", {});
+  const memoire = useMemoire();
   const [pourMoi, setPourMoi] = useState(null);
   useEffect(() => { fetchFoiPourMoi().then(setPourMoi).catch(() => setPourMoi(null)); }, []);
   const enCours = parcours.map((p) => ({ p, faits: (progress[p.id] || []).length })).find((x) => x.faits > 0 && x.faits < x.p.days.length);
   const aujourdhui = cleDuJour();
   const aReevaluer = (decisions || []).filter((d) => d.dateReeval && d.dateReeval <= aujourdhui && !d.issue);
-  return { theme, enCours, intentions: intentions || [], aReevaluer, pauseFaite: !!(journal || {})[aujourdhui], pourMoi };
+  const versetsDus = versetsARevoir(memoire.progress);
+  return { theme, enCours, intentions: intentions || [], aReevaluer, pauseFaite: !!(journal || {})[aujourdhui], pourMoi, versetsDus };
 }
 
 function PourToi({ r, go, compact = false }) {
@@ -143,6 +148,7 @@ function PourToi({ r, go, compact = false }) {
   if (r.aReevaluer.length) lignes.push({ Icone: CalendarClock, texte: `Décision à réévaluer : « ${r.aReevaluer[0].decision} »`, vue: "discernement", fort: true });
   if (r.enCours) lignes.push({ Icone: Compass, texte: `${r.enCours.p.title} · jour ${r.enCours.faits + 1} sur ${r.enCours.p.days.length}`, vue: "parcours" });
   if (r.intentions.length) lignes.push({ Icone: HandHeart, texte: `${pluriel(r.intentions.length, "intention", "intentions")} dans ta prière`, vue: "priere" });
+  if (r.versetsDus?.length) lignes.push({ Icone: Brain, texte: `${pluriel(r.versetsDus.length, "verset à revoir", "versets à revoir")} aujourd'hui : ${r.versetsDus[0]}${r.versetsDus.length > 1 ? "…" : ""}`, vue: "memoire", fort: true });
   if (!r.pauseFaite) lignes.push({ Icone: Wind, texte: `Ta pause du jour : ${r.theme.theme}`, vue: "sagesse" });
   if (!lignes.length) lignes.push({ Icone: Check, texte: "Tout est à jour pour aujourd'hui. Belle journée.", vue: null });
   return (
@@ -271,7 +277,7 @@ function Sagesse() {
 function LectureBiblique() {
   const [i, setI] = useLocal("lecture_index", 0);
   const [favoris, setFavoris] = useLocal("lecture_favoris", []);
-  const [progMemoire, setProgMemoire] = useMemoireProgress();
+  const { progress: progMemoire } = useMemoire();
   const v = versetsLecture[i % versetsLecture.length];
   const dus = versetsLecture.map((x, k) => ({ x, k })).filter(({ x }) => versetsARevoir(progMemoire).includes(x.ref));
   const estFavori = favoris.some((f) => f.ref === v.ref);
@@ -295,7 +301,7 @@ function LectureBiblique() {
         <Quote className="mt-3 h-6 w-6 text-gold/70" />
         <p className="mt-1 font-display text-2xl leading-snug text-offwhite">{v.text}</p>
         <p className="mt-3 text-sm font-medium text-gold">— {v.ref}</p>
-        <AideMemoire className="mt-4" verset={v} progress={progMemoire} setProgress={setProgMemoire} />
+        <AideMemoire className="mt-4" verset={v} />
         <div className="mt-6 flex justify-center gap-2">
           <GhostBtn onClick={() => setI((i - 1 + versetsLecture.length) % versetsLecture.length)}><ArrowLeft className="h-4 w-4" /> Précédent</GhostBtn>
           <GoldBtn onClick={() => setI((i + 1) % versetsLecture.length)}>Verset suivant <ArrowRight className="h-4 w-4" /></GoldBtn>
@@ -713,6 +719,7 @@ export default function MaFoiApp({ initialView = "hub", onActiver, onRefuser, on
       {view === "priere" && <Priere />}
       {view === "parcours" && <Parcours />}
       {view === "lecture" && <LectureBiblique />}
+      {view === "memoire" && <Memoire />}
       {view === "discernement" && <Discernement />}
       {view === "cercle" && <Cercle />}
       {view === "repos" && <Repos />}
