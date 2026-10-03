@@ -2439,7 +2439,7 @@ async def actualite(marche: str = "", filtre: str = "tout", bref: bool = True, d
     return {"masque": False, "marche": pays_compte, "label": _libelle_marche(pays_compte, cm), "filtre": filtre,
             "marches": marches, "articles": articles, "limite": limite,
             "ia": any(a.get("description_origine") == "ia" for a in articles),
-            "genere_a": now.isoformat(), "rythme": cm.get("actu_rythme", "quotidien"), "configure": bool(cm.get("actu_rythme")),
+            "genere_a": now.isoformat(), "rythme": cm.get("actu_rythme", "quotidien"), "configure": True,   # actualité active par défaut (rythme quotidien) : plus d'écran de configuration bloquant
             "prefs": {"canaux": cm.get("actu_canaux") if isinstance(cm.get("actu_canaux"), list) else ["email", "push"], "nb": cm.get("actu_nb") or 3},
             "prochaine_maj": (now + timedelta(minutes=30)).isoformat()}
 

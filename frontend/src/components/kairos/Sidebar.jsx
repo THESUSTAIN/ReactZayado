@@ -41,7 +41,7 @@ export function Sidebar() {
   const location = useLocation();
   const [actualiteNonVue, setActualiteNonVue] = useState(false);
   useEffect(() => {
-    fetchActualite().then((data) => {
+    fetchActualite("", { bref: false }).then((data) => {
       const aujourdHui = new Date().toISOString().slice(0, 10);
       const dernierVu = localStorage.getItem("actualite_vue_le");
       const aDuContenu = !data?.masque && !data?.erreur && (data?.articles?.length || 0) > 0;

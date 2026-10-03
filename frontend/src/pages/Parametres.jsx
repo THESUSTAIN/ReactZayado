@@ -588,7 +588,7 @@ function CartePush() {
     catch (e) { toast.error(e.message || "Active d'abord les notifications."); }
   };
   return (
-    <Carte titre="Notifications push (mobile & bureau)" desc="Reçois les rappels de check-in et les opportunités du Radar, même l'app fermée.">
+    <Carte titre="Notifications push (mobile & bureau)" desc="Activées par défaut sur ton téléphone (app installée) et ton ordinateur : rappels de check-in, actualité et opportunités du Radar, même l'app fermée. Tu peux les couper ici.">
       {!st.supporte ? (
         <p className="text-sm text-offwhite/50" data-testid="push-non-supporte">Ton navigateur ne supporte pas les notifications push.</p>
       ) : !st.disponible && !st.loading ? (
@@ -597,7 +597,7 @@ function CartePush() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-sm font-medium text-offwhite">Sur cet appareil</p>
-            <p className="text-xs text-offwhite/50">{st.actif ? "Activées — tu peux envoyer un test." : "Active pour recevoir les rappels push."}</p>
+            <p className="text-xs text-offwhite/50">{st.actif ? "Activées — tu peux envoyer un test." : "Pas encore autorisées sur cet appareil : clique sur Activer, ou accepte la demande du navigateur."}</p>
           </div>
           <div className="flex items-center gap-2">
             {st.actif && (

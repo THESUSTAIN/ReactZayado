@@ -50,6 +50,7 @@ import ProspectionCroissance from "@/pages/marketing/ProspectionCroissance";
 import BienEtreDirigeant from "@/pages/marketing/BienEtreDirigeant";
 import { useParams } from "react-router-dom";
 import AccesGate from "@/components/kairos/AccesGate";
+import AutoPush from "@/components/kairos/AutoPush";
 import { getToken } from "@/lib/kairosApi";
 
 // Deux apps séparées issues du même code — la saveur est choisie AU BUILD :
@@ -114,6 +115,7 @@ function App() {
           <GuidedTour />
           <InstallBanner />
           <AccesGate />
+          <AutoPush />
           <Routes>
             <Route path="/" element={getToken() ? <Navigate to="/app" replace /> : <Landing />} />
             <Route path="/accueil" element={<Landing />} />

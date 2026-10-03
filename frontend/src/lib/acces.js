@@ -14,11 +14,10 @@ export function chargerAbonnement() {
 }
 
 // Offre Rêveur : Vision Board, Idées et chat IA (le chat est dans l'en-tête).
-// Ma Foi n'est plus dans cette liste : elle suit désormais la même règle
-// d'accès payant que le reste de /app (voir AccesGate.jsx).
+// Ma Foi est ouverte dès l'offre Rêveur (droits.js : mafoi → « reveur »).
 // Idées est maintenant l'onglet du Plan d'action : Rêveur y accède (onglets Idées et Objectifs).
-export const PAGES_REVEUR = ["/app/vision", "/app/actions", "/app/ideas", "/app/sources", "/app/bien-etre", "/app/debloquer"];
+export const PAGES_REVEUR = ["/app/vision", "/app/actions", "/app/ideas", "/app/sources", "/app/bien-etre", "/app/ma-foi", "/app/debloquer"];
 export const pageAutorisee = (plan, pathname) =>
   plan !== "reveur" || !pathname.startsWith("/app") || PAGES_REVEUR.some((p) => pathname.startsWith(p));
 // Clés du menu accessibles en Rêveur (Bien-être carte du jour incluse).
-export const MENU_REVEUR = ["vision", "actions", "wellbeing"];
+export const MENU_REVEUR = ["vision", "actions", "wellbeing", "mafoi"];

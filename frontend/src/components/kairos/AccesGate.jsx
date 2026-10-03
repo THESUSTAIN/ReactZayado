@@ -8,7 +8,7 @@ import { accueilPro, chargerEspace, enPro, pagesPro } from "@/lib/espace";
 // Plus d'offre gratuite : sans offre active (ni rôle interne), l'espace /app
 // renvoie d'abord vers l'onboarding si le projet n'a jamais été raconté,
 // puis seulement vers /activer (essai 1 mois pour 1 € ou offre).
-// Offre Rêveur : seules Vision, Idées (et le chat de l'en-tête) sont ouvertes.
+// Offre Rêveur : Vision, Idées, Bien-être, Ma Foi (et le chat de l'en-tête) sont ouvertes.
 export const oublierAcces = oublierAbonnement;
 
 export default function AccesGate() {
@@ -16,8 +16,8 @@ export default function AccesGate() {
   const navigate = useNavigate();
   useEffect(() => {
     if (!pathname.startsWith("/app") || !getToken()) return;
-    // Ma Foi suit la même règle d'accès que le reste de /app (offre active),
-    // SAUF pour un membre TheSustain connecté par SSO (a.thesustain).
+    // Ma Foi est ouverte dès l'offre Rêveur (droits.js) ; un membre TheSustain
+    // connecté par SSO (a.thesustain) y accède même sans offre Zayado.
     Promise.all([chargerAbonnement(), chargerEspace()]).then(([a, esp]) => {
       // Espace Pro (entreprise) : seulement les pages des modules ouverts par le titulaire.
       if (esp?.entreprise && enPro()) {

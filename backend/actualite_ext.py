@@ -148,7 +148,7 @@ def lire_prefs(cm: Optional[dict]) -> dict:
     heure = str(cm.get("actu_heure") or "08:00")
     if not re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", heure):
         heure = "08:00"
-    return {"rythme": cm.get("actu_rythme") or "jamais", "canaux": canaux, "nb": nb, "heure": heure,
+    return {"rythme": cm.get("actu_rythme") or "quotidien", "canaux": canaux, "nb": nb, "heure": heure,
             "jour_repos": cm.get("jour_repos") if isinstance(cm.get("jour_repos"), int) else -1}
 
 

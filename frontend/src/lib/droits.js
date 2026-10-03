@@ -11,7 +11,7 @@ export const NOMS_OFFRES = { essentielle: "Sans offre", reveur: "Rêveur", seren
 export const MODULES_MIN = {
   vision: "reveur", idees: "reveur", chat: "reveur",
   cockpit: "serenite", actions: "serenite", radar: "serenite", revue: "serenite", bienetre: "reveur",
-  agents: "serenite", documents: "serenite", mafoi: "serenite",
+  agents: "serenite", documents: "serenite", mafoi: "reveur",
   agent_business: "pro", alertes: "pro",
   rh: "business", equipe: "business",
 };

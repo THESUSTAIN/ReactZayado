@@ -11,7 +11,7 @@ def loc(j, h, m=0):  # 2026-10-05 = lundi
 
 def test_prefs_par_defaut():
     p = lire_prefs({})
-    assert p["rythme"] == "jamais" and p["canaux"] == ["email", "push"] and p["nb"] == 3 and p["heure"] == "08:00"
+    assert p["rythme"] == "quotidien" and p["canaux"] == ["email", "push"] and p["nb"] == 3 and p["heure"] == "08:00"
 
 
 def test_prefs_valeurs_invalides():
@@ -20,7 +20,7 @@ def test_prefs_valeurs_invalides():
 
 
 def test_rien_sans_rythme():
-    assert doit_envoyer(lire_prefs({}), loc(0, 9), False) == "rythme_non_choisi"
+    assert doit_envoyer(lire_prefs({"actu_rythme": "jamais"}), loc(0, 9), False) == "rythme_non_choisi"
 
 
 def test_envoi_quotidien_apres_heure():
