@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Sparkles, Send, Mic, Lightbulb, BatteryLow, Compass, X, Loader2,
   Sun, ListChecks, Newspaper, Check, Clock, XCircle, ExternalLink, RefreshCw, Mail, Bookmark,
@@ -11,7 +12,7 @@ import { prendreOngletEnAttente, prendrePromptEnAttente, discuterAvecIA } from "
 import CanauxCopilote from "@/components/kairos/CanauxCopilote";
 import { useKairos } from "@/context/KairosContext";
 import {
-  streamChat, resumerActualites, fetchPointDuJour, fetchDecisions, suggererDecisions, patchDecision, fetchActualite, enregistrerArticle, fetchEnregistres, validerDecisionEmail,
+  streamChat, fetchHistoriqueChat, fetchPointDuJour, fetchDecisions, suggererDecisions, patchDecision, fetchActualite, enregistrerArticle, fetchEnregistres, validerDecisionEmail,
   saveProfile, creerTache, oauthStockage, relierTrello, choisirListeTrello, telechargerDocument, rangerDocumentDrive, ouvrirMesDocuments, reglerDossierDocuments,
   creerImageIA, rangerFichierDrive, fetchContexteCopilote, fetchDossierDocuments,
 } from "@/lib/kairosApi";
@@ -19,8 +20,20 @@ import { toast } from "sonner";
 
 // Derniers échanges du chat, joints (si on le souhaite) au message pour un collaborateur.
 const contexteChat = { texte: "" };
-// La conversation survit au passage petit ⇄ grand format (le composant est remonté).
-const memoireChat = { messages: null };
+// La conversation vit HORS du composant. Avant, elle était perdue de plusieurs façons : le panneau se ferme
+// et se remonte à chaque changement de page (les réponses données aux questions de mise en route étaient
+// oubliées, donc les mêmes questions revenaient), une réponse en cours d'écriture se perdait si on quittait
+// la page, et un rechargement complet repartait de zéro. Désormais : le magasin ci-dessous survit aux
+// changements de page et au passage petit ⇄ grand format, la réponse en cours continue d'arriver même
+// panneau fermé, et après un rechargement l'historique est relu côté serveur.
+const memoireChat = { messages: null, streaming: false, libre: false, historiqueCharge: false, abonnes: new Set() };
+const diffuserChat = () => memoireChat.abonnes.forEach((f) => f({ messages: memoireChat.messages, streaming: memoireChat.streaming }));
+const majMessages = (fn) => { memoireChat.messages = typeof fn === "function" ? fn(memoireChat.messages || []) : fn; diffuserChat(); };
+const majStreaming = (v) => { memoireChat.streaming = v; diffuserChat(); };
+// Nouvelle connexion (autre compte) : on repart d'une conversation vide, sans voir celle de la personne précédente.
+if (typeof window !== "undefined") {
+  window.addEventListener("zayado:token", () => { Object.assign(memoireChat, { messages: null, streaming: false, libre: false, historiqueCharge: false }); });
+}
 
 // Ouvre le dossier des documents IA dans le Drive / OneDrive de l'utilisateur.
 export async function ouvrirDossierDocuments() {
@@ -218,6 +231,7 @@ function ItemExport({ icon: Icone, label, onClick, testid }) {
 function ActionsMessage({ m, demande, onCopier, onImage, i }) {
   const [envoi, setEnvoi] = useState(null);
   const [menu, setMenu] = useState(false);
+  const navigate = useNavigate();
   const plan = usePlanEffectif();
   const docsOk = !plan || aDroit(plan, "documents");
   const btn = "inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10.5px] font-medium text-offwhite/60 transition hover:border-gold/40 hover:text-gold disabled:opacity-50";
@@ -261,7 +275,7 @@ function ActionsMessage({ m, demande, onCopier, onImage, i }) {
         </div>
       )}
       {pagesCitees(demande).map(([, label, chemin]) => (
-        <button key={chemin} className={`${btn} !border-gold/40 !text-gold`} onClick={() => window.location.assign(chemin)} data-testid={`chat-page-${chemin.replace(/\//g, "-")}`}>
+        <button key={chemin} className={`${btn} !border-gold/40 !text-gold`} onClick={() => navigate(chemin)} data-testid={`chat-page-${chemin.replace(/\//g, "-")}`}>
           <ExternalLink size={11} /> {label}
         </button>
       ))}
@@ -398,13 +412,14 @@ function RelierTrello({ onFini }) {
 function ControlesReglage({ q, onRepondre, onPlusTard }) {
   const [choix, setChoix] = useState([]);
   const [canaux, setCanaux] = useState(false);
+  const navigate = useNavigate();
   const fini = (valeur, label, confirm) => onRepondre(q, valeur, label, confirm);
   let corps = null;
   if (q.type === "dossier") corps = <ChoixDossier onFini={fini} />;
   else if (q.type === "trello") corps = <RelierTrello onFini={fini} />;
   else if (q.type === "teams") corps = (
     <div className="flex flex-wrap gap-2">
-      <button className={puce} onClick={() => { fini("vu", "Je regarde le pack Teams", "Le pack Teams est dans Paramètres › Connexions : télécharge-le puis ajoute-le dans Teams (Applications › Gérer vos applications › Charger une application)."); window.location.assign("/parametres#connexions"); }}>Voir le pack Teams</button>
+      <button className={puce} onClick={() => { fini("vu", "Je regarde le pack Teams", "Le pack Teams est dans Paramètres › Connexions : télécharge-le puis ajoute-le dans Teams (Applications › Gérer vos applications › Charger une application)."); navigate("/parametres#connexions"); }}>Voir le pack Teams</button>
       <button className={puce} onClick={() => fini("plus_tard", "Plus tard", "D'accord, demande-le-moi quand tu veux.")}>Plus tard</button>
     </div>);
   else if (q.type === "canaux") corps = canaux ? <CanauxCopilote compact onFerme={() => fini("vu", "C'est bon", "Parfait. On est prêts : dis-moi par quoi on commence.")} /> : (
@@ -439,21 +454,51 @@ function ControlesReglage({ q, onRepondre, onPlusTard }) {
 }
 
 function ChatTab({ firstName, grand = false }) {
-  const { mode, contexte, aCheckin, priorities, loaded } = useKairos();
+  const { mode, contexte, aCheckin, priorities, loaded, majContexte } = useKairos();
   // Nouveau compte (aucun check-in, aucune action) : le Copilote se présente et
   // propose les 3 premiers pas, au lieu d'une simple formule de politesse.
   const debutant = loaded && !aCheckin && !(priorities || []).length;
   const accueil = debutant
     ? `Bienvenue${firstName ? ` ${firstName}` : ""} 👋 Je suis ton Copilote Zayado. Je vais te poser quelques questions rapides, une à la fois, pour me régler sur toi. Ensuite on fera ton premier check-in et ta première action.`
     : `Bonjour${firstName ? ` ${firstName}` : ""}. Je suis le Copilote IA Zayado, là pour t'accompagner en douceur. Par quoi commence-t-on ?`;
-  const [messages, setMessages] = useState(() => memoireChat.messages || [{ role: "assistant", content: accueil }]);
-  useEffect(() => { memoireChat.messages = messages; }, [messages]);
+  // Source de vérité = le magasin ; ce composant n'en est que l'affichage (il s'y abonne tant qu'il est monté).
+  const [messages, setMessagesLocal] = useState(() => {
+    if (!memoireChat.messages) memoireChat.messages = [{ role: "assistant", content: accueil }];
+    return memoireChat.messages;
+  });
+  const [streaming, setStreamingLocal] = useState(memoireChat.streaming);
+  const setMessages = majMessages;
+  const setStreaming = majStreaming;
+  useEffect(() => {
+    const f = (e) => { setMessagesLocal(e.messages); setStreamingLocal(e.streaming); };
+    memoireChat.abonnes.add(f);
+    f({ messages: memoireChat.messages, streaming: memoireChat.streaming }); // rattrape ce qui est arrivé entre le rendu et l'abonnement
+    return () => { memoireChat.abonnes.delete(f); };
+  }, []);
+
+  // Après un rechargement complet (ou une nouvelle session), on relit les derniers messages gardés côté serveur.
+  const [historiqueOk, setHistoriqueOk] = useState(memoireChat.historiqueCharge);
+  useEffect(() => {
+    if (memoireChat.historiqueCharge) return undefined;
+    let annule = false;
+    fetchHistoriqueChat()
+      .then((h) => {
+        if (annule) return;
+        memoireChat.historiqueCharge = true;
+        const passe = (Array.isArray(h) ? h : []).filter((x) => x && x.contenu)
+          .map((x) => ({ role: x.role === "user" ? "user" : "assistant", content: x.contenu, le: x.le || undefined }));
+        // Seulement si rien n'a encore été dit dans cette session (sinon on risquerait des doublons).
+        if (passe.length) majMessages((cur) => (cur.length === 1 ? [cur[0], ...passe] : cur));
+        setHistoriqueOk(true);
+      })
+      .catch(() => { if (!annule) { memoireChat.historiqueCharge = true; setHistoriqueOk(true); } });
+    return () => { annule = true; };
+  }, []);
   useEffect(() => {
     contexteChat.texte = messages.slice(1).slice(-8)
       .map((m) => `${m.role === "user" ? "Moi" : "Copilote"} : ${String(m.content || "").slice(0, 600)}`).join("\n");
   }, [messages]);
   const [input, setInput] = useState("");
-  const [streaming, setStreaming] = useState(false);
   const scrollRef = useRef(null);
 
   // Le profil arrive souvent après le 1er rendu : tant que la conversation
@@ -466,10 +511,11 @@ function ChatTab({ firstName, grand = false }) {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, streaming]);
 
-  const [conversationLibre, setConversationLibre] = useState(false);
+  const [conversationLibre, setConversationLibre] = useState(memoireChat.libre);
   const send = async (text) => {
     const content = (text ?? input).trim();
     if (!content) return;
+    memoireChat.libre = true;
     setConversationLibre(true);
     if (streaming) { setInput(content); return; } // réponse en cours : le texte attend dans le champ
     setInput("");
@@ -546,7 +592,7 @@ function ChatTab({ firstName, grand = false }) {
   }, []);
   const enAttente = messages.some((m) => m.reglage && !m.repondu);
   useEffect(() => {
-    if (!tourFini || !contexte || reporte || conversationLibre || streaming || ecrit || enAttente) return undefined;
+    if (!tourFini || !historiqueOk || !contexte || reporte || conversationLibre || streaming || ecrit || enAttente) return undefined;
     const q = REGLAGES.find((x) => !faite(x));
     if (!q) return undefined;
     setEcrit(true);
@@ -555,13 +601,14 @@ function ChatTab({ firstName, grand = false }) {
       setMessages((m) => [...m, { role: "assistant", content: q.texte, reglage: q.key, le: new Date().toISOString() }]);
     }, messages.length <= 1 ? 1400 : 1000);
     return () => { clearTimeout(t); setEcrit(false); };
-  }, [tourFini, contexte, reporte, conversationLibre, streaming, enAttente, reponses]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tourFini, historiqueOk, contexte, reporte, conversationLibre, streaming, enAttente, reponses]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const repondre = (q, valeur, label, confirm) => {
     setReponses((r) => ({ ...r, [q.key]: valeur }));
-    const patch = { contexte_metier: { [q.key]: valeur } };
-    if (q.key === "heure_point") patch.heure_checkin = valeur;
-    saveProfile(patch).catch(() => {});
+    // majContexte met à jour le contexte de TOUTE l'app tout de suite. Avant, seul l'état local de ce composant
+    // était mis à jour : après un changement de page, la réponse était oubliée et la même question revenait.
+    majContexte({ [q.key]: valeur }).catch(() => {});
+    if (q.key === "heure_point") saveProfile({ heure_checkin: valeur }).catch(() => {});
     const le = new Date().toISOString();
     setMessages((m) => [...m.map((x) => (x.reglage === q.key ? { ...x, repondu: true } : x)), { role: "user", content: label, le },
       ...(confirm ? [{ role: "assistant", content: confirm, le, info: true }] : [])]);
@@ -570,7 +617,7 @@ function ChatTab({ firstName, grand = false }) {
     setReponses((r) => ({ ...r, reglages_reportes_le: aujourdhuiIso() }));
     setMessages((m) => [...m.map((x) => (x.reglage && !x.repondu ? { ...x, repondu: true } : x)),
       { role: "assistant", content: "D'accord, on verra ça demain. Je suis là si tu as besoin.", info: true, le: new Date().toISOString() }]);
-    saveProfile({ contexte_metier: { reglages_reportes_le: aujourdhuiIso() } }).catch(() => {});
+    majContexte({ reglages_reportes_le: aujourdhuiIso() }).catch(() => {});
   };
 
   return (
@@ -770,25 +817,31 @@ function ActuSetup({ onFini }) {
 }
 
 // ── Onglet Actualité (digest piloté par l'énergie) ──
+// Dernier résultat par filtre, gardé 5 min : changer de page ou d'onglet ne relance ni le chargement ni le bref IA.
+// La clé tient compte des réglages « actu_* » : si on les change dans Paramètres, on recharge.
+const memoireActu = {};
+const VALIDITE_ACTU = 5 * 60 * 1000;
+
 function ActuTab() {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { contexte } = useKairos();
+  const signature = JSON.stringify(Object.entries(contexte || {}).filter(([k]) => k.startsWith("actu_")).sort());
+  const [filtre, setFiltre] = useState(() => { try { return localStorage.getItem("zayado_actu_filtre") || "tout"; } catch { return "tout"; } });
+  const enCache = (f) => { const m = memoireActu[f]; return m && m.sig === signature && Date.now() - m.t < VALIDITE_ACTU ? m.data : null; };
+  const [data, setData] = useState(() => enCache(filtre));
+  const [loading, setLoading] = useState(() => !enCache(filtre));
   const [enregistres, setEnregistres] = useState([]);
   // Filtre : tout / légal (pays du compte) / ma veille (pays, secteurs et mots-clés choisis dans Paramètres).
-  const [filtre, setFiltre] = useState(() => { try { return localStorage.getItem("zayado_actu_filtre") || "tout"; } catch { return "tout"; } });
   const load = async (f = filtre) => {
+    const c = enCache(f);
+    if (c) { setData(c); setLoading(false); return; }
     setLoading(true);
     try {
+      // Le serveur renvoie déjà le bref de chaque actu (2 à 4 phrases complètes, écrit par l'IA).
       const d = await fetchActualite(f);
-      // 1 à 3 actus (choix de l'utilisateur) en vue « Tout » ; le reste reste accessible via les filtres.
-      if (f === "tout" && d?.articles) d.articles = d.articles.slice(0, Math.max(1, Math.min(3, Number(d?.prefs?.nb) || 3)));
+      // 1 à 3 actus (choix de l'utilisateur), dans toutes les vues.
+      if (d?.articles) d.articles = d.articles.slice(0, Math.max(1, Math.min(3, Number(d?.prefs?.nb) || Number(d?.limite) || 3)));
+      if (!d?.masque && !d?.erreur && d?.configure !== false) memoireActu[f] = { t: Date.now(), sig: signature, data: d };
       setData(d); setLoading(false);
-      // Description de 2 lignes écrite par l'IA : arrive après, sans bloquer l'affichage.
-      if (d?.articles?.length) {
-        resumerActualites(d.articles.slice(0, 3).map((a) => ({ titre: a.titre, lien: a.lien, resume: a.resume })))
-          .then((r) => setData((cur) => cur && cur.articles ? { ...cur, articles: cur.articles.map((a, i) => ({ ...a, description: r?.resumes?.[i] || a.description })) } : cur))
-          .catch(() => { /* on garde le résumé du flux */ });
-      }
     } catch { setData({ erreur: true, articles: [] }); setLoading(false); }
   };
   const chargerEnregistres = async () => { try { const d = await fetchEnregistres(); setEnregistres(d?.articles || []); } catch { /* silencieux */ } };
@@ -800,7 +853,7 @@ function ActuTab() {
     <div className="h-full overflow-y-auto px-4 py-4" data-testid="actu-tab">
       <div className="mb-3 flex items-center justify-between gap-2 px-1">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Actualité</p>
-        <a href="/parametres#notifications" className="text-[11px] text-offwhite/50 hover:text-gold" data-testid="actu-regler">Choisir mes sources</a>
+        <Link to="/parametres#notifications" className="text-[11px] text-offwhite/50 hover:text-gold" data-testid="actu-regler">Choisir mes sources</Link>
       </div>
       <div className="mb-3 flex gap-1 rounded-xl border border-white/10 bg-white/5 p-1" data-testid="actu-filtres">
         {[["tout", "Tout"], ["legal", "Légal"], ["perso", "Ma veille"]].map(([k, l]) => (
@@ -816,8 +869,10 @@ function ActuTab() {
         </p>
       )}
       {!loading && data && !data.erreur && !data.masque && data.configure === false ? (
-        <ActuSetup onFini={() => load()} />
-      ) : loading ? <Loader2 className="h-5 w-5 animate-spin text-gold" /> : data?.masque ? (
+        <ActuSetup onFini={() => { Object.keys(memoireActu).forEach((k) => delete memoireActu[k]); load(); }} />
+      ) : loading ? (
+        <div className="flex items-center gap-2 text-xs text-offwhite/60" data-testid="actu-chargement"><Loader2 className="h-4 w-4 animate-spin text-gold" /> L'IA prépare ton bref du jour…</div>
+      ) : data?.masque ? (
         <div className="rounded-xl border border-[#14B8A6]/30 bg-[#14B8A6]/10 p-4 text-sm leading-relaxed text-offwhite/85" data-testid="actu-masque">
           {data.raison}
         </div>
@@ -836,7 +891,7 @@ function ActuTab() {
                 </span>
               )}
               <p className="text-sm font-medium leading-snug text-offwhite">{a.titre}</p>
-              {(a.description || a.resume) && <p className="mt-1 line-clamp-2 text-xs text-offwhite/60" data-testid={`actu-description-${i}`}>{a.description || a.resume}</p>}
+              {a.description && a.description_origine !== "titre" && <p className="mt-1.5 text-[12.5px] leading-relaxed text-offwhite/70" data-testid={`actu-description-${i}`}>{a.description}</p>}
               <p className="mt-1.5 text-[10.5px] text-offwhite/40">{[a.source_label, dateTxt].filter(Boolean).join(" · ")}</p>
               <div className="mt-2 flex items-center justify-between gap-2">
                 <button
@@ -864,6 +919,11 @@ function ActuTab() {
             </div>
             );
           })}
+          {(data?.articles || []).length > 0 && data?.ia === false && (
+            <p className="px-1 text-[10.5px] leading-snug text-offwhite/40" data-testid="actu-ia-indispo">
+              Le bref IA est momentanément indisponible : tu vois la description fournie par la source.
+            </p>
+          )}
           {(data?.articles || []).length === 0 && data?.vide_pref && (
             <p className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-offwhite/60">
               {filtre === "perso" ? "Ta veille est vide : choisis des pays, des secteurs ou des mots-clés dans Paramètres › Notifications." : "Toutes les sources sont coupées dans tes réglages. Réactive-en au moins une dans Paramètres › Notifications."}

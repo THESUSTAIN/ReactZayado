@@ -68,3 +68,56 @@ def test_url_privee_refusee():
 def test_email_echappe_html():
     h = corps_email("Zoé", [{"titre": "<script>x</script>", "description": "d"}], "https://zayado.net")
     assert "<script>" not in h and "tab=actu" in h
+
+
+# ── Bref de l'actualité : des phrases COMPLÈTES, jamais coupées ──
+from actualite_ext import bref_de_secours, extrait_utile, meta_description, phrases_completes, texte_brut
+
+
+def test_texte_brut_ne_coupe_pas_et_gere_une_balise_tronquee():
+    assert texte_brut('<a href="https://news.google.com/rss/articles/CBMi') == ""
+    assert texte_brut("<p>Un  texte&nbsp;long</p>") == "Un texte long"
+
+
+def test_phrases_completes_garde_des_phrases_entieres():
+    t = "La loi change au 1er janvier. Les PME devront déclarer plus tôt. Un délai de grâce est prévu. Les syndicats réagissent. Cinquième phrase."
+    r = phrases_completes(t, 320, 4)
+    assert r.count(".") == 4 and r.endswith("réagissent.") and "Cinquième" not in r
+
+
+def test_phrases_completes_abandonne_le_fragment_coupe():
+    r = phrases_completes("Le gouvernement annonce une aide pour les artisans. Elle sera versée dès le mo", 320, 4)
+    assert r == "Le gouvernement annonce une aide pour les artisans."
+
+
+def test_phrases_completes_ne_termine_jamais_par_des_points_de_suspension():
+    long = "mot " * 200
+    r = phrases_completes(long, 100, 4)
+    assert not r.endswith("…") and r.endswith(".") and len(r) <= 101
+
+
+def test_extrait_utile_google_actualites_ne_donne_rien():
+    # Google Actualités ne renvoie que le titre et le média : aucun vrai résumé
+    titre = "Les PME face à la hausse des prix de l'énergie - Le Monde"
+    resume = '<a href="https://news.google.com/rss/articles/CBMi123" target="_blank">Les PME face à la hausse des prix de l\'énergie</a>&nbsp;&nbsp;<font color="#6f6f6f">Le Monde</font>'
+    assert extrait_utile(titre, resume) == ""
+
+
+def test_extrait_utile_garde_un_vrai_resume():
+    r = extrait_utile("Titre court", "Titre court Les entreprises de moins de dix salariés pourront reporter leur déclaration jusqu'au 30 juin.")
+    assert r.startswith("Les entreprises")
+
+
+def test_meta_description():
+    page = '<html><head><meta property="og:description" content="Une description assez longue pour être utile aux lecteurs de l\'article."></head></html>'
+    assert meta_description(page).startswith("Une description")
+    assert meta_description('<meta property="og:description" content="Court">') == ""
+
+
+def test_bref_de_secours_prefere_la_page_puis_le_flux_puis_le_titre():
+    meta = "L'État prolonge le dispositif d'aide. Les demandes restent ouvertes jusqu'en mars."
+    assert bref_de_secours("Aide prolongée", "", meta) == (meta, "page")
+    t, o = bref_de_secours("Aide prolongée", "Aide prolongée Les demandes restent ouvertes jusqu'en mars pour toutes les entreprises concernées.")
+    assert o == "flux" and t.endswith(".")
+    t, o = bref_de_secours("Aide prolongée jusqu'en mars - Le Figaro", "")
+    assert o == "titre" and t == "Aide prolongée jusqu'en mars." 

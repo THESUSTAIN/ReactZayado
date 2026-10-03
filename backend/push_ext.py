@@ -63,12 +63,15 @@ def install_push(g: dict) -> None:
             raise HTTPException(401, "Connecte-toi pour activer les notifications.")
         return uid
 
-    def _envoyer_un(sub: "PushSubscription", payload: str) -> bool:
-        """Envoi bloquant d'une notif. Retourne False si l'abonnement est mort (404/410)."""
+    def _envoyer_un(sub: "PushSubscription", payload: str) -> str:
+        """Envoi bloquant d'une notif. Retourne "ok" (acceptée par le service push), "mort" (abonnement
+        expiré, 404/410 : à supprimer) ou "echec" (autre erreur : abonnement gardé, mais PAS compté comme envoyé).
+        Avant, un échec était compté comme un envoi réussi : le bouton « test » annonçait « envoyée » sans rien
+        recevoir, et les relances ne basculaient jamais sur Telegram."""
         v = _vapid()
         if webpush is None:
             log.warning("pywebpush non installé : notification ignorée.")
-            return True
+            return "echec"
         try:
             webpush(
                 subscription_info={"endpoint": sub.endpoint, "keys": {"p256dh": sub.p256dh, "auth": sub.auth}},
@@ -78,13 +81,16 @@ def install_push(g: dict) -> None:
                 ttl=3600,
                 timeout=10,
             )
-            return True
+            return "ok"
         except WebPushException as exc:
             resp = getattr(exc, "response", None)
             if resp is not None and resp.status_code in (404, 410):
-                return False
-            log.warning("Echec push (conservé) : %s", exc)
-            return True
+                return "mort"
+            log.warning("Echec push (abonnement conservé) : %s", exc)
+            return "echec"
+        except Exception as exc:  # noqa: BLE001  (clé privée invalide, réseau coupé…)
+            log.warning("Echec push (%s) : %s", type(exc).__name__, exc)
+            return "echec"
 
     async def envoyer_push(db, user_id: str, titre: str, corps: str, url: str = "/app", tag: str = "zayado") -> dict:
         """Envoie une notif à tous les appareils d'un utilisateur. Nettoie les morts."""
@@ -93,17 +99,19 @@ def install_push(g: dict) -> None:
             return {"envoye": 0, "raison": "vapid_absent"}
         subs = list((await db.execute(select(PushSubscription).where(PushSubscription.user_id == user_id))).scalars())
         payload = json.dumps({"title": titre, "body": corps, "url": url, "tag": tag})
-        envoye = supprime = 0
+        envoye = supprime = echec = 0
         for s in subs:
-            vivant = await asyncio.to_thread(_envoyer_un, s, payload)
-            if vivant:
+            etat = await asyncio.to_thread(_envoyer_un, s, payload)
+            if etat == "ok":
                 envoye += 1
-            else:
+            elif etat == "mort":
                 await db.delete(s)
                 supprime += 1
+            else:
+                echec += 1
         if supprime:
             await db.commit()
-        return {"envoye": envoye, "supprime": supprime}
+        return {"envoye": envoye, "supprime": supprime, "echec": echec}
 
     g["envoyer_push"] = envoyer_push
 
@@ -153,6 +161,10 @@ def install_push(g: dict) -> None:
         uid = _connecte()
         r = await envoyer_push(db, uid, "Zayado", "🔔 Tes notifications sont bien activées.", "/app", "test")
         if not r.get("envoye"):
+            if r.get("raison") == "vapid_absent":
+                raise HTTPException(503, "Notifications non configurées côté serveur (clés VAPID absentes).")
+            if r.get("echec"):
+                raise HTTPException(502, "Le service de notification a refusé l'envoi : vérifie les clés VAPID dans les journaux du serveur.")
             raise HTTPException(400, "Aucun appareil abonné (active d'abord les notifications).")
         return r
 

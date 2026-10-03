@@ -161,6 +161,7 @@ Tout fonctionne sans ces clés, avec des réponses de repli ou des boutons désa
 | Connexion Google + Google Drive | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` |
 | Connexion Microsoft + OneDrive | `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, `MICROSOFT_TENANT` |
 | E-mails | `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME` |
+| Notifications push (PWA) | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` : à générer avec `python generer_cles_vapid.py` (dans `backend/`) |
 | Telegram | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME` |
 | Prospects (Radar) | `APOLLO_API_KEY` |
 | Boutique | `SHOPIFY_SHOP_DOMAIN`, `SHOPIFY_ADMIN_TOKEN` |

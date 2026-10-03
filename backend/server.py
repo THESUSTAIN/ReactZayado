@@ -1998,10 +1998,12 @@ async def chat(body: ChatIn, db: AsyncSession = Depends(get_db)):
     # Historique récent (avant ce message) : le Copilote suit la conversation au lieu de répondre à chaque message isolé.
     try:
         recents = list((await db.execute(select(VisionChatMessage).where(VisionChatMessage.user_id == uid)
-                                         .order_by(VisionChatMessage.created_at.desc()).limit(10))).scalars())[::-1]
+                                         .order_by(VisionChatMessage.created_at.desc()).limit(16))).scalars())[::-1]
         if recents:
-            systeme += "\n\n--- Conversation récente ---\n" + "\n".join(
-                f"{'Utilisateur' if m.role == 'user' else 'Copilote'} : {m.contenu[:600]}" for m in recents)
+            systeme += ("\n\n--- Conversation récente (la plus ancienne en premier) ---\n" + "\n".join(
+                f"{'Utilisateur' if m.role == 'user' else 'Copilote'} : {m.contenu[:900]}" for m in recents)
+                + "\n\nTu te souviens de cette conversation. Ne repose JAMAIS une question à laquelle l'utilisateur a déjà répondu "
+                  "ci-dessus ; reprends là où vous en étiez et réponds à son dernier message.")
     except Exception as e:  # noqa: BLE001
         logger.info("Historique du chat indisponible : %s", e)
     # Recherche web, actus du jour, texte d'un article collé : le Copilote peut AGIR sur l'actualité.
@@ -2040,35 +2042,41 @@ async def chat(body: ChatIn, db: AsyncSession = Depends(get_db)):
     except Exception as e:  # noqa: BLE001
         logger.warning("Victoire non enregistrée depuis le chat : %s", e)
 
+    async def _sauver_reponse(texte: str):
+        try:
+            async with async_session() as s:
+                s.add(VisionChatMessage(user_id=uid, role="assistant", contenu=texte))
+                await s.commit()
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Historique chat non enregistré : %s", e)
+
     async def flux():
         morceaux = []
         if victoire_notee:
             yield f"data: {json.dumps({'victoire': victoire_notee})}\n\n"
         try:
-            client = _client_llm(f"copilote-{uid}", systeme)
-            if client is None:
-                raise RuntimeError("MAMMOTH_API_KEY absente")
-            from llm_mammouth import StreamDone, TextDelta, UserMessage
-            async for ev in client.stream_message(UserMessage(text=body.message)):
-                if isinstance(ev, TextDelta):
-                    morceaux.append(ev.content)
-                    yield f"data: {json.dumps({'delta': ev.content})}\n\n"
-                elif isinstance(ev, StreamDone):
-                    break
-        except Exception as e:  # noqa: BLE001
-            logger.warning("Copilote IA indisponible (%s) — repli local", e)
-            texte = repli_juridique() if juridique else _repli(body.message)
-            morceaux = [texte]
-            yield f"data: {json.dumps({'delta': texte})}\n\n"
-
-        complet = "".join(morceaux).strip()
-        if complet:
             try:
-                async with async_session() as s:
-                    s.add(VisionChatMessage(user_id=uid, role="assistant", contenu=complet))
-                    await s.commit()
+                client = _client_llm(f"copilote-{uid}", systeme)
+                if client is None:
+                    raise RuntimeError("MAMMOTH_API_KEY absente")
+                from llm_mammouth import StreamDone, TextDelta, UserMessage
+                async for ev in client.stream_message(UserMessage(text=body.message)):
+                    if isinstance(ev, TextDelta):
+                        morceaux.append(ev.content)
+                        yield f"data: {json.dumps({'delta': ev.content})}\n\n"
+                    elif isinstance(ev, StreamDone):
+                        break
             except Exception as e:  # noqa: BLE001
-                logger.warning("Historique chat non enregistré : %s", e)
+                logger.warning("Copilote IA indisponible (%s) — repli local", e)
+                texte = repli_juridique() if juridique else _repli(body.message)
+                morceaux = [texte]
+                yield f"data: {json.dumps({'delta': texte})}\n\n"
+        finally:
+            # Même si la page est fermée ou rechargée en plein flux, ce qui a déjà été écrit est gardé :
+            # la conversation retrouvée au retour n'a plus de réponse manquante. Tâche détachée : elle survit à l'annulation.
+            complet = "".join(morceaux).strip()
+            if complet:
+                asyncio.ensure_future(_sauver_reponse(complet))
         if juridique and sources:
             yield f"data: {json.dumps({'sources': sources, 'juridique': True})}\n\n"
         elif sources_web:
@@ -2101,8 +2109,16 @@ async def copilote_contexte(db: AsyncSession = Depends(get_db)):
 
 @api.get("/copilote/history")
 async def chat_history(db: AsyncSession = Depends(get_db)):
-    msgs = list((await db.execute(select(VisionChatMessage).where(VisionChatMessage.user_id == _uid()).order_by(VisionChatMessage.created_at).limit(100))).scalars())
-    return [{"role": m.role, "contenu": m.contenu} for m in msgs]
+    """Les 100 derniers messages, du plus ancien au plus récent (le chat les recharge à chaque ouverture)."""
+    msgs = list((await db.execute(select(VisionChatMessage).where(VisionChatMessage.user_id == _uid())
+                                  .order_by(VisionChatMessage.created_at.desc()).limit(100))).scalars())[::-1]
+
+    def _le(m):
+        d = m.created_at
+        if d is not None and d.tzinfo is None:
+            d = d.replace(tzinfo=timezone.utc)
+        return d.isoformat() if d else None
+    return [{"role": m.role, "contenu": m.contenu, "le": _le(m)} for m in msgs]
 
 
 # ─────────────── Point du jour ───────────────
@@ -2231,7 +2247,7 @@ def _lire_flux(url: str) -> list:
         out.append({
             "titre": getattr(e, "title", "").strip(),
             "lien": getattr(e, "link", ""),
-            "resume": (getattr(e, "summary", "") or "")[:220],
+            "resume": (getattr(e, "summary", "") or "")[:2000],
             "date": getattr(e, "published", "") or getattr(e, "updated", ""),
         })
     return out
@@ -2333,12 +2349,14 @@ async def actualite_options(db: AsyncSession = Depends(get_db)):
 
 
 @api.get("/copilote/actualite")
-async def actualite(marche: str = "", filtre: str = "tout", db: AsyncSession = Depends(get_db)):
+async def actualite(marche: str = "", filtre: str = "tout", bref: bool = True, db: AsyncSession = Depends(get_db)):
     """Veille du jour, PILOTÉE PAR L'ÉNERGIE (3 à 5 items, masquée en récupération).
     - Légal : rattaché au pays du compte (sauf si l'utilisateur choisit un autre pays pour le légal) ;
       source officielle quand elle existe (service-public, OHADA), sinon presse juridique du pays.
     - Personnalisé : pays suivis, secteurs choisis et mots-clés de veille de l'utilisateur.
-    filtre = tout | legal | perso (le filtre du chat)."""
+    filtre = tout | legal | perso (le filtre du chat).
+    Le nombre d'actus suit le choix de l'utilisateur (actu_nb : 1 à 3). bref=False : pas de résumé IA (pastille de la cloche).
+    Chaque actu revient avec `description` (bref de 2 à 4 phrases complètes) et `description_origine` (ia | page | flux | titre)."""
     uid = _uid()
     dernier = list((await db.execute(select(VisionCheckin).where(VisionCheckin.user_id == uid).order_by(VisionCheckin.date.desc()).limit(1))).scalars())
     energie = dernier[0].energie if dernier else 4
@@ -2386,7 +2404,10 @@ async def actualite(marche: str = "", filtre: str = "tout", db: AsyncSession = D
         for mc in mots:
             sources.append((_gnews(f'"{mc.strip()}"', pays_suivis[0], _libelle_marche(pays_suivis[0], cm)), "veille", mc.strip()))
 
-    limite = (5 if energie >= 4 else 3) if filtre == "tout" else 12
+    try:
+        limite = max(1, min(3, int(cm.get("actu_nb") or 3)))   # 1 à 3 actus, comme choisi (avant : 3 à 5, ou 12 en Légal / Ma veille)
+    except (TypeError, ValueError):
+        limite = 3
     if not sources:
         return {"masque": False, "erreur": False, "marche": pays_compte, "label": _libelle_marche(pays_compte, cm),
                 "marches": marches, "articles": [], "limite": limite, "vide_pref": True, "filtre": filtre}
@@ -2407,10 +2428,17 @@ async def actualite(marche: str = "", filtre: str = "tout", db: AsyncSession = D
         for lst in autres:
             if lst:
                 melange.append(lst.pop(0))
-    articles = (legaux[:2] + melange) if filtre == "tout" else (legaux if filtre == "legal" else melange)
+    articles = (legaux[:(1 if limite <= 2 else 2)] + melange) if filtre == "tout" else (legaux if filtre == "legal" else melange)
     now = datetime.now(timezone.utc)
+    articles = articles[:limite]
+    if bref and "enrichir_actus" in globals():
+        try:
+            articles = await globals()["enrichir_actus"](articles)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Bref des actus indisponible : %s", e)
     return {"masque": False, "marche": pays_compte, "label": _libelle_marche(pays_compte, cm), "filtre": filtre,
-            "marches": marches, "articles": articles[:limite], "limite": limite,
+            "marches": marches, "articles": articles, "limite": limite,
+            "ia": any(a.get("description_origine") == "ia" for a in articles),
             "genere_a": now.isoformat(), "rythme": cm.get("actu_rythme", "quotidien"), "configure": bool(cm.get("actu_rythme")),
             "prefs": {"canaux": cm.get("actu_canaux") if isinstance(cm.get("actu_canaux"), list) else ["email", "push"], "nb": cm.get("actu_nb") or 3},
             "prochaine_maj": (now + timedelta(minutes=30)).isoformat()}

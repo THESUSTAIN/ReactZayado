@@ -184,7 +184,7 @@ export function Header() {
   useEffect(() => {
     let on = true;
     const aujourdHui = new Date().toISOString().slice(0, 10);
-    Promise.allSettled([fetchActualite(), fetchDecisions(), fetchLettres(), fetchRituels()]).then(([actu, dec, lettres, rituels]) => {
+    Promise.allSettled([fetchActualite("", { bref: false }), fetchDecisions(), fetchLettres(), fetchRituels()]).then(([actu, dec, lettres, rituels]) => {
       if (!on) return;
       const d1 = actu.status === "fulfilled" ? actu.value : null;
       const aDuContenu = !!(d1 && !d1.masque && !d1.erreur && (d1.articles?.length || 0) > 0);

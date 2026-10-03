@@ -126,7 +126,13 @@ export const fetchDecisions = () => jget("/copilote/decisions");
 export const suggererDecisions = () => jsend("/copilote/decisions/suggerer", "POST");
 export const patchDecision = (id, statut, canal) => jsend(`/copilote/decisions/${id}`, "PATCH", { statut, canal });
 export const validerDecisionEmail = (id) => jsend(`/copilote/decisions/${id}/valider-email`, "POST");
-export const fetchActualite = (filtre = "") => jget(`/copilote/actualite${filtre ? `?filtre=${filtre}` : ""}`);
+// bref:false = sans résumé IA (juste savoir s'il y a du contenu : pastille de la cloche).
+export const fetchActualite = (filtre = "", { bref = true } = {}) => {
+  const q = [filtre ? `filtre=${filtre}` : "", bref ? "" : "bref=0"].filter(Boolean).join("&");
+  return jget(`/copilote/actualite${q ? `?${q}` : ""}`);
+};
+// Les 100 derniers messages du Copilote (conservés côté serveur) : la conversation se retrouve après un rechargement.
+export const fetchHistoriqueChat = () => jget("/copilote/history");
 export const fetchActualiteOptions = () => jget("/copilote/actualite/options");
 export const resumerActualites = (articles) => jsend("/copilote/actualite/resumes", "POST", { articles });
 export const testerActualite = () => jsend("/copilote/actualite/test", "POST");

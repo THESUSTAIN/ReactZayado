@@ -11,7 +11,8 @@ Réglages (profil.contexte_metier) :
   actu_heure   : "HH:MM" heure locale          (défaut : 08:00)
 
 Routes :
-  POST /api/copilote/actualite/resumes   : 2 lignes de résumé IA par actu (cache 24 h)
+  GET  /api/copilote/actualite           : (server.py) actus du jour, déjà accompagnées de leur bref IA (2 à 4 phrases)
+  POST /api/copilote/actualite/resumes   : brefs IA pour une liste d'actus (cache 24 h)
   POST /api/copilote/actualite/test      : envoi immédiat + diagnostic canal par canal
   GET  /api/copilote/actualite/statut    : ce qui manque pour que l'envoi arrive
   GET  /api/admin/actualite/envois       : (admin) journal des envois
@@ -46,7 +47,8 @@ CANAUX = ("email", "push")
 URL_RE = re.compile(r"https?://[^\s)»\]>\"']+")
 MOTS_ACTU = ("actu", "actualité", "actualite", "news", "dernier", "dernière", "aujourd'hui", "nouveau", "nouveauté",
              "intéressant", "interessant", "recherche", "cherche", "quoi de neuf", "tendance", "veille")
-_cache_resumes: dict = {}
+_cache_resumes: dict = {}   # clé -> (horodatage, texte, origine) ; 24 h, 300 entrées au plus
+TTL_RESUMES = 24 * 3600
 
 
 # ───────────────────────── fonctions pures (testées) ─────────────────────────
@@ -58,6 +60,79 @@ def nettoyer(texte: str, limite: int = 220) -> str:
     if len(t) <= limite:
         return t
     return t[:limite].rsplit(" ", 1)[0].rstrip(",;: ") + "…"
+
+
+def texte_brut(texte: str) -> str:
+    """HTML retiré, espaces normalisés, SANS aucune coupe."""
+    t = _html.unescape(re.sub(r"<[^>]*>?", " ", texte or ""))
+    return re.sub(r"\s+", " ", t).strip()
+
+
+_FIN_PHRASE = re.compile(r"(?<=[.!?…])\s+")
+
+
+def phrases_completes(texte: str, limite: int = 320, max_phrases: int = 4) -> str:
+    """Garde des phrases ENTIÈRES (jamais coupées au milieu), 4 au plus, `limite` caractères au plus.
+
+    Un fragment final sans ponctuation (texte coupé par le flux ou par l'IA) est abandonné
+    dès qu'au moins une phrase complète le précède. Cas extrême (une seule phrase trop
+    longue) : coupe sur un mot et termine par un point, jamais par « … »."""
+    t = texte_brut(texte)
+    if not t:
+        return ""
+    morceaux = [p.strip() for p in _FIN_PHRASE.split(t) if p.strip()]
+    if len(morceaux) > 1 and morceaux[-1][-1] not in ".!?…":
+        morceaux = morceaux[:-1]
+    sortie: list = []
+    for p in morceaux:
+        if sortie and len(" ".join(sortie + [p])) > limite:
+            break
+        sortie.append(p)
+        if len(sortie) >= max_phrases:
+            break
+    res = " ".join(sortie)
+    if len(res) > limite * 1.5:
+        res = res[:limite].rsplit(" ", 1)[0].rstrip(",;:-– ")
+    if res and res[-1] not in ".!?…":
+        res += "."
+    return res
+
+
+def extrait_utile(titre: str, resume: str) -> str:
+    """Ce que le flux dit EN PLUS du titre. Google Actualités ne renvoie que le titre + le média :
+    dans ce cas il ne reste rien d'utile (chaîne vide) et on ira chercher mieux."""
+    t = texte_brut(resume)
+    titre_n = texte_brut(titre)
+    if titre_n:
+        t = t.replace(titre_n, " ")
+        # titres Google Actualités : « Titre - Média » ; le flux répète « Titre  Média »
+        racine = re.split(r"\s[-–—|]\s", titre_n)[0]
+        if racine and len(racine) > 20:
+            t = t.replace(racine, " ")
+    t = re.sub(r"\s+", " ", t).strip(" -–—|·.")
+    return t if len(t) >= 60 else ""
+
+
+def meta_description(html_page: str) -> str:
+    """Description officielle de l'article (balises og:description / description)."""
+    for pat in (r'<meta[^>]+property=["\']og:description["\'][^>]+content=["\']([^"\']+)',
+                r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:description',
+                r'<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\']+)'):
+        m = re.search(pat, html_page or "", re.I)
+        if m:
+            t = texte_brut(m.group(1))
+            if len(t) >= 40:
+                return t
+    return ""
+
+
+def bref_de_secours(titre: str, resume: str, meta: str = "") -> tuple:
+    """Sans IA : meilleure description disponible, en phrases complètes. Retourne (texte, origine)."""
+    for brut, origine in ((meta, "page"), (extrait_utile(titre, resume), "flux")):
+        t = phrases_completes(brut, 320, 3) if brut else ""
+        if t and texte_brut(t).lower().rstrip(".") != texte_brut(titre).lower().rstrip("."):
+            return t, origine
+    return phrases_completes(re.split(r"\s[-–—|]\s", texte_brut(titre))[0], 200, 1), "titre"
 
 
 def lire_prefs(cm: Optional[dict]) -> dict:
@@ -167,64 +242,124 @@ def install_actualite(g: dict) -> None:
 
     g["ActuEnvoi"] = ActuEnvoi
 
-    # ── IA : résumé de 2 lignes ──
+    # ── IA : bref de 2 à 4 phrases complètes ──
+    async def _page_article(url: str) -> str:
+        """Description officielle de l'article, si la page est lisible (les liens Google Actualités ne le sont pas)."""
+        if not url or "news.google.com" in url:
+            return ""
+        try:
+            if not await asyncio.to_thread(url_publique, url):
+                return ""
+            async with httpx.AsyncClient(timeout=6, follow_redirects=True, headers={"User-Agent": "Mozilla/5.0 ZayadoBot"}) as c:
+                r = await c.get(url)
+            if r.status_code != 200 or "html" not in r.headers.get("content-type", ""):
+                return ""
+            return meta_description(r.text[:60000])
+        except Exception as e:  # noqa: BLE001
+            log.info("Page d'actu illisible %s : %s", url[:80], e)
+            return ""
+
+    def _cle(a: dict) -> str:
+        return a.get("lien") or a.get("titre") or ""
+
+    def _en_cache(a: dict):
+        c = _cache_resumes.get(_cle(a))
+        if c and (datetime.now(timezone.utc).timestamp() - c[0]) < TTL_RESUMES:
+            return c[1], c[2]
+        return None
+
+    def _mettre_en_cache(a: dict, texte: str, origine: str) -> None:
+        if len(_cache_resumes) >= 300:
+            for k in sorted(_cache_resumes, key=lambda k: _cache_resumes[k][0])[:100]:
+                _cache_resumes.pop(k, None)
+        _cache_resumes[_cle(a)] = (datetime.now(timezone.utc).timestamp(), texte, origine)
+
     async def resumer(articles: list) -> list:
-        """Une description courte (2 lignes) par actu. Repli : le résumé du flux, nettoyé."""
-        brut = [nettoyer(a.get("resume") or a.get("titre") or "", 180) for a in articles]
-        out = []
+        """Un bref par actu : liste de (texte, origine) avec origine = ia | page | flux | titre.
+
+        Ordre : cache → IA (titre + extrait + description de la page) → meilleure description disponible.
+        Toujours des phrases complètes, jamais un texte coupé par « … »."""
+        out: list = [None] * len(articles)
         a_faire = []
         for i, a in enumerate(articles):
-            c = _cache_resumes.get(a.get("lien") or a.get("titre"))
+            c = _en_cache(a)
             if c:
-                out.append(c)
+                out[i] = c
             else:
-                out.append(None)
                 a_faire.append(i)
-        if a_faire:
-            try:
-                client = g["_client_llm"]("actu-resumes", (
-                    "Tu rédiges des descriptions d'actualités pour une application d'entrepreneurs. "
-                    "Pour chaque actu, écris 2 lignes maximum (35 mots max), factuelles, sans promesse ni jugement, "
-                    "dans la langue du titre. Réponds UNIQUEMENT par un tableau JSON de chaînes, dans le même ordre."))
-                if client is None:
-                    raise RuntimeError("aucune clé IA")
-                demande = json.dumps([{"titre": articles[i].get("titre"), "extrait": brut[i]} for i in a_faire], ensure_ascii=False)
-                rep = await asyncio.wait_for(client.send_message(g_user_message(demande)), timeout=25)
-                tab = json.loads(re.search(r"\[.*\]", rep, re.S).group(0))
-                for i, texte in zip(a_faire, tab):
-                    if isinstance(texte, str) and texte.strip():
-                        out[i] = nettoyer(texte, 260)
-                        _cache_resumes[articles[i].get("lien") or articles[i].get("titre")] = out[i]
-            except Exception as e:  # noqa: BLE001
-                log.info("Résumé IA indisponible, repli sur le flux : %s", e)
-        return [o or brut[i] for i, o in enumerate(out)]
+        if not a_faire:
+            return out
+        # description officielle des pages (en parallèle, 6 s au plus)
+        metas = await asyncio.gather(*[_page_article(articles[i].get("lien", "")) for i in a_faire], return_exceptions=True)
+        metas = [m if isinstance(m, str) else "" for m in metas]
+        secours = {i: bref_de_secours(articles[i].get("titre", ""), articles[i].get("resume", ""), m) for i, m in zip(a_faire, metas)}
+        ia_ok = {}
+        try:
+            client = g["_client_llm"]("actu-resumes", (
+                "Tu rédiges le bref d'une actualité pour une application d'entrepreneurs. "
+                "Pour chaque actu : 2 à 4 phrases COMPLÈTES (70 mots maximum au total) qui disent ce qui s'est passé "
+                "et pourquoi cela compte pour une petite entreprise. Appuie-toi UNIQUEMENT sur le titre et l'extrait fournis : "
+                "n'invente ni chiffre, ni nom, ni date. Si l'extrait est mince, écris 2 phrases prudentes sur le sujet. "
+                "Même langue que le titre. Ni promesse, ni jugement, ni emoji. "
+                "Réponds UNIQUEMENT par un tableau JSON de chaînes, dans le même ordre, sans texte autour."))
+            if client is None:
+                raise RuntimeError("aucune clé IA (MAMMOTH_API_KEY)")
+            demande = json.dumps([{
+                "titre": texte_brut(articles[i].get("titre", "")),
+                "extrait": metas[k] or extrait_utile(articles[i].get("titre", ""), articles[i].get("resume", "")),
+                "date": nettoyer(articles[i].get("date", ""), 25),
+            } for k, i in enumerate(a_faire)], ensure_ascii=False)
+            rep = await asyncio.wait_for(client.send_message(g_user_message(demande)), timeout=25)
+            tab = json.loads(re.search(r"\[.*\]", rep, re.S).group(0))
+            for i, texte in zip(a_faire, tab):
+                t = phrases_completes(texte if isinstance(texte, str) else "", 520, 4)
+                if len(t) >= 40:
+                    ia_ok[i] = t
+        except Exception as e:  # noqa: BLE001
+            log.warning("Bref IA indisponible, repli sur la description de la source : %s", e)
+        for i in a_faire:
+            texte, origine = (ia_ok[i], "ia") if i in ia_ok else secours[i]
+            out[i] = (texte, origine)
+            if origine in ("ia", "page", "flux"):
+                _mettre_en_cache(articles[i], texte, origine)
+        return out
 
     def g_user_message(texte: str):
         from llm_mammouth import UserMessage
         return UserMessage(text=texte)
 
+    async def enrichir(articles: list) -> list:
+        """Ajoute `description` (bref complet) et `description_origine` à chaque actu."""
+        if not articles:
+            return articles
+        res = await resumer(articles)
+        return [{**a, "description": t, "description_origine": o} for a, (t, o) in zip(articles, res)]
+
+    g["enrichir_actus"] = enrichir
+
     @api.post("/copilote/actualite/resumes")
     async def resumes(body: ResumesIn):
         arts = [a for a in body.articles if isinstance(a, dict)][:3]
-        return {"resumes": await resumer(arts)}
+        res = await resumer(arts)
+        return {"resumes": [t for t, _ in res], "origines": [o for _, o in res]}
 
     # ── Récupération des actus d'un utilisateur (réutilise la route /copilote/actualite) ──
     async def actus_utilisateur(db, uid: str, nb: int) -> list:
         jeton = g["_current_uid"].set(uid)
         try:
-            rep = await g["actualite"](marche="", filtre="tout", db=db)
+            rep = await g["actualite"](marche="", filtre="tout", bref=False, db=db)
         finally:
             g["_current_uid"].reset(jeton)
         if rep.get("masque") or rep.get("erreur"):
             return []
-        arts = (rep.get("articles") or [])[:nb]
-        descr = await resumer(arts)
+        arts = await enrichir((rep.get("articles") or [])[:nb])
         return [{"titre": a["titre"], "lien": a.get("lien", ""), "date": nettoyer(a.get("date", ""), 25),
-                 "source_label": a.get("source_label") or "", "description": d} for a, d in zip(arts, descr)]
+                 "source_label": a.get("source_label") or "",
+                 "description": "" if a.get("description_origine") == "titre" else a["description"]} for a in arts]
 
     # ── Envoi sur un canal, avec diagnostic précis ──
     def base_url() -> str:
-        return (os.environ.get("FRONTEND_URL") or os.environ.get("APP_URL") or "https://zayado.net").rstrip("/")
+        return (os.environ.get("FRONTEND_PUBLIC_URL") or os.environ.get("FRONTEND_URL") or os.environ.get("APP_URL") or "https://zayado.net").rstrip("/")
 
     async def envoyer_email(profil, articles: list) -> tuple:
         if not (os.environ.get("BREVO_API_KEY") or g.get("EMAIL_KEY")):
@@ -253,7 +388,10 @@ def install_actualite(g: dict) -> None:
             r = await g["envoyer_push"](db, uid, "Ton actualité du jour", corps, "/app?tab=actu", "actu")
         except Exception as e:  # noqa: BLE001
             return False, f"erreur d'envoi : {e}"
-        return (True, f"envoyé sur {r.get('envoye')} appareil(s)") if r.get("envoye") else (False, "aucun appareil n'a reçu la notification")
+        if r.get("envoye"):
+            return True, f"envoyé sur {r.get('envoye')} appareil(s)"
+        return False, ("le service de notification a refusé l'envoi (clés VAPID invalides ? voir les journaux du serveur)"
+                       if r.get("echec") else "aucun appareil n'a reçu la notification")
 
     async def journaliser(db, uid, jour, origine, canal, ok, detail):
         db.add(ActuEnvoi(user_id=uid, jour=jour, origine=origine, canal=canal, ok=ok, detail=detail[:400]))
