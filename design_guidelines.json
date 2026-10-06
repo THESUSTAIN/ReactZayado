@@ -1,0 +1,130 @@
+{
+  "theme": "Light theme (white & beige dominant) to evoke calmness, clarity, and an editorial 'Awwwards' feel. Darker mid-light navy accents are used for trust, structure, and high contrast typography.",
+  "typography": {
+    "headings": {
+      "font": "Cormorant Garamond",
+      "fallback": "Playfair Display, serif",
+      "classes": "font-serif tracking-tight text-[#1A2A3A]",
+      "description": "Editorial, elegant, premium, perfectly suited for the 'apaisé' (soothed) aesthetic."
+    },
+    "body": {
+      "font": "Manrope",
+      "fallback": "sans-serif",
+      "classes": "font-sans leading-relaxed text-[#4A5568]",
+      "description": "Clean, highly readable, geometric yet warm modern sans-serif."
+    },
+    "labels": {
+      "classes": "uppercase tracking-[0.2em] text-xs font-semibold text-[#355C7D]"
+    }
+  },
+  "colors": {
+    "background": {
+      "primary": "#FFFFFF",
+      "secondary": "#F7F5F0"
+    },
+    "brand": {
+      "navy": "#355C7D",
+      "navy_light": "#4A749C",
+      "navy_dark": "#1A2A3A"
+    },
+    "text": {
+      "primary": "#1A2A3A",
+      "secondary": "#4A5568",
+      "accent": "#355C7D"
+    }
+  },
+  "visual_enhancers": [
+    "Subtle grain/noise overlay (mix-blend-multiply opacity-20) over beige backgrounds to give a print/editorial feel.",
+    "Lenis smooth scrolling (MANDATORY) to give physical weight to the site flow.",
+    "Framer Motion for kinetic typography (masked line-by-line reveal on load).",
+    "Slow-moving editorial marquee for key brand pillars."
+  ],
+  "components": [
+    {
+      "name": "Navigation & Favicon",
+      "description": "Glassmorphism header (backdrop-blur-xl bg-white/70 border-b border-white/20). Contains a custom SVG logo (a minimalist 'Y' with a subtle arch or leaf integrated, acting as both main logo and favicon). Must include 3-4 nav links and a primary 'Prendre rendez-vous' CTA."
+    },
+    {
+      "name": "Kinetic Hero Section",
+      "description": "Awwwards-style hero. Very large serif typography in French. Must feature a masked line-by-line text reveal on load using Framer Motion. Subtle parallax effect on a highly clipped, editorial background image."
+    },
+    {
+      "name": "Editorial Marquee",
+      "description": "Use react-fast-marquee. Text: 'Bien-être de l'entrepreneur • Santé de l'entreprise • Équilibre • Performance •'. Very pale beige background, navy serif text, extremely slow smooth drift."
+    },
+    {
+      "name": "Bento Grid (Piliers d'accompagnement)",
+      "description": "Asymmetrical Mode-A 'Tetris' grid layout detailing 'Prendre soin du dirigeant' (mindset, coaching, therapy) and 'Prendre soin de l'entreprise' (legal, accounting, admin). Generous padding (p-8 to p-12), solid flat surfaces with a 1px delicate border, avoiding generic shadows."
+    },
+    {
+      "name": "Marketplace Catalogue (Offres)",
+      "description": "Category filters (Juridique, Comptabilité, Bien-être, Croissance). The offer cards should feature abstract soft shapes or treated photography. Hover effects must be premium: subtle image scale, -translate-y-1, and text color shift."
+    },
+    {
+      "name": "Competitor Comparison",
+      "description": "A refined Swiss-grid comparison section. Compare Yori vs real French competitors: 1. Shine/Qonto (focuses only on business, ignores mental health). 2. Alan/Moka.care (focuses only on health, ignores business admin). 3. LegalPlace (purely admin/legal, very rigid). Highlight how Yori uniquely combines both the human and the business."
+    },
+    {
+      "name": "Offer Detail & Booking Form",
+      "description": "A multi-view/modal or distinct section for 'Prendre rendez-vous'. Use Shadcn components (Form, Input, Textarea, Select, Calendar). Style inputs minimally (e.g., bottom borders only, no bulky boxes) for a premium tactile feel. Must trigger a Sonner success toast upon submission."
+    },
+    {
+      "name": "Footer",
+      "description": "Massive typography for the final CTA, minimalist links layout, very dark navy background with off-white text for deep contrast at the bottom of the page."
+    }
+  ],
+  "layouts": {
+    "spacing": "Generous spacing. Use p-12, py-24, gap-12 or gap-16 to let elements breathe. Never cramp content.",
+    "grids": "Use the Tetris Grid (Mode A) for the bento pillars. Subgrid where necessary to align inner content."
+  },
+  "motion": {
+    "page_load": "Staggered fade-up for children, strict masked line-by-line reveal for hero H1.",
+    "scroll": "Parallax on images, subtle scale-down/fade-in on bento cards as they enter the viewport via Framer Motion useInView.",
+    "hover": "Button hover: bg turns to navy_light, text remains white. Cards: subtle shadow and image scale."
+  },
+  "image_urls": {
+    "hero_architecture": {
+      "url": "https://images.unsplash.com/photo-1567016376408-0226e4d0c1ea?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MDV8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwYXJjaGl0ZWN0dXJlJTIwY2FsbXxlbnwwfHx8fDE3OTEzMjEwNTF8MA&ixlib=rb-4.1.0&q=85",
+      "description": "Minimalist architecture in beige tones. Use in the hero section or background elements."
+    },
+    "entrepreneur_calm": {
+      "url": "https://images.unsplash.com/photo-1674932668403-33398b81c92f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzNzl8MHwxfHNlYXJjaHwzfHxjYWxtJTIwd29tYW4lMjBwb3J0cmFpdCUyMG5hdHVyYWwlMjBsaWdodHxlbnwwfHx8fDE3OTEzMjEwNTF8MA&ixlib=rb-4.1.0&q=85",
+      "description": "Calm portrait of an entrepreneur. Use in 'Bien-être', founder, or coaching section."
+    },
+    "business_desk": {
+      "url": "https://images.pexels.com/photos/7057/desk-office-computer-imac.jpg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "description": "Clean minimal desk. Use in 'Juridique / Comptabilité' business services section."
+    }
+  },
+  "instructions_to_main_agent": [
+    "Use pure HTML/Tailwind for marketing layouts. Do not rely heavily on generic Shadcn Card wrappers if they restrict asymmetry.",
+    "Use Shadcn UI primarily for complex interactives (Select, Input, Calendar, Button) in the booking form.",
+    "Implement Framer Motion (`framer-motion`) for the hero text reveal and scroll animations.",
+    "Use `react-fast-marquee` for the editorial strip.",
+    "Use `lucide-react` for icons.",
+    "Ensure all interactive elements have data-testid attributes (e.g. data-testid='booking-submit-button', data-testid='offer-card').",
+    "Use `sonner` for the appointment booking success notification.",
+    "Implement Lenis for smooth scrolling in the main App wrapper.",
+    "Create a clean, scalable inline SVG logo for 'Yori' that can also be used as the favicon."
+  ],
+  "accessibility": {
+    "contrast": "Ensure navy text on beige background passes APCA.",
+    "motion": "Respect prefers-reduced-motion for the kinetic hero."
+  },
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "You tend to converge toward generic outputs. Make creative, distinctive frontends that surprise and delight.",
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients.",
+    "Don't make generic centered layouts, simplistic gradients, and uniform styling.",
+    "Create depth through layered design elements with z-index hierarchy.",
+    "Use glass-morphism effects with backdrop filters (12-24px blur).",
+    "You MUST NOT apply universal transition. Eg: `transition: all`. Always add specific transitions (e.g., `transition: transform 0.3s ease`).",
+    "You MUST NOT center align the app container. Text flow should be natural (mostly left-aligned for editorial).",
+    "Always use modern button styles (e.g. pill-shaped or perfectly sharp corners depending on theme) with interaction animations.",
+    "NEVER use AI assistant Emoji characters like 🤖🧠💭💡🔮🎯 for icons.",
+    "Every interaction needs micro-animations - hover states, transitions, parallax effects, and entrance animations.",
+    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
+    "Subtle grain textures, noise overlays, custom cursors, selection states, and loading animations separate good from extraordinary.",
+    "Prioritize using pre-existing components from src/components/ui when applicable.",
+    "Use `sonner` for toasts."
+  ]
+}

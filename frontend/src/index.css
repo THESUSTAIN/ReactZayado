@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    @apply bg-paper font-sans text-ink antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+::selection {
+    @apply bg-navy text-paper;
+}
+
+.grain-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    pointer-events: none;
+    mix-blend-mode: multiply;
+    opacity: 0.55;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+}
+
+@keyframes yori-marquee {
+    to {
+        transform: translateX(-50%);
+    }
+}
+
+.marquee-track {
+    animation: yori-marquee 75s linear infinite;
+    will-change: transform;
+}
+
+.img-editorial {
+    filter: saturate(0.82) contrast(0.98) brightness(1.02);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+    .marquee-track {
+        animation: none;
+    }
+}
+
+@layer base {
+    :root {
+        --background: 40 33% 98%;
+        --foreground: 210 40% 16%;
+        --card: 0 0% 100%;
+        --card-foreground: 210 40% 16%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 210 40% 16%;
+        --primary: 210 40% 35%;
+        --primary-foreground: 40 33% 98%;
+        --secondary: 42 27% 93%;
+        --secondary-foreground: 210 40% 16%;
+        --muted: 42 27% 93%;
+        --muted-foreground: 218 14% 35%;
+        --accent: 42 27% 93%;
+        --accent-foreground: 210 40% 16%;
+        --destructive: 0 84.2% 60.2%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 40 25% 86%;
+        --input: 40 25% 86%;
+        --ring: 210 40% 35%;
+        --chart-1: 210 40% 35%;
+        --chart-2: 213 36% 45%;
+        --chart-3: 40 27% 80%;
+        --chart-4: 218 14% 60%;
+        --chart-5: 210 40% 16%;
+        --radius: 0.25rem;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+    body {
+        @apply bg-background text-foreground;
+    }
+    [data-debug-wrapper="true"] {
+        display: contents !important;
+    }
+}
