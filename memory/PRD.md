@@ -1,42 +1,33 @@
-# PRD — Yori, Maison des entrepreneurs apaisés
+# PRD — Zayado, Maison des entrepreneurs apaisés
 
 ## Problème original (verbatim)
 "Genere mois une page frentend yori : maison des entrepnneurs aipaisé.. une maketpalce standard pour prendre soin de l'entrpznnejr et son entrepnneur liste 3 concurents a ce niveau. Couleur de fond principal blanc un peu de beige clair et couelur bleu navy mi clair"
 
-## Décisions recueillies (ask_human)
-- Type : mini-marketplace complète (multi-vues)
-- Concurrents : réels, vérifiés par recherche web (LegalPlace, Captain Contrat, Indy)
-- CTA principal : « Prendre rendez-vous »
-- Couleurs : fond blanc, beige clair, bleu navy mi-clair
+## Choix utilisateur (ask_human)
+- Mini-marketplace complète ; concurrents réels ; CTA « Prendre rendez-vous » ; blanc/beige clair/navy mi-clair.
 
-## Utilisateurs cibles
-1. Fondateur / indépendant en charge mentale — cherche de l'aide humaine (burn-out, coaching).
-2. Dirigeant de TPE — cherche délégation fiable (juridique, comptabilité).
-3. Les deux à la fois — persona cœur de Yori.
+## Évolution majeure (docx client, 2026-10-07)
+Le client a fourni « Zayado — Services et produits de la marketplace.docx » : rebranding Yori → **Zayado** (zayado.net) et restructuration complète en deux familles (Services + Produits) avec 4 mécanismes d'achat (Demander un diagnostic / S'abonner ou Essayer / Ajouter au panier / Demander un devis). Tout le contenu provient de ce document, chiffrés inclus.
 
 ## Architecture réalisée
-- Backend FastAPI (port 8001, /api) + MongoDB (motor) :
-  - GET /api/offers (+ filtre ?category=), GET /api/offers/{id} (404 géré)
-  - POST /api/appointments (validation EmailStr, nom ≥ 2), GET /api/appointments
-  - Seed automatique de 12 offres / 4 catégories au démarrage si collection vide
-- Frontend React (CRA + craco, Tailwind, framer-motion, lenis, sonner) :
-  - / — hero cinétique (réveal masqué ligne par ligne + parallaxe), marquee éditorial, bento 4 piliers, 3 offres en vedette, section marché (3 concurrents réels), citation
-  - /offres — catalogue 12 offres, filtres par catégorie, cartes animées
-  - /offres/:id — détail (méta tarif/durée/format, image en arche, CTA préremplissant le RDV, suggestions)
-  - /rendez-vous — formulaire (nom, email, tél, offre, date, message) → POST → panneau succès + toast Sonner
-- Identité : logo SVG original (arche + soleil, navy/beige) aussi en favicon ; Cormorant Garamond + Manrope ; grain multiplicatif overlay.
+- Backend FastAPI (/api) + MongoDB (motor) :
+  - GET /api/services, GET /api/services/{slug} — 3 lignes de service avec contenu structuré (features, plans, rows, steps, notes)
+  - GET /api/products — 23 rayons (pour_moi 10, pour_entreprise 9, transverse 4) avec statut prix (« En cours » / « Sur devis ») et flag « proposé »
+  - POST/GET /api/appointments — demandes avec request_type (diagnostic / abonnement / devis), sujet, date
+  - Seed automatique au démarrage (collections vides uniquement)
+- Frontend React (Tailwind, framer-motion, lenis, sonner, shadcn) :
+  - / — hero cinétique « Rentabiliser son entreprise, sans s'y perdre. », promesse « Plus de clients, moins de charge mentale », marquee, bento « Pourquoi Zayado » (problème / sélection stricte / socle financier / interlocuteur de confiance), deux familles, spotlight Cockpit IA (5 fonctions + tarifs fondateurs), marché (3 concurrents réels + bandeau « ni Amazon, ni freelances au rabais »), citation
+  - /services — index des 3 services + note partenaires réglementés
+  - /services/:slug — cockpit-ia (5 fonctions, 5 offres : Essai 15 €, Solo 29 € [fondateur 24 €], Pro 69 € [fondateur 49 €], Équipe 99 €, Entreprise dès 299 € sur devis, essai 1 mois offert, annuel ~2 mois offerts, TheSustain −30 %) ; optimisation-entreprise (5 services, sur devis après diagnostic) ; acquisition-transmission (parcours 4 étapes, forfaits 1 990 / 2 850 / 2 850 € HT + 20 % économie ou 3 300 € HT, notes transmission/honoraires tiers/valorisation sans certification)
+  - /produits — rayons groupés (Pour moi / Pour mon entreprise / Transverses & box), « Ajouter au panier » désactivé (prix en cours), « Demander un devis » pour l'aménagement, box saisonnières en précommande
+  - /diagnostic — formulaire avec sujet pré-rempli depuis ?service=, request_type dérivé (cockpit→abonnement, aménagement→devis), succès + toast ; /rendez-vous redirige vers /diagnostic
+- Identité : logo SVG arche + soleil (navy/beige) en favicon ; Cormorant Garamond + Manrope ; grain éditorial ; lenis ; prefers-reduced-motion respecté.
 
-## Design
-- Palette : paper #FBFAF7, sand #F4F0E8, navy #355C7D / soft #4A749C / deep #1A2A3A, lignes #E5DFD3.
-- Motion : lenis smooth scroll, reveals framer-motion (once, amount 0.15), hover micro-interactions, prefers-reduced-motion respecté.
-
-## Fait (2026-10-06)
-- [x] Backend complet + seed 12 offres, endpoints testés par curl (200/404/422)
-- [x] Toutes les pages + navigation mobile (menu overlay)
-- [x] Parcours e2e vérifié par screenshots : filtre catalogue → détail → réservation → succès
-- [x] Desktop 1440 & mobile 390 vérifiés, aucun overflow horizontal
+## Vérifié (2026-10-07)
+- [x] curl : /api/services (3), /api/services/cockpit-ia (5 offres), /api/products (23 rayons), POST /api/appointments (request_type abonnement enregistré), 404/422 gérés
+- [x] e2e UI : formulaire diagnostic avec pré-remplissage ?service=cockpit-ia → bouton « Commencer mon abonnement » → succès + toast
+- [x] Screenshots desktop 1440 (accueil, cockpit, produits) et mobile 390 sans overflow
 
 ## Backlog priorisé
-- P0 : —
-- P1 : panel des demandes reçues (lecture des appointments), confirmation par email (Resend)
-- P2 : comptes experts / annonceurs pour publier leurs offres (marketplace à double face), paiement (Stripe), calendrier de créneaux
+- P1 : panneau des demandes reçues (lecture appointments), email de confirmation (Resend), paiement abonnements (Stripe) quand le Cockpit IA sera prêt
+- P2 : panier + catalogue produits (débloquer « Ajouter au panier » quand les prix arrivent), comptes partenaires, iframing de la grille tarifaire depuis l'application, compteur de places des box en précommande

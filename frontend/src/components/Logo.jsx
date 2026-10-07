@@ -31,8 +31,8 @@ export default function Logo({ dark = false, compact = false }) {
         >
             <YoriMark className="h-9 w-9" stroke={color} dot={color} />
             <span className="flex flex-col leading-none">
-                <span className="font-serif text-[1.7rem] font-semibold tracking-tight">
-                    Yori
+                <span className="font-serif text-[1.55rem] font-semibold tracking-tight">
+                    Zayado
                 </span>
                 {!compact && (
                     <span className="mt-1 text-[0.5rem] font-semibold uppercase tracking-[0.3em] opacity-60">

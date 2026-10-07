@@ -6,7 +6,8 @@ import Logo from "./Logo";
 
 const LINKS = [
     { label: "La Maison", to: "/", hash: "maison", slug: "maison" },
-    { label: "Les offres", to: "/offres", slug: "offres" },
+    { label: "Services", to: "/services", slug: "services" },
+    { label: "Produits", to: "/produits", slug: "produits" },
     { label: "Le marché", to: "/", hash: "marche", slug: "marche" },
 ];
 
@@ -83,12 +84,12 @@ export default function Nav() {
                         </a>
                     ))}
                     <a
-                        href="/rendez-vous"
+                        href="/diagnostic"
                         data-testid="nav-cta-button"
-                        onClick={go({ to: "/rendez-vous" })}
+                        onClick={go({ to: "/diagnostic" })}
                         className="rounded-full bg-navy px-6 py-2.5 text-sm font-semibold text-paper transition-colors duration-300 hover:bg-navy-soft"
                     >
-                        Prendre rendez-vous
+                        Demander un diagnostic
                     </a>
                 </div>
 
@@ -127,12 +128,12 @@ export default function Nav() {
                                 ))}
                             </div>
                             <a
-                                href="/rendez-vous"
+                                href="/diagnostic"
                                 data-testid="mobile-cta-button"
-                                onClick={go({ to: "/rendez-vous" })}
+                                onClick={go({ to: "/diagnostic" })}
                                 className="rounded-full bg-navy py-4 text-center text-sm font-semibold text-paper"
                             >
-                                Prendre rendez-vous
+                                Demander un diagnostic
                             </a>
                         </div>
                     </motion.div>

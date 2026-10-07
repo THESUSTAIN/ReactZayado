@@ -1,13 +1,21 @@
 import { Component, useEffect } from "react";
-import { BrowserRouter, Routes, Route, useLocation, Link } from "react-router-dom";
+import {
+    BrowserRouter,
+    Routes,
+    Route,
+    useLocation,
+    Link,
+    Navigate,
+} from "react-router-dom";
 import Lenis from "lenis";
 import { Toaster } from "@/components/ui/sonner";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import Home from "@/pages/Home";
-import Catalogue from "@/pages/Catalogue";
-import OfferDetail from "@/pages/OfferDetail";
-import RendezVous from "@/pages/RendezVous";
+import Services from "@/pages/Services";
+import ServiceDetail from "@/pages/ServiceDetail";
+import Produits from "@/pages/Produits";
+import Diagnostic from "@/pages/Diagnostic";
 
 function SmoothScroll() {
     useEffect(() => {
@@ -98,9 +106,14 @@ export default function App() {
                 <Nav />
                 <Routes>
                     <Route path="/" element={<Home />} />
-                    <Route path="/offres" element={<Catalogue />} />
-                    <Route path="/offres/:id" element={<OfferDetail />} />
-                    <Route path="/rendez-vous" element={<RendezVous />} />
+                    <Route path="/services" element={<Services />} />
+                    <Route path="/services/:slug" element={<ServiceDetail />} />
+                    <Route path="/produits" element={<Produits />} />
+                    <Route path="/diagnostic" element={<Diagnostic />} />
+                    <Route
+                        path="/rendez-vous"
+                        element={<Navigate to="/diagnostic" replace />}
+                    />
                     <Route path="*" element={<NotFound />} />
                 </Routes>
                 <Footer />

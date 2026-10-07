@@ -20,38 +20,131 @@ db = client[os.environ['DB_NAME']]
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
-CATEGORIES = ["Juridique", "Comptabilité", "Bien-être", "Croissance"]
-
 U = "https://images.unsplash.com"
 IMG = {
     "desk_main": "https://images.pexels.com/photos/7057/desk-office-computer-imac.jpg?auto=compress&cs=tinysrgb&w=1200",
     "desk_monitor": f"{U}/photo-1570993492881-25240ce854f4?q=85&w=1200&auto=format&fit=crop",
     "wood_table": f"{U}/photo-1611269154421-4e27233ac5c7?q=85&w=1200&auto=format&fit=crop",
-    "white_desk": f"{U}/photo-1449247709967-d4461a6a6103?q=85&w=1200&auto=format&fit=crop",
     "forest_calm": f"{U}/photo-1763713383838-5cd702c13160?q=85&w=1200&auto=format&fit=crop",
-    "portrait_calm": f"{U}/photo-1438761681033-6461ffad8d80?q=85&w=1200&auto=format&fit=crop",
-    "portrait_soft": f"{U}/photo-1674932668403-33398b81c92f?q=85&w=1200&auto=format&fit=crop",
     "arch_light": f"{U}/photo-1567016376408-0226e4d0c1ea?q=85&w=1200&auto=format&fit=crop",
-    "arch_royal": f"{U}/photo-1597787427778-5bcd7be5bd37?q=85&w=1200&auto=format&fit=crop",
     "arch_beige": f"{U}/photo-1524228461686-3de5d5289d09?q=85&w=1200&auto=format&fit=crop",
-    "door_pink": f"{U}/photo-1656383908989-bb1c4e9db214?q=85&w=1200&auto=format&fit=crop",
 }
 
+SERVICES_SEED = [
+    {
+        "slug": "cockpit-ia",
+        "kind": "cockpit",
+        "title": "Cockpit IA Zayado",
+        "tagline": "Piloter et développer son activité, dans un seul espace.",
+        "intro": "Zayado à vos côtés chaque jour pour rassembler votre vision, vos priorités, vos prospects et votre énergie dans un seul espace. L'IA prépare, l'entrepreneur décide.",
+        "price_summary": "dès 15 € / mois — 1 mois d'essai offert",
+        "cta_label": "S'abonner ou essayer",
+        "image": IMG["arch_light"],
+        "sort": 1,
+        "features": [
+            {"name": "Clarté", "desc": "Vision Board, plan d'action, priorité du jour."},
+            {"name": "Clients", "desc": "Le Radar trouve des prospects et prescripteurs, avec des messages prêts."},
+            {"name": "Sérénité", "desc": "Suivi de l'énergie et de la charge mentale, exercices de mindset."},
+            {"name": "Rentabilité", "desc": "Pouls business (trésorerie, chiffre d'affaires), revue hebdomadaire."},
+            {"name": "Disponibilité", "desc": "Agent Business (assistant à votre marque) pour répondre aux clients."},
+        ],
+        "plans": [
+            {"name": "Essai", "target": "Poser sa vision, nourrir ses idées", "price": "15 € / mois", "special": "1 mois offert, sans carte"},
+            {"name": "Solo", "target": "Le solopreneur qui pilote seul", "price": "29 € / mois", "special": "2 mois pour 1 € — tarif fondateur 24 € / mois"},
+            {"name": "Pro", "target": "L'indépendant qui a des clients", "price": "69 € / mois", "special": "Tarif fondateur 49 € / mois"},
+            {"name": "Équipe", "target": "Petite équipe, jusqu'à 5 personnes", "price": "99 € / mois", "special": ""},
+            {"name": "Entreprise", "target": "Plus de 5 personnes, installation Microsoft 365 complète", "price": "Sur devis, dès 299 € / mois", "special": ""},
+        ],
+        "rows": [],
+        "steps": [],
+        "notes": [
+            "Facturation annuelle : environ 2 mois offerts.",
+            "Membres TheSustain : -30 % (non cumulable avec le tarif fondateur).",
+            "La grille tarifaire est affichée directement depuis l'application pour garantir l'uniformité des prix.",
+        ],
+    },
+    {
+        "slug": "optimisation-entreprise",
+        "kind": "optimisation",
+        "title": "Optimisation d'entreprise",
+        "tagline": "Rendre l'activité plus rentable et plus légère.",
+        "intro": "Analyse, propositions et aide à la mise en place pour améliorer la rentabilité et réduire la consommation d'énergie de l'entreprise. Chaque service commence par un diagnostic.",
+        "price_summary": "sur devis, après diagnostic",
+        "cta_label": "Demander un diagnostic",
+        "image": IMG["desk_main"],
+        "sort": 2,
+        "features": [],
+        "plans": [],
+        "rows": [
+            {"name": "Finance et pilotage", "target": "Dirigeant qui veut comprendre et maîtriser ses chiffres", "what": "Diagnostic de trésorerie et de rentabilité, tableau de bord simple, plan d'action chiffré, structuration de l'activité ou du patrimoine."},
+            {"name": "Création et opérationnel", "target": "Créateur ou entreprise qui se structure", "what": "Lancement de l'activité, organisation, processus, choix des outils, priorités des 90 premiers jours."},
+            {"name": "Organisation et outils numériques", "target": "TPE qui travaille encore avec des fichiers éparpillés", "what": "Installation et organisation de l'espace de travail (Google Drive, OneDrive, SharePoint, Teams), droits d'accès, automatisations utiles."},
+            {"name": "Aménagement et travaux", "target": "Entreprise qui veut un espace de travail plus sain et plus efficace", "what": "Analyse des besoins (bureau, lumière, acoustique, ergonomie), puis mise en relation avec un partenaire sélectionné pour les travaux."},
+            {"name": "TheSustain × Zayado", "target": "Entrepreneur qui veut décider en cohérence avec sa foi", "what": "Accompagnement entrepreneurial structuré, ancré dans des valeurs chrétiennes."},
+        ],
+        "steps": [],
+        "notes": [
+            "Le service d'optimisation pose le diagnostic et le plan ; le Cockpit IA aide à le tenir au quotidien.",
+            "Pour les actes réglementés (comptabilité certifiée, juridique, fiscal), Zayado travaille avec des partenaires réglementés — expert-comptable, avocat, notaire, conseiller fiscal — et ne se substitue pas à eux.",
+        ],
+    },
+    {
+        "slug": "acquisition-transmission",
+        "kind": "acquisition",
+        "title": "Acquisition et transmission d'entreprise",
+        "tagline": "Acheter au juste prix, vendre en toute lucidité.",
+        "intro": "Accompagnement pour l'achat d'une entreprise, afin de ne pas la payer trop cher ni l'acquérir seul. Zayado défend les intérêts du repreneur, du premier rendez-vous à la promesse de vente.",
+        "price_summary": "forfaits dès 1 990 € HT",
+        "cta_label": "Demander un diagnostic",
+        "image": IMG["wood_table"],
+        "sort": 3,
+        "features": [],
+        "plans": [
+            {"name": "1 · Évaluation seule", "target": "Analyse économique et financière, valorisation indicative de l'entreprise visée.", "price": "1 990 € HT", "special": ""},
+            {"name": "2 · Évaluation et stratégie de reprise", "target": "Forfait 1, plus la stratégie d'offre et de négociation.", "price": "2 850 € HT", "special": ""},
+            {"name": "3 · Accompagnement complet", "target": "Forfait 2, plus l'accompagnement jusqu'à la promesse.", "price": "2 850 € HT + 20 % de l'économie négociée", "special": "ou 3 300 € HT s'il n'y a pas de négociation"},
+        ],
+        "rows": [],
+        "steps": [
+            {"n": "1", "label": "Guide complet", "desc": "« Votre parcours d'acquisition de A à Z », en 14 étapes."},
+            {"n": "2", "label": "Mandat", "desc": "Mandat de recherche et d'accompagnement."},
+            {"n": "3", "label": "Fiche de proposition", "desc": "Fiche de proposition de vente signée par le cédant."},
+            {"n": "4", "label": "Constat du prix", "desc": "Constat du prix final."},
+        ],
+        "notes": [
+            "L'économie négociée = prix de la fiche de proposition de vente − prix final de la promesse. Zayado est rémunéré sur la baisse de prix obtenue.",
+            "Côté cédant : la transmission prépare la vente de votre entreprise pour la rendre lisible et attractive — sur devis.",
+            "Les honoraires des avocats, notaires et experts-comptables sont facturés à part et payés directement par le client.",
+            "La valorisation Zayado est une analyse de conseil, sans certification des comptes.",
+        ],
+    },
+]
 
-class Offer(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    title: str
-    category: str
-    tagline: str
-    description: str
-    price: str
-    duration: str
-    format: str
-    image: str
-    featured: bool = False
-    sort: int = 0
+PRODUCTS_SEED = [
+    {"family": "pour_moi", "name": "Énergie et récupération", "description": "Ce qui aide à recharger les batteries entre deux journées chargées.", "price_status": "En cours", "proposed": False, "sort": 1},
+    {"family": "pour_moi", "name": "Focus et clarté mentale", "description": "Outils pour se concentrer et sortir de la dispersion.", "price_status": "En cours", "proposed": False, "sort": 2},
+    {"family": "pour_moi", "name": "Ancrage et recentrage", "description": "Carnets, journal, objets pour revenir à l'essentiel (mindset).", "price_status": "En cours", "proposed": False, "sort": 3},
+    {"family": "pour_moi", "name": "Corps et posture", "description": "Ergonomie, soutien du dos, confort assis ou debout.", "price_status": "En cours", "proposed": False, "sort": 4},
+    {"family": "pour_moi", "name": "Calme et rythme", "description": "Routines du matin et du soir, pauses, apaisement.", "price_status": "En cours", "proposed": False, "sort": 5},
+    {"family": "pour_moi", "name": "Santé visuelle et concentration", "description": "Lunettes et lampes anti-lumière bleue.", "price_status": "En cours", "proposed": False, "sort": 6},
+    {"family": "pour_moi", "name": "Liberté et mobilité", "description": "Équipement pour travailler bien, où que l'on soit.", "price_status": "En cours", "proposed": False, "sort": 7},
+    {"family": "pour_moi", "name": "Sommeil et récupération", "description": "Mieux dormir pour mieux décider.", "price_status": "En cours", "proposed": True, "sort": 8},
+    {"family": "pour_moi", "name": "Alimentation et hydratation", "description": "Bien manger et bien boire pendant les journées de travail.", "price_status": "En cours", "proposed": True, "sort": 9},
+    {"family": "pour_moi", "name": "Micro-pauses et sport au bureau", "description": "Bouger un peu, souvent, sans quitter son poste.", "price_status": "En cours", "proposed": True, "sort": 10},
+    {"family": "pour_entreprise", "name": "Espace et environnement", "description": "Décoration utile, plantes, lumière, mobilier de bureau.", "price_status": "En cours", "proposed": False, "sort": 1},
+    {"family": "pour_entreprise", "name": "Organisation et efficacité", "description": "Planners, rangement, outils pour clarifier le travail.", "price_status": "En cours", "proposed": False, "sort": 2},
+    {"family": "pour_entreprise", "name": "Clarté financière", "description": "Supports pour suivre ses chiffres et sa trésorerie.", "price_status": "En cours", "proposed": False, "sort": 3},
+    {"family": "pour_entreprise", "name": "Optimisation opérationnelle", "description": "Équipements qui fluidifient le travail quotidien.", "price_status": "En cours", "proposed": False, "sort": 4},
+    {"family": "pour_entreprise", "name": "Équipement du quotidien", "description": "Le matériel de base, bien choisi.", "price_status": "En cours", "proposed": False, "sort": 5},
+    {"family": "pour_entreprise", "name": "Outils finance et tableaux de bord papier", "description": "Tableaux de bord et carnets de gestion à remplir.", "price_status": "En cours", "proposed": True, "sort": 6},
+    {"family": "pour_entreprise", "name": "Automatisation et outils numériques", "description": "Logiciels partenaires sélectionnés, en complément du Cockpit IA.", "price_status": "En cours", "proposed": True, "sort": 7},
+    {"family": "pour_entreprise", "name": "Aménagement et travaux", "description": "Réaménagement du bureau, lumière, acoustique, ergonomie — réalisés par des partenaires sélectionnés (par exemple Trouveton).", "price_status": "Sur devis", "proposed": False, "sort": 8},
+    {"family": "pour_entreprise", "name": "Équipements spécialisés", "description": "Matériel propre à un métier, via des partenaires.", "price_status": "Sur devis", "proposed": False, "sort": 9},
+    {"family": "transverse", "name": "Thés et infusions", "description": "Pour les pauses qui reposent vraiment.", "price_status": "En cours", "proposed": False, "sort": 1},
+    {"family": "transverse", "name": "Idées cadeaux", "description": "Pour offrir à un entrepreneur, un associé, une équipe.", "price_status": "En cours", "proposed": False, "sort": 2},
+    {"family": "transverse", "name": "Parcours complets (Packs)", "description": "Pack Repreneur, Pack Rentrée, Programme 90 jours : produits et accompagnement réunis.", "price_status": "En cours", "proposed": False, "sort": 3},
+    {"family": "transverse", "name": "Cartes cadeaux", "description": "Offrir Zayado, à utiliser dans toute la marketplace.", "price_status": "En cours", "proposed": True, "sort": 4},
+]
 
 
 class AppointmentCreate(BaseModel):
@@ -60,8 +153,8 @@ class AppointmentCreate(BaseModel):
     name: str = Field(min_length=2)
     email: EmailStr
     phone: Optional[str] = None
-    offer_id: Optional[str] = None
-    offer_title: Optional[str] = None
+    request_type: str = "diagnostic"
+    subject: Optional[str] = None
     preferred_date: Optional[str] = None
     message: Optional[str] = None
 
@@ -72,95 +165,39 @@ class Appointment(AppointmentCreate):
     status: str = "À confirmer"
 
 
-OFFERS_SEED = [
-    Offer(title="Création d'entreprise clé en main", category="Juridique",
-          tagline="De la rédaction des statuts à l'immatriculation, vous n'avez rien à faire — sauf rêver.",
-          description="Nous rédigeons vos statuts, déposons votre capital, publions votre annonce légale et complétons votre immatriculation. Vous repartez avec un Kbis, un compte bancaire pro ouvert et l'esprit léger.",
-          price="dès 349 €", duration="2 semaines", format="En ligne & visio",
-          image=IMG["desk_main"], featured=True, sort=1),
-    Offer(title="Contrats sur mesure & avenants", category="Juridique",
-          tagline="Contrats commerciaux, CGV, pactes d'associés : chaque engagement écrit avec vous, pas pour vous.",
-          description="Un juriste dédié relit votre activité, identifie vos angles morts et rédige les documents qui vous protègent vraiment. Relecture illimitée pendant 30 jours.",
-          price="dès 190 €", duration="5 jours", format="En ligne",
-          image=IMG["white_desk"], sort=2),
-    Offer(title="Transmission & cession d'entreprise", category="Juridique",
-          tagline="Préparez votre sortie en douceur : audit, valorisation, négociation et formalités.",
-          description="Un parcours complet pour céder votre entreprise sans brusquer ni vous-même ni vos équipes : audit de transmission, valorisation, accompagnement à la négociation et formalités de cession.",
-          price="dès 890 €", duration="1 à 3 mois", format="Cabinet & visio",
-          image=IMG["wood_table"], sort=3),
-    Offer(title="Comptabilité sereine — abonnement", category="Comptabilité",
-          tagline="Votre comptabilité tenue au fil de l'eau, un tableau de bord calmant chaque mois.",
-          description="Un expert-comptable attitré tient votre comptabilité au fil de l'eau. Chaque mois, un tableau de bord simple : trésorerie, charges, points d'attention. Zéro surprise au moment du bilan.",
-          price="89 € / mois", duration="En continu", format="En ligne",
-          image=IMG["desk_monitor"], featured=True, sort=4),
-    Offer(title="Bilan annuel & liasse fiscale", category="Comptabilité",
-          tagline="Vos obligations annuelles bouclées sans jargon, avec une lecture humaine de vos chiffres.",
-          description="Nous produisons votre bilan, votre liasse fiscale et vos déclarations sociales — puis nous les traduisons en une page de ce qui compte vraiment pour l'année suivante.",
-          price="dès 540 €", duration="3 semaines", format="En ligne",
-          image=IMG["white_desk"], sort=5),
-    Offer(title="Mise en conformité express", category="Comptabilité",
-          tagline="Redressements, retards, oublis : on remet vos comptes d'aplomb sans moralité.",
-          description="Un chantier de remise en ordre : régularisation des déclarations en retard, dialogue avec l'administration et plan de rattrapage. Vous respirez, vos comptes aussi.",
-          price="dès 320 €", duration="10 jours", format="En ligne",
-          image=IMG["desk_monitor"], sort=6),
-    Offer(title="Prévention du burn-out — 6 séances", category="Bien-être",
-          tagline="Un programme progressif pour réapprendre la vitesse qui vous ressemble.",
-          description="Six séances individuelles avec un coach certifié pour désamorcer la surcharge, réapprendre à couper et repartir avec un rythme tenable. Un programme confidentiel, facturé à l'entreprise jamais raconté.",
-          price="480 € / programme", duration="6 semaines", format="Visio",
-          image=IMG["forest_calm"], featured=True, sort=7),
-    Offer(title="Sophrologie du dirigeant", category="Bien-être",
-          tagline="Séances individuelles pour apaiser la charge mentale — avant les conseils d'administration.",
-          description="Des outils concrets de respiration et de visualisation pour tenir les décisions lourdes, les pitchs stressants et les semaines à trois Conseil d'Administration.",
-          price="75 € / séance", duration="45 minutes", format="Cabinet & visio",
-          image=IMG["portrait_soft"], sort=8),
-    Offer(title="Week-end déconnexion fondateurs", category="Bien-être",
-          tagline="Deux jours hors ligne entre pairs, encadrés par un coach et un psychologue du travail.",
-          description="Un rituel trimestriel : douze fondateurs, un lieu sans réseau, deux jours pour décharger, partager et repartir. Encadrement bienveillant, agenda volontairement vide.",
-          price="690 € / personne", duration="2 jours", format="Résidentiel",
-          image=IMG["portrait_calm"], sort=9),
-    Offer(title="Plan de croissance 90 jours", category="Croissance",
-          tagline="Un cap clair, trois priorités, des rituels simples : la stratégie qui tient au mur.",
-          description="Trois mois pour transformer l'intuition en trajectoire : atelier de cadrage, priorisation sans complaisance, rituels d'équipe. Vous repartez avec un plan d'une page et des jalons mesurables.",
-          price="1 200 €", duration="3 mois", format="Visio & cabinet",
-          image=IMG["arch_light"], featured=True, sort=10),
-    Offer(title="Préparation à la levée de pré-amorçage", category="Croissance",
-          tagline="Pitch, modèle économique, chiffres : arrivez en salle avec la nuque droite.",
-          description="Un parcours intensif avec un ex-investisseur : narrative, proforma, data room et répétitions. Pour pitcher sans improviser et négocier sans redouter.",
-          price="dès 950 €", duration="4 semaines", format="Visio",
-          image=IMG["arch_royal"], sort=11),
-    Offer(title="Marque & storytelling de fondateur", category="Croissance",
-          tagline="Une voix, un récit, une image : ce qui vous rendra cher et reconnaissable.",
-          description="Nous écrivons votre histoire de fondateur, posons votre plateforme de marque et déclinons le tout en éléments concrets : page À propos, pitch deck, prise de parole.",
-          price="dès 640 €", duration="3 semaines", format="En ligne",
-          image=IMG["arch_beige"], sort=12),
-]
-
-
 @app.on_event("startup")
 async def startup_seed():
-    if await db.offers.count_documents({}) == 0:
-        await db.offers.insert_many([o.model_dump() for o in OFFERS_SEED])
-        logging.info("Seed: %d offres insérées", len(OFFERS_SEED))
+    if await db.services.count_documents({}) == 0:
+        await db.services.insert_many(SERVICES_SEED)
+        logging.info("Seed: %d services insérés", len(SERVICES_SEED))
+    if await db.products.count_documents({}) == 0:
+        await db.products.insert_many(PRODUCTS_SEED)
+        logging.info("Seed: %d rayons insérés", len(PRODUCTS_SEED))
 
 
 @api_router.get("/")
 async def root():
-    return {"message": "Yori — Maison des entrepreneurs apaisés. API en ligne."}
+    return {"message": "Zayado — Maison des entrepreneurs apaisés. API en ligne."}
 
 
-@api_router.get("/offers", response_model=List[Offer])
-async def list_offers(category: Optional[str] = None):
-    query = {"category": category} if category in CATEGORIES else {}
-    docs = await db.offers.find(query, {"_id": 0}).sort("sort", 1).to_list(200)
-    return [Offer(**d) for d in docs]
+@api_router.get("/services")
+async def list_services():
+    docs = await db.services.find({}, {"_id": 0}).sort("sort", 1).to_list(20)
+    return docs
 
 
-@api_router.get("/offers/{offer_id}", response_model=Offer)
-async def get_offer(offer_id: str):
-    doc = await db.offers.find_one({"id": offer_id}, {"_id": 0})
+@api_router.get("/services/{slug}")
+async def get_service(slug: str):
+    doc = await db.services.find_one({"slug": slug}, {"_id": 0})
     if not doc:
-        raise HTTPException(status_code=404, detail="Offre introuvable")
-    return Offer(**doc)
+        raise HTTPException(status_code=404, detail="Service introuvable")
+    return doc
+
+
+@api_router.get("/products")
+async def list_products():
+    docs = await db.products.find({}, {"_id": 0}).sort("sort", 1).to_list(100)
+    return docs
 
 
 @api_router.post("/appointments", response_model=Appointment)

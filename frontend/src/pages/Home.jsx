@@ -5,9 +5,9 @@ import {
     useTransform,
     useReducedMotion,
 } from "framer-motion";
-import { ArrowDown, Check } from "lucide-react";
-import { getOffers } from "@/lib/api";
-import OfferCard from "@/components/OfferCard";
+import { ArrowDown, ArrowUpRight, Check, ShieldCheck } from "lucide-react";
+import { Link } from "react-router-dom";
+import { getProducts, getServices } from "@/lib/api";
 import Marquee from "@/components/Marquee";
 import { Eyebrow, PillLink } from "@/components/Bits";
 import { MaskedLine, FadeUp, EASE } from "@/components/Reveal";
@@ -33,7 +33,7 @@ const COMPETITORS = [
         name: "Captain Contrat",
         zone: "Juridique accompagné",
         does: "Un juriste dédié et un réseau d'avocats partenaires pour des formalités juridiques très humaines.",
-        missing: "Le périmètre s'arrête au droit : ni comptabilité du quotidien, ni bien-être, ni croissance.",
+        missing: "Le périmètre s'arrête au droit : ni pilotage quotidien, ni bien-être, ni produits.",
     },
     {
         name: "Indy",
@@ -67,19 +67,19 @@ function Hero() {
                         transition={{ duration: 0.7, ease: EASE }}
                     >
                         <Eyebrow>
-                            Yori — Maison des entrepreneurs apaisés
+                            Zayado — Maison des entrepreneurs apaisés
                         </Eyebrow>
                     </motion.div>
 
                     <h1 className="mt-8 font-serif text-[15vw] leading-[0.98] tracking-tight text-ink sm:text-6xl lg:text-7xl xl:text-[5.4rem]">
                         <MaskedLine delay={0.08}>
-                            Prendre soin
+                            Rentabiliser
                         </MaskedLine>
                         <MaskedLine delay={0.2}>
-                            de <em className="italic text-navy">l'entrepreneur</em>
+                            <em className="italic text-navy">son entreprise</em>,
                         </MaskedLine>
                         <MaskedLine delay={0.32}>
-                            et de son entreprise.
+                            sans s'y perdre.
                         </MaskedLine>
                     </h1>
 
@@ -89,10 +89,11 @@ function Hero() {
                         transition={{ duration: 0.8, ease: EASE, delay: 0.55 }}
                         className="mt-8 max-w-xl text-base leading-relaxed text-ink/70 md:text-lg"
                     >
-                        Yori est la première marketplace dédiée à l'équilibre du
-                        fondateur : des experts du droit, des chiffres et du
-                        bien-être réunis au même endroit, pour que l'entreprise
-                        avance sans que personne ne s'épuise.
+                        Vous portez tout : les clients, les chiffres, les
+                        décisions, l'organisation — et vous passez en dernier.
+                        Zayado réunit les services pour développer et sécuriser
+                        votre activité, un Cockpit IA pour piloter le quotidien
+                        et des produits sélectionnés pour prendre soin de vous.
                     </motion.p>
 
                     <motion.div
@@ -102,17 +103,17 @@ function Hero() {
                         className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center"
                     >
                         <PillLink
-                            to="/rendez-vous"
+                            to="/diagnostic"
                             dataTestId="hero-cta-primary"
                         >
-                            Prendre rendez-vous
+                            Demander un diagnostic
                         </PillLink>
                         <PillLink
-                            to="/offres"
+                            to="/services"
                             variant="outline"
                             dataTestId="hero-cta-secondary"
                         >
-                            Découvrir les offres
+                            Découvrir les services
                         </PillLink>
                     </motion.div>
 
@@ -123,7 +124,7 @@ function Hero() {
                         className="mt-8 flex items-center gap-2 text-xs text-ink/55"
                     >
                         <Check className="h-3.5 w-3.5 text-navy" />
-                        Premier échange de 30 minutes offert — sans engagement.
+                        Premier échange avec la Maison — sans engagement.
                     </motion.p>
                 </div>
 
@@ -153,10 +154,10 @@ function Hero() {
                             className="absolute -left-6 bottom-12 border border-line bg-white/90 px-6 py-4 backdrop-blur-md md:-left-12"
                         >
                             <p className="text-[0.6rem] font-semibold uppercase tracking-[0.22em] text-navy">
-                                La Maison
+                                La promesse
                             </p>
                             <p className="mt-1 font-serif text-lg italic text-ink">
-                                Réponse sous 24 h ouvrées
+                                Plus de clients, moins de charge mentale
                             </p>
                         </motion.div>
 
@@ -189,66 +190,66 @@ function Hero() {
     );
 }
 
-const PILLARS = [
+const WHY = [
     {
         num: "01",
-        tag: "Bien-être",
-        title: "Prendre soin du dirigeant",
-        desc: "Coaching, sophrologie, prévention du burn-out : la personne d'abord, l'entreprise ensuite.",
-        chips: ["Coaching", "Sophrologie", "Déconnexion"],
+        tag: "Le problème",
+        title: "L'entrepreneur porte tout — et passe en dernier.",
+        desc: "Les clients, les chiffres, les décisions, l'organisation : tout repose sur vous. Zayado existe pour que rentabiliser votre entreprise ne se fasse jamais au prix de votre santé, de votre famille ou de votre sens.",
+        chips: ["Santé", "Famille", "Sens"],
         image: IMG.forest,
         layout: "image",
     },
     {
         num: "02",
-        tag: "Juridique & administratif",
-        title: "Prendre soin de l'entreprise",
-        desc: "Statuts, contrats, formalités : tout ce qui protège la structure, rédigé par des juristes.",
-        chips: ["Création", "Contrats", "Transmission"],
+        tag: "La sélection",
+        title: "La sélection est une promesse.",
+        desc: "Zayado n'est ni Amazon, ni une plateforme de freelances au rabais. Chaque produit et chaque partenaire est choisi pour rendre votre vie plus simple, plus saine, plus rentable.",
+        chips: ["Qualité", "Fiabilité", "Utilité réelle"],
         layout: "navy",
     },
     {
         num: "03",
-        tag: "Comptabilité & fiscalité",
-        title: "Des chiffres qui rassurent",
-        desc: "Comptabilité tenue au fil de l'eau, bilans lisibles, tableaux de bord mensuels sans jargon.",
-        chips: ["Abonnement", "Bilan", "Conformité"],
+        tag: "Le socle",
+        title: "Le conseil financier, d'abord.",
+        desc: "Comprendre ses chiffres, sécuriser sa trésorerie, acheter ou développer une entreprise : Zayado accompagne les décisions financières importantes avec des partenaires réglementés.",
+        chips: ["Trésorerie", "Rentabilité", "Acquisition"],
         image: IMG.deskMonitor,
         layout: "sand",
     },
     {
         num: "04",
-        tag: "Croissance",
-        title: "Avancer, au bon rythme",
-        desc: "Stratégie, levée de fonds, marque : la trajectoire se construit à vitesse humaine.",
-        chips: ["Stratégie", "Levée de fonds", "Marque"],
+        tag: "La confiance",
+        title: "Porté par Zayado, pas sous-traité.",
+        desc: "Vous savez toujours à qui vous vous adressez. Les services sont portés par Zayado — pas revendus au moindre coût par le dernier arrivé.",
+        chips: ["Interlocuteur unique", "Confiance"],
         image: IMG.archBeige,
         layout: "split",
     },
 ];
 
-function Pillars() {
+function Why() {
     return (
-        <section id="maison" data-testid="pillars-section" className="mx-auto max-w-7xl px-6 py-24 lg:px-10 lg:py-32">
+        <section id="maison" data-testid="why-section" className="mx-auto max-w-7xl px-6 py-24 lg:px-10 lg:py-32">
             <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
                 <FadeUp>
-                    <Eyebrow>La Maison</Eyebrow>
+                    <Eyebrow>Pourquoi Zayado</Eyebrow>
                     <h2 className="mt-6 max-w-xl font-serif text-4xl leading-[1.05] tracking-tight text-ink md:text-5xl lg:text-6xl">
-                        Deux visages,{" "}
-                        <em className="italic text-navy">une même maison.</em>
+                        Toutes les dimensions,{" "}
+                        <em className="italic text-navy">une seule maison.</em>
                     </h2>
                 </FadeUp>
                 <FadeUp delay={0.1}>
                     <p className="max-w-md text-sm leading-relaxed text-ink/65 md:text-base">
-                        Un entrepreneur, c'est une personne et une structure.
-                        Yori est la seule marketplace à soigner les deux, avec
-                        le même sérieux et le même calme.
+                        Finances, organisation, corps, esprit, rituels : la
+                        réussite de l'entreprise est liée à l'équilibre de
+                        celui qui la porte.
                     </p>
                 </FadeUp>
             </div>
 
             <div className="mt-14 grid grid-cols-1 gap-5 md:grid-cols-12">
-                {PILLARS.map((p, i) => (
+                {WHY.map((p, i) => (
                     <FadeUp
                         key={p.num}
                         delay={i * 0.08}
@@ -385,47 +386,174 @@ function YoriWatermark() {
     );
 }
 
-function FeaturedOffers() {
-    const [offers, setOffers] = useState(null);
-    useEffect(() => {
-        getOffers()
-            .then(setOffers)
-            .catch(() => setOffers([]));
-    }, []);
-    const featured = (offers ?? []).filter((o) => o.featured).slice(0, 3);
-
+function Families() {
     return (
-        <section data-testid="featured-offers" className="border-y border-line bg-sand/60">
+        <section data-testid="families-section" className="border-y border-line bg-sand/60">
             <div className="mx-auto max-w-7xl px-6 py-24 lg:px-10 lg:py-32">
-                <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+                <FadeUp>
+                    <Eyebrow>Comment fonctionne la marketplace</Eyebrow>
+                    <h2 className="mt-6 max-w-2xl font-serif text-4xl leading-[1.05] tracking-tight text-ink md:text-5xl">
+                        Une marketplace,{" "}
+                        <em className="italic text-navy">deux familles.</em>
+                    </h2>
+                </FadeUp>
+
+                <div className="mt-14 grid grid-cols-1 gap-6 lg:grid-cols-2">
                     <FadeUp>
-                        <Eyebrow>La marketplace</Eyebrow>
-                        <h2 className="mt-6 font-serif text-4xl leading-[1.05] tracking-tight text-ink md:text-5xl">
-                            Les offres les plus demandées.
-                        </h2>
+                        <article className="flex h-full flex-col border border-line bg-white">
+                            <img
+                                src={IMG.deskMain}
+                                alt="Services d'accompagnement"
+                                loading="lazy"
+                                className="img-editorial h-60 w-full object-cover"
+                            />
+                            <div className="flex flex-1 flex-col p-8 md:p-10">
+                                <span className="text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-navy">
+                                    Famille 1 — Services
+                                </span>
+                                <h3 className="mt-4 font-serif text-3xl leading-tight text-ink md:text-4xl">
+                                    Développer et sécuriser l'activité.
+                                </h3>
+                                <p className="mt-4 text-sm leading-relaxed text-ink/65 md:text-base">
+                                    Optimisation d'entreprise, acquisition et
+                                    transmission. Chaque parcours commence par
+                                    un diagnostic, puis une proposition sur
+                                    mesure.
+                                </p>
+                                <div className="mt-auto flex flex-wrap gap-2 pt-6">
+                                    <span className="rounded-full border border-ink/15 px-3.5 py-1.5 text-xs text-ink/70">
+                                        Bouton : « Demander un diagnostic »
+                                    </span>
+                                </div>
+                                <PillLink
+                                    to="/services"
+                                    dataTestId="family-services-cta"
+                                    className="mt-8 self-start"
+                                >
+                                    Voir les services
+                                </PillLink>
+                            </div>
+                        </article>
                     </FadeUp>
+
                     <FadeUp delay={0.1}>
-                        <PillLink
-                            to="/offres"
-                            variant="outline"
-                            dataTestId="featured-view-catalogue"
-                        >
-                            Voir le catalogue
-                        </PillLink>
+                        <article className="flex h-full flex-col border border-line bg-white">
+                            <img
+                                src={IMG.forest}
+                                alt="Produits sélectionnés"
+                                loading="lazy"
+                                className="img-editorial h-60 w-full object-cover"
+                            />
+                            <div className="flex flex-1 flex-col p-8 md:p-10">
+                                <span className="text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-navy">
+                                    Famille 2 — Produits
+                                </span>
+                                <h3 className="mt-4 font-serif text-3xl leading-tight text-ink md:text-4xl">
+                                    Prendre soin du corps, de l'esprit et de
+                                    l'espace de travail.
+                                </h3>
+                                <p className="mt-4 text-sm leading-relaxed text-ink/65 md:text-base">
+                                    Des rayons sélectionnés pour l'entrepreneur
+                                    et son entreprise — plus l'aménagement et
+                                    les travaux réalisés par des partenaires.
+                                </p>
+                                <div className="mt-auto flex flex-wrap gap-2 pt-6">
+                                    <span className="rounded-full border border-ink/15 px-3.5 py-1.5 text-xs text-ink/70">
+                                        Bouton : « Ajouter au panier »
+                                    </span>
+                                    <span className="rounded-full border border-ink/15 px-3.5 py-1.5 text-xs text-ink/70">
+                                        « Demander un devis » pour les travaux
+                                    </span>
+                                </div>
+                                <PillLink
+                                    to="/produits"
+                                    dataTestId="family-products-cta"
+                                    className="mt-8 self-start"
+                                >
+                                    Explorer les rayons
+                                </PillLink>
+                            </div>
+                        </article>
                     </FadeUp>
                 </div>
+            </div>
+        </section>
+    );
+}
 
-                <div className="mt-14 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {featured.length === 0
-                        ? [0, 1, 2].map((i) => (
-                              <div
-                                  key={i}
-                                  className="h-[26rem] animate-pulse border border-line bg-white/60"
-                              />
-                          ))
-                        : featured.map((o, i) => (
-                              <OfferCard key={o.id} offer={o} index={i} />
-                          ))}
+function Cockpit() {
+    return (
+        <section data-testid="cockpit-section" className="bg-ink text-paper">
+            <div className="mx-auto max-w-7xl px-6 py-24 lg:px-10 lg:py-32">
+                <div className="grid grid-cols-1 gap-14 lg:grid-cols-12">
+                    <div className="lg:col-span-5">
+                        <FadeUp>
+                            <Eyebrow dark>Service phare</Eyebrow>
+                            <h2 className="mt-6 font-serif text-4xl leading-[1.05] tracking-tight md:text-5xl lg:text-6xl">
+                                Cockpit IA{" "}
+                                <em className="italic text-paper/75">
+                                    Zayado.
+                                </em>
+                            </h2>
+                            <p className="mt-6 max-w-md text-sm leading-relaxed text-paper/70 md:text-base">
+                                Votre vision, vos priorités, vos prospects et
+                                votre énergie, rassemblés dans un seul espace.
+                                L'IA prépare, l'entrepreneur décide.
+                            </p>
+                            <p className="mt-8 font-serif text-2xl italic text-paper/90">
+                                dès 15 € / mois — 1 mois d'essai offert, sans
+                                carte.
+                            </p>
+                            <div className="mt-10 flex flex-col gap-4 sm:flex-row">
+                                <PillLink
+                                    to="/services/cockpit-ia"
+                                    variant="light"
+                                    dataTestId="cockpit-discover-cta"
+                                >
+                                    Voir les offres
+                                </PillLink>
+                                <PillLink
+                                    to="/diagnostic?service=cockpit-ia"
+                                    variant="outline"
+                                    dataTestId="cockpit-subscribe-cta"
+                                    className="!border-paper/30 !text-paper hover:!border-paper"
+                                >
+                                    S'abonner
+                                </PillLink>
+                            </div>
+                        </FadeUp>
+                    </div>
+                    <div className="grid grid-cols-1 gap-px border border-paper/15 bg-paper/15 sm:grid-cols-2 lg:col-span-7 lg:grid-cols-2">
+                        {[
+                            ["Clarté", "Vision Board, plan d'action, priorité du jour."],
+                            ["Clients", "Le Radar trouve des prospects et prescripteurs, avec des messages prêts."],
+                            ["Sérénité", "Suivi de l'énergie et de la charge mentale, exercices de mindset."],
+                            ["Rentabilité", "Pouls business (trésorerie, chiffre d'affaires), revue hebdomadaire."],
+                            ["Disponibilité", "Agent Business (assistant à votre marque) pour répondre aux clients."],
+                        ].map(([name, desc], i) => (
+                            <FadeUp
+                                key={name}
+                                delay={i * 0.06}
+                                className="bg-ink p-8"
+                            >
+                                <p className="font-serif text-2xl italic text-paper">
+                                    {name}
+                                </p>
+                                <p className="mt-3 text-sm leading-relaxed text-paper/65">
+                                    {desc}
+                                </p>
+                            </FadeUp>
+                        ))}
+                        <FadeUp delay={0.3} className="bg-navy p-8">
+                            <p className="font-serif text-2xl italic text-paper">
+                                Tarifs fondateurs
+                            </p>
+                            <p className="mt-3 text-sm leading-relaxed text-paper/80">
+                                Solo à 24 €/mois, Pro à 49 €/mois — pour les
+                                premiers arrivés. Membres TheSustain : -30 %.
+                            </p>
+                        </FadeUp>
+                    </div>
                 </div>
             </div>
         </section>
@@ -442,9 +570,10 @@ function Competitors() {
                     <em className="italic text-navy">pour soi.</em>
                 </h2>
                 <p className="mt-6 max-w-2xl text-sm leading-relaxed text-ink/65 md:text-base">
-                    Yori se compare aux références du marché. Toutes excellent
-                    dans leur métier. Aucune ne prend soin de l'entrepreneur{" "}
-                    <em>et</em> de son entreprise, au même endroit.
+                    Zayado se compare aux références du marché. Elles
+                    excellent toutes dans leur métier. Aucune ne prend soin de
+                    l'entrepreneur <em>et</em> de son entreprise, au même
+                    endroit.
                 </p>
             </FadeUp>
 
@@ -488,28 +617,46 @@ function Competitors() {
 
                 <FadeUp>
                     <article
-                        data-testid="yori-positioning-card"
+                        data-testid="zayado-positioning-card"
                         className="mt-4 flex flex-col gap-8 border border-navy bg-navy p-8 text-paper md:flex-row md:items-center md:justify-between md:p-12"
                     >
                         <div>
                             <h3 className="font-serif text-3xl md:text-4xl">
-                                Yori, la Maison qui réunit les deux.
+                                Zayado, la Maison qui réunit les deux.
                             </h3>
                             <p className="mt-4 max-w-xl text-sm leading-relaxed text-paper/80 md:text-base">
-                                Droit, chiffres, bien-être et croissance : une
-                                seule marketplace, pour l'entrepreneur et son
-                                entreprise.
+                                Services d'accompagnement, Cockpit IA et
+                                produits sélectionnés : une seule marketplace,
+                                pour l'entrepreneur et son entreprise.
                             </p>
                         </div>
                         <PillLink
-                            to="/rendez-vous"
+                            to="/diagnostic"
                             variant="light"
                             dataTestId="competitors-cta"
                             className="shrink-0"
                         >
-                            Prendre rendez-vous
+                            Demander un diagnostic
                         </PillLink>
                     </article>
+                </FadeUp>
+
+                <FadeUp>
+                    <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border border-line bg-sand px-6 py-5 md:px-8">
+                        <p className="flex items-center gap-3 text-sm text-ink/70">
+                            <ShieldCheck className="h-4 w-4 shrink-0 text-navy" />
+                            Ni catalogue infini, ni freelances au rabais : la
+                            sélection est une promesse faite aux clients.
+                        </p>
+                        <Link
+                            to="/produits"
+                            data-testid="anti-amazon-link"
+                            className="group inline-flex items-center gap-1.5 text-sm font-semibold text-navy"
+                        >
+                            Voir la sélection
+                            <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                        </Link>
+                    </div>
                 </FadeUp>
             </div>
         </section>
@@ -517,24 +664,38 @@ function Competitors() {
 }
 
 function Philosophy() {
+    const [services, setServices] = useState([]);
+    const [products, setProducts] = useState([]);
+
+    useEffect(() => {
+        getServices()
+            .then(setServices)
+            .catch(() => {});
+        getProducts()
+            .then(setProducts)
+            .catch(() => {});
+    }, []);
+
+    const rayons = products.length;
+
     return (
         <section data-testid="philosophy-section" className="border-t border-line bg-sand">
             <div className="mx-auto max-w-5xl px-6 py-24 text-center lg:px-10 lg:py-32">
                 <FadeUp>
                     <p className="font-serif text-3xl italic leading-snug text-ink md:text-4xl lg:text-5xl">
-                        «&nbsp;Un entrepreneur apaisé est la meilleure chose qui
-                        puisse arriver à son entreprise.&nbsp;»
+                        «&nbsp;La réussite de l'entreprise est liée à
+                        l'équilibre de celui qui la porte.&nbsp;»
                     </p>
                     <p className="mt-8 text-[0.65rem] font-semibold uppercase tracking-[0.25em] text-navy">
-                        La Maison Yori
+                        Zayado — Maison des entrepreneurs apaisés
                     </p>
                 </FadeUp>
                 <FadeUp delay={0.15}>
                     <div className="mx-auto mt-16 grid max-w-2xl grid-cols-3 divide-x divide-ink/10 border-y border-ink/10 py-6">
                         {[
-                            ["12", "offres au catalogue"],
-                            ["4", "piliers d'accompagnement"],
-                            ["24 h", "pour revenir vers vous"],
+                            [String(services.length || "3"), "services d'accompagnement"],
+                            [rayons ? String(rayons) : "—", "rayons de produits"],
+                            ["dès 15 €", "le Cockpit IA par mois"],
                         ].map(([n, label]) => (
                             <div key={label} className="px-2">
                                 <p className="font-serif text-3xl text-navy md:text-4xl">
@@ -557,8 +718,9 @@ export default function Home() {
         <main>
             <Hero />
             <Marquee />
-            <Pillars />
-            <FeaturedOffers />
+            <Why />
+            <Families />
+            <Cockpit />
             <Competitors />
             <Philosophy />
         </main>

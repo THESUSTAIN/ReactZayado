@@ -1,10 +1,10 @@
 const ITEMS = [
-    "Bien-être du dirigeant",
-    "Santé de l'entreprise",
-    "Juridique",
-    "Comptabilité",
-    "Croissance",
-    "Sérénité",
+    "Plus de clients",
+    "Moins de charge mentale",
+    "Cockpit IA",
+    "Services d'accompagnement",
+    "Produits sélectionnés",
+    "Sélection stricte",
 ];
 
 function Row({ hidden = false }) {

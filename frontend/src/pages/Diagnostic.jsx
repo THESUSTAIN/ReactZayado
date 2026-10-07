@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useState } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, Check, Loader2 } from "lucide-react";
-import { getOffers, createAppointment } from "@/lib/api";
+import { createAppointment } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -20,40 +19,58 @@ import { MaskedLine, FadeUp } from "@/components/Reveal";
 const U = "https://images.unsplash.com";
 const SIDE_IMG = `${U}/photo-1656383908989-bb1c4e9db214?q=85&w=1000&auto=format&fit=crop`;
 
+const SUBJECTS = [
+    { value: "none", label: "Je ne sais pas encore", type: "diagnostic" },
+    { value: "cockpit", label: "Cockpit IA Zayado (abonnement)", type: "abonnement" },
+    { value: "optimisation", label: "Optimisation d'entreprise", type: "diagnostic" },
+    { value: "acquisition", label: "Acquisition d'entreprise", type: "diagnostic" },
+    { value: "transmission", label: "Transmission d'entreprise", type: "diagnostic" },
+    { value: "amenagement", label: "Aménagement et travaux (devis)", type: "devis" },
+];
+
+const SERVICE_TO_SUBJECT = {
+    "cockpit-ia": "cockpit",
+    "optimisation-entreprise": "optimisation",
+    "acquisition-transmission": "acquisition",
+    amenagement: "amenagement",
+};
+
+function initialSubject() {
+    const match = (window.location.search || "").match(
+        /[?&]service=([^&]+)/,
+    );
+    const prefill = match ? decodeURIComponent(match[1]) : null;
+    return (prefill && SERVICE_TO_SUBJECT[prefill]) || "none";
+}
+
 const inputClass =
     "h-auto rounded-none border-0 border-b border-line bg-transparent px-0 py-3 text-base text-ink shadow-none transition-colors duration-300 focus-visible:border-navy focus-visible:ring-0";
 
-export default function RendezVous() {
-    const [offers, setOffers] = useState([]);
-    const [offerId, setOfferId] = useState("none");
+const CTA_LABELS = {
+    diagnostic: "Envoyer ma demande de diagnostic",
+    abonnement: "Commencer mon abonnement",
+    devis: "Demander mon devis",
+};
+
+export default function Diagnostic() {
+    const [subject, setSubject] = useState(initialSubject);
     const [sending, setSending] = useState(false);
     const [done, setDone] = useState(false);
     const [formError, setFormError] = useState(null);
-    const [searchParams] = useSearchParams();
 
-    useEffect(() => {
-        getOffers()
-            .then((all) => {
-                setOffers(all);
-                const prefill = searchParams.get("offer");
-                if (prefill && all.some((o) => o.id === prefill)) {
-                    setOfferId(prefill);
-                }
-            })
-            .catch(() => setOffers([]));
-    }, [searchParams]);
-
-    const selectedOffer = offers.find((o) => o.id === offerId);
+    const requestType =
+        SUBJECTS.find((s) => s.value === subject)?.type ?? "diagnostic";
 
     const onSubmit = async (e) => {
         e.preventDefault();
         const fd = new FormData(e.currentTarget);
+        const subjectLabel = SUBJECTS.find((s) => s.value === subject)?.label;
         const payload = {
             name: (fd.get("name") || "").trim(),
             email: (fd.get("email") || "").trim(),
             phone: (fd.get("phone") || "").trim() || null,
-            offer_id: selectedOffer ? selectedOffer.id : null,
-            offer_title: selectedOffer ? selectedOffer.title : null,
+            request_type: requestType,
+            subject: subject === "none" ? null : subjectLabel,
             preferred_date: fd.get("date") || null,
             message: (fd.get("message") || "").trim() || null,
         };
@@ -95,8 +112,8 @@ export default function RendezVous() {
                             <ul className="mt-10 space-y-4">
                                 {[
                                     "Réponse sous 24 h ouvrées",
-                                    "Premier échange de 30 minutes offert",
-                                    "Sans engagement, sans relance insistante",
+                                    "Premier échange avec la Maison, sans engagement",
+                                    "Proposition sur mesure après diagnostic",
                                 ].map((line) => (
                                     <li
                                         key={line}
@@ -123,7 +140,7 @@ export default function RendezVous() {
                         <FadeUp delay={0.15}>
                             {done ? (
                                 <div
-                                    data-testid="booking-success"
+                                    data-testid="diagnostic-success"
                                     className="flex min-h-[32rem] flex-col items-center justify-center border border-line bg-white p-10 text-center"
                                 >
                                     <span className="flex h-14 w-14 items-center justify-center rounded-full bg-navy">
@@ -134,12 +151,12 @@ export default function RendezVous() {
                                     </h2>
                                     <p className="mt-4 max-w-sm text-sm leading-relaxed text-ink/65">
                                         Votre demande est arrivée à la Maison.
-                                        Un expert vous répond sous 24 h ouvrées
+                                        Zayado vous répond sous 24 h ouvrées
                                         pour convenir d'un premier échange.
                                     </p>
                                     <a
                                         href="/"
-                                        data-testid="booking-success-home"
+                                        data-testid="diagnostic-success-home"
                                         className="mt-10 inline-flex items-center gap-2 rounded-full bg-navy px-7 py-3.5 text-sm font-semibold text-paper transition-colors duration-300 hover:bg-navy-soft"
                                     >
                                         <ArrowLeft className="h-4 w-4" />
@@ -148,7 +165,7 @@ export default function RendezVous() {
                                 </div>
                             ) : (
                                 <form
-                                    data-testid="booking-form"
+                                    data-testid="diagnostic-form"
                                     onSubmit={onSubmit}
                                     className="border border-line bg-white p-8 md:p-10"
                                 >
@@ -166,7 +183,7 @@ export default function RendezVous() {
                                                 required
                                                 minLength={2}
                                                 placeholder="Camille Martin"
-                                                data-testid="booking-input-name"
+                                                data-testid="diagnostic-input-name"
                                                 className={inputClass}
                                             />
                                         </div>
@@ -183,7 +200,7 @@ export default function RendezVous() {
                                                 type="email"
                                                 required
                                                 placeholder="camille@entreprise.fr"
-                                                data-testid="booking-input-email"
+                                                data-testid="diagnostic-input-email"
                                                 className={inputClass}
                                             />
                                         </div>
@@ -199,7 +216,7 @@ export default function RendezVous() {
                                                 name="phone"
                                                 type="tel"
                                                 placeholder="06 12 34 56 78"
-                                                data-testid="booking-input-phone"
+                                                data-testid="diagnostic-input-phone"
                                                 className={inputClass}
                                             />
                                         </div>
@@ -214,42 +231,36 @@ export default function RendezVous() {
                                                 id="date"
                                                 name="date"
                                                 type="date"
-                                                data-testid="booking-input-date"
+                                                data-testid="diagnostic-input-date"
                                                 className={inputClass}
                                             />
                                         </div>
                                         <div className="space-y-2 sm:col-span-2">
                                             <Label
-                                                htmlFor="offer"
+                                                htmlFor="subject"
                                                 className="text-[0.6rem] font-semibold uppercase tracking-[0.2em] text-ink/50"
                                             >
-                                                Offre qui vous intéresse
+                                                Votre sujet
                                             </Label>
                                             <Select
-                                                value={offerId}
-                                                onValueChange={setOfferId}
+                                                value={subject}
+                                                onValueChange={setSubject}
                                             >
                                                 <SelectTrigger
-                                                    id="offer"
-                                                    data-testid="booking-select-offer"
+                                                    id="subject"
+                                                    data-testid="diagnostic-select-subject"
                                                     className="h-auto w-full justify-between rounded-none border-0 border-b border-line px-0 py-3 text-base shadow-none transition-colors duration-300 focus:ring-0 data-[state=open]:border-navy"
                                                 >
                                                     <SelectValue placeholder="Je ne sais pas encore" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem
-                                                        value="none"
-                                                        data-testid="booking-select-offer-none"
-                                                    >
-                                                        Je ne sais pas encore
-                                                    </SelectItem>
-                                                    {offers.map((o) => (
+                                                    {SUBJECTS.map((s) => (
                                                         <SelectItem
-                                                            key={o.id}
-                                                            value={o.id}
-                                                            data-testid={`booking-select-offer-${o.id}`}
+                                                            key={s.value}
+                                                            value={s.value}
+                                                            data-testid={`diagnostic-select-option-${s.value}`}
                                                         >
-                                                            {o.title}
+                                                            {s.label}
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>
@@ -267,7 +278,7 @@ export default function RendezVous() {
                                                 name="message"
                                                 rows={4}
                                                 placeholder="Ce qui pèse, ce qui bloque, ce dont vous rêvez…"
-                                                data-testid="booking-input-message"
+                                                data-testid="diagnostic-input-message"
                                                 className={`${inputClass} resize-none`}
                                             />
                                         </div>
@@ -275,7 +286,7 @@ export default function RendezVous() {
 
                                     {formError && (
                                         <p
-                                            data-testid="booking-error"
+                                            data-testid="diagnostic-error"
                                             className="mt-6 border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
                                         >
                                             {formError}
@@ -285,7 +296,7 @@ export default function RendezVous() {
                                     <Button
                                         type="submit"
                                         disabled={sending}
-                                        data-testid="booking-submit-button"
+                                        data-testid="diagnostic-submit-button"
                                         className="mt-10 h-auto w-full rounded-full bg-navy py-4 text-sm font-semibold text-paper transition-colors duration-300 hover:bg-navy-soft"
                                     >
                                         {sending ? (
@@ -294,7 +305,7 @@ export default function RendezVous() {
                                                 Envoi en cours…
                                             </>
                                         ) : (
-                                            "Envoyer ma demande de rendez-vous"
+                                            CTA_LABELS[requestType]
                                         )}
                                     </Button>
                                     <p className="mt-4 text-center text-xs text-ink/45">
