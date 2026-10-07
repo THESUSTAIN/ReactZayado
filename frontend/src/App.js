@@ -64,11 +64,11 @@ import { getToken } from "@/lib/kairosApi";
 //   REACT_APP_FLAVOR=console  → admin.zayado.net : console admin seule, sa propre porte
 const FLAVOR = process.env.REACT_APP_FLAVOR || "saas";
 
-// Aperçu développeur (preview Emergent / localhost) : le backend retombe alors
-// sur le compte démo pour toute requête sans jeton (_mode_apercu côté serveur).
-// La même règle côté interface : on ne force PAS la connexion en aperçu —
-// c'est ce qui cassait le bouton « Ouvrir le compte test (Thomas) ».
-const APERCU = typeof window !== "undefined" && /(preview\.emergentagent\.com|localhost|127\.0\.0\.1)/i.test(window.location.hostname);
+// Aperçu développeur : tout ce qui n'est PAS un domaine de production (app.zayado.net,
+// zayado.net) est considéré comme aperçu — quelle que soit la forme de l'URL de preview
+// (panneau intégré, iframe, localhost…). Le backend applique la même règle via
+// _mode_apercu / APERCU_CODE, et la production reste strictement protégée par _en_prod.
+const APERCU = typeof window !== "undefined" && !/^(app\.)?zayado\.(net|fr|com)$/i.test(window.location.hostname);
 
 function ProtectedRoute({ children }) {
   const location = useLocation();

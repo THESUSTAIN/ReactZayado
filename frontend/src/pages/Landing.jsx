@@ -236,6 +236,9 @@ export default function Landing() {
           <span className="hidden font-display text-lg font-bold sm:inline">Zayado</span>
         </Link>
         <div className="flex items-center gap-3" ref={menuRef}>
+          <Link to="/login" className="inline-flex items-center gap-2 rounded-full border border-white/30 px-4 py-2 text-[14px] font-medium text-offwhite transition hover:bg-white/10" data-testid="landing-connexion">
+            Se connecter
+          </Link>
           <Link to={START} className="inline-flex items-center gap-2 rounded-full border border-white/60 px-4 py-2 text-[14px] font-medium text-offwhite transition hover:bg-white/10" data-testid="landing-agent">
             <Sparkles size={16} /> Copilote IA
           </Link>
