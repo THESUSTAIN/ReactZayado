@@ -2082,6 +2082,13 @@ async def chat(body: ChatIn, db: AsyncSession = Depends(get_db)):
         "(francais -> francais, anglais -> anglais, espagnol -> espagnol, etc.), en gardant un ton chaleureux et concis. "
         "Si la langue est incomprehensible ou ambigue, demande poliment de reformuler, en francais ET en anglais."
     )
+    # Concision (modèle Okyai) : des réponses courtes, une action à la fois.
+    systeme += (
+        "\n\n--- CONCISION ---\n"
+        "Reponds COURT : 2 a 5 phrases maximum (une seule si la question est simple). "
+        "Pas de titres, pas de listes a puce, pas de pavé : va droit au but, "
+        "pose au maximum UNE question a la fois, et propose au plus UNE prochaine action concrete."
+    )
     # Support juridique (façon Kandbaz) : question de droit → prompt structuré
     # + sources officielles du pays jointes sous la réponse (juridique_ext).
     # Historique récent (avant ce message) : le Copilote suit la conversation au lieu de répondre à chaque message isolé.

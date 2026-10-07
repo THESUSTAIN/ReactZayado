@@ -158,6 +158,12 @@ export function ChatBody({ onClose, estElargi, onToggleTaille, grand = false, su
   // Onglet initial : celui demandé par openChat("actu" | "decisions" | "chat"),
   // consommé ici — fiable même si le panneau vient tout juste de se monter.
   const [tab, setTab] = useState(() => prendreOngletEnAttente() || (() => { try { return new URLSearchParams(window.location.search).get("tab") === "actu" ? "actu" : null; } catch { return null; } })() || "chat");
+  // « Décisions » / « Actualité » depuis l'en-tête plein écran (bouton façon Okyai) : bascule l'onglet.
+  useEffect(() => {
+    const f = (e) => setTab((t) => (t === e.detail ? "chat" : e.detail));
+    window.addEventListener("kairos:onglet", f);
+    return () => window.removeEventListener("kairos:onglet", f);
+  }, []);
   const [cloudSync, setCloudSync] = useState(null);
   // Bouton « Collaborateur » : message important à l'équipe humaine, avec le contexte du chat.
   const [collab, setCollab] = useState(null); // null = fermé, sinon { contexte }
@@ -217,6 +223,14 @@ export function ChatBody({ onClose, estElargi, onToggleTaille, grand = false, su
             title="Écrire à un collaborateur de l'équipe Zayado" data-testid="chat-collaborateur-btn">
             <Users className="h-3.5 w-3.5" /> {grand ? "Collaborateur" : <span className="sr-only">Collaborateur</span>}
           </button>
+          <button onClick={() => setTab((t) => (t === "decisions" ? "chat" : "decisions"))} title="Décisions à valider" data-testid="assistant-tab-decisions"
+            className={`rounded-lg p-1.5 transition-colors ${tab === "decisions" ? "bg-gold/15 text-gold" : "text-offwhite/50 hover:bg-white/5 hover:text-gold"}`}>
+            <ListChecks className="h-4 w-4" />
+          </button>
+          <button onClick={() => setTab((t) => (t === "actu" ? "chat" : "actu"))} title="Actualité de ton secteur" data-testid="assistant-tab-actu"
+            className={`rounded-lg p-1.5 transition-colors ${tab === "actu" ? "bg-gold/15 text-gold" : "text-offwhite/50 hover:bg-white/5 hover:text-gold"}`}>
+            <Newspaper className="h-4 w-4" />
+          </button>
           {grand && surReglages && (
             <button onClick={surReglages} className="rounded-lg p-1.5 text-offwhite/50 hover:bg-white/5 hover:text-gold" data-testid="chat-grand-reglages" title="Réglages du Copilote">
               <Settings className="h-4 w-4" />
@@ -236,23 +250,7 @@ export function ChatBody({ onClose, estElargi, onToggleTaille, grand = false, su
       </div>
       )}
 
-      {/* Onglets */}
-      <div className="flex gap-1 border-b border-white/10 px-3 py-2">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            data-testid={`assistant-tab-${t.key}`}
-            className={`flex flex-1 flex-col items-center gap-1 rounded-lg py-1.5 text-[10px] font-medium transition-colors ${
-              tab === t.key ? "bg-gold/15 text-gold" : "text-offwhite/55 hover:text-offwhite"
-            }`}
-          >
-            <t.icon className="h-4 w-4" />
-            {t.label}
-          </button>
-        ))}
-      </div>
-
+      {/* Les onglets laissent place aux boutons d'en-tête (Décisions / Actualité) : plus de barre qui prend de la place. */}
       <div className="flex-1 overflow-hidden">
         {tab === "chat" && <ChatTab firstName={user.firstName} grand={grand} />}
         {tab === "decisions" && <DecisionsTab />}
@@ -1175,6 +1173,16 @@ export function ChatGrand({ onReduire, onClose }) {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            <button onClick={() => window.dispatchEvent(new CustomEvent("kairos:onglet", { detail: "decisions" }))} data-testid="chat-grand-decisions"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-white/12 bg-white/5 px-3.5 py-2 text-[13px] font-medium text-offwhite/80 transition hover:border-gold/40 hover:text-gold"
+              title="Décisions à valider">
+              <ListChecks className="h-4 w-4" /> <span className="hidden sm:inline">Décisions</span>
+            </button>
+            <button onClick={() => window.dispatchEvent(new CustomEvent("kairos:onglet", { detail: "actu" }))} data-testid="chat-grand-actu"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-white/12 bg-white/5 px-3 py-2 text-offwhite/80 transition hover:border-gold/40 hover:text-gold"
+              title="Actualité de ton secteur">
+              <Newspaper className="h-4 w-4" />
+            </button>
             <button onClick={() => setReglages(true)} data-testid="chat-grand-reglages"
               className="inline-flex items-center gap-1.5 rounded-xl border border-white/12 bg-white/5 px-3.5 py-2 text-[13px] font-medium text-offwhite/80 transition hover:border-gold/40 hover:text-gold"
               title="Réglages du Copilote">

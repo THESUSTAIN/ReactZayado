@@ -162,8 +162,13 @@ input.bg-white\/\[0\.08\]:focus, textarea.bg-white\/\[0\.08\]:focus {
         font-family: 'Fraunces', Georgia, serif;
     }
     .btn-gold {
-        @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gold px-5 py-2.5 font-semibold text-navy-900 transition-all duration-200 hover:bg-gold-hover active:scale-95;
-        box-shadow: 0 6px 20px -6px rgba(222,194,163, 0.6);
+        @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 font-semibold text-navy-900 transition-all duration-200 active:scale-95;
+        background: linear-gradient(135deg, #F1E2CC 0%, #E8C77E 45%, #C9973B 100%);
+        box-shadow: 0 6px 20px -6px rgba(222, 194, 163, 0.6);
+    }
+    .btn-gold:hover {
+        filter: brightness(1.06);
+        box-shadow: 0 12px 28px -8px rgba(232, 199, 126, 0.55);
     }
     .btn-ghost {
         @apply inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 font-medium text-offwhite transition-all duration-200 hover:bg-white/10;
@@ -732,6 +737,11 @@ body:not(.theme-clair) .zy-app :is(.border-white\/12, .border-white\/15):not(.be
 @keyframes orb-flotte { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
 @media (prefers-reduced-motion: reduce) { .chat-orb i, .chat-orb span { animation: none; } .chat-orb span { opacity: 0; } .chat-orb span:first-child { opacity: .5; transform: scale(1.2); } }
 .chat-accueil { animation: actu-entree .5s ease-out; }
+
+/* Halo doré au survol des cartes (GlassCard) */
+.gold-halo:hover {
+    border-color: rgba(232, 199, 126, 0.35);
+}
 
 /* Carte d'entrée premium du chat : verre dépoli + halo doré au focus */
 .chat-input-card { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }

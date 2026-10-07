@@ -2,11 +2,19 @@ import React from "react";
 import { Briefcase, User } from "lucide-react";
 
 // Jauge à aiguille Pro / Perso (identique à la maquette validée).
+// L'aiguille part du centre et rejoint sa position au chargement (micro-animation).
 export function BalanceDial({ pro = 50, perso = 50 }) {
   const total = pro + perso || 1;
   const posPerso = perso / total; // 0 (tout pro) .. 1 (tout perso)
-  const rot = (posPerso - 0.5) * 160; // -80° (pro) .. +80° (perso)
+  const rotCible = (posPerso - 0.5) * 160; // -80° (pro) .. +80° (perso)
   const desequilibre = Math.abs(pro - perso) >= 20;
+
+  const [parti, setParti] = React.useState(false);
+  React.useEffect(() => {
+    const t = setTimeout(() => setParti(true), 300);
+    return () => clearTimeout(t);
+  }, []);
+  const rot = parti ? rotCible : 0;
 
   const cx = 110;
   const cy = 100;
@@ -40,7 +48,7 @@ export function BalanceDial({ pro = 50, perso = 50 }) {
             opacity="0.9"
           />
           {/* Aiguille */}
-          <g transform={`rotate(${rot} ${cx} ${cy})`} style={{ transition: "transform 0.9s cubic-bezier(0.22,1,0.36,1)" }}>
+          <g transform={`rotate(${rot} ${cx} ${cy})`} style={{ transition: "transform 1.1s cubic-bezier(0.22,1,0.36,1)" }}>
             <line x1={cx} y1={cy} x2={cx} y2={cy - r * 0.86} stroke="url(#gaugeGold)" strokeWidth="4" strokeLinecap="round" />
             <circle cx={cx} cy={cy - r * 0.86} r="4" fill="#F1E2CC" />
           </g>

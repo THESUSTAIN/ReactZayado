@@ -30,17 +30,38 @@ import {
 // L'anneau d'énergie des maquettes : grand, lisible, sans décor.
 function AnneauEnergie({ valeur, vide = false }) {
   const r = 70, c = 2 * Math.PI * r;
+  // Au chargement : l'anneau se remplit et le chiffre monte de 0 à la valeur (micro-animation).
+  const [parti, setParti] = React.useState(false);
+  React.useEffect(() => {
+    const t = setTimeout(() => setParti(true), 250);
+    return () => clearTimeout(t);
+  }, []);
+  const [n, setN] = React.useState(0);
+  React.useEffect(() => {
+    if (!parti || vide) return;
+    const cible = Math.max(0, Math.min(100, valeur || 0));
+    let ra; const t0 = performance.now();
+    const boucle = (t) => {
+      const p = Math.min(1, (t - t0) / 1100);
+      setN(Math.round(cible * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) ra = requestAnimationFrame(boucle);
+    };
+    ra = requestAnimationFrame(boucle);
+    return () => cancelAnimationFrame(ra);
+  }, [parti, vide, valeur]);
+  const offset = c * (1 - (parti ? Math.max(0, Math.min(1, valeur / 100)) : 0));
   return (
     <div className="relative mx-auto" style={{ width: 168, height: 168 }}>
       <svg width="168" height="168" style={{ transform: "rotate(-90deg)" }} aria-hidden>
         <circle cx="84" cy="84" r={r} stroke="rgba(255,255,255,.09)" strokeWidth="11" fill="none" />
         {!vide && (
           <circle cx="84" cy="84" r={r} stroke="#DEC2A3" strokeWidth="11" fill="none" strokeLinecap="round"
-            strokeDasharray={c} strokeDashoffset={c * (1 - Math.max(0, Math.min(1, valeur / 100)))} />
+            strokeDasharray={c} strokeDashoffset={offset}
+            style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(0.22,1,0.36,1)" }} />
         )}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="font-display text-[40px] font-semibold leading-none">{vide ? "—" : valeur}</span>
+        <span className="font-display text-[40px] font-semibold leading-none">{vide ? "—" : n}</span>
         <span className="mt-1.5 text-[12px] text-offwhite/62">énergie</span>
       </div>
     </div>

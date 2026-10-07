@@ -76,11 +76,11 @@ export default function PoulsBusinessWidget() {
       {!edit ? (
         <>
           <div className="grid grid-cols-3 gap-3">
-            <KPI icon={Landmark} label="CA du mois" value={`${fmt(data.ca_mensuel)}€`}
+            <KPI icon={Landmark} label="CA du mois" nombre={data.ca_mensuel} suffixe="€"
                  sub={data.ca_objectif > 0 ? `${data.avancement}% de l'objectif` : "Fixe un objectif"} />
-            <KPI icon={Receipt} label="Factures en attente" value={fmt(data.factures_en_attente)}
+            <KPI icon={Receipt} label="Factures en attente" nombre={data.factures_en_attente}
                  sub="À relancer" />
-            <KPI icon={Wallet}  label="Trésorerie" value={`${fmt(data.tresorerie)}€`}
+            <KPI icon={Wallet}  label="Trésorerie" nombre={data.tresorerie} suffixe="€"
                  sub="Disponible" />
           </div>
           <div className="mt-4 flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
@@ -129,14 +129,34 @@ export default function PoulsBusinessWidget() {
   );
 }
 
-function KPI({ icon: Icon, label, value, sub }) {
+function KPI({ icon: Icon, label, value, sub, nombre, suffixe = "" }) {
+  // Compteur animé au chargement : les chiffres montent de 0 à leur valeur.
+  const [parti, setParti] = React.useState(false);
+  React.useEffect(() => {
+    const t = setTimeout(() => setParti(true), 300);
+    return () => clearTimeout(t);
+  }, []);
+  const [n, setN] = React.useState(0);
+  React.useEffect(() => {
+    if (!parti || nombre === undefined) return;
+    const cible = nombre || 0;
+    let ra; const t0 = performance.now();
+    const boucle = (t) => {
+      const p = Math.min(1, (t - t0) / 1100);
+      setN(Math.round(cible * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) ra = requestAnimationFrame(boucle);
+    };
+    ra = requestAnimationFrame(boucle);
+    return () => cancelAnimationFrame(ra);
+  }, [parti, nombre]);
+  const affiche = value ?? `${n.toLocaleString("fr-FR")}${suffixe}`;
   return (
     <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
       <div className="flex items-center gap-1.5 text-offwhite/60">
         <Icon size={12} className="text-gold" />
         <span className="text-[10px] uppercase tracking-widest">{label}</span>
       </div>
-      <p className="mt-1 font-display text-xl font-bold text-offwhite">{value}</p>
+      <p className="mt-1 font-display text-xl font-bold text-offwhite">{affiche}</p>
       <p className="text-[10px] text-offwhite/45">{sub}</p>
     </div>
   );
