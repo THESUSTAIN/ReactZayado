@@ -1,0 +1,23 @@
+{
+  "summary": "E2E test of Zayado chantiers récents: (1) Chat Copilote plein écran — bulles désormais contraintes (user max-w-[75%] sm:max-w-[520px], IA/colonne mx-auto max-w-3xl 768px) ; régression envoi message OK, l'IA répond. (2) Pastille WhatsApp dans l'en-tête du chat grand — pastille ambre whatsapp-pill-attente visible pour test.essentielle (status=qr, deja_relie=true), aucune pastille pour Thomas. Bouton Reconnecter absent (attendu, pas en déconnecté). Webhooks whatsapp-web-disconnected et whatsapp-web-ready répondent 200 {ok:true}. Mobile 390px OK. Pastille verte / vrai bouton Reconnecter non testables (session WA jamais scannée) — à valider après scan.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "WhatsAppStatut.jsx: les 3 clés localStorage éventuelles ne sont pas utilisées — la clé réelle est 'kairos_access_token' (dans kairosApi.js). Pour un prochain test automatisé, documenter cette clé dans /app/memory/test_credentials.md pour éviter de tâtonner.",
+    "Formulaire /login : le bouton de bascule 'Mot de passe' n'a pas de data-testid et n'est pas accessible via role='tab' (click par get_by_role échoue). Ajouter data-testid=\"login-tab-password\" et data-testid=\"login-submit-btn\" pour faciliter les tests Playwright."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "100%", "frontend": "100%" },
+  "test_credentials": "test.essentielle@zayado.net / Test!2026 (admin). Clé localStorage du token: kairos_access_token. Login API possible via fetch('/api/auth/login') en-page.",
+  "seed_data_creation": "aucune",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Pour éviter de tâtonner avec /login, se logger par in-page fetch POST /api/auth/login puis stocker le token dans localStorage.kairos_access_token (voir TOKEN_KEY ligne 5 de kairosApi.js). Les pastilles WhatsApp sont dans ChatGrand (header) : amber=whatsapp-pill-attente, green=whatsapp-pill-connecte, red=whatsapp-pill-deconnecte + whatsapp-reconnecter-btn. Session WA actuelle au status 'qr' pour l'agent 6bfc75fa-1c66-415d-a729-da85dd4e6502 (deja_relie=true), donc seul le flux ambre est validable sans scan.",
+  "rca of the issue": "Non applicable — toutes les fonctionnalités demandées sont validées."
+}

@@ -61,3 +61,15 @@ Le client a fourni « Zayado — Services et produits de la marketplace.docx » 
 - Chat plein écran : barre d'onglets supprimée ; « Décisions » (étiqueté) + « Actualité » (icône) passés dans l'en-tête (événement kairos:onglet, bascule aller-retour) ; prompt Copilote + CONCISION (2-5 phrases max, une seule question, une seule prochaine action).
 - Micro-animations : anneau d'énergie se remplit + compteur 0→valeur (AnneauEnergie), aiguille BalanceDial part du centre, KPI du Pouls Business en compteur animé, GlassCard survol (soulève + halo or), .btn-gold en dégradé or 135°.
 - « Il prépare / tu décides » prouvé fonctionnel : « Génère 5 idées » a produit 5 idées IA réelles scorées (podcast, produit numérique, conseil freelance, communauté payante, automatisation IA). Aucun « propose 3 » retrouvé dans le code — l'app propose 5 ; demander l'écran exact si besoin.
+
+
+## Bulles resserrées + WhatsApp complet (2026-10-07, dernier cycle)
+- Bulles du Copilote plein écran — SEULE demande du client pour le chat (« juste la bulle trop large, c'est tout ») : conversation limitée à une colonne centrée max-w-3xl (768 px), bulles utilisateur max-w-[75 %] / 520 px, réponses IA dans la colonne, input aligné sur la même largeur. Rien d'autre modifié sur le chat.
+- WhatsApp selon la recommandation acceptée (« je suis ta recommandation ») — rôles confirmés : WhatsApp = numéro de l'entrepreneur (QR), il discute avec le Copilote IA ; Telegram = bot partagé Zayado :
+  - Nouveau composant WhatsAppStatut.jsx dans l'en-tête du Copilote plein écran : vert « Connecté à ton numéro · +33… » (ready), ambre « En attente de scan… » (qr), rouge « WhatsApp déconnecté » + bouton « Reconnecter » (déjà relié et déconnecté), muet si jamais relié. Poll 30 s ; alerte in-app signaler() une seule fois, seulement si la déconnexion persiste (2 ticks) après un état ready.
+  - POST /api/connections/whatsapp/restart (nouveau) : régénère un QR en un clic via /session/{uid}/restart du microservice.
+  - POST /api/webhooks/whatsapp-web-disconnected (nouveau) + notifyBackendDisconnected côté microservice : la perte de session est remontée à l'app.
+  - GET /api/connections/whatsapp/status enrichi : réconciliation en direct avec le microservice + champ deja_relie.
+  - Relance post-scan : quand le QR est scanné, le backend envoie au numéro connecté (conversation « Moi-même ») la confirmation + les 5 premières actions a_faire du Plan d'action (raise_for_status ajouté).
+  - Robustesse : buildSession du microservice nettoie les verrous Chromium — le Reconnecter plantait (« The browser is already running ») après un kill du service.
+- Testé (testing agent, /app/test_reports/iteration_1.json, 100 % back + front) : bulles étroites validées, envoi de message + réponse streaming OK, pastille ambre visible pour l'admin et absente pour Thomas, webhooks 200 {ok:true}, mobile 390 OK. Pastille verte, alerte de déconnexion réelle et réception de la relance : À VALIDER PAR LA PROPRIÉTAIRE après scan du QR.
