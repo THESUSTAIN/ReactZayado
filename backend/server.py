@@ -5296,9 +5296,58 @@ async def whatsapp_start(db: AsyncSession = Depends(get_db)):
 @api.get("/connections/whatsapp/status")
 async def whatsapp_status(db: AsyncSession = Depends(get_db)):
     conn = await _get_connection(db, "whatsapp")
+    # Statut en direct du microservice : la base peut être en retard si l'app a
+    # redémarré au moment d'un événement « déconnecté » / « prêt ».
+    live = None
+    if WA_SERVICE_URL and WA_SERVICE_SECRET:
+        try:
+            async with httpx.AsyncClient(timeout=6) as client:
+                r = await client.get(f"{WA_SERVICE_URL}/session/{_uid()}/status",
+                                     headers={"x-service-secret": WA_SERVICE_SECRET})
+                live = r.json()
+        except Exception as e:  # noqa: BLE001
+            logger.debug("WhatsApp statut live indisponible : %s", e)
+    if live and live.get("status") not in (None, "not_started"):
+        if conn is None:
+            if live["status"] == "ready":
+                conn = UserConnection(user_id=_uid(), provider="whatsapp", label="WhatsApp Web",
+                                      status="ready", phone_number=live.get("phone_number"))
+                db.add(conn)
+                await db.commit()
+        elif conn.status != live["status"]:
+            conn.status = live["status"]
+            if live.get("phone_number"):
+                conn.phone_number = live.get("phone_number")
+            await db.commit()
     if not conn:
-        return {"status": "disconnected"}
-    return _connection_json(conn)
+        return {"status": "disconnected", "deja_relie": False}
+    return {**_connection_json(conn), "deja_relie": True}
+
+
+@api.post("/connections/whatsapp/restart")
+async def whatsapp_restart(db: AsyncSession = Depends(get_db)):
+    """« Reconnecter » en un clic : détruit la session WhatsApp courante du
+    microservice et en recrée une nouvelle, prête à être scannée (nouveau QR)."""
+    if not WA_SERVICE_SECRET:
+        raise HTTPException(500, "WA_SERVICE_SECRET non configurée côté backend.")
+    try:
+        async with httpx.AsyncClient(timeout=40) as client:
+            r = await client.post(
+                f"{WA_SERVICE_URL}/session/{_uid()}/restart",
+                headers={"x-service-secret": WA_SERVICE_SECRET},
+                json={"agent_webhook_token": "kairos-mono"},
+            )
+            data = r.json()
+    except Exception as e:  # noqa: BLE001
+        logger.warning("WhatsApp-service restart injoignable : %s", e)
+        raise HTTPException(502, "Le service WhatsApp est injoignable pour le moment.")
+    conn = await _get_connection(db, "whatsapp")
+    if not conn:
+        conn = UserConnection(user_id=_uid(), provider="whatsapp", label="WhatsApp Web")
+        db.add(conn)
+    conn.status = data.get("status", "error")
+    await db.commit()
+    return data
 
 
 @api.post("/webhooks/whatsapp-web")
@@ -5370,6 +5419,46 @@ async def whatsapp_web_ready(request: Request, db: AsyncSession = Depends(get_db
     conn.phone_number = body.get("phone_number")
     await db.commit()
     logger.info("WhatsApp Web connecté — numéro %s", conn.phone_number)
+
+    # Relance après le scan : confirmation + actions en attente, envoyées à
+    # l'entrepreneur sur son propre numéro (conversation « Moi-même »).
+    if conn.phone_number and WA_SERVICE_URL and WA_SERVICE_SECRET:
+        try:
+            taches = (await db.execute(
+                select(VisionTache).where(VisionTache.user_id == wa_uid, VisionTache.statut == "a_faire")
+                .order_by(VisionTache.created_at.asc()).limit(5)
+            )).scalars().all()
+            lignes = "\n".join(f"{i}. {t.titre}" for i, t in enumerate(taches, 1)) \
+                or "Rien pour l'instant : ajoute une action depuis ton Plan d'action."
+            message = ("✅ WhatsApp connecté à ton Copilote Zayado ! Écris-moi ici à tout moment.\n\n"
+                       f"📋 Relance du jour — tes actions en attente :\n{lignes}\n\n"
+                       "Réponds à ce message et on avance ensemble.")
+            async with httpx.AsyncClient(timeout=12) as client:
+                envoi = await client.post(f"{WA_SERVICE_URL}/send",
+                                          headers={"x-service-secret": WA_SERVICE_SECRET},
+                                          json={"to": conn.phone_number, "message": message})
+                envoi.raise_for_status()
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Relance WhatsApp post-scan non envoyée : %s", e)
+    return {"ok": True}
+
+
+@api.post("/webhooks/whatsapp-web-disconnected")
+async def whatsapp_web_disconnected(request: Request, db: AsyncSession = Depends(get_db)):
+    """Appelé par le microservice quand la session WhatsApp est perdue
+    (déconnexion du téléphone, logout, navigateur fermé…). L'app affichera
+    une alerte et un bouton « Reconnecter »."""
+    if not WA_SERVICE_SECRET or request.headers.get("x-service-secret", "") != WA_SERVICE_SECRET:
+        raise HTTPException(401, "Non autorisé")
+    body = await request.json()
+    wa_uid = body.get("agent_id")
+    if not wa_uid:
+        raise HTTPException(400, "agent_id manquant")
+    conn = await _get_connection(db, "whatsapp", uid=wa_uid)
+    if conn:
+        conn.status = "disconnected"
+        await db.commit()
+        logger.info("WhatsApp Web déconnecté — uid %s", wa_uid)
     return {"ok": True}
 
 

@@ -55,6 +55,24 @@ async function notifyBackendReady(session) {
   }
 }
 
+function backendDisconnectedUrl() {
+  if (!BACKEND_URL) return '';
+  return `${BACKEND_URL}/api/webhooks/whatsapp-web-disconnected`;
+}
+
+// Prévient Zayado que la session est tombée : l'app affiche l'alerte et le bouton « Reconnecter ».
+async function notifyBackendDisconnected(session) {
+  if (!BACKEND_URL) return;
+  try {
+    await axios.post(backendDisconnectedUrl(), { agent_id: session.agentId }, {
+      timeout: 15000,
+      headers: { 'x-service-secret': SERVICE_SECRET }
+    });
+  } catch (error) {
+    console.warn('[WA] callback disconnected failed:', error.message);
+  }
+}
+
 async function relayInboundMessage(session, message) {
   const url = backendWebhookUrl();
   if (!url) return null;
@@ -80,6 +98,10 @@ async function relayInboundMessage(session, message) {
 function buildSession(agentId, agentWebhookToken) {
   const existing = sessions.get(agentId);
   if (existing) return existing;
+
+  // Verrous Chromium laissés par un arrêt brutal (kill, crash) : sans ce nettoyage,
+  // le navigateur refuse de rouvrir le profil (« The browser is already running… »).
+  retirerVerrousChromium(path.join(DATA_PATH, `session-zayado-${agentId}`));
 
   const client = new Client({
     authStrategy: new LocalAuth({
@@ -139,6 +161,7 @@ function buildSession(agentId, agentWebhookToken) {
     session.status = 'disconnected';
     session.message = String(reason || 'Déconnecté');
     session.phoneNumber = null;
+    notifyBackendDisconnected(session);
     // Déconnexion volontaire depuis le téléphone (LOGOUT) : on ne relance pas, il faut un nouveau QR.
     if (String(reason).toUpperCase() === 'LOGOUT') return;
     setTimeout(async () => {

@@ -494,6 +494,8 @@ export const fetchProcessus = () => jget("/processus");
 export const saveProcessus = (items) => jsend("/processus", "PUT", { items });
 export const completerCheckin = (vitals) => jsend("/checkins/aujourdhui", "PATCH", vitals);
 export const demarrerWhatsapp = () => jsend("/connections/whatsapp/start", "POST");
+export const statutWhatsapp = () => jsend("/connections/whatsapp/status");
+export const reconnecterWhatsapp = () => jsend("/connections/whatsapp/restart", "POST");
 export const connecterTelegram = (bot_token) => jsend("/connections/telegram/connect", "POST", { bot_token });
 
 // ── Statut de l'IA texte (bandeau de repli du cockpit) ──

@@ -13,6 +13,7 @@ import CollaborateurModal from "./CollaborateurModal";
 import { aDroit, usePlanEffectif } from "@/lib/droits";
 import { prendreOngletEnAttente, prendrePromptEnAttente, discuterAvecIA } from "./GlobalChat";
 import CanauxCopilote from "@/components/kairos/CanauxCopilote";
+import WhatsAppStatut from "./WhatsAppStatut";
 import { useKairos } from "@/context/KairosContext";
 import {
   streamChat, fetchHistoriqueChat, fetchPointDuJour, fetchDecisions, suggererDecisions, patchDecision, enregistrerArticle, fetchEnregistres, validerDecisionEmail,
@@ -706,7 +707,7 @@ function ChatTab({ firstName, grand = false }) {
           <div className="chat-orb scale-[3]"><span /><span /><span /><i /></div>
         </div>
       )}
-      <div ref={scrollRef} onScroll={surDefilement} className={`relative z-10 flex-1 space-y-4 overflow-y-auto px-4 py-5 sm:px-5 ${messages.length <= 1 && !streaming ? "flex flex-col justify-center" : ""}`}>
+      <div ref={scrollRef} onScroll={surDefilement} className={`relative z-10 flex-1 space-y-4 overflow-y-auto px-4 py-5 sm:px-5 ${grand ? "mx-auto w-full max-w-3xl" : ""} ${messages.length <= 1 && !streaming ? "flex flex-col justify-center" : ""}`}>
         {messages.length <= 1 && !streaming && (
           <div className="chat-accueil flex flex-col items-center gap-3 pb-2 text-center" data-testid="chat-accueil">
             <div className="chat-orb" aria-hidden="true"><span /><span /><span /><i /></div>
@@ -733,7 +734,7 @@ function ChatTab({ firstName, grand = false }) {
                 <Sparkles className="h-3.5 w-3.5 text-gold" />
               </div>
             )}
-            <div className={`max-w-[85%] ${m.role === "assistant" ? "space-y-2" : ""}`}>
+            <div className={`${grand ? (m.role === "user" ? "max-w-[75%] sm:max-w-[520px]" : "max-w-full") : "max-w-[85%]"} ${m.role === "assistant" ? "space-y-2" : ""}`}>
               <div className={`whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                 m.role === "user"
                   ? "rounded-br-md bg-gradient-to-br from-[#F1E2CC] to-[#DEC2A3] text-[#0f1b3a] shadow-[0_2px_14px_rgba(232,199,126,0.16)]"
@@ -782,7 +783,7 @@ function ChatTab({ firstName, grand = false }) {
         <BoutonDernierMessage visible={decolle} onClick={versLeBas} />
       </div>
       <div className="border-t border-white/10 px-4 py-3">
-        <div className={grand ? "mx-auto w-full max-w-[900px]" : ""}>
+        <div className={grand ? "mx-auto w-full max-w-3xl" : ""}>
           {!(grand && messages.length <= 1 && !streaming) && (
             <div className="mb-2 -mx-1 flex flex-nowrap gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               data-testid="ai-shortcuts"
@@ -1173,6 +1174,7 @@ export function ChatGrand({ onReduire, onClose }) {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            <WhatsAppStatut />
             <button onClick={() => window.dispatchEvent(new CustomEvent("kairos:onglet", { detail: "decisions" }))} data-testid="chat-grand-decisions"
               className="inline-flex items-center gap-1.5 rounded-xl border border-white/12 bg-white/5 px-3.5 py-2 text-[13px] font-medium text-offwhite/80 transition hover:border-gold/40 hover:text-gold"
               title="Décisions à valider">
