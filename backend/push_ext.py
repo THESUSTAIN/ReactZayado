@@ -241,7 +241,11 @@ def install_push(g: dict) -> None:
 
     @api.get("/push/statut")
     async def push_statut(db=Depends(get_db)):
-        uid = _connecte()
+        uid = _uid()
+        if uid == DEMO_USER_ID:
+            # Mode démo (aperçu) : réponse sereine au lieu d'un 401 qui expulsait
+            # le compte test Thomas vers /login à chaque ouverture de l'app.
+            return {"actif": False, "appareils": 0, "disponible": False, "demo": True}
         n = len(list((await db.execute(select(PushSubscription).where(PushSubscription.user_id == uid))).scalars()))
         d = _diagnostic()
         return {"actif": n > 0, "appareils": n, "disponible": d["probleme"] is None, "probleme": d["probleme"]}

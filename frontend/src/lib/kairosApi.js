@@ -22,6 +22,9 @@ function _headers(extra) {
 }
 
 function _versLogin() {
+  // Mode aperçu (preview/localhost) sans jeton = compte démo volontaire :
+  // aucun 401 ne doit expulser vers /login (sinon le compte test Thomas boucle).
+  if (/(preview\.emergentagent\.com|localhost|127\.0\.0\.1)/i.test(window.location.hostname) && !getToken()) return;
   // 401 = session absente/expirée : on renvoie vers /login, mais seulement depuis l'app (pas la landing).
   const p = window.location.pathname;
   if (p.startsWith("/app") || p.startsWith("/onboarding") || p.startsWith("/parametres") || p.startsWith("/espace-vendeur") || p.startsWith("/compte") || p.startsWith("/acheter")) window.location.assign("/login");

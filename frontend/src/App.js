@@ -64,9 +64,15 @@ import { getToken } from "@/lib/kairosApi";
 //   REACT_APP_FLAVOR=console  → admin.zayado.net : console admin seule, sa propre porte
 const FLAVOR = process.env.REACT_APP_FLAVOR || "saas";
 
+// Aperçu développeur (preview Emergent / localhost) : le backend retombe alors
+// sur le compte démo pour toute requête sans jeton (_mode_apercu côté serveur).
+// La même règle côté interface : on ne force PAS la connexion en aperçu —
+// c'est ce qui cassait le bouton « Ouvrir le compte test (Thomas) ».
+const APERCU = typeof window !== "undefined" && /(preview\.emergentagent\.com|localhost|127\.0\.0\.1)/i.test(window.location.hostname);
+
 function ProtectedRoute({ children }) {
   const location = useLocation();
-  if (!getToken()) {
+  if (!getToken() && !APERCU) {
     const next = `${location.pathname}${location.search}`;
     return <Navigate to={`/login?next=${encodeURIComponent(next)}`} replace />;
   }
