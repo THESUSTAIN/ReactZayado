@@ -688,15 +688,41 @@ function ChatTab({ firstName, grand = false }) {
 
   return (
     <div className="flex h-full flex-col">
-      <div ref={scrollRef} onScroll={surDefilement} className="flex-1 space-y-4 overflow-y-auto px-5 py-5">
+      <div ref={scrollRef} onScroll={surDefilement} className="flex-1 space-y-4 overflow-y-auto px-4 py-5 sm:px-5">
+        {messages.length <= 1 && !streaming && (
+          <div className="chat-accueil flex flex-col items-center gap-3 pb-2 pt-6 text-center" data-testid="chat-accueil">
+            <div className="chat-orb" aria-hidden="true"><span /><span /><span /><i /></div>
+            <p className="font-display text-lg font-bold text-offwhite">Ton Copilote t'écoute.</p>
+            <p className="max-w-[280px] text-xs leading-relaxed text-offwhite/55">Commence par un raccourci, ou pose ta question librement — il connaît ton activité.</p>
+            <div className="flex flex-wrap items-center justify-center gap-1.5 pt-1">
+              {SHORTCUTS.slice(0, 3).map((s) => (
+                <button key={s.key} onClick={() => send(s.prompt)} data-testid={`chat-suggestion-${s.key}`}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-gold/25 bg-gold/[0.07] px-3 py-1.5 text-[11px] font-medium text-offwhite/85 transition-all duration-200 hover:border-gold/50 hover:bg-gold/15 hover:text-gold">
+                  <s.icon className="h-3 w-3 text-gold" /> {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {messages.map((m, i) => (
-          <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`} data-testid={`chat-msg-${m.role}`}>
+          <div key={i} className={`group/msg flex items-start gap-2.5 ${m.role === "user" ? "flex-row-reverse" : ""}`} data-testid={`chat-msg-${m.role}`}>
+            {m.role === "user" ? (
+              <div aria-hidden="true" className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#F1E2CC] to-[#C9973B] text-[10px] font-bold text-[#0f1b3a] ring-1 ring-gold/40">
+                {(firstName || "M").slice(0, 1).toUpperCase()}
+              </div>
+            ) : (
+              <div aria-hidden="true" className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-navy ring-1 ring-gold/30">
+                <Sparkles className="h-3.5 w-3.5 text-gold" />
+              </div>
+            )}
             <div className={`max-w-[85%] ${m.role === "assistant" ? "space-y-2" : ""}`}>
               <div className={`whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                m.role === "user" ? (grand ? "chat-bulle-moi" : "bg-gold text-navy-900") : (grand ? "chat-bulle-ia" : "border border-white/10 bg-white/5 text-offwhite")
+                m.role === "user"
+                  ? "rounded-br-md bg-gradient-to-br from-[#F1E2CC] to-[#DEC2A3] text-[#0f1b3a] shadow-[0_2px_14px_rgba(232,199,126,0.16)]"
+                  : "rounded-bl-md border border-white/10 bg-white/[0.06] text-offwhite backdrop-blur-sm"
               }`}>
                 {m.image ? <img src={m.image.src} alt={m.content} className="max-h-80 rounded-xl" /> : (m.content ? (m.role === "assistant" ? <TexteRiche texte={m.content} /> : m.content) : (streaming && i === messages.length - 1 ? <span className="inline-flex items-center gap-2 text-xs text-offwhite/60" data-testid="chat-reflechit">l'IA réfléchit<span className="ia-points"><i /><i /><i /></span></span> : null))}
-                {grand && m.le && <span className={`mt-1.5 block text-[11px] ${m.role === "user" ? "opacity-60" : "text-offwhite/45"}`}>{heure(m.le)}</span>}
+                {(grand || i > 0) && m.le && m.content && !(streaming && i === messages.length - 1) && <span className={`mt-1.5 block text-[10.5px] ${m.role === "user" ? "opacity-55" : "text-offwhite/40"}`}>{heure(m.le)}</span>}
               </div>
               {m.reglage && !m.repondu && <ControlesReglage q={REGLAGES.find((q) => q.key === m.reglage)} onRepondre={repondre} onPlusTard={plusTard} />}
               {m.role === "assistant" && m.content && i > 0 && !m.reglage && !m.info && !(streaming && i === messages.length - 1) && (
@@ -726,9 +752,12 @@ function ChatTab({ firstName, grand = false }) {
           </div>
         ))}
         {ecrit && (
-          <div className="flex justify-start" data-testid="chat-ecrit">
-            <div className={`rounded-2xl px-4 py-3 ${grand ? "chat-bulle-ia" : "border border-white/10 bg-white/5"}`}>
-              <span className="chat-points" aria-label="Le Copilote écrit"><i /><i /><i /></span>
+          <div className="flex items-start justify-start gap-2.5" data-testid="chat-ecrit">
+            <div aria-hidden="true" className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-navy ring-1 ring-gold/30">
+              <Sparkles className="h-3.5 w-3.5 text-gold" />
+            </div>
+            <div className="rounded-2xl rounded-bl-md border border-white/10 bg-white/[0.06] px-4 py-3">
+              <span className="chat-points text-offwhite/70" aria-label="Le Copilote écrit"><i /><i /><i /></span>
             </div>
           </div>
         )}
@@ -746,19 +775,25 @@ function ChatTab({ firstName, grand = false }) {
             </button>
           ))}
         </div>
-        <div className="flex items-end gap-2">
-          <div className="relative flex-1">
-            <textarea rows={1} value={input} onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-              placeholder="Écris au Copilote IA…" data-testid="chat-input"
-              className="max-h-32 w-full resize-none rounded-xl border border-white/10 bg-white/5 py-2.5 pl-3 pr-10 text-sm text-offwhite placeholder:text-offwhite/40 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/30" />
-            <button className="absolute right-2 top-2 rounded-lg p-1 text-offwhite/50 hover:text-gold" title="Vocal (bientôt)" data-testid="chat-mic-btn">
-              <Mic className="h-4 w-4" />
-            </button>
+        <div className="chat-input-card rounded-3xl border border-gold/25 bg-white/[0.04] px-3 pb-2 pt-2 shadow-[0_10px_34px_rgba(232,199,126,0.07)] transition-colors duration-300 focus-within:border-gold/55 focus-within:bg-white/[0.06]">
+          <textarea rows={1} value={input} onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
+            placeholder="Écris au Copilote IA…" data-testid="chat-input"
+            className="max-h-28 w-full resize-none border-0 bg-transparent px-1 py-1.5 text-sm text-offwhite placeholder:text-offwhite/40 focus:outline-none" />
+          <div className="flex items-center justify-between pt-0.5">
+            <span className="hidden pl-1 text-[10px] text-offwhite/35 sm:inline">Entrée pour envoyer · Maj + Entrée pour une nouvelle ligne</span>
+            <span className="inline pl-1 text-[10px] text-offwhite/35 sm:hidden" />
+            <div className="flex items-center gap-1.5">
+              <button className="flex h-8 w-8 items-center justify-center rounded-full text-offwhite/50 transition-colors hover:bg-white/5 hover:text-gold" title="Vocal (bientôt)" data-testid="chat-mic-btn">
+                <Mic className="h-4 w-4" />
+              </button>
+              <button onClick={() => send()} disabled={streaming || !input.trim()}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#E8C77E] to-[#C9973B] text-[#0f1b3a] shadow-lg shadow-gold/20 transition-all duration-200 hover:scale-105 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
+                data-testid="chat-send-btn" title="Envoyer">
+                {streaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
-          <button onClick={() => send()} disabled={streaming || !input.trim()} className="btn-gold h-11 px-3.5 disabled:opacity-50" data-testid="chat-send-btn">
-            {streaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          </button>
         </div>
       </div>
     </div>
