@@ -138,6 +138,21 @@ let webpackConfig = {
 };
 
 webpackConfig.devServer = (devServerConfig) => {
+  // HTTPS preview: force HMR websocket to wss:// with proper host so browser doesn't reject it.
+  const wdsHost = process.env.WDS_SOCKET_HOST || "0.0.0.0";
+  const wdsPort = process.env.WDS_SOCKET_PORT || 3000;
+  const wdsProtocol = process.env.WDS_SOCKET_PROTOCOL || "ws";
+  devServerConfig.client = {
+    ...(devServerConfig.client || {}),
+    webSocketURL: {
+      hostname: wdsHost,
+      port: wdsPort === "443" ? 443 : Number(wdsPort),
+      protocol: wdsProtocol,
+    },
+  };
+  devServerConfig.allowedHosts = "all";
+  devServerConfig.webSocketServer = "ws";
+
   // Add health check endpoints if enabled
   if (config.enableHealthCheck && setupHealthEndpoints && healthPluginInstance) {
     const originalSetupMiddlewares = devServerConfig.setupMiddlewares;

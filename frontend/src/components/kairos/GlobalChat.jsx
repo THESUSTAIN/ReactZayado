@@ -1,0 +1,88 @@
+import React, { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
+import { ChatBody, ChatGrand } from "./ChatAssistant";
+import { getToken } from "@/lib/kairosApi";
+
+/**
+ * Chat « Collaborateur IA » accessible depuis toutes les pages (comme dans final 13) :
+ * rail gauche, en-tête ou barre mobile envoient l'événement « zayado:open-chat ».
+ * Sur le Cockpit en grand écran, le panneau est déjà ouvert à droite : on ne double pas.
+ *
+ * Corrigé : l'onglet demandé (« actu », « decisions ») était envoyé par événement
+ * 50 ms après l'ouverture — sur mobile/tiroir, le panneau se montait APRÈS
+ * l'événement et restait sur l'onglet Assistant (le briefing ne s'ouvrait pas).
+ * Désormais l'onglet en attente est mémorisé ici et consommé au montage du panneau.
+ */
+let ongletEnAttente = null;
+let promptEnAttente = null;
+
+export const prendreOngletEnAttente = () => { const o = ongletEnAttente; ongletEnAttente = null; return o; };
+export const prendrePromptEnAttente = () => { const p = promptEnAttente; promptEnAttente = null; return p; };
+
+export const openChat = (onglet) => {
+  if (onglet) ongletEnAttente = onglet;
+  window.dispatchEvent(new Event("zayado:open-chat"));
+  // L'événement reste utile quand le panneau est déjà monté (desktop /app) :
+  // il fait basculer l'onglet sans fermer/rouvrir.
+  if (onglet === "decisions") setTimeout(() => window.dispatchEvent(new Event("kairos:ouvrir-decisions")), 80);
+  if (onglet === "actu") setTimeout(() => window.dispatchEvent(new Event("kairos:ouvrir-actu")), 80);
+  if (onglet === "chat") setTimeout(() => window.dispatchEvent(new Event("kairos:ouvrir-chat")), 80);
+};
+
+/** Ouvre le chat sur l'Assistant avec une question déjà prête à envoyer. */
+export const discuterAvecIA = (question) => {
+  promptEnAttente = question;
+  ongletEnAttente = "chat";
+  window.dispatchEvent(new Event("zayado:open-chat"));
+  setTimeout(() => window.dispatchEvent(new CustomEvent("kairos:prompt-chat", { detail: question })), 80);
+};
+
+export default function GlobalChat() {
+  const location = useLocation();
+  const [open, setOpen] = useState(false);
+  const [grand, setGrand] = useState(false);
+  const surCockpitLarge = () => location.pathname === "/app" && window.innerWidth >= 1280;
+
+  useEffect(() => {
+    const onOpen = () => { if (!surCockpitLarge()) setOpen(true); };
+    const onKey = (e) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("zayado:open-chat", onOpen);
+    window.addEventListener("keydown", onKey);
+    return () => { window.removeEventListener("zayado:open-chat", onOpen); window.removeEventListener("keydown", onKey); };
+  }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { setOpen(false); setGrand(false); }, [location.pathname]);
+
+  // Arrivée depuis une notification (« /app?tab=chat » ou « /app?tab=actu », app fermée au moment du clic) :
+  // on ouvre directement le bon onglet du chat.
+  useEffect(() => {
+    try {
+      const t = new URLSearchParams(window.location.search).get("tab");
+      if (getToken() && ["chat", "actu", "decisions"].includes(t)) {
+        const id = setTimeout(() => openChat(t), 700);
+        return () => clearTimeout(id);
+      }
+    } catch { /* adresse illisible : rien à ouvrir */ }
+    return undefined;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!getToken() || !(location.pathname.startsWith("/app") || location.pathname === "/parametres")) return null;
+  return (
+    <>
+      <div
+        className={`fixed inset-0 z-[59] bg-[#0b1a3d]/70 backdrop-blur-sm transition-opacity duration-200 ${open ? "opacity-100" : "pointer-events-none opacity-0"}`}
+        onClick={() => setOpen(false)}
+        aria-hidden="true"
+      />
+      <aside
+        className={`chat-zayado fixed right-0 top-0 z-[60] flex h-[100dvh] w-full flex-col transition-transform duration-300 sm:w-[420px] ${open ? "translate-x-0" : "translate-x-full"}`}
+        aria-hidden={!open}
+        style={open ? undefined : { boxShadow: "none" }}
+        data-testid="global-chat"
+      >
+        {open && !grand && <ChatBody onClose={() => setOpen(false)} onToggleTaille={window.innerWidth >= 1024 ? () => setGrand(true) : undefined} />}
+      </aside>
+      {open && grand && <ChatGrand onReduire={() => setGrand(false)} onClose={() => { setGrand(false); setOpen(false); }} />}
+    </>
+  );
+}

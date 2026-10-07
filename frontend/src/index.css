@@ -1,81 +1,89 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Caveat:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-html {
-    scroll-behavior: smooth;
+/* Correctif de robustesse : ces opacités peuvent manquer dans le CSS
+   compilé (cache de build) → les champs repasseraient en fond blanc. */
+.bg-white\/8 { background-color: rgb(255 255 255 / 0.08); }
+.bg-white\/12 { background-color: rgb(255 255 255 / 0.12); }
+.border-white\/8 { border-color: rgb(255 255 255 / 0.08); }
+.border-white\/12 { border-color: rgb(255 255 255 / 0.12); }
+
+/* Aperçu d'auto-complétion Chrome (survol d'une suggestion) : fond bleu clair
+   imposé par le navigateur + notre texte clair = saisie invisible sur /login.
+   color-scheme: dark fait passer Chrome sur ses couleurs sombres (texte lisible). */
+input.text-offwhite, textarea.text-offwhite, input.bg-white\/8, input.bg-white\/5 { color-scheme: dark; }
+.theme-creme input, .pro-clair input, body.theme-clair input { color-scheme: light; }
+
+/* Chrome peint les champs auto-complétés en blanc : on garde le thème navy. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill {
+  -webkit-text-fill-color: #edf2ff;
+  -webkit-box-shadow: 0 0 0 1000px #1a2a55 inset;
+  caret-color: #edf2ff;
+  transition: background-color 9999s ease-in-out 0s;
 }
 
-body {
-    @apply bg-paper font-sans text-ink antialiased;
-    text-rendering: optimizeLegibility;
+/* Champs du thème sombre : fond translucide + bord clair lumineux (comme la
+   barre de la maquette), halo doré au focus. Les thèmes clairs (crème / pro /
+   clair) redéfinissent leurs champs plus bas dans ce fichier. */
+input.bg-white\/5, textarea.bg-white\/5, select.bg-white\/5,
+input.bg-white\/8, textarea.bg-white\/8,
+input.bg-white\/\[0\.08\], textarea.bg-white\/\[0\.08\] {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.24);
+  box-shadow: 0 0 18px rgba(222, 194, 163, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease;
+}
+input.bg-white\/5:focus, textarea.bg-white\/5:focus, select.bg-white\/5:focus,
+input.bg-white\/8:focus, textarea.bg-white\/8:focus,
+input.bg-white\/\[0\.08\]:focus, textarea.bg-white\/\[0\.08\]:focus {
+  border-color: rgba(222, 194, 163, 0.65);
+  box-shadow: 0 0 0 3px rgba(222, 194, 163, 0.18), 0 0 26px rgba(222, 194, 163, 0.22);
+  outline: none;
 }
 
-::selection {
-    @apply bg-navy text-paper;
-}
+/* Voile des modales/tiroirs : navy profond translucide, jamais noir. */
 
-.grain-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 70;
-    pointer-events: none;
-    mix-blend-mode: multiply;
-    opacity: 0.55;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
-}
-
-@keyframes yori-marquee {
-    to {
-        transform: translateX(-50%);
-    }
-}
-
-.marquee-track {
-    animation: yori-marquee 75s linear infinite;
-    will-change: transform;
-}
-
-.img-editorial {
-    filter: saturate(0.82) contrast(0.98) brightness(1.02);
-}
-
-@media (prefers-reduced-motion: reduce) {
-    html {
-        scroll-behavior: auto;
-    }
-    .marquee-track {
-        animation: none;
-    }
-}
 
 @layer base {
     :root {
-        --background: 40 33% 98%;
-        --foreground: 210 40% 16%;
-        --card: 0 0% 100%;
-        --card-foreground: 210 40% 16%;
-        --popover: 0 0% 100%;
-        --popover-foreground: 210 40% 16%;
-        --primary: 210 40% 35%;
-        --primary-foreground: 40 33% 98%;
-        --secondary: 42 27% 93%;
-        --secondary-foreground: 210 40% 16%;
-        --muted: 42 27% 93%;
-        --muted-foreground: 218 14% 35%;
-        --accent: 42 27% 93%;
-        --accent-foreground: 210 40% 16%;
-        --destructive: 0 84.2% 60.2%;
+  /* Fond Zayado : navy profond partout — jamais de noir pur (le bas de page
+     tirait vers le noir et « coupait » l'ambiance). */
+  --fond-zayado:
+    radial-gradient(ellipse at 20% 10%, rgba(52, 88, 158, 0.45) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 8%, rgba(36, 68, 122, 0.35) 0%, transparent 55%),
+    radial-gradient(ellipse at 50% 90%, rgba(13, 24, 56, 0.9) 0%, transparent 60%),
+    linear-gradient(180deg, #294174 0%, #12224a 30%, #0b1a3d 60%, #0a1230 100%);
+        --background: 222 59% 14%;
+        --foreground: 222 60% 96%;
+        --card: 222 50% 18%;
+        --card-foreground: 222 60% 96%;
+        --popover: 222 55% 14%;
+        --popover-foreground: 222 60% 96%;
+        --primary: 38 44% 60%;
+        --primary-foreground: 222 44% 6%;
+        --secondary: 222 45% 18%;
+        --secondary-foreground: 222 60% 96%;
+        --muted: 222 45% 18%;
+        --muted-foreground: 215 20% 65%;
+        --accent: 222 45% 21%;
+        --accent-foreground: 222 60% 96%;
+        --destructive: 0 66% 51%;
         --destructive-foreground: 0 0% 98%;
-        --border: 40 25% 86%;
-        --input: 40 25% 86%;
-        --ring: 210 40% 35%;
-        --chart-1: 210 40% 35%;
-        --chart-2: 213 36% 45%;
-        --chart-3: 40 27% 80%;
-        --chart-4: 218 14% 60%;
-        --chart-5: 210 40% 16%;
-        --radius: 0.25rem;
+        --border: 222 35% 24%;
+        --input: 222 30% 18%;
+        --ring: 38 44% 60%;
+        --chart-1: 187 100% 45%;
+        --chart-2: 173 58% 39%;
+        --chart-3: 217 91% 60%;
+        --chart-4: 38 44% 60%;
+        --chart-5: 27 87% 67%;
+        --radius: 0.9rem;
     }
 }
 
@@ -83,10 +91,734 @@ body {
     * {
         @apply border-border;
     }
-    body {
-        @apply bg-background text-foreground;
+    html {
+        scroll-behavior: smooth;
+        /* Le dégradé du body est en `background-attachment: fixed` : il ne se
+           répète pas sous la hauteur d'écran. Sans couleur de base ici, une page
+           longue (Radar, Plan d'action) finissait en BLANC au scroll. */
+        background-color: #0B1F3A;
     }
+    body {
+        margin: 0;
+        @apply text-offwhite font-sans;
+        /* Ciel navy de final 13 : bleu roi profond vers quasi-noir, vertical,
+           sans ruban teal (c'est lui qui donnait ce bleu « bizarre »). */
+        /* Fond unique Zayado : exactement le même sur l'app et la page d'accueil
+           (navy, sans bas noir). Défini une seule fois dans --fond-zayado. */
+        background: var(--fond-zayado);
+        background-attachment: fixed;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+    h1, h2, h3, h4, .font-display {
+        font-family: 'Fraunces', Georgia, serif;
+    }
+}
+
+@layer components {
+    .glass {
+        /* Verre Zayado : blanc translucide + flou, bord clair lumineux avec un
+           halo doux (comme la barre de recherche de la maquette). */
+        background: rgba(255, 255, 255, 0.13);
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        box-shadow:
+          0 10px 30px rgba(2, 8, 26, 0.28),
+          0 0 26px rgba(222, 194, 163, 0.10),
+          inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    }
+    .glass:hover {
+        border-color: rgba(255, 255, 255, 0.30);
+        box-shadow:
+          0 14px 36px rgba(2, 8, 26, 0.32),
+          0 0 34px rgba(222, 194, 163, 0.16),
+          inset 0 1px 0 rgba(255, 255, 255, 0.20);
+    }
+    /* Fenêtres (modales, menus, tiroirs, chat) : verre BLANC translucide,
+       comme les cartes — plus de navy opaque « d'un autre bleu ». Une fine
+       base bleutée garde le texte lisible même au-dessus d'un contenu chargé. */
+    .glass-strong, .fenetre {
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.17) 0%, rgba(255, 255, 255, 0.09) 100%),
+          rgba(20, 38, 82, 0.62);
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        backdrop-filter: blur(28px) saturate(150%);
+        -webkit-backdrop-filter: blur(28px) saturate(150%);
+        box-shadow: 0 24px 60px rgba(3, 8, 24, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        color: #F5F1EA;
+    }
+    .glass-gold {
+        border-color: rgba(201, 169, 106, 0.40);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37), 0 0 0 1px rgba(201,169,106,0.15);
+    }
+    .text-gradient-gold {
+        background: linear-gradient(120deg, #EDF2FF 0%, #F1E2CC 55%, #DEC2A3 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .font-wordmark {
+        font-family: 'Fraunces', Georgia, serif;
+    }
+    .btn-gold {
+        @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gold px-5 py-2.5 font-semibold text-navy-900 transition-all duration-200 hover:bg-gold-hover active:scale-95;
+        box-shadow: 0 6px 20px -6px rgba(222,194,163, 0.6);
+    }
+    .btn-ghost {
+        @apply inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 font-medium text-offwhite transition-all duration-200 hover:bg-white/10;
+    }
+}
+
+/* Custom subtle scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(201, 169, 106, 0.3); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(201, 169, 106, 0.6); }
+
+@layer base {
     [data-debug-wrapper="true"] {
         display: contents !important;
     }
+    [data-debug-wrapper="true"] > * {
+        margin-left: inherit; margin-right: inherit; margin-top: inherit; margin-bottom: inherit;
+        padding-left: inherit; padding-right: inherit; padding-top: inherit; padding-bottom: inherit;
+        column-gap: inherit; row-gap: inherit; gap: inherit;
+        border-left-width: inherit; border-right-width: inherit; border-top-width: inherit; border-bottom-width: inherit;
+        border-left-style: inherit; border-right-style: inherit; border-top-style: inherit; border-bottom-style: inherit;
+        border-left-color: inherit; border-right-color: inherit; border-top-color: inherit; border-bottom-color: inherit;
+    }
 }
+
+/* ── Ajouts : typographies manuscrites + papier (Vision Board) ── */
+.font-hand { font-family: 'Caveat', cursive; }
+.font-serif-italic { font-family: 'Instrument Serif', 'Fraunces', Georgia, serif; font-style: italic; }
+
+.paper-note {
+  border-radius: 8px;
+  box-shadow:
+    0 1px 2px rgba(0,0,0,0.35),
+    0 20px 42px -18px rgba(0,0,0,0.85),
+    inset 0 0 0 1px rgba(255,255,255,0.35);
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 240ms ease;
+}
+.paper-note:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.4), 0 30px 60px -22px rgba(0,0,0,0.9);
+}
+
+.polaroid-frame {
+  background: #fafafa;
+  padding: 10px 10px 14px;
+  border-radius: 5px;
+  box-shadow:
+    0 2px 4px rgba(0,0,0,0.35),
+    0 24px 44px -18px rgba(0,0,0,0.85);
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.polaroid-frame:hover { transform: translateY(-3px) scale(1.015); z-index: 30; }
+
+.push-pin {
+  width: 16px; height: 16px; border-radius: 999px;
+  background: radial-gradient(circle at 30% 30%, #f5c88a, #C9A96A 55%, #7a5e2c);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.45), inset 0 -2px 3px rgba(0,0,0,0.35);
+  position: absolute; top: -7px; left: 50%; transform: translateX(-50%);
+  pointer-events: none;
+}
+.push-pin.red { background: radial-gradient(circle at 30% 30%, #ff9b9b, #ef4444 55%, #7f1d1d); }
+.push-pin.emerald { background: radial-gradient(circle at 30% 30%, #a7f3d0, #10b981 55%, #064e3b); }
+
+/* ── Bleu Zayado exact (charte ReactZayado/v13) : diagonale lumineuse, voile léger ── */
+.zayado-blue {
+  /* Transparent : c'est le ciel global (AuroraBackground = .sky-bg de final-main) qui s'affiche. */
+  background: transparent;
+}
+
+/* Rouge de marque Zayado (#a01722 éclairci pour lisibilité sur navy) — tirets discrets */
+.tiret-rouge { width: 46px; height: 3px; border-radius: 999px; background: #C1272D; }
+
+@keyframes fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.animate-fade-up { animation: fade-up 420ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes onboarding-progress-shimmer {
+  from { width: 12%; transform: translateX(-110%); }
+  to { width: 55%; transform: translateX(210%); }
+}
+.onboarding-progress-shimmer { animation: onboarding-progress-shimmer 1.8s ease-in-out infinite; }
+
+/* ── Thème crème (modèle « Victoires ») : espace vendeur & console admin — volontairement différent de la SaaS navy ── */
+.theme-creme {
+  background: #F6F1E9;
+  color: #1F2A44;
+  min-height: 100vh;
+}
+.theme-creme .glass { background: #FFFFFF !important; border: 1px solid #ECE2D2 !important; color: #1F2A44; box-shadow: 0 2px 14px -6px rgba(31, 42, 68, 0.10); }
+.theme-creme .text-offwhite { color: #1F2A44 !important; }
+.theme-creme .text-offwhite\/90, .theme-creme .text-offwhite\/80 { color: rgba(31, 42, 68, 0.85) !important; }
+.theme-creme .text-offwhite\/70, .theme-creme .text-offwhite\/65 { color: rgba(31, 42, 68, 0.72) !important; }
+.theme-creme .text-offwhite\/60 { color: rgba(31, 42, 68, 0.62) !important; }
+.theme-creme .text-offwhite\/55, .theme-creme .text-offwhite\/50 { color: rgba(31, 42, 68, 0.55) !important; }
+.theme-creme .text-offwhite\/45, .theme-creme .text-offwhite\/40, .theme-creme .text-offwhite\/35, .theme-creme .text-offwhite\/30 { color: rgba(31, 42, 68, 0.45) !important; }
+.theme-creme .text-gold { color: #B07A2E !important; }
+.theme-creme .text-gradient-gold { background: linear-gradient(100deg, #8A5A1E, #B07A2E) !important; -webkit-background-clip: text !important; background-clip: text !important; }
+.theme-creme .bg-white\/5, .theme-creme .bg-white\/10 { background: #F4EDE1 !important; }
+.theme-creme .bg-white\/\[0\.02\], .theme-creme .bg-white\/\[0\.03\], .theme-creme .bg-white\/\[0\.07\] { background: #FFFFFF !important; box-shadow: 0 2px 14px -6px rgba(31, 42, 68, 0.10); }
+/* En-tête navy de l'Espace Vendeur : sur fond dégradé navy, le texte doit
+   rester clair — la règle .theme-creme .text-offwhite ci-dessus le force
+   en navy foncé, d'où cette exception plus spécifique. */
+.theme-creme .entete-navy .text-offwhite { color: #F6F1E9 !important; }
+.theme-creme .entete-navy .text-gold { color: #DEC2A3 !important; }
+.theme-creme .border-white\/10, .theme-creme .border-white\/12, .theme-creme .border-white\/15, .theme-creme .border-white\/8 { border-color: #E7DCC9 !important; }
+.theme-creme .border-gold\/30, .theme-creme .border-gold\/40, .theme-creme .border-gold\/25, .theme-creme .border-gold\/50 { border-color: #D9BE8F !important; }
+.theme-creme .bg-gold\/10, .theme-creme .bg-gold\/15 { background: rgba(217, 169, 78, 0.16) !important; }
+.theme-creme input, .theme-creme select, .theme-creme textarea { background: #FFFFFF !important; color: #1F2A44 !important; border-color: #E2D5BE !important; }
+.theme-creme input::placeholder, .theme-creme textarea::placeholder { color: rgba(31, 42, 68, 0.4) !important; }
+.theme-creme .bg-navy-800, .theme-creme .bg-navy-900, .theme-creme .bg-navy-900\/55, .theme-creme .bg-navy-900\/70 { background: #FFFFFF !important; color: #1F2A44 !important; }
+.theme-creme .hover\:bg-white\/10:hover { background: #F1E9DB !important; }
+.theme-creme .hover\:text-offwhite:hover { color: #1F2A44 !important; }
+.theme-creme .text-emerald-300 { color: #1E7F4F !important; }
+.theme-creme .text-blue-300 { color: #2F5FB3 !important; }
+.theme-creme .text-red-400 { color: #B3261E !important; }
+.theme-creme .btn-ghost { background: #FFFFFF !important; border: 1px solid #D8C9AE !important; color: #1F2A44 !important; }
+.theme-creme .btn-gold { color: #3A2A10 !important; }
+.theme-creme h1, .theme-creme h2, .theme-creme h3 { color: #1F2A44; }
+
+/* ── Page Radar : balayage + marquee éditorial ── */
+.radar-sweep {
+  background: conic-gradient(from 0deg, transparent 0deg, rgba(222,194,163, 0.30) 42deg, transparent 78deg);
+  animation: radar-spin 7s linear infinite;
+  box-shadow: inset 0 0 60px rgba(222,194,163, 0.05);
+}
+@keyframes radar-spin { to { transform: rotate(360deg); } }
+
+.blip-pulse { animation: blip-ping 2.6s cubic-bezier(0, 0, 0.2, 1) infinite; }
+@keyframes blip-ping { 0% { transform: scale(1); opacity: 0.8; } 75%, 100% { transform: scale(2.1); opacity: 0; } }
+
+.animate-marquee { animation: marquee-x 46s linear infinite; }
+@keyframes marquee-x { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+/* ── Menu île avec « scoops » — forme portée depuis cap-vivant-scoops-light,
+   déjà présente dans un projet précédent, jamais utilisée ici. Couleurs
+   alignées sur la vraie charte v13 (#1a3a6e/#102945) plutôt que reprises
+   telles quelles de l'ancien projet. */
+.side-nav {
+  position: fixed; left: 0; top: 0; bottom: 0; width: 96px; z-index: 40;
+  /* display géré par « hidden lg:flex » du composant : un display:flex ici
+     écrasait « hidden » et affichait la barre en mobile par-dessus le contenu
+     (qui n'a de marge gauche qu'à partir de lg). */
+  flex-direction: column; align-items: center;
+  overflow: visible; pointer-events: none;
+}
+.side-nav > * { pointer-events: auto; }
+.side-inner {
+  position: relative; flex: 1 1 auto; width: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.menu-island {
+  width: 96px; min-height: 392px; padding: 30px 0 28px !important;
+  /* Navy profond, accordé au ciel de l'app (avant : bleu roi trop vif). */
+  background: linear-gradient(180deg, #182d5e 0%, #0d1838 100%);
+  border: 1px solid rgba(255,255,255,.07); border-left: 0;
+  border-radius: 0 30px 30px 0 !important; box-shadow: 0 16px 34px rgba(4,13,34,.35);
+  position: relative; display: flex; align-items: center; justify-content: center;
+}
+.menu-island ul { min-height: 326px; justify-content: space-between; gap: 0 !important; }
+.menu-scoop-top { fill: #182d5e; }
+.menu-scoop-bottom { fill: #0d1838; }
+
+/* ── Thème clair (body.theme-clair) — activé par le bouton lune/soleil du
+   header. Même logique que .theme-creme : on inverse les surfaces sans
+   toucher aux composants. Le rail « île » navy reste identique (il contraste
+   bien sur fond clair). */
+/* Les thèmes clairs doivent aussi reprendre la main sur la couleur de base de
+   html, sinon le navy sombre réapparaît au bas d'une page longue. */
+html:has(body.theme-clair), html:has(.theme-creme) { background-color: #F3F3F1; }
+
+body.theme-clair {
+    background:
+        radial-gradient(ellipse 70% 50% at 15% 0%, rgba(222,194,163, 0.14), transparent 62%),
+        linear-gradient(135deg, #F8F8F6 0%, #F3F3F1 60%, #ECECEA 100%);
+    color: #1F2A44;
+}
+body.theme-clair .text-offwhite { color: #1F2A44 !important; }
+body.theme-clair .text-offwhite\/90, body.theme-clair .text-offwhite\/80 { color: rgba(31, 42, 68, 0.85) !important; }
+body.theme-clair .text-offwhite\/70, body.theme-clair .text-offwhite\/65 { color: rgba(31, 42, 68, 0.72) !important; }
+body.theme-clair .text-offwhite\/60 { color: rgba(31, 42, 68, 0.62) !important; }
+body.theme-clair .text-offwhite\/55, body.theme-clair .text-offwhite\/50 { color: rgba(31, 42, 68, 0.55) !important; }
+body.theme-clair .text-offwhite\/45, body.theme-clair .text-offwhite\/40, body.theme-clair .text-offwhite\/35, body.theme-clair .text-offwhite\/30 { color: rgba(31, 42, 68, 0.45) !important; }
+body.theme-clair .text-gold { color: #8A5A1E !important; }
+body.theme-clair .glass {
+    background: #FFFFFF !important;
+    border: 1px solid #E8E6E1 !important;
+    box-shadow: 0 2px 14px -6px rgba(31, 42, 68, 0.10) !important;
+}
+body.theme-clair .glass-strong {
+    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(250,250,248,0.98)) !important;
+    border: 1px solid #E8E6E1 !important;
+    color: #1F2A44 !important;
+}
+body.theme-clair .bg-white\/5, body.theme-clair .bg-white\/10 { background: #FFFFFF !important; box-shadow: 0 1px 8px -4px rgba(31, 42, 68, 0.08); }
+body.theme-clair .bg-white\/\[0\.02\], body.theme-clair .bg-white\/\[0\.03\], body.theme-clair .bg-white\/\[0\.04\], body.theme-clair .bg-white\/\[0\.07\] { background: #FFFFFF !important; }
+body.theme-clair .border-white\/10, body.theme-clair .border-white\/12, body.theme-clair .border-white\/15, body.theme-clair .border-white\/20, body.theme-clair .border-white\/25, body.theme-clair .border-white\/8 { border-color: #E8E6E1 !important; }
+body.theme-clair .bg-gold\/10, body.theme-clair .bg-gold\/15 { background: rgba(217, 169, 78, 0.16) !important; }
+body.theme-clair .bg-navy-900\/50, body.theme-clair .bg-navy-900\/70 { background: rgba(248, 248, 246, 0.85) !important; }
+body.theme-clair .text-navy-900 { color: #1F2A44 !important; }
+body.theme-clair input, body.theme-clair select, body.theme-clair textarea { color: #1F2A44; }
+/* Le fond aurora navy est masqué en thème clair — le dégradé crème du body prend le relais. */
+body.theme-clair .aurora-bg { display: none; }
+
+/* ── Paramètres : lisibilité ──────────────────────────────────────────────
+   Avant : fenêtre translucide (le décor flouté passait à travers) et textes à 40-55 % d'opacité
+   (contraste ≈ 2,8:1, sous le seuil de 4,5:1). Ici : surface presque opaque + plancher de contraste.
+   Tout est limité à .fenetre-parametres : aucune autre page n'est touchée.
+   Thème sombre : textes secondaires ≥ 6:1. Thème clair : champs bordés, placeholders et statuts lisibles. */
+body:not(.theme-clair) .fenetre.fenetre-parametres {
+  background: linear-gradient(180deg, #172a5c 0%, #0f1d42 100%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+body:not(.theme-clair) .fenetre-parametres .text-offwhite\/40,
+body:not(.theme-clair) .fenetre-parametres .text-offwhite\/45,
+body:not(.theme-clair) .fenetre-parametres .text-offwhite\/50,
+body:not(.theme-clair) .fenetre-parametres .text-offwhite\/55 { color: rgba(237, 242, 255, 0.74); }
+body:not(.theme-clair) .fenetre-parametres .text-offwhite\/60,
+body:not(.theme-clair) .fenetre-parametres .text-offwhite\/65 { color: rgba(237, 242, 255, 0.82); }
+body:not(.theme-clair) .fenetre-parametres .text-offwhite\/70,
+body:not(.theme-clair) .fenetre-parametres .text-offwhite\/75 { color: rgba(237, 242, 255, 0.88); }
+body:not(.theme-clair) .fenetre-parametres input::placeholder,
+body:not(.theme-clair) .fenetre-parametres textarea::placeholder { color: rgba(237, 242, 255, 0.58); opacity: 1; }
+body:not(.theme-clair) .fenetre-parametres input,
+body:not(.theme-clair) .fenetre-parametres select,
+body:not(.theme-clair) .fenetre-parametres textarea { border-color: rgba(255, 255, 255, 0.24); }
+
+body.theme-clair .fenetre-parametres .text-offwhite\/40,
+body.theme-clair .fenetre-parametres .text-offwhite\/45,
+body.theme-clair .fenetre-parametres .text-offwhite\/50,
+body.theme-clair .fenetre-parametres .text-offwhite\/55 { color: rgba(31, 42, 68, 0.74) !important; }
+body.theme-clair .fenetre-parametres .text-offwhite\/60,
+body.theme-clair .fenetre-parametres .text-offwhite\/65 { color: rgba(31, 42, 68, 0.80) !important; }
+body.theme-clair .fenetre-parametres .text-offwhite\/70,
+body.theme-clair .fenetre-parametres .text-offwhite\/75,
+body.theme-clair .fenetre-parametres .text-offwhite\/80 { color: rgba(31, 42, 68, 0.88) !important; }
+body.theme-clair .fenetre-parametres input::placeholder,
+body.theme-clair .fenetre-parametres textarea::placeholder { color: rgba(31, 42, 68, 0.62) !important; opacity: 1; }
+/* Champs et cartes : en clair, les bordures « blanc translucide » disparaissaient sur fond blanc. */
+body.theme-clair .fenetre-parametres input,
+body.theme-clair .fenetre-parametres select,
+body.theme-clair .fenetre-parametres textarea { background: #FFFFFF !important; border-color: #B9C3D6 !important; color: #1F2A44 !important; }
+body.theme-clair .fenetre-parametres [class*="border-white"] { border-color: #D5DBE7 !important; }
+body.theme-clair .fenetre-parametres [class*="bg-white/"] { background-color: #F4F6FA !important; }
+body.theme-clair .fenetre-parametres button.bg-gold,
+body.theme-clair .fenetre-parametres .btn-gold { color: #0f1b3a !important; }
+/* Statuts (clairs sur navy) : versions foncées sur fond blanc. */
+body.theme-clair .fenetre-parametres .text-emerald-300 { color: #047857 !important; }
+body.theme-clair .fenetre-parametres .text-red-300,
+body.theme-clair .fenetre-parametres .text-rose-300 { color: #b91c1c !important; }
+body.theme-clair .fenetre-parametres .text-amber-100,
+body.theme-clair .fenetre-parametres .text-amber-200,
+body.theme-clair .fenetre-parametres .text-amber-300 { color: #92400e !important; }
+
+/* Menu mobile du bas : on réserve sa hauteur pour que rien ne passe dessous. */
+@media (max-width: 1023px) {
+  body.avec-nav-bas { padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
+}
+
+/* Chat (Copilote / Collaborateur IA) : accordé à l'app — même navy que le ciel, or de la marque. */
+.chat-zayado {
+  background: linear-gradient(180deg, #172C5C 0%, #0E1B3E 55%, #0A1230 100%);
+  color: #F5F1EA;
+  border-left: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: -18px 0 50px rgba(3, 8, 24, 0.45);
+  backdrop-filter: blur(24px);
+}
+.chat-zayado .chat-badge { background: linear-gradient(135deg, #F1E2CC, #DEC2A3); color: #0f1b3a; }
+.chat-zayado .chat-msg-ia { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.08); color: #F5F1EA; }
+.chat-zayado .chat-msg-user { background: linear-gradient(135deg, #F1E2CC, #DEC2A3); color: #0f1b3a; }
+.chat-zayado .chat-envoyer { background: linear-gradient(135deg, #F1E2CC, #DEC2A3); color: #0f1b3a; }
+.chat-zayado textarea:focus { border-color: rgba(222, 194, 163, 0.5); }
+
+/* ── Espaces pro (console admin, espace vendeur) : thème clair par défaut,
+   fond blanc → bleu ciel avec nuages bleus, menu latéral navy. Mode sombre au choix. ── */
+.pro-clair {
+  background:
+    radial-gradient(ellipse 900px 380px at 12% -5%, rgba(147, 197, 253, 0.38), transparent 60%),
+    radial-gradient(ellipse 700px 300px at 92% 8%, rgba(191, 219, 254, 0.55), transparent 60%),
+    radial-gradient(ellipse 900px 360px at 55% 105%, rgba(165, 200, 250, 0.35), transparent 60%),
+    linear-gradient(180deg, #fbfdff 0%, #f1f6ff 50%, #e8f0fe 100%);
+  background-attachment: fixed;
+  color: #16213d;
+}
+.pro-sombre { background: var(--fond-zayado); background-attachment: fixed; }
+.pro-clair .text-offwhite { color: #16213d !important; }
+.pro-clair .text-offwhite\/90, .pro-clair .text-offwhite\/85, .pro-clair .text-offwhite\/80 { color: rgba(22, 33, 61, 0.86) !important; }
+.pro-clair .text-offwhite\/75, .pro-clair .text-offwhite\/70, .pro-clair .text-offwhite\/65 { color: rgba(22, 33, 61, 0.72) !important; }
+.pro-clair .text-offwhite\/60, .pro-clair .text-offwhite\/55, .pro-clair .text-offwhite\/50 { color: #5b6b8c !important; }
+.pro-clair .text-offwhite\/45, .pro-clair .text-offwhite\/40, .pro-clair .text-offwhite\/35, .pro-clair .text-offwhite\/30 { color: #8391ad !important; }
+.pro-clair .text-gold { color: #9a6a2c !important; }
+.pro-clair .bg-white\/5, .pro-clair .bg-white\/10, .pro-clair .bg-white\/\[0\.03\], .pro-clair .bg-white\/\[0\.04\], .pro-clair .bg-white\/\[0\.05\], .pro-clair .bg-white\/\[0\.06\], .pro-clair .bg-white\/\[0\.08\], .pro-clair .glass, .pro-clair .glass-strong, .pro-clair .fenetre {
+  background: #ffffff !important; box-shadow: 0 1px 2px rgba(16, 38, 84, 0.06), 0 8px 24px rgba(16, 38, 84, 0.06);
+}
+.pro-clair .border-white\/5, .pro-clair .border-white\/8, .pro-clair .border-white\/10, .pro-clair .border-white\/12, .pro-clair .border-white\/15, .pro-clair .border-white\/20, .pro-clair .border-white\/\[0\.14\] { border-color: #dbe4f3 !important; }
+.pro-clair .bg-navy-800, .pro-clair .bg-navy-900, .pro-clair select, .pro-clair input, .pro-clair textarea { background-color: #ffffff !important; color: #16213d !important; border-color: #cfdbef !important; }
+.pro-clair .bg-gold\/10, .pro-clair .bg-gold\/15 { background: rgba(222, 194, 163, 0.28) !important; }
+.pro-clair .text-emerald-300 { color: #0f8a5f !important; }
+.pro-clair .text-red-300, .pro-clair .text-red-400 { color: #c2410c !important; }
+.pro-clair .text-amber-200, .pro-clair .text-amber-300 { color: #a16207 !important; }
+.pro-clair .entete-navy { background: rgba(255, 255, 255, 0.82) !important; border-color: #dbe4f3 !important; }
+.pro-clair .entete-navy .text-offwhite { color: #16213d !important; }
+.pro-clair table thead tr { color: #5b6b8c; }
+.pro-clair input::placeholder, .pro-clair textarea::placeholder { color: #8a97b3 !important; opacity: 1; }
+
+/* ── Espaces pro façon « Cours » (admin / vendeur) : couleurs exactes du modèle ── */
+/* Barre latérale flottante navy */
+.pro-sidebar {
+  background: linear-gradient(180deg, #182d5e 0%, #0d1838 100%);
+  border: 1px solid rgba(255,255,255,0.07);
+  box-shadow: 0 16px 34px rgba(4,13,34,.28);
+}
+.pro-nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 14px; border-radius: 12px;
+  color: rgba(237,242,255,0.72); font-weight: 500;
+  transition: all .2s ease; cursor: pointer;
+}
+.pro-nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.pro-nav-item[data-active="true"] {
+  background: linear-gradient(135deg, rgba(222,194,163,0.28), rgba(201,169,106,0.14));
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(222,194,163,0.45);
+}
+/* Fond crème + accents exacts du modèle (par-dessus les bascules .pro-clair) */
+.pro-cours {
+  background:
+    radial-gradient(ellipse 70% 50% at 15% 0%, rgba(222, 194, 163, 0.16), transparent 62%),
+    linear-gradient(135deg, #F8F8F6 0%, #F3F3F1 60%, #ECECEA 100%) !important;
+  background-attachment: fixed !important;
+  color: #1F2A44;
+}
+.pro-cours .border-white\/5, .pro-cours .border-white\/8, .pro-cours .border-white\/10, .pro-cours .border-white\/12, .pro-cours .border-white\/15, .pro-cours .border-white\/20, .pro-cours .border-white\/\[0\.14\] { border-color: #E8E6E1 !important; }
+.pro-cours .bg-white\/5, .pro-cours .bg-white\/10, .pro-cours .bg-white\/\[0\.03\], .pro-cours .bg-white\/\[0\.04\], .pro-cours .bg-white\/\[0\.05\], .pro-cours .bg-white\/\[0\.06\], .pro-cours .bg-white\/\[0\.08\], .pro-cours .glass, .pro-cours .glass-strong, .pro-cours .fenetre {
+  background: #FFFFFF !important; border-radius: 20px;
+  box-shadow: 0 2px 14px -6px rgba(31, 42, 68, 0.10);
+}
+.pro-cours .text-gold { color: #8A5A1E !important; }
+.pro-cours select, .pro-cours input, .pro-cours textarea { border-color: #E2D5BE !important; }
+.pro-cours select:focus, .pro-cours input:focus, .pro-cours textarea:focus { border-color: #C9A96A !important; box-shadow: 0 0 0 3px rgba(222,194,163,0.30) !important; }
+.pro-cours .entete-navy { background: rgba(255,255,255,0.85) !important; border-color: #E8E6E1 !important; }
+
+
+/* Chat en thème clair : panneau blanc assorti (au lieu du navy) */
+body.theme-clair .chat-zayado {
+  background: linear-gradient(180deg, #FFFFFF 0%, #F7F7F5 100%);
+  color: #1F2A44;
+  border-left: 1px solid #E8E6E1;
+  box-shadow: -18px 0 50px rgba(31, 42, 68, 0.12);
+}
+body.theme-clair .chat-zayado .chat-msg-ia { background: #F3F3F1; border: 1px solid #E8E6E1; color: #1F2A44; }
+body.theme-clair .chat-zayado .chat-badge { background: linear-gradient(135deg, #F1E2CC, #DEC2A3); color: #0f1b3a; }
+
+/* Fenêtres (modales, menus, chat) en thème clair : verre blanc, texte navy */
+body.theme-clair .fenetre {
+    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(250,250,248,0.98)) !important;
+    border: 1px solid #E8E6E1 !important;
+    color: #1F2A44 !important;
+    box-shadow: 0 24px 60px rgba(31, 42, 68, 0.18) !important;
+}
+
+
+/* ── Page Bien-être « Prends soin de toi » : variante CLAIRE façon maquette.
+   La maquette prête sa FORME uniquement — les couleurs sont celles du thème
+   clair existant (body.theme-clair : fond clair de l'app, cartes blanches,
+   encre navy #1F2A44). .be-clair est posé sur la racine de la page. ── */
+.be-card {
+  background: #FFFFFF;
+  border: 1px solid #E8E6E1;
+  border-radius: 22px;
+  padding: 26px;
+  box-shadow: 0 1px 2px rgba(31, 42, 68, 0.06), 0 12px 30px -18px rgba(31, 42, 68, 0.16);
+}
+.be-mini {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  background: #F6F6F3; border: 1px solid #E8E6E1; border-radius: 18px;
+  padding: 22px 16px; transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+button.be-mini:hover { transform: translateY(-2px); box-shadow: 0 10px 22px -14px rgba(31, 42, 68, 0.25); }
+button.be-mini:hover > span:last-child { background: #1F2A44; color: #F8F8F6; }
+.be-btn-navy {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: #1F2A44; color: #F8F8F6; border-radius: 999px;
+  padding: 12px 24px; font-weight: 600; font-size: 13.5px;
+  transition: filter 0.18s ease, transform 0.18s ease;
+}
+.be-btn-navy:hover { filter: brightness(1.2); transform: translateY(-1px); }
+.be-btn-navy:focus-visible { outline: 2px solid #1F2A44; outline-offset: 3px; }
+.be-banner {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px;
+  background: rgba(217, 169, 78, 0.12); border: 1px solid rgba(217, 169, 78, 0.35);
+  border-radius: 20px; padding: 18px 24px; margin-top: 20px;
+}
+
+/* Inversion des utilitaires sombres dans les composants propres à la page
+   (theme-clair ne couvre que text-offwhite ; ceux-ci utilisent text-white). */
+.be-clair .text-white { color: #1F2A44 !important; }
+.be-clair .text-white\/90, .be-clair .text-white\/85 { color: rgba(31, 42, 68, 0.85) !important; }
+.be-clair .text-white\/70, .be-clair .text-white\/75 { color: rgba(31, 42, 68, 0.7) !important; }
+.be-clair .text-white\/60, .be-clair .text-white\/55 { color: rgba(31, 42, 68, 0.55) !important; }
+.be-clair .text-white\/50, .be-clair .text-white\/45, .be-clair .text-white\/40 { color: rgba(31, 42, 68, 0.45) !important; }
+.be-clair .bg-white\/5, .be-clair .bg-white\/10, .be-clair .bg-white\/\[0\.03\], .be-clair .bg-white\/\[0\.04\], .be-clair .bg-white\/\[0\.05\], .be-clair .bg-white\/\[0\.06\], .be-clair .bg-white\/\[0\.08\] {
+  background: #FFFFFF !important;
+  box-shadow: 0 1px 2px rgba(31, 42, 68, 0.05), 0 10px 26px rgba(31, 42, 68, 0.07);
+}
+.be-clair .border-white\/5, .be-clair .border-white\/8, .be-clair .border-white\/10, .be-clair .border-white\/12, .be-clair .border-white\/15, .be-clair .border-white\/20, .be-clair .border-white\/25 {
+  border-color: #E8E6E1 !important;
+}
+
+/* Vision Board en vue canvas : plein écran aussi sur PC (le rail latéral de
+   l'app est masqué — le board a ses propres outils et sa sortie « Cockpit »). */
+.vision-plein-ecran .side-nav { display: none !important; }
+
+.be-clair .bg-navy-900\/50, .be-clair .bg-navy-900\/70 { background: rgba(248, 248, 246, 0.9) !important; }
+.be-clair .bg-gold\/10, .be-clair .bg-gold\/15 { background: rgba(217, 169, 78, 0.16) !important; }
+.be-clair input, .be-clair select, .be-clair textarea { color: #1F2A44; }
+.be-clair .glass, .be-clair .glass-strong, .be-clair .fenetre {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 250, 248, 0.98)) !important;
+  border: 1px solid #E8E6E1 !important;
+  color: #1F2A44 !important;
+  box-shadow: 0 24px 60px rgba(31, 42, 68, 0.18) !important;
+}
+/* Bandeau du header au défilement */
+.be-clair .zy-header-defile, body.theme-clair .zy-header-defile { background: rgba(248, 248, 246, 0.88) !important; backdrop-filter: blur(14px); }
+
+/* Overlays volontairement sombres (séance de respiration immersive) : on ne
+   les inverse pas — repère .be-dark-keep posé sur leur racine. */
+.be-clair .be-dark-keep .text-white { color: #FFFFFF !important; }
+.be-clair .be-dark-keep .text-white\/90, .be-clair .be-dark-keep .text-white\/85, .be-clair .be-dark-keep .text-white\/80 { color: rgba(255, 255, 255, 0.85) !important; }
+.be-clair .be-dark-keep .text-white\/70, .be-clair .be-dark-keep .text-white\/75 { color: rgba(255, 255, 255, 0.72) !important; }
+.be-clair .be-dark-keep .text-white\/60, .be-clair .be-dark-keep .text-white\/55 { color: rgba(255, 255, 255, 0.6) !important; }
+.be-clair .be-dark-keep .text-white\/50, .be-clair .be-dark-keep .text-white\/45, .be-clair .be-dark-keep .text-white\/40 { color: rgba(255, 255, 255, 0.5) !important; }
+.be-clair .be-dark-keep .bg-white\/5, .be-clair .be-dark-keep .bg-white\/10, .be-clair .be-dark-keep .bg-white\/\[0\.05\] {
+  background: rgba(255, 255, 255, 0.08) !important; box-shadow: none !important;
+}
+.be-clair .be-dark-keep .border-white\/10, .be-clair .be-dark-keep .border-white\/12, .be-clair .be-dark-keep .border-white\/15, .be-clair .be-dark-keep .border-white\/20 {
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+/* Thème clair global : rail latéral et menu mobile LISIBLES (avant : icônes
+   navy invisibles sur fond navy quand theme-clair inversait le texte). */
+body.theme-clair .menu-island {
+  background: linear-gradient(180deg, #FFFFFF 0%, #F6F6F3 100%);
+  border: 1px solid #E8E6E1; border-left: 0;
+  box-shadow: 0 16px 34px rgba(31, 42, 68, 0.1);
+}
+body.theme-clair .menu-scoop-top { fill: #FFFFFF; }
+body.theme-clair .menu-scoop-bottom { fill: #F6F6F3; }
+body.theme-clair .menu-island .bg-white {
+  background: #1F2A44 !important; color: #FFFFFF !important;
+  box-shadow: 0 10px 22px -10px rgba(31, 42, 68, 0.55) !important;
+}
+body.theme-clair .menu-island .text-navy-900 { color: #FFFFFF !important; }
+body.theme-clair .menu-island .hover\:bg-white\/10:hover { background: rgba(31, 42, 68, 0.08) !important; }
+body.theme-clair .menu-island .bg-navy-800 { background: #1F2A44 !important; color: #F5F1EA !important; }
+
+/* Menu mobile du bas : barre claire, icônes navy (plus rien d'invisible). */
+body.theme-clair [data-testid="bottomnav"] {
+  background: rgba(248, 248, 246, 0.95) !important;
+  border-color: #E8E6E1 !important;
+  backdrop-filter: blur(14px);
+}
+
+
+.theme-creme .text-offwhite\/85, .theme-creme .text-offwhite\/75 { color: rgba(31, 42, 68, 0.8) !important; }
+.theme-creme .placeholder\:text-offwhite\/40::placeholder { color: rgba(31, 42, 68, 0.4) !important; }
+
+/* ── Page Bien-être & Mindset (mise en page maquette) ──
+   Sombre par défaut : fond bleu de l'app, cartes « verre ».
+   Clair (body.theme-clair) : palette claire de l'app — PAS le beige de l'admin. */
+.be-page {
+  --be-ink: #F5F1EA; --be-muted: rgba(245, 241, 234, 0.62); --be-accent: #DEC2A3;
+  --be-accent-soft: rgba(222, 194, 163, 0.16); --be-line: rgba(255, 255, 255, 0.12);
+  --be-card: rgba(255, 255, 255, 0.12); --be-card-border: rgba(255, 255, 255, 0.26);
+  --be-tile: rgba(255, 255, 255, 0.10); --be-suggestion: rgba(222, 194, 163, 0.12);
+  --be-tab-on: #DEC2A3; --be-tab-on-ink: #0f1b3a; --be-ring-track: rgba(255, 255, 255, 0.10);
+  --be-bar: #DEC2A3; --be-input: rgba(255, 255, 255, 0.08);
+}
+body.theme-clair .be-page {
+  --be-ink: #1F2A44; --be-muted: rgba(31, 42, 68, 0.58); --be-accent: #8A5A1E;
+  --be-accent-soft: rgba(217, 169, 78, 0.16); --be-line: #E8E6E1;
+  --be-card: #FFFFFF; --be-card-border: #E8E6E1;
+  --be-tile: #F3F3F1; --be-suggestion: rgba(217, 169, 78, 0.12);
+  --be-tab-on: #1F2A44; --be-tab-on-ink: #F8F8F6; --be-ring-track: #ECECEA;
+  --be-bar: #1F2A44; --be-input: #FFFFFF;
+}
+.be-page .be-card { background: var(--be-card); border: 1px solid var(--be-card-border); border-radius: 22px; padding: 24px; color: var(--be-ink); backdrop-filter: blur(18px); box-shadow: 0 16px 36px -26px rgba(3, 10, 24, 0.8); }
+body.theme-clair .be-page .be-card { backdrop-filter: none; box-shadow: 0 1px 2px rgba(31,42,68,.05), 0 12px 30px -20px rgba(31,42,68,.18); }
+.be-tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; background: var(--be-card); border: 1px solid var(--be-card-border); border-radius: 999px; padding: 5px; backdrop-filter: blur(18px); }
+.be-tab { flex: 1 0 auto; border-radius: 999px; padding: 9px 18px; font-size: 15px; color: var(--be-ink); opacity: .8; transition: background .18s ease, opacity .18s ease; white-space: nowrap; }
+.be-tab:hover { opacity: 1; background: var(--be-tile); }
+.be-tab[data-actif="true"] { background: var(--be-tab-on); color: var(--be-tab-on-ink); font-weight: 600; opacity: 1; }
+.be-tab { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+@media (max-width: 639px) {
+  /* 5 onglets sur un téléphone : icône au-dessus d'un libellé court, sans défilement. */
+  .be-tabs { border-radius: 18px; padding: 4px; gap: 2px; overflow: visible; }
+  .be-tab { flex: 1 1 0; min-width: 0; flex-direction: column; gap: 3px; padding: 7px 2px; border-radius: 14px; font-size: 11px; }
+}
+.be-suggestion { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; background: var(--be-suggestion); border: 1px solid var(--be-accent-soft); border-radius: 18px; padding: 18px 24px; }
+.be-raccourci { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 96px; background: var(--be-card); border: 1px solid var(--be-card-border); border-radius: 18px; padding: 16px 10px; text-align: center; color: var(--be-ink); font-size: 15px; transition: transform .18s ease, border-color .18s ease; }
+button.be-raccourci:hover { transform: translateY(-2px); border-color: var(--be-accent); }
+.be-tuile { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 78px; background: var(--be-tile); border-radius: 14px; padding: 10px 8px; transition: filter .18s ease; }
+.be-tuile:hover { filter: brightness(1.08); }
+.be-check-off { border-color: var(--be-muted); background: transparent; }
+.be-check-on { border-color: var(--be-accent); background: var(--be-accent); color: var(--be-tab-on-ink); }
+body.theme-clair .be-check-on { border-color: #1F2A44; background: #1F2A44; color: #fff; }
+.be-rituel-off { border-color: var(--be-line); background: var(--be-card); }
+.be-rituel-off:hover { border-color: var(--be-accent); }
+.be-rituel-on { border-color: var(--be-accent); background: var(--be-accent-soft); }
+.be-input { background: var(--be-input); color: var(--be-ink); border-color: var(--be-line); }
+.be-page .be-btn-navy { background: var(--be-tab-on); color: var(--be-tab-on-ink); }
+/* Séance complète (onglet Outils) en thème clair : carte navy, textes clairs malgré .be-clair */
+/* Carte « Séance du moment » : verre comme le reste en sombre ; navy plein seulement en clair. */
+.be-seance-compacte { background: var(--be-card); border: 1px solid var(--be-card-border); backdrop-filter: blur(18px); }
+body.theme-clair .be-seance-compacte { background: #1C2746; border-color: transparent; }
+.be-clair .be-seance-dark > section { background: #1C2746 !important; border-color: transparent !important; }
+.be-clair .be-seance-dark .text-white { color: #F6F1E9 !important; }
+.be-clair .be-seance-dark .text-white\/85, .be-clair .be-seance-dark .text-white\/70 { color: rgba(246,241,233,.8) !important; }
+.be-clair .be-seance-dark .text-white\/60, .be-clair .be-seance-dark .text-white\/55, .be-clair .be-seance-dark .text-white\/50 { color: rgba(246,241,233,.6) !important; }
+.be-clair .be-seance-dark .bg-white\/\[0\.03\] { background: rgba(255,255,255,.05) !important; box-shadow: none !important; }
+.be-clair .be-seance-dark .border-white\/10, .be-clair .be-seance-dark .border-white\/15 { border-color: rgba(255,255,255,.18) !important; }
+/* Thème clair : teintes manquantes (textes /85 /75 et cartes /[0.06] /[0.10] restaient blancs sur blanc) */
+body.theme-clair .text-offwhite\/85, body.theme-clair .text-offwhite\/75 { color: rgba(31, 42, 68, 0.8) !important; }
+body.theme-clair .bg-white\/\[0\.06\], body.theme-clair .bg-white\/\[0\.10\], body.theme-clair .bg-white\/\[0\.08\] { background: #FFFFFF !important; box-shadow: 0 1px 8px -4px rgba(31, 42, 68, 0.08); }
+body.theme-clair .border-white\/\[0\.14\], body.theme-clair .border-white\/\[0\.16\], body.theme-clair .border-white\/25 { border-color: #E8E6E1 !important; }
+body.theme-clair input::placeholder, body.theme-clair textarea::placeholder { color: rgba(31, 42, 68, 0.42) !important; }
+body.theme-clair [data-testid="lang-switcher-icon"] { color: rgba(31, 42, 68, 0.75) !important; background: #FFFFFF !important; border-color: #E8E6E1 !important; }
+
+
+/* ── Cartes plus visibles (thème sombre de l'app) ───────────────────────────
+   Beaucoup d'écrans utilisaient des fonds à 3-5 % de blanc et des bords à 10 % :
+   sur le ciel navy, les cartes disparaissaient. On aligne tout sur le verre Zayado
+   (.glass) : un voile blanc lisible et un contour clair. Les thèmes clairs
+   (theme-clair, console pro claire, Bien-être clair) gardent leurs propres règles. */
+body:not(.theme-clair) .zy-app :is(.bg-white\/\[0\.03\], .bg-white\/\[0\.04\], .bg-white\/5):not(.be-clair *, .theme-creme *, .pro-clair *) { background-color: rgba(255, 255, 255, 0.085); }
+body:not(.theme-clair) .zy-app :is(.bg-white\/\[0\.05\], .bg-white\/\[0\.06\], .bg-white\/\[0\.07\]):not(.be-clair *, .theme-creme *, .pro-clair *) { background-color: rgba(255, 255, 255, 0.11); }
+body:not(.theme-clair) .zy-app :is(.border-white\/10, .border-white\/\[0\.07\], .border-white\/\[0\.06\], .border-white\/5):not(.be-clair *, .theme-creme *, .pro-clair *) { border-color: rgba(255, 255, 255, 0.2); }
+body:not(.theme-clair) .zy-app :is(.border-white\/12, .border-white\/15):not(.be-clair *, .theme-creme *, .pro-clair *) { border-color: rgba(255, 255, 255, 0.24); }
+
+/* Chat en grand format : suit le thème du SaaS (sombre par défaut, crème en thème clair). */
+.chat-grand { background: linear-gradient(180deg, #172C5C 0%, #0E1B3E 55%, #0A1230 100%); color: #F5F1EA; }
+.chat-grand-carte { background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 0 18px 50px -20px rgba(3, 8, 24, 0.6); backdrop-filter: blur(18px); }
+.chat-grand .chat-bulle-moi { background: linear-gradient(135deg, #F1E2CC, #DEC2A3); color: #0f1b3a; border-bottom-right-radius: 6px; }
+.chat-grand .chat-bulle-ia { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.10); color: #F5F1EA; border-bottom-left-radius: 6px; }
+.chat-grand textarea { border-radius: 9999px !important; padding-left: 18px !important; }
+.chat-grand-clair.chat-grand { background: #F6F1E9; color: #1F2A44; }
+.chat-grand-clair .chat-grand-carte { background: #FFFFFF; border: 1px solid #ECE2D2; box-shadow: 0 2px 18px -8px rgba(31, 42, 68, 0.12); backdrop-filter: none; }
+.chat-grand-clair .chat-bulle-moi { background: #1f3a6e; color: #FFFFFF; }
+.chat-grand-clair .chat-bulle-ia { background: #FFFFFF; border: 1px solid #E7DCC9; color: #1F2A44; }
+.chat-grand-clair .bg-gold.text-navy-900 { color: #0f1b3a !important; }
+
+/* « Le Copilote écrit… » : trois points qui respirent */
+.chat-points { display: inline-flex; gap: 4px; align-items: center; height: 10px }
+.chat-points i { width: 6px; height: 6px; border-radius: 9999px; background: currentColor; opacity: .35; animation: chat-points 1.1s infinite ease-in-out }
+.chat-points i:nth-child(2) { animation-delay: .15s } .chat-points i:nth-child(3) { animation-delay: .3s }
+@keyframes chat-points { 0%, 80%, 100% { opacity: .25; transform: translateY(0) } 40% { opacity: .9; transform: translateY(-3px) } }
+@media (prefers-reduced-motion: reduce) { .chat-points i { animation: none; opacity: .6 } }
+
+
+/* Chat : points animés « l'IA réfléchit… » et apparition des cartes Actualité une à une */
+.ia-points { display: inline-flex; gap: 3px; }
+.ia-points i { width: 4px; height: 4px; border-radius: 9999px; background: currentColor; opacity: .3; animation: ia-point 1.1s infinite ease-in-out; }
+.ia-points i:nth-child(2) { animation-delay: .18s; }
+.ia-points i:nth-child(3) { animation-delay: .36s; }
+@keyframes ia-point { 0%, 80%, 100% { opacity: .25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-2px); } }
+.actu-carte { opacity: 0; animation: actu-entree .4s ease-out forwards; }
+@keyframes actu-entree { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .actu-carte { animation: none; opacity: 1; } .ia-points i { animation: none; opacity: .6; } }
+
+/* ═══════════════════════════════════════════════════════════════════
+   GRAMMAIRE DE CARTE « OK » — celle des maquettes validées.
+   
+   Les écrans du produit et les maquettes ne se ressemblaient pas : les
+   maquettes posaient une tuile à halo, une pastille d'icône en haut à
+   droite, un grand nombre en serif et une ligne de variation ; le produit
+   empilait des GlassCard identiques. Ces classes portent cette grammaire
+   dans l'application, une fois, pour que tous les écrans refondus
+   parlent la même langue visuelle.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.ok {
+  position: relative;
+  /* Grammaire EXACTE de la maquette validée (base.css) : léger dégradé + halo
+     champagne en coin, bord à 12 %. Pas de fond plat — c'est le halo discret qui
+     fait reconnaître la carte Zayado. */
+  background: linear-gradient(150deg, rgba(255,255,255,.07), rgba(255,255,255,.028));
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 20px;
+  overflow: hidden;
+}
+.ok::after {
+  content: ""; position: absolute; right: -70px; top: -70px;
+  width: 200px; height: 200px; border-radius: 999px; pointer-events: none;
+  background: radial-gradient(circle, rgba(222,194,163,.13), transparent 68%);
+}
+/* Carte mise en avant (hero) : bord champagne + halo un peu plus marqué. */
+.ok-or { border-color: rgba(222,194,163,.42); }
+.ok-or::after { background: radial-gradient(circle, rgba(222,194,163,.22), transparent 66%); }
+.ok-pad { padding: 24px 26px; }
+.ok-lab { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.38); font-weight: 600; }
+/* La pastille d'icône fait 40px (right/top 22) : on dégage libellé et nombre
+   pour qu'ils ne passent pas dessous. */
+.ok-ic ~ .ok-lab { padding-right: 50px; }
+.ok-ic ~ .ok-num { padding-right: 46px; }
+/* Le nombre : sans-sérif (Inter), demi-gras 600, taille et interlettrage de la
+   maquette validée — pas l'extra-gras que j'avais mis en copiant la capture du
+   site live (qui est violet et plus gras). */
+.ok-num {
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  font-size: 36px; font-weight: 600; letter-spacing: -.6px; margin-top: 9px; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.ok-sub { font-size: 12.5px; color: rgba(255,255,255,.38); margin-top: 7px; }
+.ok-var { font-size: 12.5px; font-weight: 600; margin-top: 14px; display: flex; align-items: center; gap: 6px; }
+.ok-ic {
+  position: absolute; right: 22px; top: 22px; width: 40px; height: 40px; border-radius: 13px;
+  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12);
+  display: grid; place-items: center; color: rgba(255,255,255,.85);
+}
+
+/* Ligne de liste régulière (séparateur fin, pas de carte par élément). */
+.ok-row { display: flex; align-items: center; gap: 14px; padding: 12px 0; }
+.ok-row + .ok-row { border-top: 1px solid rgba(255,255,255,.055); }
+.ok-av { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; flex-shrink: 0; }
+.ok-ti { font-size: 14px; font-weight: 600; }
+.ok-su { font-size: 12.5px; color: rgba(255,255,255,.38); margin-top: 2px; }
+.ok-me { font-size: 12.5px; color: rgba(255,255,255,.38); white-space: nowrap; }
+
+/* Ligne à barre de progression — le motif « ce que le radar a trouvé ». */
+.ok-prow {
+  background: rgba(255,255,255,.035); border: 1px solid rgba(255,255,255,.12);
+  border-radius: 15px; padding: 14px 17px;
+}
+.ok-prow + .ok-prow { margin-top: 10px; }
+.ok-bar { height: 5px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; }
+.ok-bar > span { display: block; height: 100%; border-radius: 999px; }
+.ok-chip { font-size: 10.5px; font-weight: 600; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+
+/* Barre d'onglets pilule. */
+.ok-tabs { display: inline-flex; gap: 4px; padding: 5px; border-radius: 999px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12); }
+.ok-tab {
+  display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 999px;
+  font-size: 13.5px; font-weight: 600; color: rgba(255,255,255,.62); transition: color .15s, background .15s;
+}
+.ok-tab:hover { color: #fff; }
+.ok-tab.on { background: #DEC2A3; color: #0A1128; }
+.ok-tab.on:hover { color: #0A1128; }
+
+/* Thèmes clairs : la carte devient blanche et le halo disparaît. */
+body.theme-clair .ok, .theme-creme .ok, .pro-clair .ok, .be-clair .ok {
+  background: #FFFFFF !important; border-color: #ECE2D2 !important; color: #1F2A44;
+  box-shadow: 0 2px 14px -6px rgba(31,42,68,.10);
+}
+
+body.theme-clair .ok-lab, body.theme-clair .ok-sub, body.theme-clair .ok-su, body.theme-clair .ok-me,
+.theme-creme .ok-lab, .theme-creme .ok-sub, .theme-creme .ok-su, .theme-creme .ok-me { color: #6B7280 !important; }
+body.theme-clair .ok-row + .ok-row, .theme-creme .ok-row + .ok-row { border-top-color: #EEE6DA; }
+body.theme-clair .ok-prow, .theme-creme .ok-prow { background: #FAF8F4 !important; border-color: #ECE2D2 !important; }

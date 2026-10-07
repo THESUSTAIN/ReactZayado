@@ -1,0 +1,208 @@
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Menu, Bell, Plus, Sparkles, Trophy, Heart, TrendingUp, Target, User,
+  Home as HomeIcon, LayoutGrid, MoreHorizontal, Briefcase, Compass, Leaf,
+} from "lucide-react";
+import { useKairos } from "@/context/KairosContext";
+import { toast } from "sonner";
+import { fetchBoards, createBoard, fetchObjectifs } from "@/lib/kairosApi";
+
+const GOLD = "#DEC2A3";
+
+// Couleurs d'aperçu des boards (plus de fausses photos ni de faux compteurs).
+const TEINTES = [
+  "linear-gradient(160deg,#26437e,#0f1b3a)", "linear-gradient(160deg,#7A5C3E,#0f1b3a)",
+  "linear-gradient(160deg,#3E4A66,#0f1b3a)", "linear-gradient(160deg,#8a6a45,#0f1b3a)",
+];
+
+const QUOTES = [
+  { text: "L'avenir dépend de ce que tu fais aujourd'hui.", author: "Mahatma Gandhi" },
+  { text: "Va doucement, ça avance quand même.", author: "Zayado" },
+  { text: "Prends soin de la journée, elle prendra soin de la vie.", author: "Anonyme" },
+  { text: "La clarté vient après le premier pas, pas avant.", author: "Zayado" },
+];
+
+/**
+ * Vision Board Mobile Home
+ * - Header "Welcome back, {name}"
+ * - Hero "Create Your Vision"
+ * - My Vision Boards grid 2 cols
+ * - Daily Motivation quote
+ * - Progress Overview 3 stats
+ * - Bottom tab bar (Home/Boards/+/Goals/Profile)
+ */
+export default function VisionBoardMobileHome({ onOpenBoard }) {
+  const navigate = useNavigate();
+  const { user } = useKairos();
+  const [boards, setBoards] = useState(null);
+  const [quoteIndex, setQuoteIndex] = useState(0);
+  const [stats, setStats] = useState(null);
+  const firstName = user?.firstName || "";
+
+  useEffect(() => {
+    fetchBoards().then((d) => setBoards(d.boards || [])).catch(() => setBoards([]));
+    fetchObjectifs().then((d) => {
+      const list = Array.isArray(d) ? d : (d?.items || []);
+      const actifs = list.filter((o) => o.statut !== "termine");
+      const faits = list.filter((o) => o.statut === "termine" || (o.progression || 0) >= 100);
+      const moy = list.length ? Math.round(list.reduce((a, o) => a + Math.min(100, o.progression || 0), 0) / list.length) : null;
+      setStats({ active: actifs.length, done: faits.length, progress: moy });
+    }).catch(() => setStats({ active: 0, done: 0, progress: null }));
+  }, []);
+
+  const openBoard = (b) => {
+    localStorage.setItem("kairos_board_key", b.key);
+    if (onOpenBoard) onOpenBoard(b);
+    else navigate(`/app/vision?view=canvas&board=${b.key}`);
+  };
+  const nouveauBoard = async () => {
+    const nom = window.prompt("Nom du nouveau board ?", "Ma vision");
+    if (!nom || nom.trim().length < 2) return;
+    try { const r = await createBoard({ nom: nom.trim().slice(0, 60), emoji: "🧭" }); openBoard({ key: r.key || r.board?.key || "perso" }); }
+    catch { toast.error("Création impossible (12 boards maximum)."); }
+  };
+
+  const nextQuote = () => setQuoteIndex((i) => (i + 1) % QUOTES.length);
+  const q = QUOTES[quoteIndex];
+
+  return (
+    <div className="min-h-screen text-white" style={{
+      background: `#0f1b3a radial-gradient(ellipse 800px 500px at 50% 0%, rgba(74,106,158,0.35) 0%, transparent 60%) no-repeat`,
+    }}>
+      {/* Top bar */}
+      <header className="sticky top-0 z-30 flex items-center justify-between px-5 pt-4 pb-3 backdrop-blur-xl" style={{ background: "rgba(11,26,61,0.6)" }}>
+        <button onClick={() => navigate("/app")} className="rounded-lg p-2 hover:bg-white/5" aria-label="Retour au cockpit"><HomeIcon size={20} /></button>
+        <div className="text-center">
+          <div className="text-[10px] uppercase tracking-[0.22em]" style={{ color: GOLD }}>Zayado</div>
+          <div className="font-display text-[15px] font-semibold">{firstName ? `Bon retour, ${firstName}` : "Bon retour"} <span className="ml-1">👋</span></div>
+        </div>
+        <button onClick={() => navigate("/parametres")} className="rounded-lg p-2 hover:bg-white/5" aria-label="Paramètres"><User size={20} /></button>
+      </header>
+      <p className="text-center text-[12px] text-white/55 pb-4">Garde le cap sur ce qui compte.</p>
+
+      <main className="px-5 pb-28 space-y-6">
+        {/* Hero card */}
+        <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-white p-5 text-navy-900"
+          style={{ boxShadow: "0 20px 40px -20px rgba(0,0,0,0.5)" }}>
+          <div className="relative z-10 max-w-[60%]">
+            <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl" style={{ background: `linear-gradient(135deg, ${GOLD}, #b89566)` }}>
+              <Sparkles size={20} className="text-white" />
+            </div>
+            <h2 className="font-display text-[22px] font-semibold leading-tight">Crée ta vision</h2>
+            <p className="mt-1 text-[12.5px] text-navy-900/65">Transforme tes rêves en une histoire visuelle.</p>
+            <button onClick={nouveauBoard}
+              className="mt-4 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-[13px] font-bold text-white"
+              style={{ background: `linear-gradient(135deg, ${GOLD}, #a97e42)`, boxShadow: `0 8px 20px -6px ${GOLD}80` }}>
+              <Plus size={15} /> Nouveau board
+            </button>
+          </div>
+          {/* Splash art on the right */}
+          <div className="pointer-events-none absolute right-0 top-0 h-full w-2/5 opacity-90">
+            <div className="absolute inset-0 rounded-3xl" style={{
+              background: `radial-gradient(circle at 60% 40%, ${GOLD}44, transparent 60%), radial-gradient(circle at 30% 80%, #38b2ac44, transparent 60%), radial-gradient(circle at 80% 80%, #60a5fa44, transparent 60%)`,
+            }} />
+            <div className="absolute right-2 top-4 grid grid-cols-2 gap-1 rotate-[-6deg]">
+              {["photo-1470071459604-3b5ec3a7fe05", "photo-1505843513577-22bb7d21e455", "photo-1567808291548-fc3ee04dbcf0", "photo-1571019614242-c5c5dee9f50b"].map((p, i) => (
+                <div key={i} className="h-12 w-14 overflow-hidden rounded-sm border-[1.5px] border-white shadow-md" style={{ transform: `rotate(${(i % 2 ? 4 : -3)}deg)` }}>
+                  <img src={`https://images.unsplash.com/${p}?w=200&q=60`} alt="" className="h-full w-full object-cover" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* My Vision Boards */}
+        <section>
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="font-display text-[17px] font-semibold">Mes Vision Boards</h3>
+            <button onClick={() => openBoard({ key: localStorage.getItem("kairos_board_key") || "perso" })} className="text-[12px] font-semibold" style={{ color: GOLD }}>Ouvrir le canvas</button>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {boards === null && [0, 1].map((i) => <div key={i} className="aspect-[4/5] animate-pulse rounded-2xl bg-white/5" />)}
+            {boards?.map((b, i) => (
+              <button key={b.key} onClick={() => openBoard(b)}
+                className="group relative aspect-[4/5] overflow-hidden rounded-2xl border border-white/10 text-left transition active:scale-[0.98]"
+                style={{ background: TEINTES[i % TEINTES.length] }} data-testid={`mobile-board-${b.key}`}>
+                <span className="absolute left-3 top-3 text-[30px]">{b.emoji}</span>
+                <div className="absolute inset-x-3 bottom-3">
+                  <h4 className="font-display text-[15px] font-semibold text-white">{b.nom}</h4>
+                  <div className="mt-0.5 flex items-center gap-1 text-[10.5px] text-white/70">
+                    <LayoutGrid size={10} /> {b.count ? `${b.count} élément${b.count > 1 ? "s" : ""}` : "Vide pour l'instant"}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Daily motivation */}
+        <section>
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="font-display text-[17px] font-semibold">Motivation du jour</h3>
+            <button onClick={nextQuote} className="text-[12px] font-semibold" style={{ color: GOLD }}>Nouvelle citation</button>
+          </div>
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 p-5"
+            style={{
+              backgroundImage: `linear-gradient(135deg, rgba(15,27,58,0.7), rgba(15,27,58,0.4)), url(https://images.unsplash.com/photo-1518020382113-a7e8fc38eac9?w=800&q=60)`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}>
+            <Sparkles size={14} style={{ color: GOLD }} />
+            <p className="mt-2 font-serif-italic italic text-[18px] leading-tight text-white">« {q.text} »</p>
+            <p className="mt-2 text-[12px] text-white/70">— {q.author}</p>
+          </div>
+        </section>
+
+        {/* Progress overview */}
+        <section>
+          <h3 className="mb-3 font-display text-[17px] font-semibold">Aperçu progression</h3>
+          <div className="grid grid-cols-3 gap-2">
+            <StatCard icon={Target} label="Objectifs" value={stats ? stats.active : "…"} sub="En cours" bg="rgba(96,165,250,0.15)" fg="#60a5fa" />
+            <StatCard icon={Trophy} label="Atteints" value={stats ? stats.done : "…"} sub="Au total" bg="rgba(244,114,182,0.15)" fg="#f472b6" />
+            <StatCard icon={TrendingUp} label="Avancement" value={stats?.progress != null ? `${stats.progress}%` : "—"} sub={stats?.progress != null ? "Moyenne" : "Fixe un objectif"} bg="rgba(222,194,163,0.15)" fg={GOLD} />
+          </div>
+        </section>
+      </main>
+
+      {/* Bottom nav */}
+      <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 backdrop-blur-2xl" style={{ background: "rgba(15,27,58,0.85)" }}>
+        <div className="relative flex items-center justify-around px-2 py-2.5">
+          <TabItem icon={HomeIcon} label="Cockpit" active onClick={() => navigate("/app")} />
+          <TabItem icon={LayoutGrid} label="Boards" onClick={() => navigate("/app/vision")} />
+          <div className="w-14" />
+          <TabItem icon={Target} label="Idées" onClick={() => navigate("/app/actions?tab=idees")} />
+          <TabItem icon={User} label="Profil" onClick={() => navigate("/parametres")} />
+          <button onClick={nouveauBoard} aria-label="Nouveau board"
+            className="absolute left-1/2 -top-5 flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full text-white shadow-lg"
+            style={{ background: `linear-gradient(135deg, ${GOLD}, #b89566)`, boxShadow: `0 10px 24px -6px ${GOLD}` }}>
+            <Plus size={26} strokeWidth={2.5} />
+          </button>
+        </div>
+      </nav>
+    </div>
+  );
+}
+
+function StatCard({ icon: Icon, label, value, sub, bg, fg }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+      <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl" style={{ background: bg }}>
+        <Icon size={16} style={{ color: fg }} />
+      </div>
+      <div className="text-[10px] uppercase tracking-widest text-white/50">{label}</div>
+      <div className="mt-0.5 font-display text-[20px] font-semibold" style={{ color: fg }}>{value}</div>
+      <div className="text-[10.5px] text-white/55">{sub}</div>
+    </div>
+  );
+}
+
+function TabItem({ icon: Icon, label, active, onClick }) {
+  return (
+    <button onClick={onClick} className={`flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 transition ${active ? "" : "text-white/50 hover:text-white/80"}`}
+      style={active ? { color: GOLD } : {}}>
+      <Icon size={19} />
+      <span className="text-[9.5px] font-semibold">{label}</span>
+    </button>
+  );
+}

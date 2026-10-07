@@ -31,3 +31,11 @@ Le client a fourni « Zayado — Services et produits de la marketplace.docx » 
 ## Backlog priorisé
 - P1 : panneau des demandes reçues (lecture appointments), email de confirmation (Resend), paiement abonnements (Stripe) quand le Cockpit IA sera prêt
 - P2 : panier + catalogue produits (débloquer « Ajouter au panier » quand les prix arrivent), comptes partenaires, iframing de la grille tarifaire depuis l'application, compteur de places des box en précommande
+
+## Installation du vrai projet Zayado + corrections notifications/PWA (2026-10-07)
+- Projet client (ReactZayado-main-12.zip) installé dans le pod en remplacement du prototype : backend FastAPI/SQLite sur 8001, frontend CRA+craco sur 3000 (tsconfig Vite déplacés dans frontend/_vite_tsconfig_backup pour le conflit CRA), WhatsApp-service copié (non démarré).
+- Compte admin local = test.essentielle@zayado.net / Test!2026 (seed + bootstrap, garde anti-rétrogradation ajoutée).
+- Diagnostic prod (app.zayado.net) : backend sain (cloche remplie quotidiennement, e-mails Brevo OK, VAPID cohérentes) ; frontend déployé ancien (sans activerPushAuto/abonnementValide) → 0 appareil push abonné → « 3 jours sans notification ». PWA : sw v4 + manifest OK en prod ; shell installé à purger/réinstaller.
+- Correctifs (additifs, Railway-safe — voir /app/MODIFS-NOTIFICATIONS-2026-10-07.md) : /api/push/public-key en route publique ; endpoint GET /api/admin/notifications/sante (push, crons, appareils, relances 7 j par canal, règles de calme) ; carte « Santé du système de notification » + « règles de calme » dans Admin → Notifications ; erreurs SW loguées en console.
+- Vérifié localement : login admin, cockpit, abonnement push (réel + simulé), envoi de bienvenue réel vers FCM, /api/push/statut, /api/admin/notifications/test (cloche ✓ / push ✓ raison / e-mail ✓ message clair), relances/executer, sante.
+- Production vérifiée page par page : login, compte, cockpit, cloche (12 notifs), vision, radar, actions, paramètres, admin (vérificateur multi-canal : cloche ✓, push « aucun appareil abonné », e-mail ✓ envoyé).

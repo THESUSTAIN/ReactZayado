@@ -1,0 +1,69 @@
+{
+  "id": "/",
+  "short_name": "Zayado",
+  "name": "Zayado — Cockpit IA",
+  "description": "Le cockpit IA privé de Zayado pour piloter son activité sans perdre son équilibre.",
+  "icons": [
+    {
+      "src": "icon-zayado-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-zayado-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-zayado-maskable-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ],
+  "start_url": "/app?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#0B0F19",
+  "background_color": "#0B0F19",
+  "shortcuts": [
+    {
+      "name": "Capturer une idée",
+      "short_name": "Idée",
+      "description": "Noter une idée en une phrase",
+      "url": "/app/actions?tab=idees"
+    },
+    {
+      "name": "Mon cockpit",
+      "short_name": "Cockpit",
+      "url": "/app"
+    },
+    {
+      "name": "Envoyer vers mon Vision Board",
+      "short_name": "Vision",
+      "description": "Ajouter une image, un lien ou une note à mon Vision Board",
+      "url": "/app/partager"
+    }
+  ],
+  "share_target": {
+    "action": "/app/partager",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "medias",
+          "accept": [
+            "image/*"
+          ]
+        }
+      ]
+    }
+  }
+}

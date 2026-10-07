@@ -1,0 +1,116 @@
+import { lireEnAttente, oublierEnAttente } from "@/lib/diagnostic";
+import React, { createContext, useContext, useMemo, useState, useCallback, useEffect } from "react";
+import { energyModes } from "@/mock/data";
+import { fetchState, postCheckin, toggleTache, getToken, saveDiagnostic, saveProfile } from "@/lib/kairosApi";
+
+const KairosContext = createContext(null);
+
+function deriveMode(score) {
+  if (score <= 2) return "recuperation";
+  if (score === 3) return "soutien";
+  return "elan";
+}
+
+const SAFE = {
+  user: { firstName: "" },
+  energy: { score: 4, mood: "" },
+  balance: { pro: 60, perso: 40 },
+  priorities: [],
+  goal: { title: "", percent: 0, daysLeft: 0, substeps: [] },
+  victory: { title: "", detail: "", date: "" },
+  trend: [],
+  aCheckin: false,
+};
+
+export function KairosProvider({ children }) {
+  const [user, setUser] = useState(SAFE.user);
+  const [energy, setEnergy] = useState(SAFE.energy);
+  const [balance, setBalance] = useState(SAFE.balance);
+  const [priorities, setPriorities] = useState(SAFE.priorities);
+  const [goal, setGoal] = useState(SAFE.goal);
+  const [victory, setVictory] = useState(SAFE.victory);
+  const [trend, setTrend] = useState(SAFE.trend);
+  const [aCheckin, setACheckin] = useState(SAFE.aCheckin);
+  const [contexte, setContexte] = useState({});
+  const [onboardingData, setOnboardingData] = useState(null);
+  const [loaded, setLoaded] = useState(false);
+
+  const hydrate = useCallback((s) => {
+    // Diagnostic fait sur la page publique avant l'inscription : enregistré sur le compte dès la connexion.
+    const enAttente = lireEnAttente();
+    if (enAttente && getToken()) {
+      saveDiagnostic({ ...enAttente, source: "public" }).then(oublierEnAttente).catch(() => {});
+    }
+    setUser({ firstName: s.profile?.prenom || "toi" });
+    setEnergy({ score: s.energy?.score ?? 4, mood: s.energy?.mood || "aligné" });
+    setACheckin(Boolean(s.energy?.a_checkin));
+    setContexte(s.vision?.contexte_metier || {});
+    setBalance(s.balance || null);  // null = pas encore de mesure (plus de 60/40 inventé)
+    setPriorities(s.priorities || []);
+    if (s.goal) {
+      const dl = s.goal.echeance ? Math.max(0, Math.round((new Date(s.goal.echeance) - new Date()) / 86400000)) : 0;
+      setGoal({ title: s.goal.title, percent: s.goal.percent, daysLeft: dl, substeps: [] });
+    }
+    setVictory(s.victory || SAFE.victory);  // null = plus de victoire (supprimée) : on vide, on ne garde pas l'ancienne
+    setTrend(s.trend || []);
+    setLoaded(true);
+  }, []);
+
+  const refresh = useCallback(() => fetchState().then(hydrate).catch(() => setLoaded(true)), [hydrate]);
+  // Met à jour une préférence du compte (contexte_metier) et l'applique tout de suite dans l'app
+  // (menu, Ma Foi…) sans attendre un rechargement.
+  const majContexte = useCallback(async (patch) => {
+    setContexte((c) => ({ ...c, ...patch }));
+    await saveProfile({ contexte_metier: patch });
+  }, []);
+  useEffect(() => { refresh(); }, [refresh]);
+  // Revenir sur l'application (autre onglet, PWA remise au premier plan) recharge l'état :
+  // une victoire notée ailleurs (chat, revue, Telegram) s'affiche sans rechargement manuel.
+  useEffect(() => {
+    let dernier = Date.now();
+    const auRetour = () => {
+      if (document.visibilityState !== "visible" || Date.now() - dernier < 20000) return;
+      dernier = Date.now();
+      if (getToken()) refresh();
+    };
+    document.addEventListener("visibilitychange", auRetour);
+    window.addEventListener("focus", auRetour);
+    return () => { document.removeEventListener("visibilitychange", auRetour); window.removeEventListener("focus", auRetour); };
+  }, [refresh]);
+  // Connexion en SPA (pas de rechargement) : un nouveau token déclenche la
+  // re-hydratation — sinon prénom, préférences et contexte restaient vides.
+  useEffect(() => {
+    const onToken = () => refresh();
+    window.addEventListener("zayado:token", onToken);
+    return () => window.removeEventListener("zayado:token", onToken);
+  }, [refresh]);
+
+  const mode = deriveMode(energy.score);
+  const modeInfo = energyModes[mode];
+  const isRecovery = mode === "recuperation";
+
+  const togglePriority = useCallback((id) => {
+    setPriorities((prev) => prev.map((p) => (p.id === id ? { ...p, done: !p.done, progress: !p.done ? 100 : p.progress } : p)));
+    toggleTache(id).catch(() => {});
+  }, []);
+
+  const submitCheckin = useCallback(({ score, mental, mood }) => {
+    setEnergy({ score, mood, mental });
+    setACheckin(true);
+    postCheckin({ energie: score, charge: mental, mood }).then(() => refresh()).catch(() => {});
+  }, [refresh]);
+
+  const value = useMemo(() => ({
+    user, energy, setEnergy, balance, priorities, togglePriority,
+    goal, victory, trend, mode, modeInfo, isRecovery, loaded, aCheckin, contexte,
+    submitCheckin, onboardingData, setOnboardingData, refresh, majContexte,
+  }), [user, energy, balance, priorities, goal, victory, trend, mode, modeInfo, isRecovery, loaded, aCheckin, contexte, togglePriority, submitCheckin, onboardingData, refresh, majContexte]);
+
+  return <KairosContext.Provider value={value}>{children}</KairosContext.Provider>;
+}
+
+export function useKairos() {
+  const ctx = useContext(KairosContext);
+  if (!ctx) throw new Error("useKairos must be used within KairosProvider");
+  return ctx;
+}
