@@ -736,6 +736,11 @@ body:not(.theme-clair) .zy-app :is(.border-white\/12, .border-white\/15):not(.be
 /* Carte d'entrée premium du chat : verre dépoli + halo doré au focus */
 .chat-input-card { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 
+/* Halo pulsant derrière le chat plein écran (façon OkyAi) */
+.chat-halo { animation: halo-pulse 7s ease-in-out infinite; }
+@keyframes halo-pulse { 0%, 100% { opacity: .7; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .chat-halo { animation: none; } }
+
 
 /* Chat : points animés « l'IA réfléchit… » et apparition des cartes Actualité une à une */
 .ia-points { display: inline-flex; gap: 3px; }

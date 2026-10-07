@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useChatScroll } from "@/hooks/useChatScroll";
 import { BoutonDernierMessage } from "@/components/kairos/BoutonDernierMessage";
+import { Sidebar } from "@/components/kairos/Sidebar";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Sparkles, Send, Mic, Lightbulb, BatteryLow, Compass, X, Loader2,
   Sun, ListChecks, Newspaper, Check, Clock, XCircle, ExternalLink, RefreshCw, Mail, Bookmark,
   Maximize2, Minimize2, CloudCheck, Users, Scale, Copy, PenLine, FolderOpen, FileText, FileSpreadsheet,
-  FileDown, UploadCloud, ImagePlus, ListPlus, Settings, Info,
+  FileDown, UploadCloud, ImagePlus, ListPlus, Settings, Info, Plus,
 } from "lucide-react";
 import CollaborateurModal from "./CollaborateurModal";
 import { aDroit, usePlanEffectif } from "@/lib/droits";
@@ -152,7 +153,7 @@ const TABS = [
   { key: "actu", label: "Actualité", icon: Newspaper },
 ];
 
-export function ChatBody({ onClose, estElargi, onToggleTaille, grand = false }) {
+export function ChatBody({ onClose, estElargi, onToggleTaille, grand = false, surReglages, sansEnTete = false }) {
   const { user } = useKairos();
   // Onglet initial : celui demandé par openChat("actu" | "decisions" | "chat"),
   // consommé ici — fiable même si le panneau vient tout juste de se monter.
@@ -190,6 +191,7 @@ export function ChatBody({ onClose, estElargi, onToggleTaille, grand = false }) 
   return (
     <div className="relative flex h-full flex-col">
       <CollaborateurModal open={!!collab} contexte={collab?.contexte || ""} onClose={() => setCollab(null)} />
+      {!sansEnTete && (
       <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
         <div className="flex items-center gap-2.5">
           <div className={grand ? "flex h-10 w-10 items-center justify-center rounded-full bg-gold/15 ring-1 ring-gold/30" : "flex h-8 w-8 items-center justify-center rounded-xl bg-gold/15 ring-1 ring-gold/30"}>
@@ -215,6 +217,11 @@ export function ChatBody({ onClose, estElargi, onToggleTaille, grand = false }) 
             title="Écrire à un collaborateur de l'équipe Zayado" data-testid="chat-collaborateur-btn">
             <Users className="h-3.5 w-3.5" /> {grand ? "Collaborateur" : <span className="sr-only">Collaborateur</span>}
           </button>
+          {grand && surReglages && (
+            <button onClick={surReglages} className="rounded-lg p-1.5 text-offwhite/50 hover:bg-white/5 hover:text-gold" data-testid="chat-grand-reglages" title="Réglages du Copilote">
+              <Settings className="h-4 w-4" />
+            </button>
+          )}
           {onToggleTaille && (
             <button onClick={onToggleTaille} className="rounded-lg p-1.5 text-offwhite/50 hover:bg-white/5 hover:text-offwhite" data-testid="chat-toggle-taille-btn" title={estElargi ? "Réduire" : "Agrandir"}>
               {estElargi ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
@@ -227,6 +234,7 @@ export function ChatBody({ onClose, estElargi, onToggleTaille, grand = false }) 
           )}
         </div>
       </div>
+      )}
 
       {/* Onglets */}
       <div className="flex gap-1 border-b border-white/10 px-3 py-2">
@@ -643,6 +651,13 @@ function ChatTab({ firstName, grand = false }) {
     return () => window.removeEventListener("kairos:prompt-chat", injecter);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // « Nouvelle conversation » (rail gauche) : on repart d'une page blanche, sans recharger l'historique.
+  useEffect(() => {
+    const f = () => majMessages(() => [{ role: "assistant", content: accueil }]);
+    window.addEventListener("kairos:chat-nouveau", f);
+    return () => window.removeEventListener("kairos:chat-nouveau", f);
+  }); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Mise en route conversationnelle : une question à la fois.
   const [reponses, setReponses] = useState({});
   const val = (k) => reponses[k] ?? contexte?.[k];
@@ -687,21 +702,26 @@ function ChatTab({ firstName, grand = false }) {
   };
 
   return (
-    <div className="flex h-full flex-col">
-      <div ref={scrollRef} onScroll={surDefilement} className="flex-1 space-y-4 overflow-y-auto px-4 py-5 sm:px-5">
+    <div className="relative flex h-full flex-col">
+      {grand && messages.length > 1 && !streaming && (
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-1/4 z-0 flex justify-center opacity-[0.14]">
+          <div className="chat-orb scale-[3]"><span /><span /><span /><i /></div>
+        </div>
+      )}
+      <div ref={scrollRef} onScroll={surDefilement} className={`relative z-10 flex-1 space-y-4 overflow-y-auto px-4 py-5 sm:px-5 ${messages.length <= 1 && !streaming ? "flex flex-col justify-center" : ""}`}>
         {messages.length <= 1 && !streaming && (
-          <div className="chat-accueil flex flex-col items-center gap-3 pb-2 pt-6 text-center" data-testid="chat-accueil">
+          <div className="chat-accueil flex flex-col items-center gap-3 pb-2 text-center" data-testid="chat-accueil">
             <div className="chat-orb" aria-hidden="true"><span /><span /><span /><i /></div>
-            <p className="font-display text-lg font-bold text-offwhite">Ton Copilote t'écoute.</p>
-            <p className="max-w-[280px] text-xs leading-relaxed text-offwhite/55">Commence par un raccourci, ou pose ta question librement — il connaît ton activité.</p>
-            <div className="flex flex-wrap items-center justify-center gap-1.5 pt-1">
+            <p className={`font-display font-bold text-offwhite ${grand ? "text-2xl" : "text-lg"}`}>Ton Copilote t'écoute.</p>
+            <p className={`leading-relaxed text-offwhite/55 ${grand ? "max-w-sm text-sm" : "max-w-[280px] text-xs"}`}>Commence par un raccourci, ou pose ta question librement — il connaît ton activité.</p>
+            {!grand && <div className="flex flex-wrap items-center justify-center gap-1.5 pt-1">
               {SHORTCUTS.slice(0, 3).map((s) => (
                 <button key={s.key} onClick={() => send(s.prompt)} data-testid={`chat-suggestion-${s.key}`}
                   className="inline-flex items-center gap-1.5 rounded-full border border-gold/25 bg-gold/[0.07] px-3 py-1.5 text-[11px] font-medium text-offwhite/85 transition-all duration-200 hover:border-gold/50 hover:bg-gold/15 hover:text-gold">
                   <s.icon className="h-3 w-3 text-gold" /> {s.label}
                 </button>
               ))}
-            </div>
+            </div>}
           </div>
         )}
         {messages.map((m, i) => (
@@ -764,43 +784,64 @@ function ChatTab({ firstName, grand = false }) {
         <BoutonDernierMessage visible={decolle} onClick={versLeBas} />
       </div>
       <div className="border-t border-white/10 px-4 py-3">
-        {/* Raccourcis sur UNE seule ligne, défilement horizontal (molette / glissé tactile), sans barre visible. */}
-        <div className="mb-2 -mx-1 flex flex-nowrap gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          data-testid="ai-shortcuts"
-          onWheel={(e) => { if (e.deltaY && !e.deltaX) e.currentTarget.scrollLeft += e.deltaY; }}>
-          {SHORTCUTS.map((s) => (
-            <button key={s.key} onClick={() => send(s.prompt)} disabled={streaming} data-testid={`ai-shortcut-${s.key}`}
-              className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-offwhite/80 transition-colors hover:border-gold/40 hover:text-gold disabled:opacity-50">
-              <s.icon className="h-3 w-3 text-gold" /> {s.label}
-            </button>
-          ))}
-        </div>
-        <div className="chat-input-card rounded-3xl border border-gold/25 bg-white/[0.04] px-3 pb-2 pt-2 shadow-[0_10px_34px_rgba(232,199,126,0.07)] transition-colors duration-300 focus-within:border-gold/55 focus-within:bg-white/[0.06]">
-          <textarea rows={1} value={input} onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-            placeholder="Écris au Copilote IA…" data-testid="chat-input"
-            className="max-h-28 w-full resize-none border-0 bg-transparent px-1 py-1.5 text-sm text-offwhite placeholder:text-offwhite/40 focus:outline-none" />
-          <div className="flex items-center justify-between pt-0.5">
-            <span className="hidden pl-1 text-[10px] text-offwhite/35 sm:inline">Entrée pour envoyer · Maj + Entrée pour une nouvelle ligne</span>
-            <span className="inline pl-1 text-[10px] text-offwhite/35 sm:hidden" />
-            <div className="flex items-center gap-1.5">
-              <button className="flex h-8 w-8 items-center justify-center rounded-full text-offwhite/50 transition-colors hover:bg-white/5 hover:text-gold" title="Vocal (bientôt)" data-testid="chat-mic-btn">
-                <Mic className="h-4 w-4" />
-              </button>
-              <button onClick={() => send()} disabled={streaming || !input.trim()}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#E8C77E] to-[#C9973B] text-[#0f1b3a] shadow-lg shadow-gold/20 transition-all duration-200 hover:scale-105 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
-                data-testid="chat-send-btn" title="Envoyer">
-                {streaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              </button>
+        <div className={grand ? "mx-auto w-full max-w-[900px]" : ""}>
+          {!(grand && messages.length <= 1 && !streaming) && (
+            <div className="mb-2 -mx-1 flex flex-nowrap gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              data-testid="ai-shortcuts"
+              onWheel={(e) => { if (e.deltaY && !e.deltaX) e.currentTarget.scrollLeft += e.deltaY; }}>
+              {SHORTCUTS.map((s) => (
+                <button key={s.key} onClick={() => send(s.prompt)} disabled={streaming} data-testid={`ai-shortcut-${s.key}`}
+                  className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-offwhite/80 transition-colors hover:border-gold/40 hover:text-gold disabled:opacity-50">
+                  <s.icon className="h-3 w-3 text-gold" /> {s.label}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="chat-input-card rounded-3xl border border-gold/25 bg-white/[0.04] px-3 pb-2 pt-2 shadow-[0_10px_34px_rgba(232,199,126,0.07)] transition-colors duration-300 focus-within:border-gold/55 focus-within:bg-white/[0.06]">
+            <textarea rows={1} value={input} onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
+              placeholder="Écris au Copilote IA…" data-testid="chat-input"
+              className="max-h-28 w-full resize-none border-0 bg-transparent px-1 py-1.5 text-sm text-offwhite placeholder:text-offwhite/40 focus:outline-none" />
+            <div className="flex items-center justify-between pt-0.5">
+              <span className="hidden pl-1 text-[10px] text-offwhite/35 sm:inline">Entrée pour envoyer · Maj + Entrée pour une nouvelle ligne</span>
+              <span className="inline pl-1 text-[10px] text-offwhite/35 sm:hidden" />
+              <div className="flex items-center gap-1.5">
+                <button className="flex h-8 w-8 items-center justify-center rounded-full text-offwhite/50 transition-colors hover:bg-white/5 hover:text-gold" title="Vocal (bientôt)" data-testid="chat-mic-btn">
+                  <Mic className="h-4 w-4" />
+                </button>
+                <button onClick={() => send()} disabled={streaming || !input.trim()}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#E8C77E] to-[#C9973B] text-[#0f1b3a] shadow-lg shadow-gold/20 transition-all duration-200 hover:scale-105 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
+                  data-testid="chat-send-btn" title="Envoyer">
+                  {streaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
           </div>
+          {grand && messages.length <= 1 && !streaming && (
+            <div className="mt-4 flex flex-col items-center gap-2.5" data-testid="chat-suggestions-bas">
+              <p className="flex items-center gap-1.5 text-[12px] font-medium text-offwhite/60">
+                <Sparkles className="h-3.5 w-3.5 text-gold" /> Essaie de demander :
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {SHORTCUTS.slice(0, 4).map((s) => (
+                  <button key={s.key} onClick={() => send(s.prompt)} disabled={streaming} data-testid={`chat-suggestion-${s.key}`}
+                    className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-[12px] text-offwhite/80 transition-colors hover:border-gold/40 hover:text-gold disabled:opacity-50">
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {grand && (
+            <p className="mt-3 text-center text-[11px] text-offwhite/40" data-testid="chat-grand-astuce">
+              Range tes fichiers avec « Mes documents » · Survole un message pour le copier · Le Copilote propose, tu décides.
+            </p>
+          )}
         </div>
       </div>
     </div>
   );
 }
-
-// ── Onglet Point du jour ──
 function PointTab() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -1111,15 +1152,46 @@ export function ChatGrand({ onReduire, onClose }) {
     return () => window.removeEventListener("keydown", k);
   }, [onReduire, reglages]);
   return (
-    <div className={`${typeof document !== "undefined" && document.body.classList.contains("theme-clair") ? "theme-creme chat-grand-clair" : ""} chat-grand fixed inset-0 z-[70] overflow-y-auto`} data-testid="chat-grand">
-      {/* Conversation centrée (inspiration ChatGPT / Claude) : une seule colonne, large respiration. */}
-      <div className="mx-auto flex min-h-full max-w-[860px] flex-col px-2 py-3 sm:px-6 sm:py-6">
-        <div className="chat-grand-carte relative flex min-h-[calc(100vh-24px)] flex-1 flex-col overflow-hidden rounded-[28px] sm:min-h-[calc(100vh-48px)]">
-          <button onClick={() => setReglages(true)} data-testid="chat-grand-reglages"
-            className="absolute right-16 top-3 z-10 hidden items-center gap-1.5 rounded-full border border-white/12 bg-white/5 px-3 py-1.5 text-[12px] font-medium text-offwhite/70 transition hover:text-gold sm:inline-flex">
-            <Settings className="h-3.5 w-3.5" /> Réglages
-          </button>
-          <ChatBody grand estElargi onToggleTaille={onReduire} onClose={onClose} />
+    <div className={`${typeof document !== "undefined" && document.body.classList.contains("theme-clair") ? "theme-creme chat-grand-clair" : ""} chat-grand fixed inset-0 z-[70]`} data-testid="chat-grand">
+      {/* Halos d'arrière-plan animés, façon OkyAi. */}
+      <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+        <div className="chat-halo absolute left-1/2 top-1/2 h-[620px] w-[620px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gold/[0.07] blur-[110px]" />
+        <div className="absolute -right-24 top-0 h-[420px] w-[420px] rounded-full bg-navy/50 blur-[110px]" />
+        <div className="absolute -left-24 bottom-0 h-[380px] w-[380px] rounded-full bg-gold/[0.05] blur-[100px]" />
+      </div>
+
+      {/* Le menu gauche EXISTANT de l'application reste affiché (desktop). */}
+      <Sidebar />
+
+      <div className="relative z-10 flex h-full flex-col lg:pl-[96px]">
+        <header className="flex items-center justify-between gap-4 border-b border-white/10 px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gold/15 ring-1 ring-gold/30">
+              <Sparkles className="h-5 w-5 text-gold" />
+            </div>
+            <div className="leading-tight">
+              <h1 className="font-display text-xl font-bold text-offwhite sm:text-2xl" data-testid="chat-grand-titre">Copilote IA</h1>
+              <p className="mt-0.5 text-[12.5px] text-offwhite/55">Il connaît ton activité · mémoire active · il propose, tu décides</p>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <button onClick={() => setReglages(true)} data-testid="chat-grand-reglages"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-white/12 bg-white/5 px-3.5 py-2 text-[13px] font-medium text-offwhite/80 transition hover:border-gold/40 hover:text-gold"
+              title="Réglages du Copilote">
+              <Settings className="h-4 w-4" /> <span className="hidden sm:inline">Réglages</span>
+            </button>
+            <button onClick={onReduire} data-testid="chat-grand-reduire" title="Réduire le chat"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-white/12 bg-white/5 px-3.5 py-2 text-[13px] font-medium text-offwhite/80 transition hover:border-gold/40 hover:text-gold">
+              <Minimize2 className="h-4 w-4" /> <span className="hidden sm:inline">Réduire</span>
+            </button>
+            <button onClick={onClose} data-testid="chat-grand-fermer" title="Fermer"
+              className="rounded-xl border border-white/12 bg-white/5 p-2 text-offwhite/80 transition hover:text-gold sm:hidden">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </header>
+        <div className="relative flex min-h-0 flex-1 flex-col">
+          <ChatBody grand sansEnTete estElargi onToggleTaille={onReduire} onClose={onClose} />
         </div>
       </div>
       {reglages && (
