@@ -1,0 +1,22 @@
+{
+  "summary": "Validation complète des 8 points demandés (PC chat masqué + bouton flottant chat-rouvrir, deep link /app?tab=chat, menu chat-menu-plus avec documents/collaborateur + close par clic extérieur, état vide sobre « Bonjour Thomas » + 3 raccourcis sans chat-ecrit ni message IA automatique, régression envoi message OK avec réponse IA, grand format via chat-toggle-taille-btn + Réduire fonctionnel, cloche notifications max-h-75vh + w-[calc(100vw-16px)] sm:w-80 + titre « NOTIFICATIONS · N » affiché, mobile 390px Radar/Actions/Chat sans débordement horizontal, panneau notifications 374px dans 390). Tous les tests passent.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Header.jsx ligne 380 : le bouton 'notif-tout-lu' n'apparaît que si inboxNonLues.length > 0 (notifications INBOX non lues). Avec 4 notifications ambiantes (actu/décisions/vision) mais 0 inbox, le bouton ne s'affiche pas — comportement cohérent avec le code mais le brief disait « bouton Tout lu visible dès 1 non-lue » : si le client s'attend à ce que ça inclue les notifs ambiantes, il faudra élargir la condition. Non bloquant : le compteur dans le titre '· N' est bien visible dans tous les cas."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "n/a", "frontend": "100%" },
+  "test_credentials": "Thomas via login-guest-btn (preview). Admin: test.essentielle@zayado.net / Test!2026 (POST /api/auth/login puis localStorage.setItem('kairos_access_token', token)).",
+  "seed_data_creation": "aucune",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Thomas (démo) a un historique conversationnel chargé (~19 msgs) : pour tester l'état vide, dispatcher window.dispatchEvent(new Event('kairos:chat-nouveau')) après ouverture du panneau pour vider les messages. Le bouton 'Tout lu' notifications n'apparaît que pour les notifs INBOX non lues (pas les notifs ambiantes comme actu/décisions). Pour tester la pastille WhatsApp ambre admin, dismisser d'abord la modale « Bienvenue dans Zayado » (bouton 'Plus tard') qui apparaît au 1er login admin.",
+  "rca of the issue": "Non applicable — toutes les fonctionnalités demandées sont validées."
+}

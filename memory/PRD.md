@@ -73,3 +73,13 @@ Le client a fourni « Zayado — Services et produits de la marketplace.docx » 
   - Relance post-scan : quand le QR est scanné, le backend envoie au numéro connecté (conversation « Moi-même ») la confirmation + les 5 premières actions a_faire du Plan d'action (raise_for_status ajouté).
   - Robustesse : buildSession du microservice nettoie les verrous Chromium — le Reconnecter plantait (« The browser is already running ») après un kill du service.
 - Testé (testing agent, /app/test_reports/iteration_1.json, 100 % back + front) : bulles étroites validées, envoi de message + réponse streaming OK, pastille ambre visible pour l'admin et absente pour Thomas, webhooks 200 {ok:true}, mobile 390 OK. Pastille verte, alerte de déconnexion réelle et réception de la relance : À VALIDER PAR LA PROPRIÉTAIRE après scan du QR.
+
+
+## Chat redessiné : fermé par défaut, en-tête épuré, zéro pavé d'infos (2026-10-08)
+- Demande client : « le chat sur PC à droite ne doit pas s'ouvrir par défaut », « trop d'info en haut, peut-être déplacer l'icône dossier », « les infos à chaque fois qu'on contacte le chat, tu trouves cela pro ? », notifications à améliorer, mobile radar/plan d'action/chat.
+- ChatPanel (cockpit xl) : JAMAIS ouvert au chargement (suppression de la persistance localStorage zayado_chat_masque) ; bouton flottant or « Copilote » (chat-rouvrir) en bas à droite pour l'ouvrir ; deep-link /app?tab=chat|actu|decisions rouvre le panneau (fix : l'événement partait avant le montage).
+- En-tête du chat épuré : Décisions + Actualité (icônes) + menu « + » (chat-menu-plus) qui regroupe Mes documents, Écrire à l'équipe Zayado et le statut « Transmis » (cloud sync) + Réglages/Agrandir/Fermer.
+- Zéro pavé d'infos : le message d'accueil et le moteur de questions de mise en route (REGLAGES, ControlesReglage, ChoixDossier, RelierTrello, RYTHMES_ACTU, ~180 lignes) sont SUPPRIMÉS ; état vide sobre « Bonjour {prénom} » + 3 raccourcis ; historique relu côté serveur inchangé ; kairos:chat-nouveau → conversation vide.
+- Cloche améliorée : panneau défilable (max-h-75vh), largeur responsive mobile (w-[calc(100vw-16px)] sm:w-80), compteur « Notifications · N » et bouton « Tout lu » visible dès 1 non-lue (reçu) + en bas de liste.
+- Mobile radar/actions/chat : aucun débordement horizontal mesuré à 390 px (scrollWidth == innerWidth), grilles déjà empilées ; capture desktop de preuve : cockpit plein écran sans panneau + bouton flottant, et chat ouvert avec en-tête épuré.
+- Testé (testing agent, iteration_2.json, 100 %) : les 8 points passent. Note : le bouton « Tout lu » ne concerne que les notifications reçues (inbox) — les indicateurs ambiants (actu/décisions/vision) n'ont rien à marquer.
