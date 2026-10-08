@@ -169,6 +169,16 @@ export function ChatBody({ onClose, estElargi, onToggleTaille, grand = false, su
   const [collab, setCollab] = useState(null); // null = fermé, sinon { contexte }
   // Menu « + » de l'en-tête : documents, équipe et exports regroupés (l'en-tête restait trop chargé).
   const [menu, setMenu] = useState(false);
+  // Lien Drive/OneDrive des documents : demandé EN AVANCE (à l'ouverture du menu) pour que
+  // le clic ouvre un vrai lien natif — jamais bloqué par le bloqueur de pop-ups —
+  // ou propose clairement de relier le cloud quand aucun dossier n'existe encore.
+  const [dossierEtat, setDossierEtat] = useState(null); // null = consultation en cours ; { url } ; { url: null } = rien de relié
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (!menu) return;
+    setDossierEtat(null);
+    ouvrirMesDocuments().then((r) => setDossierEtat(r)).catch(() => setDossierEtat({ url: null }));
+  }, [menu]);
   useEffect(() => {
     const ouvrir = (e) => setCollab({ contexte: e?.detail?.contexte || "" });
     window.addEventListener("zayado:ouvrir-collaborateur", ouvrir);
@@ -233,14 +243,20 @@ export function ChatBody({ onClose, estElargi, onToggleTaille, grand = false, su
                       <CloudCheck className="h-3.5 w-3.5 shrink-0" /> Document transmis {cloudSync.provider === "google" ? "dans Google Drive" : "dans OneDrive / SharePoint"}
                     </div>
                   )}
-                  <button onClick={() => { setMenu(false); ouvrirDossierDocuments(); }} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium text-offwhite/85 transition hover:bg-white/10 hover:text-gold" data-testid="chat-menu-documents">
-                    <FolderOpen className="h-4 w-4 shrink-0 text-gold" /> Mes documents (Drive / OneDrive)
-                  </button>
+                  {dossierEtat?.url ? (
+                    <a href={dossierEtat.url} target="_blank" rel="noopener noreferrer" onClick={() => setMenu(false)} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium text-offwhite/85 transition hover:bg-white/10 hover:text-gold" data-testid="chat-menu-documents">
+                      <FolderOpen className="h-4 w-4 shrink-0 text-gold" /> Mes documents (Drive / OneDrive)
+                    </a>
+                  ) : (
+                    <button onClick={() => { setMenu(false); if (dossierEtat && dossierEtat.url === null) { navigate({ pathname: "/parametres", hash: "#connexions" }); } else { ouvrirDossierDocuments(); } }} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium text-offwhite/85 transition hover:bg-white/10 hover:text-gold" data-testid="chat-menu-documents">
+                      <FolderOpen className="h-4 w-4 shrink-0 text-gold" /> {dossierEtat && dossierEtat.url === null ? "Relier mon Google Drive / OneDrive" : "Mes documents (Drive / OneDrive)"}
+                    </button>
+                  )}
                   <button onClick={() => { setMenu(false); setCollab({ contexte: contexteChat.texte }); }} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium text-offwhite/85 transition hover:bg-white/10 hover:text-gold" data-testid="chat-menu-collaborateur">
                     <Users className="h-4 w-4 shrink-0 text-gold" /> Écrire à l'équipe Zayado
                   </button>
-                  {messages.filter((m) => m.role === "assistant" && m.content).length > 0 && (
-                    <button onClick={() => { setMenu(false); telechargerDocument(`Conversation Copilote du ${new Date().toLocaleDateString("fr-FR")}`, messages.filter((m) => m.content).map((m) => `${m.role === "user" ? "Moi" : "Copilote"} : ${m.content}`).join("\n\n"), "docx").then(() => toast.success("Conversation exportée en Word ✅")).catch(() => toast.error("Export impossible pour le moment.")); }} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium text-offwhite/85 transition hover:bg-white/10 hover:text-gold" data-testid="chat-menu-export">
+                  {((memoireChat.messages || []).filter((m) => m.role === "assistant" && m.content)).length > 0 && (
+                    <button onClick={() => { setMenu(false); telechargerDocument(`Conversation Copilote du ${new Date().toLocaleDateString("fr-FR")}`, (memoireChat.messages || []).filter((m) => m.content).map((m) => `${m.role === "user" ? "Moi" : "Copilote"} : ${m.content}`).join("\n\n"), "docx").then(() => toast.success("Conversation exportée en Word ✅")).catch(() => toast.error("Export impossible pour le moment.")); }} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium text-offwhite/85 transition hover:bg-white/10 hover:text-gold" data-testid="chat-menu-export">
                       <FileDown className="h-4 w-4 shrink-0 text-gold" /> Exporter la conversation (Word)
                     </button>
                   )}
