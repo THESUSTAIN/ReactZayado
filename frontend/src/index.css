@@ -163,7 +163,7 @@ input.bg-white\/\[0\.08\]:focus, textarea.bg-white\/\[0\.08\]:focus {
     }
     .btn-gold {
         @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 font-semibold text-navy-900 transition-all duration-200 active:scale-95;
-        background: linear-gradient(135deg, #F1E2CC 0%, #E8C77E 45%, #C9973B 100%);
+        background: linear-gradient(135deg, #F8EEDD 0%, #F1E2CC 50%, #DEC2A3 100%);
         box-shadow: 0 6px 20px -6px rgba(222, 194, 163, 0.6);
     }
     .btn-gold:hover {

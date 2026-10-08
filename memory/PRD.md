@@ -83,3 +83,11 @@ Le client a fourni « Zayado — Services et produits de la marketplace.docx » 
 - Cloche améliorée : panneau défilable (max-h-75vh), largeur responsive mobile (w-[calc(100vw-16px)] sm:w-80), compteur « Notifications · N » et bouton « Tout lu » visible dès 1 non-lue (reçu) + en bas de liste.
 - Mobile radar/actions/chat : aucun débordement horizontal mesuré à 390 px (scrollWidth == innerWidth), grilles déjà empilées ; capture desktop de preuve : cockpit plein écran sans panneau + bouton flottant, et chat ouvert avec en-tête épuré.
 - Testé (testing agent, iteration_2.json, 100 %) : les 8 points passent. Note : le bouton « Tout lu » ne concerne que les notifications reçues (inbox) — les indicateurs ambiants (actu/décisions/vision) n'ont rien à marquer.
+
+## Accueil façon OkyAi : capteurs, limite de tâches, beige du login (2026-10-08)
+- Demande client : trop de tâches sur l'accueil (19 cartes TEST) ; bouton login « bizarre marron dégradé et non beige » ; générer une image de l'accueil Zayado dans le design du dashboard OkyAi (violet→beige, fond bleu navy).
+- Bouton login corrigé : btn-gold passe de `#F1E2CC→#E8C77E→#C9973B` (bronze → effet marron) à `#F8EEDD→#F1E2CC→#DEC2A3` (beige pur, cohérent avec les boutons du hero). Vérifié par style calculé.
+- Quatre cartes capteurs (composant CarteCapteur, langage visuel OkyAi : label capitales, chiffre 30px, ligne de contexte, icône en pastille, note colorée verte/or en bas) remplacent la ligne de 3 chiffres : Énergie (score/5 + check-in), Série (jours + tenue), Actions (faites/total), Objectif 90 j (% ou — + cap 3 ans). data-testid cockpit-capteurs / cap-*.
+- « Tes autres priorités » limité à 6 cartes + lien or « Voir les N dans le Plan d'action → » (data-testid priorites-voir-tout) vers /app/actions?tab=actions. Vérifié sur le compte Thomas : 6 cartes affichées, lien « Voir les 19… ».
+- Images de preuve servies par la preview : capture-1 (chat fermé PC), capture-2 (chat ouvert), capture-3 (chat mobile 390), capture-4 (menu + ouvert), capture-5 (accueil redesign PC, compte Thomas), capture-6 (accueil mobile 390).
+

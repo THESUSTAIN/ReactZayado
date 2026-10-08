@@ -68,6 +68,32 @@ function AnneauEnergie({ valeur, vide = false }) {
   );
 }
 
+// Une carte capteur, calquée sur les grands tableaux de bord (OkyAi & co) :
+// label en capitales, chiffre massif, ligne de contexte, icône en pastille
+// à droite et une note colorée en bas. Le fond reste navy, l'accent est beige.
+function CarteCapteur({ icon: Icone, label, valeur, sous, note, testid }) {
+  const [ok, texte] = note || [null, null];
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_30px_-12px_rgba(222,194,163,0.35)]" data-testid={testid}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold uppercase tracking-[0.17em] text-offwhite/55">{label}</p>
+          <p className="mt-2.5 font-display text-[30px] font-semibold leading-none text-offwhite">{valeur}</p>
+          <p className="mt-2.5 text-[12.5px] leading-snug text-offwhite/45">{sous}</p>
+        </div>
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/[0.07] text-offwhite/70" aria-hidden>
+          <Icone size={19} />
+        </span>
+      </div>
+      {texte ? (
+        <p className={`mt-3 flex items-center gap-1.5 text-[12px] font-semibold ${ok ? "text-emerald-300" : "text-gold"}`}>
+          <TrendingUp size={12} /> {texte}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export default function Cockpit() {
   const { user, energy, priorities, goal, victory, mode, modeInfo, isRecovery, aCheckin, refresh } = useKairos();
   const [nouvelleVictoire, setNouvelleVictoire] = useState("");
@@ -98,18 +124,6 @@ export default function Cockpit() {
   const doneCount = priorities.filter((p) => p.done).length;
   const focusPriority = priorities.find((p) => !p.done) || priorities[0];
   const dateDuJour = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
-
-  // Trois chiffres lus depuis l'état réel. Aucun n'est décoratif : s'il n'y a
-  // rien à dire, la ligne dit ce qui manque au lieu d'afficher un zéro flatteur.
-  const chiffres = [
-    serie && serie.jours > 0
-      ? [`${serie.jours} jour${serie.jours > 1 ? "s" : ""}`, serie.aujourdhui_fait ? "de suite · tenu aujourd'hui" : "de suite · à prolonger"]
-      : ["Première journée", "ta série démarre avec un geste"],
-    goal?.title ? ["Cap défini", "ta Vision est reliée"] : ["Pas de cap", "le Radar attend ta phrase"],
-    priorities.length > 0
-      ? [`${doneCount}/${priorities.length}`, doneCount === priorities.length ? "tout est accompli" : "accomplies aujourd'hui"]
-      : ["Rien de posé", "ta journée est encore ouverte"],
-  ];
 
   return (
     <div className="min-h-screen">
@@ -197,17 +211,23 @@ export default function Cockpit() {
                 </div>
               </Ok>
 
-              {/* Trois chiffres, tous vrais : la série, le cap, les victoires. */}
-              <div className="mb-6 flex flex-wrap gap-x-10 gap-y-4 px-1.5 animate-fade-up" data-testid="cockpit-chiffres">
-                {chiffres.map(([v, d], i) => (
-                  <React.Fragment key={d}>
-                    {i > 0 && <span className="hidden w-px self-stretch bg-white/10 sm:block" />}
-                    <div>
-                      <p className="font-display text-[23px] font-semibold">{v}</p>
-                      <p className="mt-0.5 text-[12.5px] text-offwhite/38">{d}</p>
-                    </div>
-                  </React.Fragment>
-                ))}
+              {/* ── QUATRE CAPTEURS, façon tableau de bord : l'état de la journée
+                     se lit en deux secondes — énergie, série, actions, cap.
+                     Tous les chiffres viennent de l'état réel ; s'il n'y a rien
+                     à dire, la note dit ce qui manque au lieu d'un zéro flatteur. ── */}
+              <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4 animate-fade-up" data-testid="cockpit-capteurs">
+                <CarteCapteur icon={BatteryMedium} label="Énergie" valeur={`${energy.score}/5`}
+                  sous={aCheckin ? `check-in fait · ${Math.round(energyPercent)}% de charge` : "ton check-in du jour attend"} 
+                  note={aCheckin ? ["Check-in du jour fait", true] : ["Faire mon check-in", false]} testid="cap-energie" />
+                <CarteCapteur icon={Flame} label="Série" valeur={serie && serie.jours > 0 ? `${serie.jours} j` : "0 j"}
+                  sous={serie && serie.jours > 0 ? (serie.aujourdhui_fait ? "tenue aujourd'hui — continue" : "à prolonger aujourd'hui") : "ta série démarre avec un geste"}
+                  note={serie && serie.aujourdhui_fait ? ["Rythme tenu aujourd'hui", true] : ["Un geste la relance", false]} testid="cap-serie" />
+                <CarteCapteur icon={CheckSquare} label="Actions" valeur={`${doneCount}/${priorities.length || 0}`}
+                  sous={priorities.length ? (doneCount === priorities.length ? "journée complète, bravo" : "accomplies aujourd'hui") : "rien de posé — ta journée est ouverte"}
+                  note={priorities.length ? [`${priorities.length - doneCount} en cours`, true] : ["Poser une action", false]} testid="cap-actions" />
+                <CarteCapteur icon={Target} label="Objectif 90 j" valeur={goal?.title ? `${goal.percent || 0}%` : "—"}
+                  sous={goal?.title ? goal.title.slice(0, 38) : "ton cap de 90 jours attend d'être posé"}
+                  note={capLong ? [`Cap 3 ans relié`, true] : ["Relier ma Vision", false]} testid="cap-objectif" />
               </div>
 
               {/* ── LA VICTOIRE, EN LIGNE ──────────────────────────────────
@@ -271,14 +291,20 @@ export default function Cockpit() {
                      invitation. ── */}
               {priorities.length > 1 && (() => {
                 const autres = priorities.filter((p) => p.id !== focusPriority?.id);
+                // L'accueil montre au plus 6 cartes : au-delà, la page devient un
+                // back-log illisible. Le reste vit dans le Plan d'action, à un clic.
+                const affichees = autres.slice(0, 6);
                 return (
                   <section className="mb-5 animate-fade-up" style={{ animationDelay: "180ms" }}>
-                    <div className="mb-3 flex items-center justify-between">
+                    <div className="mb-3 flex items-center justify-between gap-3">
                       <h2 className="font-display text-xl font-bold text-offwhite">Tes autres priorités</h2>
-                      <span className="text-sm text-offwhite/50">{doneCount}/{priorities.length} accomplies au total</span>
+                      <button onClick={() => navigate("/app/actions?tab=actions")} data-testid="priorites-voir-tout"
+                        className="shrink-0 text-sm font-semibold text-gold hover:underline">
+                        {autres.length > 6 ? `Voir les ${autres.length} dans le Plan d'action →` : "Ouvrir le Plan d'action →"}
+                      </button>
                     </div>
-                    <div className={`grid gap-4 ${autres.length >= 3 ? "lg:grid-cols-3" : "sm:grid-cols-2"}`}>
-                      {autres.map((p) => <PriorityCard key={p.id} priority={p} />)}
+                    <div className={`grid gap-4 ${affichees.length >= 3 ? "lg:grid-cols-3" : "sm:grid-cols-2"}`}>
+                      {affichees.map((p) => <PriorityCard key={p.id} priority={p} />)}
                     </div>
                   </section>
                 );
