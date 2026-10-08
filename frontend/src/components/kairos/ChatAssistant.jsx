@@ -239,6 +239,11 @@ export function ChatBody({ onClose, estElargi, onToggleTaille, grand = false, su
                   <button onClick={() => { setMenu(false); setCollab({ contexte: contexteChat.texte }); }} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium text-offwhite/85 transition hover:bg-white/10 hover:text-gold" data-testid="chat-menu-collaborateur">
                     <Users className="h-4 w-4 shrink-0 text-gold" /> Écrire à l'équipe Zayado
                   </button>
+                  {messages.filter((m) => m.role === "assistant" && m.content).length > 0 && (
+                    <button onClick={() => { setMenu(false); telechargerDocument(`Conversation Copilote du ${new Date().toLocaleDateString("fr-FR")}`, messages.filter((m) => m.content).map((m) => `${m.role === "user" ? "Moi" : "Copilote"} : ${m.content}`).join("\n\n"), "docx").then(() => toast.success("Conversation exportée en Word ✅")).catch(() => toast.error("Export impossible pour le moment.")); }} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium text-offwhite/85 transition hover:bg-white/10 hover:text-gold" data-testid="chat-menu-export">
+                      <FileDown className="h-4 w-4 shrink-0 text-gold" /> Exporter la conversation (Word)
+                    </button>
+                  )}
                 </div>
               </>
             )}
@@ -510,7 +515,7 @@ function ChatTab({ firstName, grand = false }) {
             <p className={`font-display font-bold text-offwhite ${grand ? "text-2xl" : "text-lg"}`}>{accueil}</p>
             <p className={`leading-relaxed text-offwhite/55 ${grand ? "text-sm" : "text-xs"}`}>Dis-moi par quoi on commence.</p>
             <div className="flex flex-wrap items-center justify-center gap-1.5 pt-1">
-              {SHORTCUTS.slice(0, 3).map((s) => (
+              {!grand && SHORTCUTS.slice(0, 3).map((s) => (
                 <button key={s.key} onClick={() => send(s.prompt)} data-testid={`chat-suggestion-${s.key}`}
                   className="inline-flex items-center gap-1.5 rounded-full border border-gold/25 bg-gold/[0.07] px-3 py-1.5 text-[11px] font-medium text-offwhite/85 transition-all duration-200 hover:border-gold/50 hover:bg-gold/15 hover:text-gold">
                   <s.icon className="h-3 w-3 text-gold" /> {s.label}
@@ -540,7 +545,7 @@ function ChatTab({ firstName, grand = false }) {
                 {(grand || i > 0) && m.le && m.content && !(streaming && i === messages.length - 1) && <span className={`mt-1.5 block text-[10.5px] ${m.role === "user" ? "opacity-55" : "text-offwhite/40"}`}>{heure(m.le)}</span>}
               </div>
 
-              {m.role === "assistant" && m.content && i > 0 && !m.reglage && !m.info && !(streaming && i === messages.length - 1) && (
+              {m.role === "assistant" && m.content && !m.reglage && !m.info && !(streaming && i === messages.length - 1) && (
                 <ActionsMessage m={m} demande={messages[i - 1]?.role === "user" ? messages[i - 1].content : ""} onCopier={() => copierReponse(m)}
                   onImage={(img) => setMessages((x) => [...x, { role: "assistant", content: img.description, image: img, le: new Date().toISOString() }])} i={i} />
               )}
@@ -602,7 +607,7 @@ function ChatTab({ firstName, grand = false }) {
               </div>
             </div>
           </div>
-          {grand && messages.length <= 1 && !streaming && (
+          {grand && messages.length === 0 && !streaming && (
             <div className="mt-4 flex flex-col items-center gap-2.5" data-testid="chat-suggestions-bas">
               <p className="flex items-center gap-1.5 text-[12px] font-medium text-offwhite/60">
                 <Sparkles className="h-3.5 w-3.5 text-gold" /> Essaie de demander :
