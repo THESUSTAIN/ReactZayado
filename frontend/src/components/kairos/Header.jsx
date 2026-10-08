@@ -372,8 +372,18 @@ export function Header() {
               <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-alert px-1 text-[9px] font-bold text-white" data-testid="bell-badge">{notifCount}</span>
             )}
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="glass-strong w-80 border-white/10 text-offwhite">
-            <DropdownMenuGroup><DropdownMenuLabel className="text-xs uppercase tracking-[0.2em] text-gold">Notifications</DropdownMenuLabel></DropdownMenuGroup>
+          <DropdownMenuContent align="end" className="glass-strong max-h-[75vh] w-[calc(100vw-16px)] overflow-y-auto border-white/10 text-offwhite sm:w-80">
+            <DropdownMenuGroup className="flex items-center justify-between gap-2">
+              <DropdownMenuLabel className="text-xs uppercase tracking-[0.2em] text-gold">
+                Notifications{notifChargees && notifCount > 0 ? ` · ${notifCount}` : ""}
+              </DropdownMenuLabel>
+              {inboxNonLues.length > 0 && (
+                <button onClick={toutLu} data-testid="notif-tout-lu"
+                  className="mr-1 flex items-center gap-1 px-2 py-1 text-[11px] text-offwhite/55 hover:text-gold">
+                  <CheckCheck className="h-3 w-3" /> Tout lu
+                </button>
+              )}
+            </DropdownMenuGroup>
             {enRepos && (
               <p className="px-2 py-1.5 text-[11px] italic text-gold/80" data-testid="notif-jour-repos">
                 Jour de repos : les rappels doux se taisent aujourd'hui. Bonne pause.
@@ -383,7 +393,7 @@ export function Header() {
             {inbox.items.length > 0 && (
               <>
                 {inboxNonLues.length > 1 && (
-                  <button onClick={toutLu} data-testid="notif-tout-lu"
+                  <button onClick={toutLu} data-testid="notif-tout-lu-bas"
                     className="ml-auto flex items-center gap-1 px-3 pb-1 pt-0.5 text-[11px] text-offwhite/55 hover:text-gold">
                     <CheckCheck className="h-3 w-3" /> Tout marquer comme lu
                   </button>
