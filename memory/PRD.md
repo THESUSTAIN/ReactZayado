@@ -139,3 +139,9 @@
 - Pied de page : le bloc guide est masqué quand la page en a déjà un. Tests iteration_6 OK (débordement 9px corrigé ensuite).
 - À faire : avis clients vérifiés (validation dans l'admin), Notes de la maison, tunnel « Optimisation d'entreprise ».
 
+## Audit production 14/10/2026 (iteration_7) + correctif (iteration_8)
+- BUG CRITIQUE corrigé : redirections /public, /legal, /diagnostic → « undefined » (VITE_SHOP_URL absente sur Railway). App.tsx : BOUTIQUE = VITE_SHOP_URL || https://zayado.net. VITE_SHOP_URL retirée du .env local pour reproduire la prod. À REDÉPLOYER sur Railway.
+- zayado.net répond 402 « boutique indisponible » (abonnement Shopify à régler côté utilisateur).
+- admin@zayado.net / Admin!2026 refusé en prod (401) : mot de passe prod différent.
+- Droits par forfait : droits.js (MODULES_MIN + PAGES) ne couvre que les anciennes routes /app/* ; les pages actuelles (/, /radar, /pilotage, /plan-action, /tunnels, /entreprise) ne sont pas verrouillées → tous les forfaits voient tout. Écarts avec la grille : Radar min = Solo alors que Rêveur a le « Radar découverte » ; Rêveur a « 1 tunnel » mais tunnels = cockpit = Solo ; Équipe : « 3 comptes » vs « jusqu'à 5 personnes ».
+

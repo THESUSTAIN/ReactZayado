@@ -1,0 +1,23 @@
+{
+  "summary": "Frontend-only test of the VITE_SHOP_URL fallback fix in App.tsx (BOUTIQUE = VITE_SHOP_URL || 'https://zayado.net'). VITE_SHOP_URL is absent from /app/frontend/.env (reproducing Railway prod). All 11 public/legal/partner routes correctly redirect to https://zayado.net/pages/... with NO 'undefined' in the final URL. Shopify currently returns 'Cette boutique est actuellement indisponible' (402/503) which is expected and out of scope per the request. The 4 non-regression routes (/login, /pricing, /public/tunnel/confirmation, /public/tunnel/kit) remain inside the app with no redirect.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "App.tsx L188: fallback 'https://zayado.net' is correct. Consider also guarding against VITE_SHOP_URL set to empty string by using a truthy check (currently '' would evaluate falsy with ||, which is fine).",
+    "App.tsx L189-192: LEGAL map falls back to the raw :page param when key not found; this is acceptable but could redirect to an unknown Shopify page. Low risk."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "100%"},
+  "test_credentials": "none required",
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Verified routes individually with Playwright page.goto + wait_for_url('zayado.net'). Some routes needed a slightly longer timeout (>8s) because the app bundle must boot in a fresh tab before useEffect fires window.location.replace. All 11 redirects verified: /public/tunnel, /public/tunnel/merci, /diagnostic -> /pages/diagnostic; /public/reprise, /public/reprise/rdv, /public/cession -> /pages/reprise; /legal/cgu -> /pages/cgu; /legal/cgv -> /pages/cgv; /legal/confidentialite -> /pages/confidentialite; /legal/mentions -> /pages/mentions-legales; /partenaires/thesustain -> /pages/maison. Zayado.net itself shows Shopify 'boutique indisponible' which is noted in the request as not an app bug.",
+  "rca of the issue": "Original bug: BOUTIQUE used `import.meta.env.VITE_SHOP_URL` without fallback, producing the string 'undefined' when the var was unset on Railway. Fix (confirmed in App.tsx L188): `(import.meta.env.VITE_SHOP_URL as string | undefined) || 'https://zayado.net'` provides a safe default. Reproduction locally with VITE_SHOP_URL removed from /app/frontend/.env now yields correct zayado.net URLs with no 'undefined'."
+}
