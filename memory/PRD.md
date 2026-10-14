@@ -145,3 +145,9 @@
 - admin@zayado.net / Admin!2026 refusé en prod (401) : mot de passe prod différent.
 - Droits par forfait : droits.js (MODULES_MIN + PAGES) ne couvre que les anciennes routes /app/* ; les pages actuelles (/, /radar, /pilotage, /plan-action, /tunnels, /entreprise) ne sont pas verrouillées → tous les forfaits voient tout. Écarts avec la grille : Radar min = Solo alors que Rêveur a le « Radar découverte » ; Rêveur a « 1 tunnel » mais tunnels = cockpit = Solo ; Équipe : « 3 comptes » vs « jusqu'à 5 personnes ».
 
+## Forfaits & paiement (14/10/2026, iterations 9-11)
+- Droits : droits.js couvre / (cockpit), /plan-action (actions), /pilotage (chiffres), /radar, /tunnels (Rêveur), /copilote. Menu chrome.tsx : Plan=actions, Chiffres=chiffres. Rêveur → / redirige vers /vision-board.
+- Debloquer : « Essayer Solo » lance le paiement (plus /activer). Lien marketing connecté → /onboarding?plan=serenite&essai=1.
+- Mollie (commerce_ext.py) : motif exact du refus renvoyé + journalisé ; MOLLIE_PROFILE_ID / MOLLIE_TESTMODE pris en compte si la clé est un jeton access_… ; client Mollie recréé si créé avec une autre clé.
+- PROD : POST /api/checkout → 502 « Mollie a refusé la demande (400) » à la création du client : cause exacte visible après redéploiement (probable clé Mollie invalide ou jeton d'organisation sans profileId).
+

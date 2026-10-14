@@ -1,0 +1,23 @@
+{
+  "summary": "Contre-test ciblé de la correction des verrous menu (chrome.tsx) demandée par l'itération 10. Vérifications réalisées sur l'URL preview via login UI avec compte Rêveur et Solo. ✅ RÊVEUR : (1) Sidebar desktop sur /app/debloquer -> nav-lock-today=true, nav-lock-plan=true, AUCUN verrou sur chiffres/clients/vision/bienetre. (2) Barre du bas (390px) sur /app/debloquer -> cadenas présent sur bottomnav-today et bottomnav-plan, AUCUN cadenas sur clients/vision. (3) Clic sur nav-chiffres ouvre bien /pilotage (href='/pilotage'). (4) / redirige vers /vision-board. (5) /plan-action redirige vers /app/debloquer?m=actions. ✅ SOLO : aucun verrou sur today/plan/chiffres/clients/vision/bienetre dans la sidebar desktop. Les corrections de /app/frontend/src/components/vision/chrome.tsx (ENTREES: plan->module 'actions', chiffres->module 'chiffres') sont effectives et correspondent à la grille attendue.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_11.json"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "chrome.tsx:ENTREES correctement aligné avec MODULES_MIN (droits.js). Les testids nav-lock-{cle} et bottomnav-{cle} sont bien exposés.",
+    "Rappel LOW de l'itération 10 toujours valable : /app/frontend/src/zy/components/kairos/Sidebar.jsx (ancien, MOD_MENU) semble ne plus être utilisé mais partage des data-testid avec chrome.tsx — à nettoyer pour éviter la confusion. Non bloquant."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend only)", "frontend": "100% sur les points demandés"},
+  "test_credentials": "test.reveur@zayado.net / Test!2026, test.solo@zayado.net / Test!2026 — tous deux validés via /login (onglet Mot de passe)",
+  "seed_data_creation": "Aucune",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Login UI: /login -> cocher la case CGU -> onglet 'Mot de passe' -> remplir email+password -> bouton 'Se connecter'. Le token est posé dans localStorage['kairos_access_token']. Attention : Cloudflare bot-check se déclenche après trop de navigations rapides sur l'URL preview — prévoir sleep ~60-90s entre batchs. Les testids: sidebar desktop = [data-testid='nav-lock-<cle>'], mobile = [data-testid='bottomnav-<cle>'] avec span.nav-cadenas enfant si verrouillé. cles: today, plan, chiffres, clients, vision, bienetre.",
+  "rca of the issue": "N/A — correction validée. Pas de régression."
+}
