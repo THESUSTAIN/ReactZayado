@@ -184,7 +184,8 @@ function GardeAcces() {
 }
 
 // Pages publiques = boutique Shopify. L'appli ne garde que connexion, espace client, paiement Mollie, /admin et /espace-vendeur.
-const BOUTIQUE = import.meta.env.VITE_SHOP_URL as string;
+// Domaine public de la boutique (marque) : la variable Railway VITE_SHOP_URL peut le remplacer.
+const BOUTIQUE = (import.meta.env.VITE_SHOP_URL as string | undefined) || "https://zayado.net";
 const LEGAL: Record<string, string> = { cgu: "cgu", cgv: "cgv", mentions: "mentions-legales", "mentions-legales": "mentions-legales", confidentialite: "confidentialite" };
 function VersBoutique({ chemin, legal = false }: { chemin?: string; legal?: boolean }) {
   const { page = "" } = useParams();
