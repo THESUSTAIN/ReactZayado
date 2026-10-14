@@ -1,0 +1,6 @@
+{
+  "sections": {
+    "main": { "type": "zayado-favoris", "settings": {} }
+  },
+  "order": ["main"]
+}

@@ -1,0 +1,6 @@
+{
+  "sections": {
+    "grille": { "type": "zayado-grille-produits", "settings": { "nombre": 24, "colonnes": 3 } }
+  },
+  "order": ["grille"]
+}

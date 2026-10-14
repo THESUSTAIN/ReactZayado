@@ -1,0 +1,17 @@
+export const IMG = {
+  heroDesk: "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/8a5a108e484b9f93ab9e25aaf8e7ed70dad093ccce6dc011f3c680c33b8672d4.jpeg",
+  heroDeskMountain: "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/4f573bfd2bf3e96af4ccd93442a2535468d663836df245508489c18c1087e3b6.jpeg",
+  heroDeskHands: "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/abf97a988634230bc5716480ac9d74ae0dc712108f1ef57e2b2230ff03a5a409.jpeg",
+  hero: "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/99d637aa5de2a64f9932b14a36f2fd8ff8dd263f298c832219f24b0b582a1f3d.jpeg",
+  fauteuil: "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/103b8ede3aa9b67d0aec3d3e1bfd6e773c01699f643fa6b1fb498a95d1f80522.jpeg",
+  lampe: "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/7fdb2ced8981b5c0132f3b4ca9c87cd5bc960e55c40d9f0b5161029de77e8fc6.jpeg",
+  vegetal: "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/06285b877c75137d7442e00075d21ae52aeed15ff6bf096ee15fd67956a01c5a.jpeg",
+  plaid: "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/d29bcddfd50520f8e081caa678fc7b3656175165d3ba591c1316fe9a58884861.jpeg",
+  casque: "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/b7886a789d26a2f063fd3db2d3fef5259acbb23e5fd19e0bd4a65005d22cb085.jpeg",
+  carnet: "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/2901dc1fbd7d9f4f891c5bb561b96c9dea008dc4b614dd4c450038e9936a7fe8.jpeg",
+  planner: "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/34dc1d19f13f50c924a21202732d56c9dcfb5ad01236e3fe7e24af9639588fe4.jpeg",
+  mug: "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/a752605fa8b89a6c95a8ad7798acf1d35a891f2765f23f3c44b7a04d41bee0eb.jpeg",
+  boxHiver: "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/11353e196d358cbae3999e4964c60f62169d70f82f7909a5ce53df5d7efa803b.jpeg",
+  boxEte: "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/398f5cb93642f19b6258ac93f032a2b2fecdf37037e75d50035c2fc8e0801c61.jpeg",
+  hands: "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/f83fb9dd8c176c599fa5c8094a86094d08891a920c27d0b10d6edf898407b440.jpeg",
+};

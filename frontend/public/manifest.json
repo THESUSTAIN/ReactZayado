@@ -1,0 +1,68 @@
+{
+  "id": "/",
+  "short_name": "VisionAct",
+  "name": "VisionAct par Zayado",
+  "description": "Votre vision board, votre plan d'action, vos chiffres et vos prospects au même endroit : le copilote IA des entrepreneurs, pour avancer sans s'épuiser.",
+  "icons": [
+    {
+      "src": "icon-zayado-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-zayado-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-zayado-maskable-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ],
+  "start_url": "/app?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#0D1F38",
+  "background_color": "#0D1F38",
+  "shortcuts": [
+    {
+      "name": "Aujourd'hui",
+      "short_name": "Aujourd'hui",
+      "url": "/"
+    },
+    {
+      "name": "Mes prospects",
+      "short_name": "Prospects",
+      "url": "/radar"
+    },
+    {
+      "name": "Envoyer vers ma Vision",
+      "short_name": "Vision",
+      "description": "Ajouter une image, un lien ou une note à ma Vision",
+      "url": "/app/partager"
+    }
+  ],
+  "share_target": {
+    "action": "/app/partager",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "medias",
+          "accept": [
+            "image/*"
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,37 @@
+{{ 'zayado.css' | asset_url | stylesheet_tag }}
+{%- comment -%} Bandeau d'appel à l'action : fond bleu nuit, un mot manuscrit, un ou deux boutons. {%- endcomment -%}
+<section class="zy">
+  <div class="zy__wrap zy-bandeau__wrap">
+    <div class="zy-bandeau {% if section.settings.centre %}zy-bandeau--centre{% endif %}">
+      <div class="zy-bandeau__texte">
+        {%- if section.settings.mot_main != blank -%}<p class="zy-bandeau__main">{{ section.settings.mot_main }}</p>{%- endif -%}
+        <h2 class="zy-bandeau__titre">{{ section.settings.titre }}</h2>
+        {%- if section.settings.texte != blank -%}<p class="zy-bandeau__phrase">{{ section.settings.texte }}</p>{%- endif -%}
+      </div>
+      <div class="zy-bandeau__actions">
+        {%- if section.settings.bouton_1 != blank -%}<a class="zy__btn zy-bandeau__btn" href="{{ section.settings.lien_1 | default: 'https://app.zayado.net/public/tunnel' }}">{{ section.settings.bouton_1 }} →</a>{%- endif -%}
+        {%- if section.settings.bouton_2 != blank -%}<a class="zy__btn zy-bandeau__btn--ligne" href="{{ section.settings.lien_2 }}">{{ section.settings.bouton_2 }}</a>{%- endif -%}
+      </div>
+    </div>
+    {%- if section.settings.mention != blank -%}<p class="zy-bandeau__mention">{{ section.settings.mention }}</p>{%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Zayado — Bandeau",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "mot_main", "label": "Petit mot manuscrit (or)", "default": "on s'y met ?" },
+    { "type": "text", "id": "titre", "label": "Titre", "default": "Prêt à construire l'équilibre ?" },
+    { "type": "textarea", "id": "texte", "label": "Phrase" },
+    { "type": "text", "id": "bouton_1", "label": "Bouton principal", "default": "Faire mon diagnostic gratuit" },
+    { "type": "url", "id": "lien_1", "label": "Lien du bouton principal" },
+    { "type": "text", "id": "bouton_2", "label": "Bouton secondaire" },
+    { "type": "url", "id": "lien_2", "label": "Lien du bouton secondaire" },
+    { "type": "text", "id": "mention", "label": "Mention sous le bandeau" },
+    { "type": "checkbox", "id": "centre", "label": "Centrer", "default": false }
+  ],
+  "presets": [{ "name": "Zayado — Bandeau" }]
+}
+{% endschema %}

@@ -1,0 +1,93 @@
+{%- comment -%} Hero cinétique de la vitrine : entrées animées par ligne, cartes flottantes
+(jauge d'équilibre + prochaine action). Textes réglables dans le customizer. {%- endcomment -%}
+{%- assign lignes = section.settings.bienfaits | default: "Plus de focus|Un quotidien plus serein\nPlus de clarté|Des décisions plus simples\nPlus d'efficacité|Des solutions concrètes pour votre activité\nUn meilleur équilibre|Entrepreneurs et petites équipes" | newline_to_br | split: '<br />' -%}
+{%- assign jauges = section.settings.jauges | default: "Clarté financière|88\nÉnergie|72\nOrganisation|64\nSérénité|80\nÉquilibre pro/perso|58" | newline_to_br | split: '<br />' -%}
+<section class="zy-heroA" data-testid="landing-hero">
+  <div class="zy-heroA__fond"></div>
+  <div class="zy-heroA__in">
+    <div>
+      <p class="zy-heroA__sur zy-anim" style="--d: .05s">{{ section.settings.surtitre | default: "La maison des entrepreneurs apaisés" }}</p>
+      <h1 class="zy-heroA__titre">
+        <span class="zy-heroA__ligne zy-anim" style="--d: .15s">{{ section.settings.ligne_1 | default: "Entreprendre avec" }}</span>
+        <span class="zy-heroA__ligne zy-anim" style="--d: .3s"><em class="zy-heroA__main">{{ section.settings.ligne_main | default: "clarté financière," }}</em></span>
+        <span class="zy-heroA__ligne zy-anim" style="--d: .45s">{{ section.settings.ligne_2 | default: "sérénité et équilibre." }}</span>
+      </h1>
+      <p class="zy-heroA__sous zy-anim" style="--d: .7s">{{ section.settings.sous_titre | default: "Une sélection de produits et de services pour vous aider à mieux travailler, mieux vivre et développer une activité rentable, durablement." }}</p>
+      <div class="zy-heroA__ctas zy-anim" style="--d: .9s">
+        <a class="zy__btn zy__btn--plein" href="{{ section.settings.cta1_lien | default: 'https://app.zayado.net/diagnostic' }}">{{ section.settings.cta1_texte | default: "Faire mon diagnostic" }} →</a>
+        <a class="zy__btn zy__btn--ligne" href="{{ section.settings.cta2_lien | default: '/collections/produits' }}">{{ section.settings.cta2_texte | default: "Explorer la marketplace" }}</a>
+      </div>
+      <div class="zy-heroA__bienfaits">
+        {%- for l in lignes -%}
+          {%- assign p = l | split: '|' -%}
+          {%- if p[0] != blank -%}
+            <div class="zy-heroA__bienfait zy-anim" style="--d: {{ 1.0 | plus: forloop.index0 | times: 0.12 }}s">
+              <p class="zy-heroA__bienfait-t">{{ p[0] | strip }}</p>
+              <p class="zy-heroA__bienfait-d">{{ p[1] | strip }}</p>
+            </div>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    </div>
+    <div class="zy-heroA__visuel zy-anim" style="--d: .5s">
+      <div class="zy-heroA__cadre">
+        {%- if section.settings.image != blank -%}
+          <img src="{{ section.settings.image | image_url: width: 1100 }}" alt="{{ section.settings.image_alt | default: 'Bureau apaisé' | escape }}" width="1100" height="1300" loading="eager">
+        {%- else -%}
+          <img src="https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/8a5a108e484b9f93ab9e25aaf8e7ed70dad093ccce6dc011f3c680c33b8672d4.jpeg" alt="Bureau apaisé : jauge d'équilibre, plantes et carnet" width="1100" height="1300" loading="eager">
+        {%- endif -%}
+      </div>
+      {%- if section.settings.carte_jauge -%}
+        <div class="zy-heroA__jauge zy-anim" style="--d: 1.1s">
+          <div class="zy-heroA__jauge-tete">
+            <span class="zy-heroA__jauge-score">{{ section.settings.score | default: 78 }}<small>/100</small></span>
+            <span class="zy-heroA__jauge-lbl">équilibre</span>
+          </div>
+          {%- for j in jauges -%}
+            {%- assign p = j | split: '|' -%}
+            {%- if p[0] != blank -%}
+              <div class="zy-heroA__barre">
+                <span class="zy-heroA__barre-lbl">{{ p[0] | strip }}</span>
+                <span class="zy-heroA__barre-piste"><span class="zy-heroA__barre-val" style="--v: {{ p[1] | strip | default: 50 }}%; --d: {{ 1.3 | plus: forloop.index0 | times: 0.15 }}s"></span></span>
+                <span class="zy-heroA__barre-n">{{ p[1] | strip }}</span>
+              </div>
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+      {%- if section.settings.carte_action and section.settings.action_texte != blank -%}
+        <div class="zy-heroA__action zy-anim" style="--d: 1.4s">
+          <p class="zy-heroA__action-lbl">Prochaine action</p>
+          <p class="zy-heroA__action-txt">{{ section.settings.action_texte | default: "Finaliser mon plan financier" }}</p>
+        </div>
+      {%- endif -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Zayado — Hero cinétique",
+  "class": "zy",
+  "settings": [
+    { "type": "text", "id": "surtitre", "label": "Surtitre", "default": "La maison des entrepreneurs apaisés" },
+    { "type": "text", "id": "ligne_1", "label": "Titre — ligne 1", "default": "Entreprendre avec" },
+    { "type": "text", "id": "ligne_main", "label": "Titre — mot manuscrit (or)", "default": "clarté financière," },
+    { "type": "text", "id": "ligne_2", "label": "Titre — ligne 3", "default": "sérénité et équilibre." },
+    { "type": "textarea", "id": "sous_titre", "label": "Sous-titre", "default": "Une sélection de produits et de services pour vous aider à mieux travailler, mieux vivre et développer une activité rentable, durablement." },
+    { "type": "text", "id": "cta1_texte", "label": "Bouton 1 — texte", "default": "Faire mon diagnostic" },
+    { "type": "url", "id": "cta1_lien", "label": "Bouton 1 — lien" },
+    { "type": "text", "id": "cta2_texte", "label": "Bouton 2 — texte", "default": "Explorer la marketplace" },
+    { "type": "url", "id": "cta2_lien", "label": "Bouton 2 — lien" },
+    { "type": "textarea", "id": "bienfaits", "label": "Bienfaits (Titre|Description, un par ligne)", "default": "Plus de focus|Un quotidien plus serein\nPlus de clarté|Des décisions plus simples\nPlus d'efficacité|Des solutions concrètes pour votre activité\nUn meilleur équilibre|Entrepreneurs et petites équipes" },
+    { "type": "image_picker", "id": "image", "label": "Image du cadre" },
+    { "type": "text", "id": "image_alt", "label": "Texte alternatif de l'image", "default": "Bureau apaisé : jauge d'équilibre, plantes et carnet" },
+    { "type": "checkbox", "id": "carte_jauge", "label": "Afficher la carte équilibre", "default": true },
+    { "type": "range", "id": "score", "label": "Score d'équilibre", "min": 0, "max": 100, "step": 1, "default": 78 },
+    { "type": "textarea", "id": "jauges", "label": "Jauges (Libellé|Valeur, une par ligne)", "default": "Clarté financière|88\nÉnergie|72\nOrganisation|64\nSérénité|80\nÉquilibre pro/perso|58" },
+    { "type": "checkbox", "id": "carte_action", "label": "Afficher la carte prochaine action", "default": true },
+    { "type": "text", "id": "action_texte", "label": "Prochaine action", "default": "Finaliser mon plan financier" }
+  ],
+  "presets": [{ "name": "Zayado — Hero cinétique" }]
+}
+{% endschema %}

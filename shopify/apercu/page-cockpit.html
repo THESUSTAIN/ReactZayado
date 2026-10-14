@@ -1,0 +1,326 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>page.zayado-cockpit.json</title><style>body{margin:0}/* Zayado — styles des sections Shopify. Mêmes couleurs, mêmes polices que l'appli et les tunnels :
+   Poppins partout, Caveat pour UN mot manuscrit par titre. Polices servies par la boutique
+   (fichiers du thème) : plus rapide, et aucune requête vers Google (RGPD). */
+@font-face { font-family: "Poppins"; font-style: normal; font-weight: 400; font-display: swap; src: url("../theme/assets/zayado-poppins-400.woff2") format("woff2"); }
+@font-face { font-family: "Poppins"; font-style: normal; font-weight: 500; font-display: swap; src: url("../theme/assets/zayado-poppins-500.woff2") format("woff2"); }
+@font-face { font-family: "Poppins"; font-style: normal; font-weight: 600; font-display: swap; src: url("../theme/assets/zayado-poppins-600.woff2") format("woff2"); }
+@font-face { font-family: "Poppins"; font-style: normal; font-weight: 700; font-display: swap; src: url("../theme/assets/zayado-poppins-700.woff2") format("woff2"); }
+@font-face { font-family: "Caveat"; font-style: normal; font-weight: 600; font-display: swap; src: url("../theme/assets/zayado-caveat-600.woff2") format("woff2"); }
+
+.zy {
+  --zy-nuit: #0D1F38; --zy-nuit-2: #16304F; --zy-ardoise: #2E4A6B; --zy-gris: #8FA3B8;
+  --zy-ivoire: #FDFCF8; --zy-sable: #F4EFE6; --zy-pierre: #F6F5F2; --zy-or: #D6A64F; --zy-or-clair: #F0DCAC;
+  font-family: "Poppins", sans-serif; color: var(--zy-nuit); background: var(--zy-ivoire);
+}
+.zy *, .zy *::before, .zy *::after { box-sizing: border-box; }
+.zy--sable { background: var(--zy-pierre); } /* même fond clair que la vitrine (plus de beige) */
+.zy--nuit { background: linear-gradient(135deg, var(--zy-nuit) 0%, var(--zy-nuit-2) 60%, var(--zy-ardoise) 100%); color: var(--zy-ivoire); }
+.zy__wrap { max-width: 1200px; margin: 0 auto; padding: 72px 24px; }
+.zy__eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .24em; text-transform: uppercase; color: var(--zy-or); margin: 0 0 12px; }
+.zy__titre { font-family: "Poppins", sans-serif; font-weight: 600; font-size: clamp(30px, 4.4vw, 52px); line-height: 1.1; letter-spacing: -.02em; margin: 0; }
+.zy__titre--m { font-size: clamp(26px, 3.2vw, 38px); }
+.zy__main { font-family: "Caveat", cursive; font-weight: 600; color: var(--zy-or); font-size: 1.15em; }
+.zy__texte { font-size: 17px; line-height: 1.6; color: var(--zy-ardoise); max-width: 620px; margin: 16px 0 0; }
+.zy--nuit .zy__texte { color: #c9d3e6; }
+.zy__actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+.zy__btn { display: inline-flex; align-items: center; gap: 8px; height: 50px; padding: 0 26px; border-radius: 999px; font-weight: 600; font-size: 15px; text-decoration: none; transition: transform .2s ease, background-color .2s ease, box-shadow .2s ease; }
+.zy__btn:hover { transform: translateY(-2px); }
+.zy__btn--plein { background: var(--zy-nuit); color: var(--zy-ivoire); box-shadow: 0 10px 30px rgba(13, 31, 56, .18); }
+.zy--nuit .zy__btn--plein { background: var(--zy-sable); color: var(--zy-nuit); }
+.zy__btn--ligne { border: 1px solid rgba(13, 31, 56, .25); color: var(--zy-nuit); }
+.zy--nuit .zy__btn--ligne { border-color: rgba(253, 252, 248, .35); color: var(--zy-ivoire); }
+
+/* Hero */
+.zy-hero__grille { display: grid; gap: 48px; align-items: center; grid-template-columns: 1.1fr .9fr; }
+.zy-hero__img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 28px; box-shadow: 0 30px 80px rgba(13, 31, 56, .22); }
+
+/* Univers (4 piliers) */
+/* Vos douleurs → ce que Zayado fait */
+.zy-douleurs__grille { display: grid; gap: 16px; grid-template-columns: repeat(3, 1fr); margin-top: 40px; }
+.zy-douleurs__carte { display: flex; flex-direction: column; gap: 8px; padding: 24px; border-radius: 22px; background: #fff; border: 1px solid rgba(13, 31, 56, .08); text-decoration: none; color: inherit; transition: transform .25s ease, box-shadow .25s ease; }
+.zy-douleurs__carte:hover { transform: translateY(-4px); box-shadow: 0 18px 44px rgba(13, 31, 56, .12); }
+.zy-douleurs__douleur { font-weight: 500; font-size: 18px; line-height: 1.35; color: var(--zy-nuit); }
+.zy-douleurs__fonction { font-size: 11px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--zy-or); margin-top: 6px; }
+.zy-douleurs__reponse { font-size: 14px; line-height: 1.55; color: var(--zy-ardoise); }
+.zy-douleurs__lien { margin-top: auto; padding-top: 8px; font-size: 14px; font-weight: 600; color: var(--zy-nuit); }
+.zy-douleurs__cta { margin-top: 36px; }
+@media (max-width: 900px) { .zy-douleurs__grille { grid-template-columns: 1fr; } }
+.zy-univers__grille { display: grid; gap: 18px; grid-template-columns: repeat(4, 1fr); margin-top: 40px; }
+.zy-univers__carte { display: flex; flex-direction: column; gap: 10px; padding: 26px; border-radius: 22px; background: #fff; border: 1px solid rgba(13, 31, 56, .08); text-decoration: none; color: inherit; transition: transform .25s ease, box-shadow .25s ease; }
+.zy-univers__carte:hover { transform: translateY(-4px); box-shadow: 0 18px 44px rgba(13, 31, 56, .12); }
+.zy-univers__num { font-family: "Caveat", cursive; font-weight: 600; font-size: 22px; line-height: 1; color: var(--zy-or); }
+.zy-univers__nom { font-weight: 600; font-size: 19px; }
+.zy-univers__desc { font-size: 14px; line-height: 1.55; color: var(--zy-ardoise); }
+.zy-univers__lien { margin-top: auto; font-size: 14px; font-weight: 600; color: var(--zy-nuit); }
+
+/* Grille produits + carte */
+.zy-grille { display: grid; gap: 22px; grid-template-columns: repeat(var(--zy-colonnes, 3), 1fr); margin-top: 36px; }
+.zy-carte { display: flex; flex-direction: column; border-radius: 22px; overflow: hidden; background: #fff; border: 1px solid rgba(13, 31, 56, .08); transition: transform .25s ease, box-shadow .25s ease; }
+.zy-carte:hover { transform: translateY(-4px); box-shadow: 0 18px 44px rgba(13, 31, 56, .12); }
+.zy-carte__img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--zy-pierre); display: block; }
+.zy-carte__corps { display: flex; flex-direction: column; gap: 8px; padding: 20px 20px 22px; flex: 1; }
+.zy-carte__type { font-size: 11px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--zy-gris); }
+.zy-carte__titre { font-weight: 600; font-size: 17px; line-height: 1.3; margin: 0; }
+.zy-carte__titre a { color: inherit; text-decoration: none; }
+.zy-carte__benefice { font-size: 13px; color: var(--zy-ardoise); }
+.zy-carte__bas { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; padding-top: 12px; }
+.zy-carte__prix { font-weight: 600; font-size: 18px; }
+.zy-carte__mode { display: block; font-size: 11.5px; font-weight: 400; color: var(--zy-gris); }
+.zy-carte .zy__btn { height: 40px; padding: 0 18px; font-size: 13.5px; }
+.zy__badge { display: inline-block; align-self: flex-start; padding: 4px 10px; border-radius: 999px; background: var(--zy-or-clair); color: var(--zy-nuit); font-size: 11px; font-weight: 600; }
+
+/* Fiche produit */
+.zy-fiche__grille { display: grid; gap: 48px; grid-template-columns: 1fr 1fr; align-items: start; }
+.zy-fiche__img { width: 100%; border-radius: 24px; aspect-ratio: 1 / 1; object-fit: cover; background: var(--zy-pierre); }
+.zy-fiche__prix { font-weight: 600; font-size: 32px; letter-spacing: -.01em; margin: 18px 0 4px; }
+.zy-fiche__desc { font-size: 16px; line-height: 1.7; color: var(--zy-ardoise); margin-top: 18px; }
+.zy-fiche__reassurance { display: grid; gap: 10px; margin: 26px 0 0; padding: 0; list-style: none; font-size: 14px; color: var(--zy-ardoise); }
+.zy-fiche__reassurance li::before { content: "✓"; color: var(--zy-or); font-weight: 700; margin-right: 10px; }
+
+/* Services, tarifs, FAQ */
+.zy-services__grille { display: grid; gap: 18px; grid-template-columns: repeat(var(--zy-colonnes, 3), 1fr); margin-top: 36px; }
+.zy-services__carte { padding: 28px; border-radius: 22px; background: #fff; border: 1px solid rgba(13, 31, 56, .08); display: flex; flex-direction: column; gap: 12px; }
+.zy-tarifs__cadre { width: 100%; border: 0; border-radius: 24px; background: transparent; margin-top: 28px; }
+.zy-faq__item { border-bottom: 1px solid rgba(13, 31, 56, .12); padding: 20px 0; }
+.zy-faq__item summary { cursor: pointer; font-weight: 600; font-size: 17px; list-style: none; }
+.zy-faq__item p { color: var(--zy-ardoise); line-height: 1.6; margin: 12px 0 0; }
+
+/* Produits « bientôt » : pas de prix, on recueille l'intérêt */
+.zy__badge--doux { background: var(--zy-pierre); color: var(--zy-ardoise); border: 1px solid rgba(13, 31, 56, .1); }
+.zy-carte__bientot { font-size: 14px; font-weight: 500; color: var(--zy-ardoise); }
+.zy-prevenir { margin-top: 24px; padding: 24px; border-radius: 22px; background: var(--zy-pierre); border: 1px solid rgba(13, 31, 56, .08); }
+.zy-prevenir__titre { font-weight: 600; font-size: 22px; margin: 0; }
+.zy-prevenir__texte { font-size: 15px; line-height: 1.6; color: var(--zy-ardoise); margin: 8px 0 16px; }
+.zy-prevenir__form { display: flex; flex-wrap: wrap; gap: 10px; }
+.zy-prevenir__form .zy-champ { flex: 1 1 220px; }
+.zy-prevenir__ok { font-weight: 500; color: #047857; margin: 0; }
+.zy-prevenir__erreur { flex-basis: 100%; color: #B42318; font-size: 14px; margin: 0; }
+.zy-prevenir__rgpd { font-size: 12.5px; color: var(--zy-gris); margin: 12px 0 0; }
+.zy-champ { height: 50px; padding: 0 18px; border-radius: 999px; border: 1px solid rgba(13, 31, 56, .2); background: #fff; font: inherit; font-size: 15px; color: var(--zy-nuit); }
+.zy-champ:focus { outline: 2px solid var(--zy-ardoise); outline-offset: 1px; }
+textarea.zy-champ { height: auto; min-height: 140px; padding: 14px 18px; border-radius: 18px; resize: vertical; }
+.zy-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
+.zy__btn--plein { background: linear-gradient(120deg, #0D1F38 0%, #1E3D63 55%, #2E4A6B 100%); }
+
+@media (max-width: 989px) {
+  .zy-hero__grille, .zy-fiche__grille { grid-template-columns: 1fr; }
+  .zy-univers__grille { grid-template-columns: repeat(2, 1fr); }
+  .zy-grille, .zy-services__grille { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 589px) {
+  .zy__wrap { padding: 52px 18px; }
+  .zy-univers__grille, .zy-grille, .zy-services__grille { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { .zy * { transition: none !important; } }
+
+/* Contact et devis */
+.zy-contact { display: grid; gap: 48px; grid-template-columns: 1fr 1fr; align-items: start; }
+.zy-contact__form { display: flex; flex-direction: column; gap: 10px; padding: 28px; border-radius: 24px; background: #fff; border: 1px solid rgba(13, 31, 56, .08); box-shadow: 0 18px 44px rgba(13, 31, 56, .06); }
+.zy-contact__label { font-size: 13px; font-weight: 500; color: var(--zy-ardoise); margin-top: 6px; }
+.zy-contact__deux { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+.zy-contact__deux > div { display: flex; flex-direction: column; gap: 10px; }
+.zy-contact__form .zy__btn { align-self: flex-start; margin-top: 10px; border: 0; cursor: pointer; }
+@media (max-width: 989px) { .zy-contact, .zy-contact__deux { grid-template-columns: 1fr; } }
+
+/* ═══ Le Journal ═══ */
+.zy-tampon { display: inline-flex; align-items: center; padding: 6px 14px; border: 1.5px solid currentColor; border-radius: 4px; font-size: 11px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--zy-nuit); transform: rotate(-1.5deg); margin-bottom: 18px; }
+.zy-journal__tete { background: repeating-linear-gradient(to bottom, transparent 0, transparent 35px, rgba(19, 35, 62, .06) 35px, rgba(19, 35, 62, .06) 36px), radial-gradient(900px 500px at 85% -10%, rgba(46, 74, 107, .10), transparent 65%), var(--zy-ivoire); border-bottom: 1px solid rgba(13, 31, 56, .08); }
+.zy-journal__tete-wrap { padding-bottom: 36px; text-align: center; display: flex; flex-direction: column; align-items: center; }
+.zy-journal__intro { margin-left: auto; margin-right: auto; }
+.zy-journal__filtres { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 26px; }
+.zy-pilule { display: inline-flex; align-items: center; height: 38px; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(13, 31, 56, .16); background: #fff; color: var(--zy-ardoise); font-size: 14px; font-weight: 500; text-decoration: none; transition: background-color .2s, color .2s; }
+.zy-pilule:hover { color: var(--zy-nuit); }
+.zy-pilule[aria-current="page"] { background: linear-gradient(120deg, #0D1F38 0%, #1E3D63 55%, #2E4A6B 100%); color: var(--zy-ivoire); border-color: transparent; }
+.zy-journal__corps { padding-top: 44px; }
+
+.zy-une { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); border-radius: 28px; overflow: hidden; text-decoration: none; color: var(--zy-ivoire); background: linear-gradient(135deg, var(--zy-nuit) 0%, var(--zy-nuit-2) 60%, var(--zy-ardoise) 100%); box-shadow: 0 30px 80px rgba(13, 31, 56, .18); margin-bottom: 28px; }
+.zy-une__img { width: 100%; height: 100%; min-height: 320px; object-fit: cover; display: block; }
+.zy-une__texte { padding: 40px; display: flex; flex-direction: column; justify-content: center; gap: 12px; }
+.zy-une__etiquette { align-self: flex-start; font-size: 11px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: var(--zy-or-clair); }
+.zy-une__titre { font-weight: 600; font-size: clamp(24px, 2.6vw, 34px); line-height: 1.15; letter-spacing: -.015em; margin: 0; }
+.zy-une__extrait { font-size: 16px; line-height: 1.6; color: #c9d3e6; margin: 0; }
+.zy-une__meta { font-size: 13px; color: #9fb0cf; }
+
+.zy-journal__grille { display: grid; gap: 22px; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; }
+.zy-cj { display: flex; flex-direction: column; gap: 10px; text-decoration: none; color: inherit; border-radius: 22px; transition: transform .25s ease, box-shadow .25s ease; }
+.zy-cj:hover { transform: translateY(-3px); }
+.zy-cj--article { background: #fff; border: 1px solid rgba(13, 31, 56, .08); overflow: hidden; }
+.zy-cj--article:hover { box-shadow: 0 18px 44px rgba(13, 31, 56, .12); }
+.zy-cj__img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; }
+.zy-cj__corps { padding: 22px 24px 24px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+.zy-cj__lire, .zy-cj__rubrique { margin-top: auto; }
+.zy-cj__meta { font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--zy-gris); }
+.zy-cj__titre { font-weight: 600; font-size: 20px; line-height: 1.3; letter-spacing: -.01em; margin: 0; }
+.zy-cj__extrait { font-size: 15px; line-height: 1.6; color: var(--zy-ardoise); margin: 0; }
+.zy-cj__lire { font-size: 14px; font-weight: 600; color: var(--zy-nuit); }
+/* Témoignage : une citation, pas une carte d'article */
+.zy-cj--temoignage { padding: 30px 28px; background: var(--zy-pierre); border: 1px solid rgba(13, 31, 56, .06); }
+.zy-cj__guillemet { font-family: "Caveat", cursive; font-weight: 600; font-size: 64px; line-height: .6; color: var(--zy-or); }
+.zy-cj__citation { font-size: 19px; font-weight: 500; line-height: 1.45; color: var(--zy-nuit); margin: 0; }
+.zy-cj__personne { font-size: 14px; font-weight: 600; color: var(--zy-ardoise); }
+.zy-cj__rubrique { font-size: 11px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--zy-gris); }
+/* Note de la maison : écrite, signée, sans cadre */
+.zy-cj--note { padding: 8px 4px 8px 22px; border-left: 2px solid var(--zy-or); border-radius: 0; }
+.zy-cj--note:hover { transform: none; }
+.zy-cj__date-main, .zy-texte__date-main { font-family: "Caveat", cursive; font-weight: 600; font-size: 24px; color: var(--zy-or); line-height: 1; margin: 0; }
+.zy-cj__signature { display: flex; align-items: center; gap: 12px; margin-top: 6px; font-weight: 600; font-size: 15px; }
+.zy-cj__signature small { display: block; font-weight: 400; font-size: 12.5px; color: var(--zy-gris); }
+.zy-cj__avatar { width: 44px; height: 44px; border-radius: 999px; object-fit: cover; flex: none; }
+.zy-cj__avatar--vide { display: grid; place-items: center; background: var(--zy-nuit); color: var(--zy-ivoire); font-weight: 600; }
+
+.zy-journal__news { grid-column: 1 / -1; padding: 32px; border-radius: 24px; background: linear-gradient(135deg, var(--zy-nuit) 0%, var(--zy-nuit-2) 60%, var(--zy-ardoise) 100%); color: var(--zy-ivoire); }
+.zy-journal__news .zy__eyebrow { color: var(--zy-or-clair); }
+.zy-journal__news-titre { font-size: 24px; font-weight: 600; margin: 0 0 18px; }
+.zy-journal__news .zy__btn--plein { background: var(--zy-sable); color: var(--zy-nuit); border: 0; cursor: pointer; }
+.zy-journal__news .zy-prevenir__ok { color: var(--zy-or-clair); }
+.zy-journal__pages { display: flex; justify-content: space-between; gap: 12px; margin-top: 40px; }
+
+/* Une page du Journal */
+.zy-texte__wrap { max-width: 760px; }
+.zy-texte__retour { display: inline-block; margin-bottom: 26px; font-size: 14px; font-weight: 500; color: var(--zy-ardoise); text-decoration: none; }
+.zy-texte__chapo { font-size: 19px; }
+.zy-texte__img { width: 100%; border-radius: 24px; margin: 32px 0 8px; display: block; }
+.zy-texte__guillemet { font-size: 96px; display: block; margin-top: 10px; }
+.zy-texte__citation { font-size: clamp(26px, 3.4vw, 38px); font-weight: 500; line-height: 1.3; letter-spacing: -.01em; margin: 0; }
+.zy-texte__personne { font-weight: 600; color: var(--zy-ardoise); margin: 18px 0 0; }
+.zy-texte__signature { margin: 20px 0 8px; }
+.zy-texte__auteur { font-size: 14px; color: var(--zy-gris); margin-top: 28px; }
+.zy-prose { font-size: 18px; line-height: 1.75; color: #24364F; margin-top: 30px; }
+.zy-prose p { margin: 0 0 1.2em; }
+.zy-prose h2 { font-size: 26px; font-weight: 600; line-height: 1.25; letter-spacing: -.01em; color: var(--zy-nuit); margin: 1.8em 0 .6em; }
+.zy-prose h3 { font-size: 20px; font-weight: 600; color: var(--zy-nuit); margin: 1.5em 0 .5em; }
+.zy-prose a { color: var(--zy-nuit); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.zy-prose blockquote { margin: 1.6em 0; padding: 4px 0 4px 22px; border-left: 2px solid var(--zy-or); font-size: 21px; font-weight: 500; color: var(--zy-nuit); }
+.zy-prose ul, .zy-prose ol { padding-left: 1.2em; margin: 0 0 1.2em; }
+.zy-prose li { margin: .35em 0; }
+.zy-prose img { max-width: 100%; border-radius: 18px; }
+.zy-texte--note .zy-prose { font-size: 19px; }
+.zy-texte__cta { margin-top: 44px; padding: 32px; border-radius: 24px; }
+.zy-texte__cta-titre { font-size: 26px; font-weight: 600; line-height: 1.2; margin: 0; }
+.zy-texte__cta .zy__btn { margin-top: 20px; }
+.zy-texte__cta .zy__main { color: var(--zy-or-clair); }
+.zy-texte__suite { padding-top: 0; }
+
+@media (max-width: 989px) {
+  .zy-journal__grille { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .zy-une { grid-template-columns: minmax(0, 1fr); }
+  .zy-une__img { min-height: 220px; aspect-ratio: 16 / 9; }
+  .zy-une__texte { padding: 28px; }
+}
+@media (max-width: 689px) {
+  .zy-journal__grille { grid-template-columns: minmax(0, 1fr); }
+  .zy-une__texte { padding: 24px 22px; }
+  .zy-journal__news { padding: 24px 20px; }
+  .zy-prose { font-size: 17px; }
+}
+
+/* Section « Cartes » (piliers, étapes, niveaux, valeurs, modules) */
+.zy-cartes__tete { max-width: 760px; }
+.zy-cartes__tete--centre { margin: 0 auto; text-align: center; }
+.zy-cartes__tete--centre .zy__texte { margin-left: auto; margin-right: auto; }
+.zy-cartes__grille { display: grid; gap: 18px; grid-template-columns: repeat(var(--zy-colonnes, 3), minmax(0, 1fr)); margin-top: 40px; }
+.zy-cartes__carte { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 26px; border-radius: 22px; background: #fff; border: 1px solid rgba(13, 31, 56, .08); }
+.zy--sable .zy-cartes__carte { background: #fff; }
+.zy--nuit .zy-cartes__carte { background: rgba(253, 252, 248, .05); border-color: rgba(253, 252, 248, .14); }
+.zy-cartes__carte--avant { border: 2px solid var(--zy-or); }
+.zy-cartes__badge { position: absolute; top: -12px; left: 22px; padding: 4px 12px; border-radius: 999px; background: var(--zy-nuit); color: var(--zy-or-clair); font-size: 10.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
+.zy-cartes__titre { font-weight: 600; font-size: 19px; line-height: 1.3; margin: 0; }
+.zy-cartes__sous { font-family: "Caveat", cursive; font-weight: 600; font-size: 21px; line-height: 1.1; color: var(--zy-or); margin: -4px 0 0; }
+.zy-cartes__texte { font-size: 14.5px; line-height: 1.6; color: var(--zy-ardoise); margin: 0; }
+.zy--nuit .zy-cartes__texte, .zy--nuit .zy-cartes__liste { color: #c9d3e6; }
+.zy-cartes__liste { list-style: none; padding: 0; margin: 4px 0 0; display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.5; color: var(--zy-ardoise); }
+.zy-cartes__liste li { position: relative; padding-left: 20px; }
+.zy-cartes__liste li::before { content: ""; position: absolute; left: 2px; top: .55em; width: 8px; height: 8px; border-radius: 999px; border: 1.5px solid var(--zy-or); }
+.zy-cartes__lien { margin-top: auto; padding-top: 10px; font-size: 14px; font-weight: 600; color: inherit; text-decoration: none; }
+.zy-cartes__lien:hover { text-decoration: underline; text-underline-offset: 3px; }
+.zy__actions--centre { justify-content: center; }
+
+/* Bandeau d'appel à l'action */
+.zy-bandeau__wrap { padding-top: 24px; padding-bottom: 72px; }
+.zy-bandeau { display: flex; align-items: center; justify-content: space-between; gap: 28px; padding: 44px; border-radius: 28px; color: var(--zy-ivoire); background: linear-gradient(135deg, var(--zy-nuit) 0%, var(--zy-nuit-2) 60%, var(--zy-ardoise) 100%); box-shadow: 0 30px 80px rgba(13, 31, 56, .16); }
+.zy-bandeau--centre { flex-direction: column; text-align: center; padding: 64px 32px; }
+.zy-bandeau__main { font-family: "Caveat", cursive; font-weight: 600; font-size: 26px; line-height: 1; color: var(--zy-or-clair); margin: 0 0 8px; }
+.zy-bandeau__titre { font-weight: 600; font-size: clamp(24px, 3vw, 36px); line-height: 1.15; letter-spacing: -.015em; margin: 0; }
+.zy-bandeau__phrase { font-size: 15.5px; line-height: 1.6; color: #c9d3e6; margin: 12px 0 0; max-width: 560px; }
+.zy-bandeau--centre .zy-bandeau__phrase { margin-left: auto; margin-right: auto; }
+.zy-bandeau__actions { display: flex; flex-wrap: wrap; gap: 12px; flex: none; }
+.zy-bandeau--centre .zy-bandeau__actions { justify-content: center; }
+.zy-bandeau__btn { background: var(--zy-sable); color: var(--zy-nuit); }
+.zy-bandeau__btn--ligne { border: 1px solid rgba(253, 252, 248, .35); color: var(--zy-ivoire); }
+.zy-bandeau__mention { text-align: center; font-size: 13px; color: var(--zy-gris); margin: 16px 0 0; }
+
+@media (max-width: 989px) {
+  .zy-cartes__grille { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .zy-bandeau { flex-direction: column; align-items: flex-start; padding: 32px 26px; }
+  .zy-bandeau--centre { align-items: center; }
+}
+@media (max-width: 589px) {
+  .zy-cartes__grille { grid-template-columns: minmax(0, 1fr); }
+  .zy-bandeau__actions, .zy-bandeau__actions .zy__btn { width: 100%; justify-content: center; }
+}
+
+.zy-hero__grille--seul { grid-template-columns: minmax(0, 1fr); max-width: 900px; }
+.zy-hero__mention { font-size: 13px; color: var(--zy-gris); margin: 16px 0 0; }
+</style></head><body><section class="zy zy--nuit">
+  <div class="zy__wrap zy-hero__grille zy-hero__grille--seul">
+    <div><p class="zy__eyebrow">L'application Zayado</p><h1 class="zy__titre">Pilotez votre entreprise, <span class="zy__main">sans vous épuiser.</span></h1>
+      <p class="zy__texte">Vision, actions, prospection et énergie réunies dans un seul cockpit IA. Plus besoin de dix outils, ni de choisir entre votre santé et votre rentabilité.</p>
+      <div class="zy__actions"><a class="zy__btn zy__btn--plein" href="https://app.zayado.net/onboarding?plan=serenite&essai=1">Essayer 2 mois pour 1 € →</a><a class="zy__btn zy__btn--ligne" href="#offres">Voir les offres</a></div><p class="zy-hero__mention">Sans engagement · paiement sécurisé Mollie · RGPD</p></div></div>
+</section>
+
+
+<section class="zy " id="principes">
+  <div class="zy__wrap">
+    <div class="zy-cartes__tete "><p class="zy__eyebrow">Notre façon de faire</p><h2 class="zy__titre zy__titre--m">L'IA prépare, <span class="zy__main">vous décidez.</span></h2></div>
+    <div class="zy-cartes__grille" style="--zy-colonnes: 4"><article class="zy-cartes__carte " ><h3 class="zy-cartes__titre">L'IA prépare, vous décidez</h3><p class="zy-cartes__texte">Le Copilote propose, rédige et résume. Le dernier mot reste le vôtre.</p></article><article class="zy-cartes__carte " ><h3 class="zy-cartes__titre">Jamais seul</h3><p class="zy-cartes__texte">Un copilote qui connaît votre projet, et des experts quand il le faut.</p></article><article class="zy-cartes__carte " ><h3 class="zy-cartes__titre">L'équilibre d'abord</h3><p class="zy-cartes__texte">Pas de croissance à tout prix : le cockpit s'adapte à votre énergie.</p></article><article class="zy-cartes__carte " ><h3 class="zy-cartes__titre">Honnêteté, toujours</h3><p class="zy-cartes__texte">Vos données restent les vôtres et ne nourrissent aucune publicité.</p></article></div></div>
+</section>
+
+
+<section class="zy zy--sable" id="fonctionnalites">
+  <div class="zy__wrap">
+    <div class="zy-cartes__tete "><p class="zy__eyebrow">Fonctionnalités</p><h2 class="zy__titre zy__titre--m">Un seul cockpit, tout votre <span class="zy__main">pilotage.</span></h2><p class="zy__texte">Six modules qui travaillent ensemble et parlent de votre activité.</p></div>
+    <div class="zy-cartes__grille" style="--zy-colonnes: 3"><article class="zy-cartes__carte " ><span class="zy-carte__type">Point du jour</span><h3 class="zy-cartes__titre">Chaque matin, votre point du jour est prêt.</h3><ul class="zy-cartes__liste"><li>Priorités, objectif à 90 jours, victoires et énergie sur un écran</li><li>Trésorerie et semaine d'un coup d'œil</li><li>Un rythme qui s'adapte à votre énergie</li></ul></article><article class="zy-cartes__carte " ><span class="zy-carte__type">Copilote IA & actualité</span><h3 class="zy-cartes__titre">Un copilote qui connaît votre projet et veille votre marché.</h3><ul class="zy-cartes__liste"><li>L'actualité de votre marché, résumée chaque jour</li><li>Un chat qui clarifie, rédige et prépare vos documents</li><li>Chaque article peut devenir une décision</li></ul></article><article class="zy-cartes__carte " ><span class="zy-carte__type">Vision</span><h3 class="zy-cartes__titre">Votre vision, visible chaque jour.</h3><ul class="zy-cartes__liste"><li>Un tableau de vision généré à partir de vos mots</li><li>Roue d'équilibre et feuille de route à 90 jours</li><li>Le compte à rebours de votre objectif à 3 ans</li></ul></article><article class="zy-cartes__carte " ><span class="zy-carte__type">Radar</span><h3 class="zy-cartes__titre">Des opportunités qualifiées vous attendent.</h3><ul class="zy-cartes__liste"><li>Des entreprises qui bougent près de chez vous</li><li>Le message de prise de contact déjà prêt</li><li>Une analyse de votre activité à la demande</li></ul></article><article class="zy-cartes__carte " ><span class="zy-carte__type">Revue hebdo</span><h3 class="zy-cartes__titre">Cinq minutes par semaine pour reprendre la main.</h3><ul class="zy-cartes__liste"><li>Victoires, apprentissages, obstacles</li><li>Une seule priorité pour la semaine qui vient</li><li>Préparée par le Copilote avec vos données</li></ul></article><article class="zy-cartes__carte " ><span class="zy-carte__type">Bien-être</span><h3 class="zy-cartes__titre">Durer sans vous brûler.</h3><ul class="zy-cartes__liste"><li>Un check-in d'énergie en 30 secondes</li><li>Des rituels courts, au bon moment</li><li>Une charge de travail ajustée à votre forme</li></ul></article></div></div>
+</section>
+
+
+
+<section class="zy ">
+  <div class="zy__wrap">
+    <p class="zy__eyebrow">Les offres</p>
+    <h2 class="zy__titre zy__titre--m">Une offre pour chaque étape</h2><p class="zy__texte">Sans engagement, résiliable en un clic. Solo : 2 mois pour 1 € pour tout tester.</p><iframe class="zy-tarifs__cadre" src="https://app.zayado.net/embed/tarifs" title="Offres Zayado" loading="lazy" style="height: 1150px"></iframe>
+  </div>
+</section>
+
+
+
+<section class="zy zy--sable">
+  <div class="zy__wrap" style="max-width: 860px">
+    <p class="zy__eyebrow">Questions fréquentes</p>
+    <h2 class="zy__titre zy__titre--m">Les questions qu'on nous pose</h2>
+    <div style="margin-top: 28px"><details class="zy-faq__item" >
+          <summary>L'essai, comment ça marche ?</summary>
+          <p>Solo : 2 mois pour 1 €. Rêveur : le premier mois offert. Sans engagement, résiliable en un clic depuis votre compte.</p>
+        </details><details class="zy-faq__item" >
+          <summary>Où sont mes données ?</summary>
+          <p>Vos données sont traitées selon le RGPD et ne nourrissent aucune publicité. Vous pouvez les exporter ou les supprimer depuis votre compte.</p>
+        </details><details class="zy-faq__item" >
+          <summary>Comment je paie ?</summary>
+          <p>Par carte, avec le paiement sécurisé Mollie. Mensuel ou annuel (deux mois offerts en annuel).</p>
+        </details><details class="zy-faq__item" >
+          <summary>Et pour une équipe ou une grande entreprise ?</summary>
+          <p>L'offre Équipe couvre jusqu'à 5 personnes. Au-delà, l'offre Entreprise se construit sur devis : écrivez-nous depuis la page contact.</p>
+        </details></div>
+  </div>
+</section>
+
+
+<section class="zy">
+  <div class="zy__wrap zy-bandeau__wrap">
+    <div class="zy-bandeau zy-bandeau--centre">
+      <div class="zy-bandeau__texte"><p class="zy-bandeau__main">on commence ?</p><h2 class="zy-bandeau__titre">Racontez votre projet. Le cockpit fait le reste.</h2></div>
+      <div class="zy-bandeau__actions"><a class="zy__btn zy-bandeau__btn" href="https://app.zayado.net/onboarding?plan=serenite&essai=1">Commencer l'essai →</a><a class="zy__btn zy-bandeau__btn--ligne" href="https://app.zayado.net/public/tunnel">Faire le diagnostic</a></div>
+    </div></div>
+</section>
+
+
+</body></html>

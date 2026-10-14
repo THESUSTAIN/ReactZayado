@@ -1,0 +1,6 @@
+{
+  "sections": {
+    "main": { "type": "zayado-box-v1", "settings": {} }
+  },
+  "order": ["main"]
+}

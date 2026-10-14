@@ -1,0 +1,12 @@
+# Appli privée : rien n'est indexé, SAUF les pages d'entrée des tunnels (Zayado et ceux publiés par les utilisateurs),
+# les tarifs, les pages légales et le partenariat. Le reste du référencement se fait sur zayado.net (Shopify).
+User-agent: *
+Allow: /public/tunnel$
+Allow: /public/reprise$
+Allow: /public/cession$
+Allow: /t/
+Allow: /pricing
+Allow: /legal/
+Allow: /partenaires/
+Disallow: /
+Sitemap: https://app.zayado.net/sitemap.xml

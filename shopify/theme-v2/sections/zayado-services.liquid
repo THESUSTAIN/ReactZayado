@@ -1,0 +1,46 @@
+{{ 'zayado.css' | asset_url | stylesheet_tag }}
+<section class="zy {% if section.settings.fond == 'sable' %}zy--sable{% elsif section.settings.fond == 'nuit' %}zy--nuit{% endif %}">
+  <div class="zy__wrap">
+    <p class="zy__eyebrow">{{ section.settings.surtitre }}</p>
+    <h2 class="zy__titre zy__titre--m">{{ section.settings.titre }}</h2>
+    {%- if section.settings.texte != blank -%}<p class="zy__texte">{{ section.settings.texte }}</p>{%- endif -%}
+    <div class="zy-services__grille" style="--zy-colonnes: {{ section.blocks.size | at_most: 3 | at_least: 1 }}">
+      {%- for block in section.blocks -%}
+        <div class="zy-services__carte" {{ block.shopify_attributes }}>
+          <span class="zy-carte__type">{{ block.settings.etiquette }}</span>
+          <h3 class="zy-carte__titre">{{ block.settings.titre }}</h3>
+          <p class="zy-univers__desc">{{ block.settings.texte }}</p>
+          <a class="zy__btn zy__btn--plein" style="margin-top:auto; align-self:flex-start" href="{{ block.settings.lien }}">{{ block.settings.cta }} →</a>
+        </div>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Zayado — Services",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "surtitre", "label": "Surtitre", "default": "Avec un expert" },
+    { "type": "text", "id": "titre", "label": "Titre", "default": "Être accompagné, reprendre sans apport" },
+    { "type": "textarea", "id": "texte", "label": "Texte" },
+    { "type": "select", "id": "fond", "label": "Fond", "default": "ivoire", "options": [ { "value": "ivoire", "label": "Ivoire" }, { "value": "sable", "label": "Sable" }, { "value": "nuit", "label": "Bleu nuit" } ] }
+  ],
+  "blocks": [
+    { "type": "service", "name": "Service", "limit": 6, "settings": [
+      { "type": "text", "id": "etiquette", "label": "Étiquette", "default": "Sur devis" },
+      { "type": "text", "id": "titre", "label": "Titre" },
+      { "type": "textarea", "id": "texte", "label": "Texte" },
+      { "type": "text", "id": "cta", "label": "Bouton", "default": "Prendre rendez-vous" },
+      { "type": "url", "id": "lien", "label": "Lien" } ] }
+  ],
+  "presets": [{
+    "name": "Zayado — Services",
+    "blocks": [
+      { "type": "service", "settings": { "etiquette": "Accompagnement", "titre": "Clarté financière", "texte": "Un expert Zayado cadre votre situation, vos chiffres et vos priorités, du premier rendez-vous au plan tenu à 90 jours.", "cta": "Être accompagné", "lien": "https://zayado.net/pages/contact?sujet=Accompagnement%20clart%C3%A9%20financi%C3%A8re" } },
+      { "type": "service", "settings": { "etiquette": "Rachat", "titre": "Reprendre une entreprise", "texte": "Trouver une entreprise rentable, l'évaluer, négocier et la financer sans apport (prêts d'honneur, garanties, crédit vendeur), avec un seul interlocuteur.", "cta": "Parler de mon projet", "lien": "https://app.zayado.net/public/reprise" } }
+    ]
+  }]
+}
+{% endschema %}

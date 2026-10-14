@@ -1,0 +1,49 @@
+{{ 'zayado.css' | asset_url | stylesheet_tag }}
+{%- assign a_image = false -%}
+{%- if section.settings.image != blank or section.settings.image_url != blank -%}{%- assign a_image = true -%}{%- endif -%}
+<section class="zy {% if section.settings.fond == 'nuit' %}zy--nuit{% elsif section.settings.fond == 'sable' %}zy--sable{% endif %}">
+  <div class="zy__wrap zy-hero__grille {% unless a_image %}zy-hero__grille--seul{% endunless %}">
+    <div>
+      {%- if section.settings.surtitre != blank -%}<p class="zy__eyebrow">{{ section.settings.surtitre }}</p>{%- endif -%}
+      <h1 class="zy__titre">{{ section.settings.titre }} {% if section.settings.mot_main != blank %}<span class="zy__main">{{ section.settings.mot_main }}</span>{% endif %}</h1>
+      <p class="zy__texte">{{ section.settings.texte }}</p>
+      <div class="zy__actions">
+        {%- if section.settings.bouton_1 != blank -%}<a class="zy__btn zy__btn--plein" href="{{ section.settings.lien_1 | default: 'https://app.zayado.net/onboarding?plan=serenite' }}">{{ section.settings.bouton_1 }} →</a>{%- endif -%}
+        {%- if section.settings.bouton_2 != blank -%}<a class="zy__btn zy__btn--ligne" href="{{ section.settings.lien_2 | default: '/collections/outils-ia' }}">{{ section.settings.bouton_2 }}</a>{%- endif -%}
+      </div>
+      {%- if section.settings.mention != blank -%}<p class="zy-hero__mention">{{ section.settings.mention }}</p>{%- endif -%}
+    </div>
+    {%- if a_image -%}
+    <div>
+      {%- if section.settings.image != blank -%}
+        {{ section.settings.image | image_url: width: 1200 | image_tag: class: 'zy-hero__img', alt: section.settings.titre }}
+      {%- elsif section.settings.image_url != blank -%}
+        <img class="zy-hero__img" src="{{ section.settings.image_url }}" alt="{{ section.settings.titre | escape }}" width="1200" height="900" width="1200" height="900" loading="eager">
+      {%- endif -%}
+    </div>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Zayado — Hero",
+  "tag": "section",
+  "settings": [
+    { "type": "select", "id": "fond", "label": "Fond", "default": "ivoire", "options": [
+      { "value": "ivoire", "label": "Ivoire" }, { "value": "sable", "label": "Sable" }, { "value": "nuit", "label": "Bleu nuit" } ] },
+    { "type": "text", "id": "surtitre", "label": "Surtitre", "default": "La maison de l'entrepreneur" },
+    { "type": "text", "id": "titre", "label": "Titre", "default": "Pilotez votre activité avec" },
+    { "type": "text", "id": "mot_main", "label": "Mot manuscrit (or)", "default": "sérénité" },
+    { "type": "textarea", "id": "texte", "label": "Texte", "default": "Vos chiffres, vos futurs clients, votre plan et votre énergie au même endroit. Un Copilote IA qui vous connaît, des experts quand il faut, des produits qui font du bien." },
+    { "type": "text", "id": "bouton_1", "label": "Bouton principal", "default": "Essayer 2 mois pour 1 €" },
+    { "type": "url", "id": "lien_1", "label": "Lien du bouton principal" },
+    { "type": "text", "id": "bouton_2", "label": "Bouton secondaire", "default": "Voir les offres" },
+    { "type": "url", "id": "lien_2", "label": "Lien du bouton secondaire" },
+    { "type": "text", "id": "mention", "label": "Mention sous les boutons (ex. « Gratuit · 2 min · sans engagement »)" },
+    { "type": "image_picker", "id": "image", "label": "Image (recommandé : importée dans Shopify)" },
+    { "type": "text", "id": "image_url", "label": "…ou adresse d'une image", "default": "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/8a5a108e484b9f93ab9e25aaf8e7ed70dad093ccce6dc011f3c680c33b8672d4.jpeg" }
+  ],
+  "presets": [{ "name": "Zayado — Hero" }]
+}
+{% endschema %}

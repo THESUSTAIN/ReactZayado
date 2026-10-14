@@ -1,0 +1,78 @@
+{{ 'zayado.css' | asset_url | stylesheet_tag }}
+{%- assign bientot = false -%}
+{%- if product.tags contains 'bientot' -%}{%- assign bientot = true -%}{%- endif -%}
+{%- assign devis = false -%}
+{%- if product.tags contains 'sur-devis' -%}{%- assign devis = true -%}{%- endif -%}
+{%- assign lien = product.metafields.zayado.lien_app.value | default: section.settings.lien_defaut | default: 'https://app.zayado.net/acheter' -%}
+{%- assign cta = product.metafields.zayado.cta.value | default: section.settings.cta -%}
+<section class="zy">
+  <div class="zy__wrap zy-fiche__grille">
+    <div>
+      {%- if product.featured_image -%}
+        {{ product.featured_image | image_url: width: 1400 | image_tag: class: 'zy-fiche__img', alt: product.title }}
+      {%- endif -%}
+    </div>
+    <div>
+      <p class="zy__eyebrow">{{ product.type }}</p>
+      <h1 class="zy__titre zy__titre--m">{{ product.title }}</h1>
+      {%- if product.metafields.zayado.benefice != blank -%}<p class="zy__texte">{{ product.metafields.zayado.benefice.value }}</p>{%- endif -%}
+
+      {%- if bientot -%}
+        {%- comment -%}
+          Produit partenaire pas encore validé : pas de prix, pas d'achat.
+          Le visiteur laisse son e-mail (client Shopify, balises « prevenir » + le handle du produit) :
+          vous savez quels produits intéressent avant de signer avec le partenaire.
+        {%- endcomment -%}
+        <div class="zy-prevenir" id="prevenir">
+          <p class="zy-prevenir__titre">En cours de <span class="zy__main">sélection</span></p>
+          <p class="zy-prevenir__texte">{{ section.settings.texte_bientot }}</p>
+          {%- form 'customer', class: 'zy-prevenir__form' -%}
+            {%- if form.posted_successfully? -%}
+              <p class="zy-prevenir__ok" role="status">C'est noté. Vous serez prévenu dès que ce produit est disponible.</p>
+            {%- else -%}
+              <input type="hidden" name="contact[tags]" value="prevenir,prevenir-{{ product.handle }}">
+              <label class="zy-sr" for="prevenir-email">Votre e-mail</label>
+              <input id="prevenir-email" class="zy-champ" type="email" name="contact[email]" placeholder="votre@email.fr" required autocomplete="email">
+              <button class="zy__btn zy__btn--plein" type="submit">Me prévenir</button>
+              {%- if form.errors -%}<p class="zy-prevenir__erreur" role="alert">Vérifiez votre adresse e-mail.</p>{%- endif -%}
+            {%- endif -%}
+          {%- endform -%}
+          <p class="zy-prevenir__rgpd">Un seul e-mail, le jour de la sortie. Désinscription en un clic.</p>
+        </div>
+      {%- else -%}
+        <p class="zy-fiche__prix">
+          {%- if devis -%}Sur devis{%- else -%}{{ product.price | money }}{%- endif -%}
+        </p>
+        {%- if product.metafields.zayado.mode_prix != blank -%}<p class="zy-carte__mode">{{ product.metafields.zayado.mode_prix.value }}</p>{%- endif -%}
+        <div class="zy__actions">
+          <a class="zy__btn zy__btn--plein" href="{{ lien }}">{{ cta }} →</a>
+        </div>
+      {%- endif -%}
+
+      <div class="zy-fiche__desc">{{ product.description }}</div>
+      {%- unless bientot -%}
+        <ul class="zy-fiche__reassurance">
+          {%- for i in (1..3) -%}
+            {%- assign cle = 'reassurance_' | append: i -%}
+            {%- if section.settings[cle] != blank -%}<li>{{ section.settings[cle] }}</li>{%- endif -%}
+          {%- endfor -%}
+        </ul>
+      {%- endunless -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Zayado — Fiche produit",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "cta", "label": "Texte du bouton (si le produit n'a pas de métachamp zayado.cta)", "default": "Commander sur Zayado" },
+    { "type": "url", "id": "lien_defaut", "label": "Lien par défaut (si le produit n'a pas de métachamp zayado.lien_app)" },
+    { "type": "textarea", "id": "texte_bientot", "label": "Texte des produits « bientôt »", "default": "Nous testons ce produit avec un partenaire avant de le proposer. Laissez votre e-mail : vous serez le premier informé de sa sortie." },
+    { "type": "text", "id": "reassurance_1", "label": "Réassurance 1", "default": "Paiement sécurisé par Mollie" },
+    { "type": "text", "id": "reassurance_2", "label": "Réassurance 2", "default": "Suivi de commande dans votre espace Zayado" },
+    { "type": "text", "id": "reassurance_3", "label": "Réassurance 3", "default": "Une question ? Réponse sous 24 h" }
+  ]
+}
+{% endschema %}

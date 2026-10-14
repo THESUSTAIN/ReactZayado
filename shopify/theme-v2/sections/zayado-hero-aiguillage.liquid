@@ -1,0 +1,113 @@
+{%- comment -%} Hero « Double aiguillage » : surtitre + titre court, puis deux grandes cartes.
+Carte 1 (nuit) « Je pilote mon activité » → VisionAct / diagnostic.
+Carte 2 (ivoire) « J'équipe mon quotidien » → boutique, box, Ocushield.
+Textes, puces (une par ligne), liens et image réglables dans le customizer. {%- endcomment -%}
+{%- assign puces_1 = section.settings.puces_1 | default: "Trésorerie, marge et mois d'autonomie, expliqués simplement\nDes prospects réels qui bougent près de chez vous\nUn plan daté et un copilote IA qui connaît votre projet" | newline_to_br | split: '<br />' -%}
+{%- assign puces_2 = section.settings.puces_2 | default: "Box, carnets et objets choisis pour votre énergie\nConcentration visuelle : lunettes et filtres Ocushield\nUne sélection courte, testée, livrée chez vous" | newline_to_br | split: '<br />' -%}
+{%- assign jauges = section.settings.jauges | default: "Clarté financière|88\nÉnergie|72\nOrganisation|64" | newline_to_br | split: '<br />' -%}
+<section class="zy-aig" data-testid="landing-hero">
+  <div class="zy-aig__fond"></div>
+  <div class="zy-aig__in">
+    <header class="zy-aig__tete">
+      <p class="zy-aig__sur zy-anim" style="--d: .05s">{{ section.settings.surtitre | default: "La maison des entrepreneurs apaisés" }}</p>
+      <h1 class="zy-aig__titre zy-anim" style="--d: .18s">
+        {{ section.settings.titre | default: "Entreprendre avec" }}
+        <em class="zy-aig__main">{{ section.settings.titre_main | default: "clarté," }}</em>
+        {{ section.settings.titre_fin | default: "sérénité et équilibre." }}
+      </h1>
+      <p class="zy-aig__sous zy-anim" style="--d: .3s">{{ section.settings.sous_titre | default: "Deux portes, un même objectif : une activité rentable et un quotidien qui tient. Par où voulez-vous commencer ?" }}</p>
+    </header>
+
+    <div class="zy-aig__cartes">
+      {%- comment -%} ── Carte 1 : Je pilote mon activité ── {%- endcomment -%}
+      <a class="zy-aig__carte zy-aig__carte--nuit zy-anim" style="--d: .45s" href="{{ section.settings.lien_1 | default: 'https://app.zayado.net/diagnostic' }}" data-testid="hero-carte-pilote">
+        <div class="zy-aig__carte-tete">
+          <span class="zy-aig__num">01</span>
+          <span class="zy-aig__kicker">{{ section.settings.kicker_1 | default: "Chiffres · Radar · Plan · Copilote IA" }}</span>
+        </div>
+        <h2 class="zy-aig__carte-titre">{{ section.settings.titre_1 | default: "Je pilote mon activité" }}</h2>
+        <p class="zy-aig__carte-p">{{ section.settings.texte_1 | default: "Votre vision, vos chiffres, vos prospects et votre plan au même endroit — avec un copilote qui connaît votre projet." }}</p>
+        <ul class="zy-aig__puces">
+          {%- for l in puces_1 -%}{%- assign t = l | strip -%}{%- if t != blank -%}<li>{{ t }}</li>{%- endif -%}{%- endfor -%}
+        </ul>
+        {%- if section.settings.carte_jauge -%}
+          <div class="zy-aig__jauge" aria-hidden="true">
+            <div class="zy-aig__jauge-tete"><span class="zy-aig__jauge-score">{{ section.settings.score | default: 78 }}<small>/100</small></span><span class="zy-aig__jauge-lbl">équilibre</span></div>
+            {%- for j in jauges -%}
+              {%- assign p = j | split: '|' -%}
+              {%- if p[0] != blank -%}
+                <div class="zy-aig__barre">
+                  <span class="zy-aig__barre-lbl">{{ p[0] | strip }}</span>
+                  <span class="zy-aig__barre-piste"><span class="zy-aig__barre-val" style="--v: {{ p[1] | strip | default: 50 }}%; --d: {{ 0.9 | plus: forloop.index0 | times: 0.15 }}s"></span></span>
+                  <span class="zy-aig__barre-n">{{ p[1] | strip }}</span>
+                </div>
+              {%- endif -%}
+            {%- endfor -%}
+          </div>
+        {%- endif -%}
+        <span class="zy-aig__cta zy-aig__cta--or">{{ section.settings.cta_1 | default: "Faire mon diagnostic" }} <span class="zy-aig__fleche">→</span></span>
+      </a>
+
+      {%- comment -%} ── Carte 2 : J'équipe mon quotidien ── {%- endcomment -%}
+      <a class="zy-aig__carte zy-aig__carte--ivoire zy-anim" style="--d: .6s" href="{{ section.settings.lien_2 | default: '/collections/produits' }}" data-testid="hero-carte-equipe">
+        <div class="zy-aig__carte-tete">
+          <span class="zy-aig__num">02</span>
+          <span class="zy-aig__kicker">{{ section.settings.kicker_2 | default: "Boutique · Box · Concentration visuelle" }}</span>
+        </div>
+        <h2 class="zy-aig__carte-titre">{{ section.settings.titre_2 | default: "J'équipe mon quotidien" }}</h2>
+        <p class="zy-aig__carte-p">{{ section.settings.texte_2 | default: "Des objets et des rituels choisis pour mieux travailler et mieux vivre, sans vous éparpiller." }}</p>
+        <ul class="zy-aig__puces">
+          {%- for l in puces_2 -%}{%- assign t = l | strip -%}{%- if t != blank -%}<li>{{ t }}</li>{%- endif -%}{%- endfor -%}
+        </ul>
+        <div class="zy-aig__visuel">
+          {%- if section.settings.image_2 != blank -%}
+            <img src="{{ section.settings.image_2 | image_url: width: 900 }}" alt="{{ section.settings.image_2_alt | default: 'Bureau apaisé' | escape }}" width="900" height="600" loading="eager">
+          {%- else -%}
+            <img src="https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/8a5a108e484b9f93ab9e25aaf8e7ed70dad093ccce6dc011f3c680c33b8672d4.jpeg" alt="Bureau apaisé : plantes, carnet et thé" width="900" height="600" loading="eager">
+          {%- endif -%}
+        </div>
+        <span class="zy-aig__cta zy-aig__cta--nuit">{{ section.settings.cta_2 | default: "Explorer la boutique" }} <span class="zy-aig__fleche">→</span></span>
+      </a>
+    </div>
+
+    {%- if section.settings.note != blank -%}
+      <p class="zy-aig__note zy-anim" style="--d: .8s">{{ section.settings.note }}</p>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Zayado — Aiguillage",
+  "class": "zy",
+  "settings": [
+    { "type": "text", "id": "surtitre", "label": "Surtitre", "default": "La maison des entrepreneurs apaisés" },
+    { "type": "text", "id": "titre", "label": "Titre — début", "default": "Entreprendre avec" },
+    { "type": "text", "id": "titre_main", "label": "Titre — mot manuscrit (or)", "default": "clarté," },
+    { "type": "text", "id": "titre_fin", "label": "Titre — fin", "default": "sérénité et équilibre." },
+    { "type": "textarea", "id": "sous_titre", "label": "Sous-titre", "default": "Deux portes, un même objectif : une activité rentable et un quotidien qui tient. Par où voulez-vous commencer ?" },
+    { "type": "header", "content": "Carte 1 — Je pilote mon activité" },
+    { "type": "text", "id": "kicker_1", "label": "Étiquette", "default": "Chiffres · Radar · Plan · Copilote IA" },
+    { "type": "text", "id": "titre_1", "label": "Titre", "default": "Je pilote mon activité" },
+    { "type": "textarea", "id": "texte_1", "label": "Texte", "default": "Votre vision, vos chiffres, vos prospects et votre plan au même endroit — avec un copilote qui connaît votre projet." },
+    { "type": "textarea", "id": "puces_1", "label": "Puces (une par ligne)", "default": "Trésorerie, marge et mois d'autonomie, expliqués simplement\nDes prospects réels qui bougent près de chez vous\nUn plan daté et un copilote IA qui connaît votre projet" },
+    { "type": "text", "id": "cta_1", "label": "Bouton", "default": "Faire mon diagnostic" },
+    { "type": "url", "id": "lien_1", "label": "Lien (défaut : https://app.zayado.net/diagnostic)" },
+    { "type": "checkbox", "id": "carte_jauge", "label": "Afficher la mini-jauge d'équilibre", "default": true },
+    { "type": "range", "id": "score", "label": "Score d'équilibre", "min": 0, "max": 100, "step": 1, "default": 78 },
+    { "type": "textarea", "id": "jauges", "label": "Jauges (Libellé|Valeur, une par ligne)", "default": "Clarté financière|88\nÉnergie|72\nOrganisation|64" },
+    { "type": "header", "content": "Carte 2 — J'équipe mon quotidien" },
+    { "type": "text", "id": "kicker_2", "label": "Étiquette", "default": "Boutique · Box · Concentration visuelle" },
+    { "type": "text", "id": "titre_2", "label": "Titre", "default": "J'équipe mon quotidien" },
+    { "type": "textarea", "id": "texte_2", "label": "Texte", "default": "Des objets et des rituels choisis pour mieux travailler et mieux vivre, sans vous éparpiller." },
+    { "type": "textarea", "id": "puces_2", "label": "Puces (une par ligne)", "default": "Box, carnets et objets choisis pour votre énergie\nConcentration visuelle : lunettes et filtres Ocushield\nUne sélection courte, testée, livrée chez vous" },
+    { "type": "text", "id": "cta_2", "label": "Bouton", "default": "Explorer la boutique" },
+    { "type": "url", "id": "lien_2", "label": "Lien (défaut : /collections/produits)" },
+    { "type": "image_picker", "id": "image_2", "label": "Image de la carte" },
+    { "type": "text", "id": "image_2_alt", "label": "Texte alternatif de l'image", "default": "Bureau apaisé : plantes, carnet et thé" },
+    { "type": "header", "content": "Bas du hero" },
+    { "type": "text", "id": "note", "label": "Note (optionnelle)", "default": "Paiement sécurisé par Mollie · Sans engagement · Aucune donnée inventée : chaque chiffre a sa source et sa date." }
+  ],
+  "presets": [{ "name": "Zayado — Aiguillage" }]
+}
+{% endschema %}

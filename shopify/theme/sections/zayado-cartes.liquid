@@ -1,0 +1,85 @@
+{{ 'zayado.css' | asset_url | stylesheet_tag }}
+{%- comment -%}
+  Section « cartes » : un titre, puis une grille de cartes (piliers, étapes, niveaux, valeurs, modules…).
+  Une carte = étiquette, titre, texte, liste (une ligne = un point), bouton facultatif.
+  « Numéroter » affiche 01, 02… en manuscrit. « Mise en avant » encadre une carte (une seule par section).
+{%- endcomment -%}
+{%- assign nb = section.blocks.size -%}
+{%- assign colonnes = section.settings.colonnes | plus: 0 -%}
+{%- if colonnes == 0 -%}{%- assign colonnes = nb | at_most: 4 | at_least: 1 -%}{%- endif -%}
+<section class="zy {% if section.settings.fond == 'sable' %}zy--sable{% elsif section.settings.fond == 'nuit' %}zy--nuit{% endif %}" id="{{ section.settings.ancre | default: section.id }}">
+  <div class="zy__wrap">
+    <div class="zy-cartes__tete {% if section.settings.centre %}zy-cartes__tete--centre{% endif %}">
+      {%- if section.settings.surtitre != blank -%}<p class="zy__eyebrow">{{ section.settings.surtitre }}</p>{%- endif -%}
+      <h2 class="zy__titre zy__titre--m">{{ section.settings.titre }}{% if section.settings.mot_main != blank %} <span class="zy__main">{{ section.settings.mot_main }}</span>{% endif %}</h2>
+      {%- if section.settings.texte != blank -%}<p class="zy__texte">{{ section.settings.texte }}</p>{%- endif -%}
+    </div>
+    <div class="zy-cartes__grille" style="--zy-colonnes: {{ colonnes }}">
+      {%- for block in section.blocks -%}
+        {%- assign b = block.settings -%}
+        <article class="zy-cartes__carte {% if b.mise_en_avant %}zy-cartes__carte--avant{% endif %}" {{ block.shopify_attributes }}>
+          {%- if b.mise_en_avant and b.badge != blank -%}<span class="zy-cartes__badge">{{ b.badge }}</span>{%- endif -%}
+          {%- if section.settings.numeroter -%}<span class="zy-univers__num">{% if forloop.index < 10 %}0{% endif %}{{ forloop.index }}</span>{%- endif -%}
+          {%- if b.etiquette != blank -%}<span class="zy-carte__type">{{ b.etiquette }}</span>{%- endif -%}
+          <h3 class="zy-cartes__titre">{{ b.titre }}</h3>
+          {%- if b.sous_titre != blank -%}<p class="zy-cartes__sous">{{ b.sous_titre }}</p>{%- endif -%}
+          {%- if b.texte != blank -%}<p class="zy-cartes__texte">{{ b.texte }}</p>{%- endif -%}
+          {%- if b.liste != blank -%}
+            <ul class="zy-cartes__liste">
+              {%- assign lignes = b.liste | newline_to_br | split: '<br />' -%}
+              {%- for l in lignes -%}{%- assign l2 = l | strip -%}{%- if l2 != blank -%}<li>{{ l2 }}</li>{%- endif -%}{%- endfor -%}
+            </ul>
+          {%- endif -%}
+          {%- if b.cta != blank -%}
+            <a class="zy-cartes__lien" href="{{ b.lien | default: '#' }}">{{ b.cta }} →</a>
+          {%- endif -%}
+        </article>
+      {%- endfor -%}
+    </div>
+    {%- if section.settings.bouton != blank -%}
+      <div class="zy__actions {% if section.settings.centre %}zy__actions--centre{% endif %}">
+        <a class="zy__btn zy__btn--plein" href="{{ section.settings.bouton_lien }}">{{ section.settings.bouton }} →</a>
+      </div>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Zayado — Cartes",
+  "tag": "section",
+  "settings": [
+    { "type": "select", "id": "fond", "label": "Fond", "default": "ivoire", "options": [
+      { "value": "ivoire", "label": "Ivoire" }, { "value": "sable", "label": "Sable" }, { "value": "nuit", "label": "Bleu nuit" } ] },
+    { "type": "text", "id": "ancre", "label": "Ancre (pour un lien #…)" },
+    { "type": "text", "id": "surtitre", "label": "Surtitre" },
+    { "type": "text", "id": "titre", "label": "Titre", "default": "Un titre clair" },
+    { "type": "text", "id": "mot_main", "label": "Mot manuscrit (or) à la fin du titre" },
+    { "type": "textarea", "id": "texte", "label": "Texte d'introduction" },
+    { "type": "select", "id": "colonnes", "label": "Colonnes sur ordinateur", "default": "0", "options": [
+      { "value": "0", "label": "Automatique" }, { "value": "2", "label": "2" }, { "value": "3", "label": "3" }, { "value": "4", "label": "4" } ] },
+    { "type": "checkbox", "id": "numeroter", "label": "Numéroter les cartes (01, 02…)", "default": false },
+    { "type": "checkbox", "id": "centre", "label": "Centrer le titre", "default": false },
+    { "type": "text", "id": "bouton", "label": "Bouton sous la grille" },
+    { "type": "url", "id": "bouton_lien", "label": "Lien du bouton" }
+  ],
+  "blocks": [
+    {
+      "type": "carte",
+      "name": "Carte",
+      "settings": [
+        { "type": "text", "id": "etiquette", "label": "Étiquette" },
+        { "type": "text", "id": "titre", "label": "Titre", "default": "Titre de la carte" },
+        { "type": "text", "id": "sous_titre", "label": "Sous-titre (manuscrit)" },
+        { "type": "textarea", "id": "texte", "label": "Texte" },
+        { "type": "textarea", "id": "liste", "label": "Points (un par ligne)" },
+        { "type": "text", "id": "cta", "label": "Texte du lien" },
+        { "type": "url", "id": "lien", "label": "Lien" },
+        { "type": "checkbox", "id": "mise_en_avant", "label": "Mettre en avant", "default": false },
+        { "type": "text", "id": "badge", "label": "Badge (si mise en avant)", "default": "Le plus demandé" }
+      ]
+    }
+  ],
+  "presets": [{ "name": "Zayado — Cartes", "blocks": [{ "type": "carte" }, { "type": "carte" }, { "type": "carte" }] }]
+}
+{% endschema %}

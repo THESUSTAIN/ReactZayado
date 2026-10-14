@@ -1,0 +1,40 @@
+{{ 'zayado.css' | asset_url | stylesheet_tag }}
+<section class="zy {% if section.settings.fond == 'sable' %}zy--sable{% endif %}">
+  <div class="zy__wrap" style="max-width: 860px">
+    <p class="zy__eyebrow">{{ section.settings.surtitre }}</p>
+    <h2 class="zy__titre zy__titre--m">{{ section.settings.titre }}</h2>
+    <div style="margin-top: 28px">
+      {%- for block in section.blocks -%}
+        <details class="zy-faq__item" {{ block.shopify_attributes }}>
+          <summary>{{ block.settings.question }}</summary>
+          <p>{{ block.settings.reponse }}</p>
+        </details>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Zayado — FAQ",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "surtitre", "label": "Surtitre", "default": "Questions fréquentes" },
+    { "type": "text", "id": "titre", "label": "Titre", "default": "Tout ce que vous vous demandez" },
+    { "type": "select", "id": "fond", "label": "Fond", "default": "ivoire", "options": [ { "value": "ivoire", "label": "Ivoire" }, { "value": "sable", "label": "Sable" } ] }
+  ],
+  "blocks": [
+    { "type": "question", "name": "Question", "settings": [
+      { "type": "text", "id": "question", "label": "Question" },
+      { "type": "textarea", "id": "reponse", "label": "Réponse" } ] }
+  ],
+  "presets": [{
+    "name": "Zayado — FAQ",
+    "blocks": [
+      { "type": "question", "settings": { "question": "Où se passe le paiement ?", "reponse": "Dans votre espace Zayado, de façon sécurisée par Mollie. Vous y suivez ensuite votre commande ou votre abonnement." } },
+      { "type": "question", "settings": { "question": "Puis-je arrêter mon abonnement ?", "reponse": "Oui, à tout moment, depuis votre espace. Sans engagement." } },
+      { "type": "question", "settings": { "question": "Faut-il donner mes identifiants bancaires ?", "reponse": "Jamais. Pour vos chiffres, vous importez simplement le relevé exporté depuis votre banque." } }
+    ]
+  }]
+}
+{% endschema %}

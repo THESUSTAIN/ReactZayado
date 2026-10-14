@@ -1,0 +1,47 @@
+{{ 'zayado.css' | asset_url | stylesheet_tag }}
+<section class="zy {% if section.settings.fond == 'sable' %}zy--sable{% endif %}">
+  <div class="zy__wrap">
+    <p class="zy__eyebrow">{{ section.settings.surtitre }}</p>
+    <h2 class="zy__titre zy__titre--m">{{ section.settings.titre }}</h2>
+    {%- if section.settings.texte != blank -%}<p class="zy__texte">{{ section.settings.texte }}</p>{%- endif -%}
+    <div class="zy-univers__grille">
+      {%- for block in section.blocks -%}
+        <a class="zy-univers__carte" href="{{ block.settings.lien }}" {{ block.shopify_attributes }}>
+          <span class="zy-univers__num">0{{ forloop.index }}</span>
+          <span class="zy-univers__nom">{{ block.settings.nom }}</span>
+          <span class="zy-univers__desc">{{ block.settings.desc }}</span>
+          <span class="zy-univers__lien">{{ block.settings.cta }} →</span>
+        </a>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Zayado — 4 univers",
+  "tag": "section",
+  "settings": [
+    { "type": "select", "id": "fond", "label": "Fond", "default": "sable", "options": [ { "value": "ivoire", "label": "Ivoire" }, { "value": "sable", "label": "Sable" } ] },
+    { "type": "text", "id": "surtitre", "label": "Surtitre", "default": "La maison des entrepreneurs apaisés" },
+    { "type": "text", "id": "titre", "label": "Titre", "default": "Tout ce qu'il faut pour avancer, au même endroit" },
+    { "type": "textarea", "id": "texte", "label": "Texte", "default": "Des outils IA pour piloter, des experts pour vous accompagner, la reprise d'entreprise cadrée, et des produits choisis pour votre énergie." }
+  ],
+  "blocks": [
+    { "type": "univers", "name": "Univers", "limit": 4, "settings": [
+      { "type": "text", "id": "nom", "label": "Nom" },
+      { "type": "textarea", "id": "desc", "label": "Description" },
+      { "type": "text", "id": "cta", "label": "Texte du lien", "default": "Découvrir" },
+      { "type": "url", "id": "lien", "label": "Lien (collection)" } ] }
+  ],
+  "presets": [{
+    "name": "Zayado — 4 univers",
+    "blocks": [
+      { "type": "univers", "settings": { "nom": "Piloter avec VisionAct", "desc": "Le Copilote Zayado : chiffres, Radar de futurs clients, plan d'action et tunnels de vente. De Rêveur à Entreprise.", "cta": "Voir les offres", "lien": "/collections/outils-ia" } },
+      { "type": "univers", "settings": { "nom": "Être accompagné", "desc": "Un expert Zayado cadre vos chiffres et vos priorités, du premier rendez-vous au plan tenu.", "cta": "Être accompagné", "lien": "/collections/accompagnement" } },
+      { "type": "univers", "settings": { "nom": "Reprendre une entreprise", "desc": "Reprendre une entreprise qui tourne déjà, même sans apport : sélection de la cible, financement et négociation, avec un seul interlocuteur.", "cta": "En savoir plus", "lien": "/collections/rachat-reprise" } },
+      { "type": "univers", "settings": { "nom": "S'équiper", "desc": "Box, carnets et objets choisis pour votre énergie, votre concentration et votre bureau.", "cta": "Voir les produits", "lien": "/collections/produits" } }
+    ]
+  }]
+}
+{% endschema %}

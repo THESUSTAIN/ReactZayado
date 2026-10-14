@@ -1,0 +1,7 @@
+{
+  "sections": {
+    "fiche": { "type": "zayado-fiche-produit", "settings": {} },
+    "faq": { "type": "zayado-faq", "settings": {} }
+  },
+  "order": ["fiche", "faq"]
+}

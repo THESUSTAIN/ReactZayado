@@ -1,0 +1,211 @@
+{
+  "sections": {
+    "hero": {
+      "type": "zayado-hero",
+      "settings": {
+        "fond": "nuit",
+        "surtitre": "L'application Zayado",
+        "titre": "Pilotez votre entreprise,",
+        "mot_main": "sans vous épuiser.",
+        "texte": "Vision, actions, prospection et énergie réunies dans un seul cockpit IA. Plus besoin de dix outils, ni de choisir entre votre santé et votre rentabilité.",
+        "bouton_1": "Essayer 2 mois pour 1 €",
+        "lien_1": "https://app.zayado.net/onboarding?plan=serenite&essai=1",
+        "bouton_2": "Voir les offres",
+        "lien_2": "#offres",
+        "mention": "Sans engagement · paiement sécurisé Mollie · RGPD",
+        "image_url": ""
+      }
+    },
+    "principes": {
+      "type": "zayado-cartes",
+      "settings": {
+        "fond": "ivoire",
+        "surtitre": "Notre façon de faire",
+        "titre": "Quatre principes, une seule",
+        "mot_main": "boussole.",
+        "colonnes": "4"
+      },
+      "blocks": {
+        "c1": {
+          "type": "carte",
+          "settings": {
+            "titre": "L'IA prépare, vous décidez",
+            "texte": "Le Copilote propose, rédige et résume. Le dernier mot reste le vôtre."
+          }
+        },
+        "c2": {
+          "type": "carte",
+          "settings": {
+            "titre": "Jamais seul",
+            "texte": "Un copilote qui connaît votre projet, et des experts quand il le faut."
+          }
+        },
+        "c3": {
+          "type": "carte",
+          "settings": {
+            "titre": "L'équilibre d'abord",
+            "texte": "Pas de croissance à tout prix : le cockpit s'adapte à votre énergie."
+          }
+        },
+        "c4": {
+          "type": "carte",
+          "settings": {
+            "titre": "Honnêteté, toujours",
+            "texte": "Vos données restent les vôtres et ne nourrissent aucune publicité."
+          }
+        }
+      },
+      "block_order": [
+        "c1",
+        "c2",
+        "c3",
+        "c4"
+      ]
+    },
+    "modules": {
+      "type": "zayado-cartes",
+      "settings": {
+        "fond": "sable",
+        "ancre": "fonctionnalites",
+        "surtitre": "Fonctionnalités",
+        "titre": "Un seul cockpit, tout votre",
+        "mot_main": "pilotage.",
+        "texte": "Six modules qui travaillent ensemble et parlent de votre activité.",
+        "colonnes": "3"
+      },
+      "blocks": {
+        "c1": {
+          "type": "carte",
+          "settings": {
+            "etiquette": "Point du jour",
+            "titre": "Chaque matin, votre point du jour est prêt.",
+            "liste": "Priorités, objectif à 90 jours, victoires et énergie sur un écran\nTrésorerie et semaine d'un coup d'œil\nUn rythme qui s'adapte à votre énergie"
+          }
+        },
+        "c2": {
+          "type": "carte",
+          "settings": {
+            "etiquette": "Copilote IA & actualité",
+            "titre": "Un copilote qui connaît votre projet et veille votre marché.",
+            "liste": "L'actualité de votre marché, résumée chaque jour\nUn chat qui clarifie, rédige et prépare vos documents\nChaque article peut devenir une décision"
+          }
+        },
+        "c3": {
+          "type": "carte",
+          "settings": {
+            "etiquette": "Vision",
+            "titre": "Votre vision, visible chaque jour.",
+            "liste": "Un tableau de vision généré à partir de vos mots\nRoue d'équilibre et feuille de route à 90 jours\nLe compte à rebours de votre objectif à 3 ans"
+          }
+        },
+        "c4": {
+          "type": "carte",
+          "settings": {
+            "etiquette": "Radar",
+            "titre": "Des opportunités qualifiées vous attendent.",
+            "liste": "Des entreprises qui bougent près de chez vous\nLe message de prise de contact déjà prêt\nUne analyse de votre activité à la demande"
+          }
+        },
+        "c5": {
+          "type": "carte",
+          "settings": {
+            "etiquette": "Revue hebdo",
+            "titre": "Cinq minutes par semaine pour reprendre la main.",
+            "liste": "Victoires, apprentissages, obstacles\nUne seule priorité pour la semaine qui vient\nPréparée par le Copilote avec vos données"
+          }
+        },
+        "c6": {
+          "type": "carte",
+          "settings": {
+            "etiquette": "Bien-être",
+            "titre": "Durer sans vous brûler.",
+            "liste": "Un check-in d'énergie en 30 secondes\nDes rituels courts, au bon moment\nUne charge de travail ajustée à votre forme"
+          }
+        }
+      },
+      "block_order": [
+        "c1",
+        "c2",
+        "c3",
+        "c4",
+        "c5",
+        "c6"
+      ]
+    },
+    "offres": {
+      "type": "zayado-tarifs",
+      "settings": {
+        "surtitre": "Les offres",
+        "titre": "Une offre pour chaque étape",
+        "texte": "Sans engagement, résiliable en un clic. Solo : 2 mois pour 1 € pour tout tester.",
+        "url_app": "https://app.zayado.net",
+        "hauteur": 1150,
+        "fond": "ivoire"
+      }
+    },
+    "faq": {
+      "type": "zayado-faq",
+      "settings": {
+        "surtitre": "Questions fréquentes",
+        "titre": "Les questions qu'on nous pose",
+        "fond": "sable"
+      },
+      "blocks": {
+        "q1": {
+          "type": "question",
+          "settings": {
+            "question": "L'essai, comment ça marche ?",
+            "reponse": "Solo : 2 mois pour 1 €. Rêveur : le premier mois offert. Sans engagement, résiliable en un clic depuis votre compte."
+          }
+        },
+        "q2": {
+          "type": "question",
+          "settings": {
+            "question": "Où sont mes données ?",
+            "reponse": "Vos données sont traitées selon le RGPD et ne nourrissent aucune publicité. Vous pouvez les exporter ou les supprimer depuis votre compte."
+          }
+        },
+        "q3": {
+          "type": "question",
+          "settings": {
+            "question": "Comment je paie ?",
+            "reponse": "Par carte, avec le paiement sécurisé Mollie. Mensuel ou annuel (deux mois offerts en annuel)."
+          }
+        },
+        "q4": {
+          "type": "question",
+          "settings": {
+            "question": "Et pour une équipe ou une grande entreprise ?",
+            "reponse": "L'offre Équipe couvre jusqu'à 5 personnes. Au-delà, l'offre Entreprise se construit sur devis : écrivez-nous depuis la page contact."
+          }
+        }
+      },
+      "block_order": [
+        "q1",
+        "q2",
+        "q3",
+        "q4"
+      ]
+    },
+    "final": {
+      "type": "zayado-bandeau",
+      "settings": {
+        "mot_main": "on commence ?",
+        "titre": "Racontez votre projet. Le cockpit fait le reste.",
+        "bouton_1": "Commencer l'essai",
+        "lien_1": "https://app.zayado.net/onboarding?plan=serenite&essai=1",
+        "bouton_2": "Faire le diagnostic",
+        "lien_2": "https://app.zayado.net/public/tunnel",
+        "centre": true
+      }
+    }
+  },
+  "order": [
+    "hero",
+    "principes",
+    "modules",
+    "offres",
+    "faq",
+    "final"
+  ]
+}

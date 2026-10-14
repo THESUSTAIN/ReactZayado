@@ -1,0 +1,197 @@
+{
+  "sections": {
+    "hero": {
+      "type": "zayado-hero",
+      "settings": {
+        "fond": "ivoire",
+        "surtitre": "La maison des entrepreneurs apaisés",
+        "titre": "De quoi avez-vous besoin",
+        "mot_main": "maintenant ?",
+        "texte": "Pas un catalogue. Dites-nous où vous en êtes : nous vous montrons la voie, puis nous la tenons avec vous. Le conseil, le pilotage, les bons contacts et le bon équipement.",
+        "bouton_1": "Faire mon diagnostic gratuit",
+        "lien_1": "https://app.zayado.net/public/tunnel",
+        "bouton_2": "Parcourir les 4 piliers",
+        "lien_2": "#piliers",
+        "mention": "Gratuit · 2 minutes · sans engagement",
+        "image_url": ""
+      }
+    },
+    "piliers": {
+      "type": "zayado-cartes",
+      "settings": {
+        "fond": "sable",
+        "ancre": "piliers",
+        "surtitre": "Les quatre piliers",
+        "titre": "Tout ce dont vous pouvez avoir besoin tient en",
+        "mot_main": "quatre mots.",
+        "colonnes": "4"
+      },
+      "blocks": {
+        "c1": {
+          "type": "carte",
+          "settings": {
+            "titre": "Accompagner",
+            "texte": "Vous conseiller quand la décision compte.",
+            "liste": "Clarté financière et tableaux de bord\nReprendre une entreprise, même sans apport\nOptimiser la rentabilité",
+            "cta": "Voir l'accompagnement",
+            "lien": "/collections/accompagnement"
+          }
+        },
+        "c2": {
+          "type": "carte",
+          "settings": {
+            "titre": "Piloter",
+            "texte": "Voir clair chaque jour, sans y passer vos soirées.",
+            "liste": "Chiffres et trésorerie en un coup d'œil\nObjectifs à 90 jours et revue hebdo\nL'énergie suivie comme un indicateur",
+            "cta": "Découvrir le Cockpit",
+            "lien": "/pages/cockpit"
+          }
+        },
+        "c3": {
+          "type": "carte",
+          "settings": {
+            "titre": "Connecter",
+            "texte": "Le bon pro, la bonne opportunité, sélectionnés par nous.",
+            "liste": "Artisans et spécialistes vérifiés\nEntreprises à reprendre, sélectionnées\nUn seul interlocuteur, jamais une plateforme anonyme",
+            "cta": "Rachat & reprise",
+            "lien": "/collections/rachat-reprise"
+          }
+        },
+        "c4": {
+          "type": "carte",
+          "settings": {
+            "titre": "Équiper",
+            "texte": "Un environnement qui soutient l'effort, le corps et la tête.",
+            "liste": "Mobilier, éclairage, environnement de travail\nBien-être, focus, récupération\nÉditions saisonnières",
+            "cta": "Les produits",
+            "lien": "/collections/produits"
+          }
+        }
+      },
+      "block_order": [
+        "c1",
+        "c2",
+        "c3",
+        "c4"
+      ]
+    },
+    "voie": {
+      "type": "zayado-cartes",
+      "settings": {
+        "fond": "ivoire",
+        "surtitre": "La voie Zayado",
+        "titre": "Quatre étapes, et le diagnostic au",
+        "mot_main": "centre.",
+        "colonnes": "4",
+        "numeroter": true
+      },
+      "blocks": {
+        "c1": {
+          "type": "carte",
+          "settings": {
+            "titre": "Dites votre besoin",
+            "texte": "Le diagnostic gratuit (2 minutes) le met en mots."
+          }
+        },
+        "c2": {
+          "type": "carte",
+          "settings": {
+            "titre": "On cadre ensemble",
+            "texte": "Un expert vous rappelle avec votre résultat : le pilier, le niveau, le cap."
+          }
+        },
+        "c3": {
+          "type": "carte",
+          "settings": {
+            "titre": "Vous choisissez le niveau",
+            "texte": "Essentiel, Pack ou Parcours : nous vendons un objectif, jamais des heures."
+          }
+        },
+        "c4": {
+          "type": "carte",
+          "settings": {
+            "titre": "Le Cockpit suit tout",
+            "texte": "Entre chaque étape, il garde votre énergie et vos chiffres en vue."
+          }
+        }
+      },
+      "block_order": [
+        "c1",
+        "c2",
+        "c3",
+        "c4"
+      ]
+    },
+    "niveaux": {
+      "type": "zayado-cartes",
+      "settings": {
+        "fond": "sable",
+        "surtitre": "Packs & parcours",
+        "titre": "On vend « développer mon activité », pas « cinq heures de",
+        "mot_main": "conseil ».",
+        "texte": "Chaque besoin se règle à l'un de ces trois niveaux. Le détail et le budget se cadrent avec vous, après le diagnostic.",
+        "colonnes": "3",
+        "bouton": "Le diagnostic vous dira par où commencer",
+        "bouton_lien": "https://app.zayado.net/public/tunnel"
+      },
+      "blocks": {
+        "c1": {
+          "type": "carte",
+          "settings": {
+            "titre": "Essentiel",
+            "sous_titre": "une réponse ponctuelle",
+            "liste": "Une séance de clarification avec un expert\nUn plan d'action écrit et priorisé\nLe Cockpit pendant un mois pour appliquer",
+            "cta": "Demander un échange",
+            "lien": "/pages/contact?sujet=Accompagnement%20Essentiel"
+          }
+        },
+        "c2": {
+          "type": "carte",
+          "settings": {
+            "titre": "Pack",
+            "sous_titre": "un objectif chiffré sur 90 jours",
+            "liste": "Un pack dédié à votre besoin : reprise, rentabilité, organisation\nDes sessions avec les bons experts\nCockpit, indicateurs et revue hebdo pendant 90 jours",
+            "cta": "Demander un devis",
+            "lien": "/pages/contact?sujet=Pack%2090%20jours",
+            "mise_en_avant": true,
+            "badge": "Le plus demandé"
+          }
+        },
+        "c3": {
+          "type": "carte",
+          "settings": {
+            "titre": "Parcours",
+            "sous_titre": "la transformation complète",
+            "liste": "Entreprise et entrepreneur, tous les experts Zayado\nUn expert dédié, de la première séance à la passation\nUne reprise pilotée comme un fil continu",
+            "cta": "Demander un devis",
+            "lien": "/pages/contact?sujet=Parcours%20complet"
+          }
+        }
+      },
+      "block_order": [
+        "c1",
+        "c2",
+        "c3"
+      ]
+    },
+    "final": {
+      "type": "zayado-bandeau",
+      "settings": {
+        "mot_main": "le fil continu",
+        "titre": "Entre chaque étape, le Cockpit garde le cap.",
+        "texte": "Le conseil passe, le pilotage reste : énergie, chiffres, objectifs à 90 jours et revue hebdo dans un seul cockpit IA.",
+        "bouton_1": "Découvrir le Cockpit",
+        "lien_1": "/pages/cockpit",
+        "bouton_2": "Faire le diagnostic",
+        "lien_2": "https://app.zayado.net/public/tunnel"
+      }
+    }
+  },
+  "order": [
+    "hero",
+    "piliers",
+    "voie",
+    "niveaux",
+    "final"
+  ]
+}

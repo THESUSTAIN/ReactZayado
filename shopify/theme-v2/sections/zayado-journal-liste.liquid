@@ -1,0 +1,96 @@
+{{ 'zayado.css' | asset_url | stylesheet_tag }}
+{%- comment -%}
+  Le Journal Zayado — liste (modèle de blog « blog.journal »).
+  Trois rubriques = trois balises sur un seul blog « journal » :
+    article     → l'article de fond (image, 1 200 mots, liens produits)
+    temoignage  → la citation d'un vrai client, publiée avec son accord écrit
+    note        → la note signée d'un membre de l'équipe (photo et prénom du compte Shopify qui publie)
+  Pour un témoignage, mets la phrase-clé dans l'extrait et « Prénom, métier » dans le métachamp
+  d'article zayado.personne (Texte sur une ligne). Rien n'est publié sans accord.
+{%- endcomment -%}
+{%- paginate blog.articles by 12 -%}
+{%- assign filtre = current_tags | first -%}
+{%- assign une = false -%}
+{%- if filtre == blank and paginate.current_page == 1 and blog.articles.size > 0 -%}{%- assign une = true -%}{%- endif -%}
+<section class="zy zy-journal">
+  <header class="zy-journal__tete">
+    <div class="zy__wrap zy-journal__tete-wrap">
+      <span class="zy-tampon">{{ section.settings.tampon }}</span>
+      <h1 class="zy__titre">{{ section.settings.titre }} <span class="zy__main">{{ section.settings.mot_main }}</span></h1>
+      <p class="zy__texte zy-journal__intro">{{ section.settings.texte }}</p>
+      <nav class="zy-journal__filtres" aria-label="Rubriques du journal">
+        <a class="zy-pilule" href="{{ blog.url }}" {% if filtre == blank %}aria-current="page"{% endif %}>Tout</a>
+        <a class="zy-pilule" href="{{ blog.url }}/tagged/article" {% if filtre == 'article' %}aria-current="page"{% endif %}>Articles</a>
+        <a class="zy-pilule" href="{{ blog.url }}/tagged/temoignage" {% if filtre == 'temoignage' %}aria-current="page"{% endif %}>Témoignages</a>
+        <a class="zy-pilule" href="{{ blog.url }}/tagged/note" {% if filtre == 'note' %}aria-current="page"{% endif %}>Notes de la maison</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="zy__wrap zy-journal__corps">
+    {%- if blog.articles.size == 0 -%}
+      <p class="zy__texte">Rien ici pour l'instant. Le prochain texte arrive bientôt.</p>
+    {%- endif -%}
+
+    {%- if une -%}
+      {%- assign a = blog.articles.first -%}
+      <a class="zy-une" href="{{ a.url }}">
+        {%- if a.image -%}{{ a.image | image_url: width: 1400 | image_tag: class: 'zy-une__img', alt: a.title, loading: 'eager' }}{%- endif -%}
+        <div class="zy-une__texte">
+          <span class="zy-une__etiquette">À la une</span>
+          <h2 class="zy-une__titre">{{ a.title }}</h2>
+          <p class="zy-une__extrait">{{ a.excerpt_or_content | strip_html | truncatewords: 32 }}</p>
+          {%- assign mots = a.content | strip_html | split: ' ' | size -%}
+          <span class="zy-une__meta">{% render 'zayado-date', d: a.published_at, annee: true %} · {{ mots | divided_by: 200 | at_least: 1 }} min de lecture</span>
+        </div>
+      </a>
+    {%- endif -%}
+
+    <div class="zy-journal__grille">
+      {%- for a in blog.articles -%}
+        {%- if une and forloop.first -%}{%- continue -%}{%- endif -%}
+        {%- render 'zayado-carte-journal', article: a -%}
+        {%- if forloop.index == 5 and section.settings.newsletter -%}
+          <aside class="zy-journal__news">
+            <p class="zy__eyebrow">{{ section.settings.news_surtitre }}</p>
+            <p class="zy-journal__news-titre">{{ section.settings.news_titre }}</p>
+            {%- form 'customer', class: 'zy-prevenir__form' -%}
+              {%- if form.posted_successfully? -%}
+                <p class="zy-prevenir__ok" role="status">Inscription confirmée. À très vite.</p>
+              {%- else -%}
+                <input type="hidden" name="contact[tags]" value="newsletter,journal">
+                <label class="zy-sr" for="journal-news-email">Votre e-mail</label>
+                <input id="journal-news-email" class="zy-champ" type="email" name="contact[email]" placeholder="votre@email.fr" required autocomplete="email">
+                <button class="zy__btn zy__btn--plein" type="submit">Recevoir la note</button>
+              {%- endif -%}
+            {%- endform -%}
+          </aside>
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+
+    {%- if paginate.pages > 1 -%}
+      <nav class="zy-journal__pages" aria-label="Pages du journal">
+        {%- if paginate.previous -%}<a class="zy__btn zy__btn--ligne" href="{{ paginate.previous.url }}">← Plus récents</a>{%- endif -%}
+        {%- if paginate.next -%}<a class="zy__btn zy__btn--ligne" href="{{ paginate.next.url }}">Plus anciens →</a>{%- endif -%}
+      </nav>
+    {%- endif -%}
+  </div>
+</section>
+{%- endpaginate -%}
+
+{% schema %}
+{
+  "name": "Zayado — Journal (liste)",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "tampon", "label": "Tampon", "default": "Le journal de la maison" },
+    { "type": "text", "id": "titre", "label": "Titre", "default": "Le Journal" },
+    { "type": "text", "id": "mot_main", "label": "Mot manuscrit", "default": "Zayado" },
+    { "type": "textarea", "id": "texte", "label": "Texte", "default": "Des articles pour décider, des témoignages de dirigeants qui respirent, et nos notes : ce que nous vivons, nous aussi, en entreprenant." },
+    { "type": "checkbox", "id": "newsletter", "label": "Inscription newsletter dans la liste", "default": true },
+    { "type": "text", "id": "news_surtitre", "label": "Newsletter : surtitre", "default": "Chaque semaine" },
+    { "type": "text", "id": "news_titre", "label": "Newsletter : titre", "default": "La note d'équilibre : un chiffre, une idée, une action." }
+  ]
+}
+{% endschema %}

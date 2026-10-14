@@ -1,0 +1,77 @@
+{{ 'zayado.css' | asset_url | stylesheet_tag }}
+{%- comment -%}
+  Page Contact / demande de devis. Le sujet se préremplit depuis l'adresse :
+  /pages/contact?sujet=Copilote%20Entreprise  (boutons « Demander un devis », « Être accompagné »).
+  Les messages arrivent dans l'e-mail de la boutique (Paramètres › Notifications › Contact).
+{%- endcomment -%}
+<section class="zy {% if section.settings.fond == 'sable' %}zy--sable{% endif %}">
+  <div class="zy__wrap zy-contact">
+    <div>
+      <p class="zy__eyebrow">{{ section.settings.surtitre }}</p>
+      <h1 class="zy__titre zy__titre--m">{{ section.settings.titre }} <span class="zy__main">{{ section.settings.mot_main }}</span></h1>
+      <p class="zy__texte">{{ section.settings.texte }}</p>
+      <ul class="zy-fiche__reassurance">
+        <li>Réponse sous 24 h ouvrées</li>
+        <li>Premier échange offert, sans engagement</li>
+        <li>Vos informations restent confidentielles</li>
+      </ul>
+    </div>
+    {%- form 'contact', class: 'zy-contact__form', id: 'zy-contact' -%}
+      {%- if form.posted_successfully? -%}
+        <div class="zy-prevenir" role="status">
+          <p class="zy-prevenir__titre">Message <span class="zy__main">bien reçu</span></p>
+          <p class="zy-prevenir__texte">Nous vous répondons sous 24 h ouvrées, à l'adresse indiquée.</p>
+        </div>
+      {%- else -%}
+        <label class="zy-contact__label" for="zy-contact-sujet">Votre demande</label>
+        <select class="zy-champ" id="zy-contact-sujet" name="contact[Sujet]">
+          {%- assign sujets = section.settings.sujets | split: ',' -%}
+          {%- for s in sujets -%}<option value="{{ s | strip }}">{{ s | strip }}</option>{%- endfor -%}
+        </select>
+        <div class="zy-contact__deux">
+          <div>
+            <label class="zy-contact__label" for="zy-contact-nom">Nom</label>
+            <input class="zy-champ" id="zy-contact-nom" name="contact[Nom]" autocomplete="name" required>
+          </div>
+          <div>
+            <label class="zy-contact__label" for="zy-contact-email">E-mail</label>
+            <input class="zy-champ" id="zy-contact-email" type="email" name="contact[email]" autocomplete="email" required>
+          </div>
+        </div>
+        <label class="zy-contact__label" for="zy-contact-tel">Téléphone (facultatif)</label>
+        <input class="zy-champ" id="zy-contact-tel" type="tel" name="contact[Téléphone]" autocomplete="tel">
+        <label class="zy-contact__label" for="zy-contact-message">Votre situation en quelques lignes</label>
+        <textarea class="zy-champ" id="zy-contact-message" name="contact[body]" required></textarea>
+        {%- if form.errors -%}<p class="zy-prevenir__erreur" role="alert">Vérifiez les champs signalés.</p>{%- endif -%}
+        <button class="zy__btn zy__btn--plein" type="submit">Envoyer ma demande →</button>
+        <p class="zy-prevenir__rgpd">En envoyant ce formulaire, vous acceptez d'être recontacté au sujet de votre demande. <a href="/policies/privacy-policy">Confidentialité</a>.</p>
+      {%- endif -%}
+    {%- endform -%}
+  </div>
+</section>
+<script>
+  (function () {
+    var sujet = new URLSearchParams(window.location.search).get('sujet');
+    var champ = document.getElementById('zy-contact-sujet');
+    if (!sujet || !champ) return;
+    var trouve = Array.prototype.some.call(champ.options, function (o) { return o.value === sujet; });
+    if (!trouve) { var o = document.createElement('option'); o.value = sujet; o.textContent = sujet; champ.insertBefore(o, champ.firstChild); }
+    champ.value = sujet;
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Zayado — Contact",
+  "tag": "section",
+  "settings": [
+    { "type": "select", "id": "fond", "label": "Fond", "default": "ivoire", "options": [ { "value": "ivoire", "label": "Ivoire" }, { "value": "sable", "label": "Sable" } ] },
+    { "type": "text", "id": "surtitre", "label": "Surtitre", "default": "Parlons de votre projet" },
+    { "type": "text", "id": "titre", "label": "Titre", "default": "Une question, un devis ?" },
+    { "type": "text", "id": "mot_main", "label": "Mot manuscrit", "default": "Écrivez-nous" },
+    { "type": "textarea", "id": "texte", "label": "Texte", "default": "Accompagnement, reprise d'entreprise, offre Entreprise : décrivez votre situation, un expert Zayado vous répond personnellement." },
+    { "type": "text", "id": "sujets", "label": "Sujets proposés (séparés par des virgules)", "default": "Accompagnement clarté financière, Copilote Entreprise, Reprendre une entreprise, Partenariat produit, Autre question" }
+  ],
+  "presets": [{ "name": "Zayado — Contact" }]
+}
+{% endschema %}

@@ -1,0 +1,131 @@
+{
+  "theme": "light",
+  "project_name": "Zayado V1",
+  "target_audience": "Entrepreneurs and business leaders seeking financial clarity, optimization, business recovery, and profitability.",
+  "design_philosophy": "E1 - Anti-AI Designer. Fusion of French premium editorial layout with a high-converting diagnostic funnel. 'Awwwards' level execution: kinetic typography, deliberate product photography framing, generous white space, and purposeful motion.",
+  "typography": {
+    "imports": "@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Poppins:wght@300;400;500;600;700&display=swap');",
+    "fonts": {
+      "primary": "font-sans (Poppins) for all structural headings and body text to ensure extreme clarity.",
+      "accent": "font-handwriting (Caveat) for warm touches, signatures, annotations, and humanizing the premium feel."
+    },
+    "hierarchy": {
+      "h1": "text-5xl md:text-6xl+ font-semibold tracking-tight leading-[1.1] text-[#0A100D]",
+      "h2": "text-3xl md:text-5xl font-medium tracking-tight text-[#0A100D]",
+      "h3": "text-xl md:text-2xl font-medium",
+      "body": "text-base md:text-lg font-light leading-relaxed text-[#4A4F4C]",
+      "accent": "text-3xl md:text-4xl font-handwriting text-[#D64E33] -rotate-2 inline-block",
+      "overline": "text-xs md:text-sm uppercase tracking-[0.2em] font-medium text-[#737875]"
+    }
+  },
+  "colors": {
+    "archetype": "French Premium Editorial (Stark Contrasts + Warm Accents)",
+    "background": {
+      "primary": "bg-[#F7F7F5]",
+      "secondary": "bg-[#FFFFFF]",
+      "dark_section": "bg-[#0A2E22]"
+    },
+    "text": {
+      "primary": "text-[#0A100D]",
+      "secondary": "text-[#4A4F4C]",
+      "light": "text-[#F7F7F5]"
+    },
+    "interactive": {
+      "cta_primary": "bg-[#0A2E22] hover:bg-[#124233] text-white transition-all duration-300 shadow-[0_8px_30px_rgba(10,46,34,0.15)] hover:shadow-[0_8px_30px_rgba(10,46,34,0.25)] hover:-translate-y-1",
+      "cta_accent": "bg-[#D64E33] hover:bg-[#C2452D] text-white transition-all duration-300",
+      "input_border": "border-[#D1D1CE] focus:border-[#0A2E22] focus:ring-1 focus:ring-[#0A2E22]"
+    }
+  },
+  "visual_enhancers": {
+    "borders": "1px solid border-[#E0E0DD]",
+    "radius": "rounded-none md:rounded-sm (Keep edges relatively sharp for a premium, editorial feel, avoiding overly bubbly tech SaaS radius)",
+    "shadows": "Ambient diffuse shadows for depth, never harsh. shadow-[0_20px_40px_rgba(0,0,0,0.04)]",
+    "glassmorphism": "backdrop-blur-xl bg-white/80 border-b border-white/20 for sticky headers"
+  },
+  "grids": {
+    "marketing_tetris": "grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 (Use asymmetric spans like col-span-8 and col-span-4 for tension)",
+    "bento_features": "grid-cols-1 md:grid-cols-3 gap-6",
+    "boutique_grid": "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10"
+  },
+  "layouts": {
+    "spacing": "Generous Spacing Philosophy: p-8, p-12, py-24, py-32. Use 2-3x more spacing than typical templates.",
+    "alignment": "Left-align dense text for readability. Use optical alignment. The main CTA must have 'breathing room' of at least py-12 around it.",
+    "social_proof": "Social proof (stars, avatars, Trustpilot-style badges) MUST be positioned immediately below or adjacent to every primary CTA."
+  },
+  "motion": {
+    "libraries": "framer-motion for interactions, lenis for smooth momentum scrolling",
+    "hero_reveal": "Masked line-by-line text reveal on mount (y: 100% to 0%, transition: { staggerChildren: 0.1, ease: [0.33, 1, 0.68, 1] })",
+    "scroll_reveal": "Subtle fade-in and slide-up (y: 30) triggered on scroll into view.",
+    "hover_states": "Micro-interactions on all cards: scale 1.02, subtle shadow increase.",
+    "marquee": "Use react-fast-marquee. Very slow, elegant, font-medium, separating major sections."
+  },
+  "pages": {
+    "Home": {
+      "sections": [
+        "Hero: H-screen parallax. Massive headline. Dominant CTA 'Faire mon diagnostic gratuit'. Subtle handwritten Caveat note 'En 2 minutes'.",
+        "Editorial Marquee: 'Clarté Financière • Optimisation • Reprise • Rentabilité'.",
+        "Value Proposition/Trust Stack: Asymmetric grid, client logos, count-up stats (framer-motion).",
+        "Diagnostic Teaser: High-contrast dark block to drive users to the quiz."
+      ]
+    },
+    "Diagnostic": {
+      "flow": "6-8 steps interactive quiz. Use a progress bar.",
+      "components": "shadcn/ui RadioGroup wrapped in custom large clickable cards. Subtle transitions between steps.",
+      "capture": "Step 7 is an Email Capture form ('Vos résultats sont prêts, où vous les envoyer ?').",
+      "results": "Personalized dashboard feel: User Profile + 3 Key Levers + Recommended Service CTA (seamless bridge to Services)."
+    },
+    "Services": {
+      "structure": "3 dedicated sections (Clarté, Optimisation, Reprise). Detailed breakdown with high readability.",
+      "conversion": "Dual path: Quick Form (shadcn Form/Input) AND 'Réserver un appel' (Calendly/Modal). Both lead to an elegant on-screen confirmation toast (sonner)."
+    },
+    "Boutique": {
+      "layout": "High-end editorial catalog. 6 products. Spotlight photography, clipped frames (aspect-square, gray backgrounds).",
+      "checkout": "Simulated checkout flow with Shadcn Dialog/Sheet. Pages: Success & Cancel."
+    },
+    "Boxes": {
+      "layout": "Separate visual universe. Darker, more exclusive feel for 'Le Coffret Zayado' / 'L\\'Édition Dirigeant'. 2 products.",
+      "checkout": "Shares the simulated boutique checkout logic."
+    },
+    "Vision": {
+      "layout": "Text-heavy but highly stylized. Core values, secondary mention of TheSustain initiative, discrete mention of the 'Cockpit'."
+    }
+  },
+  "logo_svg": "<svg width=\"48\" height=\"48\" viewBox=\"0 0 48 48\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"48\" height=\"48\" rx=\"12\" fill=\"#0A2E22\"/><path d=\"M14 18H34L18 30H34\" stroke=\"#F7F7F5\" stroke-width=\"3\" stroke-linecap=\"square\"/><circle cx=\"34\" cy=\"18\" r=\"3\" fill=\"#D64E33\"/></svg>",
+  "image_urls": [
+    {
+      "url": "https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA3MDB8MHwxfHNlYXJjaHwxfHxwcmVtaXVtJTIwbWluaW1hbGlzdCUyMG9mZmljZSUyMGRlc2t8ZW58MHx8fHwxNzkxMzA4MDAxfDA&ixlib=rb-4.1.0&q=85",
+      "category": "Hero / Consulting Services",
+      "description": "Minimalist premium office desk, perfect for the financial/reprise consulting sections to establish authority."
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1674620213535-9b2a2553ef40?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTF8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBnaWZ0JTIwYm94JTIwcGFja2FnaW5nfGVufDB8fHx8MTc5MTMwODAwMXww&ixlib=rb-4.1.0&q=85",
+      "category": "Seasonal Boxes",
+      "description": "Luxury black and white gift boxes with bows, perfect representation of the 'Coffret Zayado' offering."
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1718220216044-006f43e3a9b1?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzZ8MHwxfHNlYXJjaHwyfHxidXNpbmVzcyUyMGNvbnN1bHRpbmclMjBtb2Rlcm4lMjBvZmZpY2V8ZW58MHx8fHwxNzkxMzA4MDAxfDA&ixlib=rb-4.1.0&q=85",
+      "category": "Vision / Trust",
+      "description": "Modern consulting office environment, to be used in the Vision/Values section to build corporate trust."
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1601001435957-74f0958a93fb?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NDh8MHwxfHNlYXJjaHwyfHxtaW5pbWFsaXN0JTIwcHJlbWl1bSUyMG5vdGVib29rJTIwcGxhbm5lcnxlbnwwfHx8fDE3OTEzMDgwMjB8MA&ixlib=rb-4.1.0&q=85",
+      "category": "Boutique Product",
+      "description": "Minimalist premium notebook, representing physical products in the Boutique (e.g., 'L\\'Agenda Stratège')."
+    }
+  ],
+  "accessibility": {
+    "focus": "All interactive elements must have focus:ring-2 focus:ring-[#0A2E22] focus:outline-none.",
+    "contrast": "Ensure all text, especially within the Diagnostic cards, exceeds WCAG AA contrast against the background."
+  },
+  "instructions_to_main_agent": [
+    "Configure tailwind.config.js to extend fonts 'Poppins' (sans) and 'Caveat' (handwriting).",
+    "Install and configure 'lenis' for smooth scrolling globally.",
+    "Install 'framer-motion' and use it extensively for the kinetic hero reveal, page transitions, and scrolling reveals.",
+    "Use 'sonner' for all toast notifications (e.g., simulated cart success, form submissions).",
+    "Do NOT use TypeScript files (no .tsx). Only use standard React .jsx/.js.",
+    "Ensure 'Faire mon diagnostic gratuit' is the singular dominant CTA on the home page, styled heavily.",
+    "Implement simulated checkout without Stripe. Use local state to handle the cart, followed by a Success/Cancel mockup page.",
+    "Add data-testid attributes to all buttons, links, and major forms for testing."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": "You tend to converge toward generic outputs. Avoid the 'AI slop' aesthetic. Create depth with layered design, high-contrast typography, and purposeful negative space. Use 2-3x more spacing than feels comfortable. DO NOT use generic centered layouts. DO NOT apply 'transition: all' globally. DO NOT center align the app container in global CSS. Always use Sonner for toasts. DO NOT use complete transparent backgrounds for overlapping text/headers. Add data-testid to interactive elements."
+}

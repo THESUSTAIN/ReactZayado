@@ -1,0 +1,32 @@
+{%- comment -%} Bandeau défilant façon vitrine (marquee). Réglages : éléments (un par ligne), vitesse, fond. {%- endcomment -%}
+{%- assign items = section.settings.elements | default: "Marketplace\nClarté financière\nBien-être\nPerformance durable" | newline_to_br | split: '<br />' -%}
+<div class="zy-marquee{% if section.settings.clair %} zy-marquee--clair{% endif %}" data-testid="marquee-band">
+  <div class="zy-marquee__piste" style="animation-duration: {{ section.settings.vitesse | default: 42 }}s">
+    {%- for copie in (1..2) -%}
+      <div class="zy-marquee__rangee"{% if copie == 2 %} aria-hidden="true"{% endif %}>
+        {%- for item in items -%}
+          {%- assign txt = item | strip -%}
+          {%- if txt != blank -%}
+            <span class="zy-marquee__item">
+              {{ txt }}
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#D6A64F" stroke-width="2.4" stroke-linecap="round"><path d="M12 4v16M4 12h16M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>
+            </span>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    {%- endfor -%}
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Zayado — Bandeau défilant",
+  "class": "zy",
+  "settings": [
+    { "type": "textarea", "id": "elements", "label": "Éléments (un par ligne)", "default": "Marketplace\nClarté financière\nBien-être\nPerformance durable" },
+    { "type": "range", "id": "vitesse", "label": "Durée d'un tour (s)", "min": 20, "max": 90, "step": 2, "default": 42 },
+    { "type": "checkbox", "id": "clair", "label": "Fond transparent (sur bandeau foncé)", "default": false }
+  ],
+  "presets": [{ "name": "Zayado — Bandeau défilant" }]
+}
+{% endschema %}

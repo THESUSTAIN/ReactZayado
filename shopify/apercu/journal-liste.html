@@ -1,0 +1,221 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Aperçu Journal</title><style>body{margin:0}/* Zayado — styles des sections Shopify. Mêmes couleurs, mêmes polices que l'appli et les tunnels :
+   Poppins partout, Caveat pour UN mot manuscrit par titre. Polices servies par la boutique
+   (fichiers du thème) : plus rapide, et aucune requête vers Google (RGPD). */
+@font-face { font-family: "Poppins"; font-style: normal; font-weight: 400; font-display: swap; src: url('../theme/assets/zayado-poppins-400.woff2') format("woff2"); }
+@font-face { font-family: "Poppins"; font-style: normal; font-weight: 500; font-display: swap; src: url('../theme/assets/zayado-poppins-500.woff2') format("woff2"); }
+@font-face { font-family: "Poppins"; font-style: normal; font-weight: 600; font-display: swap; src: url('../theme/assets/zayado-poppins-600.woff2') format("woff2"); }
+@font-face { font-family: "Poppins"; font-style: normal; font-weight: 700; font-display: swap; src: url('../theme/assets/zayado-poppins-700.woff2') format("woff2"); }
+@font-face { font-family: "Caveat"; font-style: normal; font-weight: 600; font-display: swap; src: url('../theme/assets/zayado-caveat-600.woff2') format("woff2"); }
+
+.zy {
+  --zy-nuit: #0D1F38; --zy-nuit-2: #16304F; --zy-ardoise: #2E4A6B; --zy-gris: #8FA3B8;
+  --zy-ivoire: #FDFCF8; --zy-sable: #F4EFE6; --zy-pierre: #F6F5F2; --zy-or: #D6A64F; --zy-or-clair: #F0DCAC;
+  font-family: "Poppins", sans-serif; color: var(--zy-nuit); background: var(--zy-ivoire);
+}
+.zy *, .zy *::before, .zy *::after { box-sizing: border-box; }
+.zy--sable { background: var(--zy-pierre); } /* même fond clair que la vitrine (plus de beige) */
+.zy--nuit { background: linear-gradient(135deg, var(--zy-nuit) 0%, var(--zy-nuit-2) 60%, var(--zy-ardoise) 100%); color: var(--zy-ivoire); }
+.zy__wrap { max-width: 1200px; margin: 0 auto; padding: 72px 24px; }
+.zy__eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .24em; text-transform: uppercase; color: var(--zy-or); margin: 0 0 12px; }
+.zy__titre { font-family: "Poppins", sans-serif; font-weight: 600; font-size: clamp(30px, 4.4vw, 52px); line-height: 1.1; letter-spacing: -.02em; margin: 0; }
+.zy__titre--m { font-size: clamp(26px, 3.2vw, 38px); }
+.zy__main { font-family: "Caveat", cursive; font-weight: 600; color: var(--zy-or); font-size: 1.15em; }
+.zy__texte { font-size: 17px; line-height: 1.6; color: var(--zy-ardoise); max-width: 620px; margin: 16px 0 0; }
+.zy--nuit .zy__texte { color: #c9d3e6; }
+.zy__actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+.zy__btn { display: inline-flex; align-items: center; gap: 8px; height: 50px; padding: 0 26px; border-radius: 999px; font-weight: 600; font-size: 15px; text-decoration: none; transition: transform .2s ease, background-color .2s ease, box-shadow .2s ease; }
+.zy__btn:hover { transform: translateY(-2px); }
+.zy__btn--plein { background: var(--zy-nuit); color: var(--zy-ivoire); box-shadow: 0 10px 30px rgba(13, 31, 56, .18); }
+.zy--nuit .zy__btn--plein { background: var(--zy-sable); color: var(--zy-nuit); }
+.zy__btn--ligne { border: 1px solid rgba(13, 31, 56, .25); color: var(--zy-nuit); }
+.zy--nuit .zy__btn--ligne { border-color: rgba(253, 252, 248, .35); color: var(--zy-ivoire); }
+
+/* Hero */
+.zy-hero__grille { display: grid; gap: 48px; align-items: center; grid-template-columns: 1.1fr .9fr; }
+.zy-hero__img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 28px; box-shadow: 0 30px 80px rgba(13, 31, 56, .22); }
+
+/* Univers (4 piliers) */
+/* Vos douleurs → ce que Zayado fait */
+.zy-douleurs__grille { display: grid; gap: 16px; grid-template-columns: repeat(3, 1fr); margin-top: 40px; }
+.zy-douleurs__carte { display: flex; flex-direction: column; gap: 8px; padding: 24px; border-radius: 22px; background: #fff; border: 1px solid rgba(13, 31, 56, .08); text-decoration: none; color: inherit; transition: transform .25s ease, box-shadow .25s ease; }
+.zy-douleurs__carte:hover { transform: translateY(-4px); box-shadow: 0 18px 44px rgba(13, 31, 56, .12); }
+.zy-douleurs__douleur { font-weight: 500; font-size: 18px; line-height: 1.35; color: var(--zy-nuit); }
+.zy-douleurs__fonction { font-size: 11px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--zy-or); margin-top: 6px; }
+.zy-douleurs__reponse { font-size: 14px; line-height: 1.55; color: var(--zy-ardoise); }
+.zy-douleurs__lien { margin-top: auto; padding-top: 8px; font-size: 14px; font-weight: 600; color: var(--zy-nuit); }
+.zy-douleurs__cta { margin-top: 36px; }
+@media (max-width: 900px) { .zy-douleurs__grille { grid-template-columns: 1fr; } }
+.zy-univers__grille { display: grid; gap: 18px; grid-template-columns: repeat(4, 1fr); margin-top: 40px; }
+.zy-univers__carte { display: flex; flex-direction: column; gap: 10px; padding: 26px; border-radius: 22px; background: #fff; border: 1px solid rgba(13, 31, 56, .08); text-decoration: none; color: inherit; transition: transform .25s ease, box-shadow .25s ease; }
+.zy-univers__carte:hover { transform: translateY(-4px); box-shadow: 0 18px 44px rgba(13, 31, 56, .12); }
+.zy-univers__num { font-family: "Caveat", cursive; font-weight: 600; font-size: 22px; line-height: 1; color: var(--zy-or); }
+.zy-univers__nom { font-weight: 600; font-size: 19px; }
+.zy-univers__desc { font-size: 14px; line-height: 1.55; color: var(--zy-ardoise); }
+.zy-univers__lien { margin-top: auto; font-size: 14px; font-weight: 600; color: var(--zy-nuit); }
+
+/* Grille produits + carte */
+.zy-grille { display: grid; gap: 22px; grid-template-columns: repeat(var(--zy-colonnes, 3), 1fr); margin-top: 36px; }
+.zy-carte { display: flex; flex-direction: column; border-radius: 22px; overflow: hidden; background: #fff; border: 1px solid rgba(13, 31, 56, .08); transition: transform .25s ease, box-shadow .25s ease; }
+.zy-carte:hover { transform: translateY(-4px); box-shadow: 0 18px 44px rgba(13, 31, 56, .12); }
+.zy-carte__img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--zy-pierre); display: block; }
+.zy-carte__corps { display: flex; flex-direction: column; gap: 8px; padding: 20px 20px 22px; flex: 1; }
+.zy-carte__type { font-size: 11px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--zy-gris); }
+.zy-carte__titre { font-weight: 600; font-size: 17px; line-height: 1.3; margin: 0; }
+.zy-carte__titre a { color: inherit; text-decoration: none; }
+.zy-carte__benefice { font-size: 13px; color: var(--zy-ardoise); }
+.zy-carte__bas { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; padding-top: 12px; }
+.zy-carte__prix { font-weight: 600; font-size: 18px; }
+.zy-carte__mode { display: block; font-size: 11.5px; font-weight: 400; color: var(--zy-gris); }
+.zy-carte .zy__btn { height: 40px; padding: 0 18px; font-size: 13.5px; }
+.zy__badge { display: inline-block; align-self: flex-start; padding: 4px 10px; border-radius: 999px; background: var(--zy-or-clair); color: var(--zy-nuit); font-size: 11px; font-weight: 600; }
+
+/* Fiche produit */
+.zy-fiche__grille { display: grid; gap: 48px; grid-template-columns: 1fr 1fr; align-items: start; }
+.zy-fiche__img { width: 100%; border-radius: 24px; aspect-ratio: 1 / 1; object-fit: cover; background: var(--zy-pierre); }
+.zy-fiche__prix { font-weight: 600; font-size: 32px; letter-spacing: -.01em; margin: 18px 0 4px; }
+.zy-fiche__desc { font-size: 16px; line-height: 1.7; color: var(--zy-ardoise); margin-top: 18px; }
+.zy-fiche__reassurance { display: grid; gap: 10px; margin: 26px 0 0; padding: 0; list-style: none; font-size: 14px; color: var(--zy-ardoise); }
+.zy-fiche__reassurance li::before { content: "✓"; color: var(--zy-or); font-weight: 700; margin-right: 10px; }
+
+/* Services, tarifs, FAQ */
+.zy-services__grille { display: grid; gap: 18px; grid-template-columns: repeat(var(--zy-colonnes, 3), 1fr); margin-top: 36px; }
+.zy-services__carte { padding: 28px; border-radius: 22px; background: #fff; border: 1px solid rgba(13, 31, 56, .08); display: flex; flex-direction: column; gap: 12px; }
+.zy-tarifs__cadre { width: 100%; border: 0; border-radius: 24px; background: transparent; margin-top: 28px; }
+.zy-faq__item { border-bottom: 1px solid rgba(13, 31, 56, .12); padding: 20px 0; }
+.zy-faq__item summary { cursor: pointer; font-weight: 600; font-size: 17px; list-style: none; }
+.zy-faq__item p { color: var(--zy-ardoise); line-height: 1.6; margin: 12px 0 0; }
+
+/* Produits « bientôt » : pas de prix, on recueille l'intérêt */
+.zy__badge--doux { background: var(--zy-pierre); color: var(--zy-ardoise); border: 1px solid rgba(13, 31, 56, .1); }
+.zy-carte__bientot { font-size: 14px; font-weight: 500; color: var(--zy-ardoise); }
+.zy-prevenir { margin-top: 24px; padding: 24px; border-radius: 22px; background: var(--zy-pierre); border: 1px solid rgba(13, 31, 56, .08); }
+.zy-prevenir__titre { font-weight: 600; font-size: 22px; margin: 0; }
+.zy-prevenir__texte { font-size: 15px; line-height: 1.6; color: var(--zy-ardoise); margin: 8px 0 16px; }
+.zy-prevenir__form { display: flex; flex-wrap: wrap; gap: 10px; }
+.zy-prevenir__form .zy-champ { flex: 1 1 220px; }
+.zy-prevenir__ok { font-weight: 500; color: #047857; margin: 0; }
+.zy-prevenir__erreur { flex-basis: 100%; color: #B42318; font-size: 14px; margin: 0; }
+.zy-prevenir__rgpd { font-size: 12.5px; color: var(--zy-gris); margin: 12px 0 0; }
+.zy-champ { height: 50px; padding: 0 18px; border-radius: 999px; border: 1px solid rgba(13, 31, 56, .2); background: #fff; font: inherit; font-size: 15px; color: var(--zy-nuit); }
+.zy-champ:focus { outline: 2px solid var(--zy-ardoise); outline-offset: 1px; }
+textarea.zy-champ { height: auto; min-height: 140px; padding: 14px 18px; border-radius: 18px; resize: vertical; }
+.zy-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
+.zy__btn--plein { background: linear-gradient(120deg, #0D1F38 0%, #1E3D63 55%, #2E4A6B 100%); }
+
+@media (max-width: 989px) {
+  .zy-hero__grille, .zy-fiche__grille { grid-template-columns: 1fr; }
+  .zy-univers__grille { grid-template-columns: repeat(2, 1fr); }
+  .zy-grille, .zy-services__grille { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 589px) {
+  .zy__wrap { padding: 52px 18px; }
+  .zy-univers__grille, .zy-grille, .zy-services__grille { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { .zy * { transition: none !important; } }
+
+/* Contact et devis */
+.zy-contact { display: grid; gap: 48px; grid-template-columns: 1fr 1fr; align-items: start; }
+.zy-contact__form { display: flex; flex-direction: column; gap: 10px; padding: 28px; border-radius: 24px; background: #fff; border: 1px solid rgba(13, 31, 56, .08); box-shadow: 0 18px 44px rgba(13, 31, 56, .06); }
+.zy-contact__label { font-size: 13px; font-weight: 500; color: var(--zy-ardoise); margin-top: 6px; }
+.zy-contact__deux { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+.zy-contact__deux > div { display: flex; flex-direction: column; gap: 10px; }
+.zy-contact__form .zy__btn { align-self: flex-start; margin-top: 10px; border: 0; cursor: pointer; }
+@media (max-width: 989px) { .zy-contact, .zy-contact__deux { grid-template-columns: 1fr; } }
+
+/* ═══ Le Journal ═══ */
+.zy-tampon { display: inline-flex; align-items: center; padding: 6px 14px; border: 1.5px solid currentColor; border-radius: 4px; font-size: 11px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--zy-nuit); transform: rotate(-1.5deg); margin-bottom: 18px; }
+.zy-journal__tete { background: repeating-linear-gradient(to bottom, transparent 0, transparent 35px, rgba(19, 35, 62, .06) 35px, rgba(19, 35, 62, .06) 36px), radial-gradient(900px 500px at 85% -10%, rgba(46, 74, 107, .10), transparent 65%), var(--zy-ivoire); border-bottom: 1px solid rgba(13, 31, 56, .08); }
+.zy-journal__tete-wrap { padding-bottom: 36px; text-align: center; display: flex; flex-direction: column; align-items: center; }
+.zy-journal__intro { margin-left: auto; margin-right: auto; }
+.zy-journal__filtres { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 26px; }
+.zy-pilule { display: inline-flex; align-items: center; height: 38px; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(13, 31, 56, .16); background: #fff; color: var(--zy-ardoise); font-size: 14px; font-weight: 500; text-decoration: none; transition: background-color .2s, color .2s; }
+.zy-pilule:hover { color: var(--zy-nuit); }
+.zy-pilule[aria-current="page"] { background: linear-gradient(120deg, #0D1F38 0%, #1E3D63 55%, #2E4A6B 100%); color: var(--zy-ivoire); border-color: transparent; }
+.zy-journal__corps { padding-top: 44px; }
+
+.zy-une { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); border-radius: 28px; overflow: hidden; text-decoration: none; color: var(--zy-ivoire); background: linear-gradient(135deg, var(--zy-nuit) 0%, var(--zy-nuit-2) 60%, var(--zy-ardoise) 100%); box-shadow: 0 30px 80px rgba(13, 31, 56, .18); margin-bottom: 28px; }
+.zy-une__img { width: 100%; height: 100%; min-height: 320px; object-fit: cover; display: block; }
+.zy-une__texte { padding: 40px; display: flex; flex-direction: column; justify-content: center; gap: 12px; }
+.zy-une__etiquette { align-self: flex-start; font-size: 11px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: var(--zy-or-clair); }
+.zy-une__titre { font-weight: 600; font-size: clamp(24px, 2.6vw, 34px); line-height: 1.15; letter-spacing: -.015em; margin: 0; }
+.zy-une__extrait { font-size: 16px; line-height: 1.6; color: #c9d3e6; margin: 0; }
+.zy-une__meta { font-size: 13px; color: #9fb0cf; }
+
+.zy-journal__grille { display: grid; gap: 22px; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; }
+.zy-cj { display: flex; flex-direction: column; gap: 10px; text-decoration: none; color: inherit; border-radius: 22px; transition: transform .25s ease, box-shadow .25s ease; }
+.zy-cj:hover { transform: translateY(-3px); }
+.zy-cj--article { background: #fff; border: 1px solid rgba(13, 31, 56, .08); overflow: hidden; }
+.zy-cj--article:hover { box-shadow: 0 18px 44px rgba(13, 31, 56, .12); }
+.zy-cj__img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; }
+.zy-cj__corps { padding: 22px 24px 24px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+.zy-cj__lire, .zy-cj__rubrique { margin-top: auto; }
+.zy-cj__meta { font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--zy-gris); }
+.zy-cj__titre { font-weight: 600; font-size: 20px; line-height: 1.3; letter-spacing: -.01em; margin: 0; }
+.zy-cj__extrait { font-size: 15px; line-height: 1.6; color: var(--zy-ardoise); margin: 0; }
+.zy-cj__lire { font-size: 14px; font-weight: 600; color: var(--zy-nuit); }
+/* Témoignage : une citation, pas une carte d'article */
+.zy-cj--temoignage { padding: 30px 28px; background: var(--zy-pierre); border: 1px solid rgba(13, 31, 56, .06); }
+.zy-cj__guillemet { font-family: "Caveat", cursive; font-weight: 600; font-size: 64px; line-height: .6; color: var(--zy-or); }
+.zy-cj__citation { font-size: 19px; font-weight: 500; line-height: 1.45; color: var(--zy-nuit); margin: 0; }
+.zy-cj__personne { font-size: 14px; font-weight: 600; color: var(--zy-ardoise); }
+.zy-cj__rubrique { font-size: 11px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--zy-gris); }
+/* Note de la maison : écrite, signée, sans cadre */
+.zy-cj--note { padding: 8px 4px 8px 22px; border-left: 2px solid var(--zy-or); border-radius: 0; }
+.zy-cj--note:hover { transform: none; }
+.zy-cj__date-main, .zy-texte__date-main { font-family: "Caveat", cursive; font-weight: 600; font-size: 24px; color: var(--zy-or); line-height: 1; margin: 0; }
+.zy-cj__signature { display: flex; align-items: center; gap: 12px; margin-top: 6px; font-weight: 600; font-size: 15px; }
+.zy-cj__signature small { display: block; font-weight: 400; font-size: 12.5px; color: var(--zy-gris); }
+.zy-cj__avatar { width: 44px; height: 44px; border-radius: 999px; object-fit: cover; flex: none; }
+.zy-cj__avatar--vide { display: grid; place-items: center; background: var(--zy-nuit); color: var(--zy-ivoire); font-weight: 600; }
+
+.zy-journal__news { grid-column: 1 / -1; padding: 32px; border-radius: 24px; background: linear-gradient(135deg, var(--zy-nuit) 0%, var(--zy-nuit-2) 60%, var(--zy-ardoise) 100%); color: var(--zy-ivoire); }
+.zy-journal__news .zy__eyebrow { color: var(--zy-or-clair); }
+.zy-journal__news-titre { font-size: 24px; font-weight: 600; margin: 0 0 18px; }
+.zy-journal__news .zy__btn--plein { background: var(--zy-sable); color: var(--zy-nuit); border: 0; cursor: pointer; }
+.zy-journal__news .zy-prevenir__ok { color: var(--zy-or-clair); }
+.zy-journal__pages { display: flex; justify-content: space-between; gap: 12px; margin-top: 40px; }
+
+/* Une page du Journal */
+.zy-texte__wrap { max-width: 760px; }
+.zy-texte__retour { display: inline-block; margin-bottom: 26px; font-size: 14px; font-weight: 500; color: var(--zy-ardoise); text-decoration: none; }
+.zy-texte__chapo { font-size: 19px; }
+.zy-texte__img { width: 100%; border-radius: 24px; margin: 32px 0 8px; display: block; }
+.zy-texte__guillemet { font-size: 96px; display: block; margin-top: 10px; }
+.zy-texte__citation { font-size: clamp(26px, 3.4vw, 38px); font-weight: 500; line-height: 1.3; letter-spacing: -.01em; margin: 0; }
+.zy-texte__personne { font-weight: 600; color: var(--zy-ardoise); margin: 18px 0 0; }
+.zy-texte__signature { margin: 20px 0 8px; }
+.zy-texte__auteur { font-size: 14px; color: var(--zy-gris); margin-top: 28px; }
+.zy-prose { font-size: 18px; line-height: 1.75; color: #24364F; margin-top: 30px; }
+.zy-prose p { margin: 0 0 1.2em; }
+.zy-prose h2 { font-size: 26px; font-weight: 600; line-height: 1.25; letter-spacing: -.01em; color: var(--zy-nuit); margin: 1.8em 0 .6em; }
+.zy-prose h3 { font-size: 20px; font-weight: 600; color: var(--zy-nuit); margin: 1.5em 0 .5em; }
+.zy-prose a { color: var(--zy-nuit); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.zy-prose blockquote { margin: 1.6em 0; padding: 4px 0 4px 22px; border-left: 2px solid var(--zy-or); font-size: 21px; font-weight: 500; color: var(--zy-nuit); }
+.zy-prose ul, .zy-prose ol { padding-left: 1.2em; margin: 0 0 1.2em; }
+.zy-prose li { margin: .35em 0; }
+.zy-prose img { max-width: 100%; border-radius: 18px; }
+.zy-texte--note .zy-prose { font-size: 19px; }
+.zy-texte__cta { margin-top: 44px; padding: 32px; border-radius: 24px; }
+.zy-texte__cta-titre { font-size: 26px; font-weight: 600; line-height: 1.2; margin: 0; }
+.zy-texte__cta .zy__btn { margin-top: 20px; }
+.zy-texte__cta .zy__main { color: var(--zy-or-clair); }
+.zy-texte__suite { padding-top: 0; }
+
+@media (max-width: 989px) {
+  .zy-journal__grille { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .zy-une { grid-template-columns: minmax(0, 1fr); }
+  .zy-une__img { min-height: 220px; aspect-ratio: 16 / 9; }
+  .zy-une__texte { padding: 28px; }
+}
+@media (max-width: 689px) {
+  .zy-journal__grille { grid-template-columns: minmax(0, 1fr); }
+  .zy-une__texte { padding: 24px 22px; }
+  .zy-journal__news { padding: 24px 20px; }
+  .zy-prose { font-size: 17px; }
+}
+</style></head><body>
+<section class="zy zy-journal"><header class="zy-journal__tete"><div class="zy__wrap zy-journal__tete-wrap"><span class="zy-tampon">Le journal de la maison</span><h1 class="zy__titre">Le Journal <span class="zy__main">Zayado</span></h1><p class="zy__texte zy-journal__intro">Des articles pour décider, des témoignages de dirigeants qui respirent, et nos notes : ce que nous vivons, nous aussi, en entreprenant.</p>
+<nav class="zy-journal__filtres"><a class="zy-pilule" aria-current="page" href="#">Tout</a><a class="zy-pilule" href="#">Articles</a><a class="zy-pilule" href="#">Témoignages</a><a class="zy-pilule" href="#">Notes de la maison</a></nav></div></header>
+<div class="zy__wrap zy-journal__corps"><a class="zy-une" href="#"><div class="zy-une__img" style="background:linear-gradient(135deg,#c9bfae,#8fa3b8)"></div><div class="zy-une__texte"><span class="zy-une__etiquette">À la une</span><h2 class="zy-une__titre">Acheter une entreprise avec 0 € d'apport : comment c'est possible</h2><p class="zy-une__extrait">L'apport n'est pas un mur. C'est une question de structure. Le plan qui change tout.</p><span class="zy-une__meta">12 juin 2026 · 5 min de lecture</span></div></a>
+<div class="zy-journal__grille"><a class="zy-cj zy-cj--article" href="#"><div class="zy-cj__img" style="background:linear-gradient(135deg,#d9d2c3,#b9c3d1)"></div><div class="zy-cj__corps"><span class="zy-cj__meta">Article · 28 mai · 4 min</span><h3 class="zy-cj__titre">Acheter ou créer : le calcul que personne ne fait</h3><p class="zy-cj__extrait">Créer coûte trois ans. Acheter coûte un plan. Comparons vraiment.</p><span class="zy-cj__lire">Lire l'article →</span></div></a><a class="zy-cj zy-cj--note" href="#"><span class="zy-cj__date-main">2 mai</span><h3 class="zy-cj__titre">L'équilibre n'est pas une récompense</h3><p class="zy-cj__extrait">On lit partout que l'équilibre viendra « quand ça sera calé ». Faux. L'équilibre ne se mérite pas après la performance : il la produit.</p><span class="zy-cj__signature"><span class="zy-cj__avatar zy-cj__avatar--vide">C</span><span>Cundy<small>Note de la maison</small></span></span></a><a class="zy-cj zy-cj--temoignage" href="#"><span class="zy-cj__guillemet">«</span><p class="zy-cj__citation">Pour la première fois, j'ouvre mes chiffres sans appréhension, et je pilote sans y passer mes week-ends.</p><span class="zy-cj__personne">Prénom, fondatrice d'une boutique (exemple de mise en page)</span><span class="zy-cj__rubrique">Témoignage</span></a><a class="zy-cj zy-cj--article" href="#"><div class="zy-cj__img" style="background:linear-gradient(135deg,#d9d2c3,#b9c3d1)"></div><div class="zy-cj__corps"><span class="zy-cj__meta">Article · 14 mai · 4 min</span><h3 class="zy-cj__titre">Lancer, vendre, transmettre : l'entreprise à 0 euro, mythe ou méthode ?</h3><p class="zy-cj__extrait">Autour d'une idée fixe : une entreprise qui se lance, ou se cède, sans apport.</p><span class="zy-cj__lire">Lire l'article →</span></div></a>
+<aside class="zy-journal__news"><p class="zy__eyebrow">Chaque semaine</p><p class="zy-journal__news-titre">La note d'équilibre : un chiffre, une idée, une action.</p><form class="zy-prevenir__form"><input class="zy-champ" placeholder="votre@email.fr"><button class="zy__btn zy__btn--plein" type="button">Recevoir la note</button></form></aside></div></div></section></body></html>

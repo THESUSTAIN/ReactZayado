@@ -1,0 +1,6 @@
+{
+  "sections": {
+    "contact": { "type": "zayado-contact", "settings": {} }
+  },
+  "order": ["contact"]
+}

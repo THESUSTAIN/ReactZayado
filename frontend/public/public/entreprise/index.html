@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Zayado — la vitrine a déménagé</title>
+<link rel="canonical" href="https://zayado.net/">
+<script>
+  // Les pages publiques vivent désormais sur la boutique Shopify (zayado.net) ;
+  // l'app (app.zayado.net) ne garde que l'espace connecté et les tunnels.
+  // Ancienne adresse « #/besoins » → page équivalente sur Shopify.
+  (function () {
+    var B = "https://zayado.net", APP = "https://app.zayado.net";
+    var h = (location.hash || "").replace(/^#/, "").split("?")[0];
+    var table = {
+      "": B + "/", "/": B + "/",
+      "/maison": B + "/pages/maison", "/besoins": B + "/pages/besoins", "/cockpit": B + "/pages/cockpit",
+      "/journal": B + "/blogs/journal", "/services": B + "/collections/accompagnement",
+      "/marketplace": B + "/collections/produits", "/boutique": B + "/collections/produits",
+      "/box": B + "/collections/produits", "/diagnostic": APP + "/public/tunnel",
+      "/tunnel-home": APP + "/public/tunnel", "/merci": APP + "/public/tunnel"
+    };
+    var cible = table[h];
+    if (!cible && h.indexOf("/journal/") === 0) cible = B + "/blogs/journal/" + h.slice(9);
+    if (!cible && h.indexOf("/tunnel/acquisition") === 0) cible = APP + "/public/reprise";
+    location.replace(cible || B + "/");
+  })();
+</script>
+</head>
+<body style="font-family:system-ui,sans-serif;background:#FDFCF8;color:#0D1F38;display:grid;place-items:center;min-height:100vh;margin:0">
+  <p>La vitrine Zayado est maintenant sur <a href="https://zayado.net/">zayado.net</a>.</p>
+</body>
+</html>

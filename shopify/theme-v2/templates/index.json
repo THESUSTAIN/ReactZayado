@@ -1,0 +1,212 @@
+{
+  "sections": {
+    "hero": {
+      "type": "zayado-hero-aiguillage",
+      "settings": {}
+    },
+    "bandeau": {
+      "type": "zayado-marquee",
+      "settings": {}
+    },
+    "douleurs": {
+      "type": "zayado-douleurs",
+      "blocks": {
+        "b1": {
+          "type": "douleur",
+          "settings": {
+            "douleur": "Je ne sais pas vraiment si je gagne de l'argent",
+            "fonction": "Chiffres",
+            "reponse": "Importez votre relevé bancaire ou votre FEC : trésorerie, marge et mois d'autonomie, expliqués simplement.",
+            "cta": "Faire mon diagnostic à 27 €",
+            "lien": "/products/kit-diagnostic-flash"
+          }
+        },
+        "b2": {
+          "type": "douleur",
+          "settings": {
+            "douleur": "Je n'ai pas assez de clients, prospecter m'épuise",
+            "fonction": "Radar",
+            "reponse": "Chaque mois, de vraies entreprises qui bougent près de chez vous (création, recrutement, changement), avec le message de relance prêt.",
+            "cta": "Voir le Radar",
+            "lien": "/collections/outils-ia"
+          }
+        },
+        "b3": {
+          "type": "douleur",
+          "settings": {
+            "douleur": "J'ai des visiteurs mais personne n'achète",
+            "fonction": "Tunnels de vente",
+            "reponse": "Une page de capture, une offre de démarrage et une page de vente rédigées pour vous, avec paiement en ligne.",
+            "cta": "Créer mon tunnel",
+            "lien": "/collections/outils-ia"
+          }
+        },
+        "b4": {
+          "type": "douleur",
+          "settings": {
+            "douleur": "Je m'éparpille et je décide seul·e",
+            "fonction": "Plan, Vision & Copilote IA",
+            "reponse": "Votre vision transformée en 3 priorités par semaine, un plan daté et un copilote IA qui connaît votre projet pour trancher avec vous.",
+            "cta": "Découvrir le Copilote",
+            "lien": "/collections/outils-ia"
+          }
+        },
+        "b5": {
+          "type": "douleur",
+          "settings": {
+            "douleur": "Je suis épuisé·e, je n'ai plus d'énergie",
+            "fonction": "Bien-être",
+            "reponse": "Un check-in du jour qui adapte votre charge à votre énergie, pour durer sans vous brûler.",
+            "cta": "Prendre soin de moi",
+            "lien": "/collections/produits"
+          }
+        },
+        "b6": {
+          "type": "douleur",
+          "settings": {
+            "douleur": "Je veux me lancer, mais créer de zéro me fait peur et je n'ai pas d'apport",
+            "fonction": "Reprise sans apport",
+            "reponse": "Reprenez une entreprise qui a déjà des clients et un chiffre d'affaires. Zayado monte le financement avec ses partenaires (prêts d'honneur, garanties, crédit vendeur) et vous accompagne pour limiter la casse.",
+            "cta": "Étudier ma reprise",
+            "lien": "https://app.zayado.net/public/reprise"
+          }
+        }
+      },
+      "block_order": [
+        "b1",
+        "b2",
+        "b3",
+        "b4",
+        "b5",
+        "b6"
+      ],
+      "settings": {}
+    },
+    "univers": {
+      "type": "zayado-univers",
+      "settings": {
+        "surtitre": "La maison des entrepreneurs apaisés",
+        "titre": "Quatre façons d'avancer, sans vous épuiser"
+      },
+      "blocks": {
+        "b1": {
+          "type": "univers",
+          "settings": {
+            "nom": "Piloter avec VisionAct",
+            "desc": "Votre vision, vos chiffres, vos prospects et votre plan au même endroit, avec un copilote IA qui connaît votre projet.",
+            "cta": "Découvrir VisionAct",
+            "lien": "/collections/outils-ia"
+          }
+        },
+        "b2": {
+          "type": "univers",
+          "settings": {
+            "nom": "Être accompagné",
+            "desc": "Un expert Zayado cadre vos chiffres et vos priorités, du premier rendez-vous au plan tenu.",
+            "cta": "Rencontrer un expert",
+            "lien": "/collections/accompagnement"
+          }
+        },
+        "b3": {
+          "type": "univers",
+          "settings": {
+            "nom": "Reprendre une entreprise",
+            "desc": "Reprendre une entreprise qui tourne déjà, même sans apport : sélection de la cible, financement et négociation, avec un seul interlocuteur.",
+            "cta": "En savoir plus",
+            "lien": "/collections/rachat-reprise"
+          }
+        },
+        "b4": {
+          "type": "univers",
+          "settings": {
+            "nom": "S'équiper",
+            "desc": "Box, carnets et objets choisis pour votre énergie, votre concentration et votre bureau.",
+            "cta": "Voir la sélection",
+            "lien": "/collections/produits"
+          }
+        }
+      },
+      "block_order": [
+        "b1",
+        "b2",
+        "b3",
+        "b4"
+      ]
+    },
+    "offres": {
+      "type": "zayado-tarifs",
+      "settings": {}
+    },
+    "services": {
+      "type": "zayado-services",
+      "settings": {},
+      "blocks": {
+        "b1": {
+          "type": "service",
+          "settings": {
+            "etiquette": "Accompagnement",
+            "titre": "Clarté financière",
+            "texte": "Un expert Zayado cadre votre situation, vos chiffres et vos priorités, du premier rendez-vous au plan tenu à 90 jours.",
+            "cta": "Être accompagné",
+            "lien": "https://zayado.net/pages/contact?sujet=Accompagnement%20clart%C3%A9%20financi%C3%A8re"
+          }
+        },
+        "b2": {
+          "type": "service",
+          "settings": {
+            "etiquette": "Rachat",
+            "titre": "Reprendre une entreprise",
+            "texte": "Trouver une entreprise rentable, l'évaluer, négocier et la financer sans apport (prêts d'honneur, garanties, crédit vendeur), avec un seul interlocuteur.",
+            "cta": "Parler de mon projet",
+            "lien": "https://app.zayado.net/public/reprise"
+          }
+        }
+      },
+      "block_order": [
+        "b1",
+        "b2"
+      ]
+    },
+    "faq": {
+      "type": "zayado-faq",
+      "settings": {},
+      "blocks": {
+        "b1": {
+          "type": "question",
+          "settings": {
+            "question": "Où se passe le paiement ?",
+            "reponse": "Dans votre espace Zayado, de façon sécurisée par Mollie. Vous y suivez ensuite votre commande ou votre abonnement."
+          }
+        },
+        "b2": {
+          "type": "question",
+          "settings": {
+            "question": "Puis-je arrêter mon abonnement ?",
+            "reponse": "Oui, à tout moment, depuis votre espace. Sans engagement."
+          }
+        },
+        "b3": {
+          "type": "question",
+          "settings": {
+            "question": "Faut-il donner mes identifiants bancaires ?",
+            "reponse": "Jamais. Pour vos chiffres, vous importez simplement le relevé exporté depuis votre banque."
+          }
+        }
+      },
+      "block_order": [
+        "b1",
+        "b2",
+        "b3"
+      ]
+    }
+  },
+  "order": [
+    "hero",
+    "bandeau",
+    "douleurs",
+    "univers",
+    "offres",
+    "services",
+    "faq"
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "sections": {
+    "main": { "type": "zayado-coming-soon", "settings": {} }
+  },
+  "order": ["main"]
+}

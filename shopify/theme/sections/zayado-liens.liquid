@@ -1,0 +1,184 @@
+{%- comment -%}
+  Page de liens « façon Linktree » pour la bio Instagram / TikTok / YouTube.
+  Mobile d'abord. Tout se modifie dans l'éditeur de thème (liens = blocs, glisser-déposer pour l'ordre).
+  Onglet Boutique : produits de la collection choisie, prix Shopify, bouton vers l'app (paiement Mollie).
+{%- endcomment -%}
+{{ 'zayado.css' | asset_url | stylesheet_tag }}
+<style>
+  .zl { min-height: 100vh; font-family: "Poppins", sans-serif; color: #0D1F38; background: #FDFCF8; }
+  .zl__haut { position: relative; text-align: center; padding: 44px 20px 22px; background-size: cover; background-position: center; }
+  .zl__haut::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(253,252,248,.6) 0%, rgba(253,252,248,.94) 80%, #FDFCF8 100%); }
+  .zl__haut > * { position: relative; z-index: 1; }
+  .zl__logo { width: 92px; height: auto; }
+  .zl__nom { font-family: "Fraunces", Georgia, serif; font-weight: 600; font-size: 40px; letter-spacing: .08em; margin: 6px 0 0; }
+  .zl__slogan { font-family: "Fraunces", Georgia, serif; font-size: 17px; line-height: 1.35; color: #2E4A6B; margin: 8px auto 0; max-width: 300px; }
+  .zl__trait { width: 56px; height: 2px; background: #D6A64F; border: 0; margin: 16px auto; border-radius: 2px; }
+  .zl__reseaux { display: flex; justify-content: center; gap: 14px; }
+  .zl__reseau { display: inline-flex; width: 42px; height: 42px; align-items: center; justify-content: center; border-radius: 999px; background: #fff; color: #0D1F38; border: 1px solid rgba(13,31,56,.08); transition: transform .2s ease, background-color .2s ease; }
+  .zl__reseau:hover { transform: translateY(-2px); background: #F0DCAC; }
+  .zl__reseau svg { width: 21px; height: 21px; }
+  .zl__corps { max-width: 520px; margin: 0 auto; padding: 4px 16px 40px; }
+  .zl__onglets { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 999px; background: #F6F5F2; border: 1px solid rgba(13,31,56,.08); margin: 0 auto 18px; max-width: 360px; }
+  .zl__onglet { height: 46px; border: 0; border-radius: 999px; background: transparent; font: 600 15px "Poppins", sans-serif; color: #0D1F38; cursor: pointer; transition: background-color .2s ease, color .2s ease; }
+  .zl__onglet[aria-selected="true"] { background: #0D1F38; color: #FDFCF8; }
+  .zl__liste { display: grid; gap: 12px; }
+  .zl__lien { position: relative; display: flex; align-items: center; gap: 14px; min-height: 92px; padding: 14px 64px 14px 14px; border-radius: 20px; overflow: hidden; text-decoration: none; color: inherit; background: #fff; border: 1px solid rgba(13,31,56,.08); box-shadow: 0 6px 22px rgba(13,31,56,.05); transition: transform .2s ease, box-shadow .2s ease; }
+  .zl__lien:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(13,31,56,.12); }
+  .zl__lien-img { position: absolute; inset: 0 0 0 52%; background-size: cover; background-position: center; -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 70%); mask-image: linear-gradient(90deg, transparent 0%, #000 70%); opacity: .85; }
+  .zl__lien::before { content: ""; position: absolute; inset: 0; z-index: 0; background: linear-gradient(90deg, #fff 0%, #fff 50%, rgba(255,255,255,.55) 64%, rgba(255,255,255,0) 80%); pointer-events: none; }
+  .zl__lien > *:not(.zl__lien-img) { z-index: 1; }
+  .zl__icone { position: relative; flex: 0 0 52px; height: 52px; border-radius: 999px; display: flex; align-items: center; justify-content: center; background: #F6F5F2; color: #0D1F38; }
+  .zl__icone--accent { background: #0D1F38; color: #F0DCAC; }
+  .zl__icone svg { width: 24px; height: 24px; }
+  .zl__texte { position: relative; flex: 1; min-width: 0; max-width: 58%; }
+  .zl__titre { display: block; font-weight: 600; font-size: 17px; line-height: 1.25; color: #0D1F38; }
+  .zl__desc { display: block; margin-top: 3px; font-family: "Fraunces", Georgia, serif; font-size: 13.5px; line-height: 1.35; color: #3D4F66; }
+  .zl__fleche { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); width: 38px; height: 38px; border-radius: 999px; background: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(13,31,56,.12); }
+  .zl__fleche svg { width: 16px; height: 16px; }
+  .zl__produits { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .zl__produits .zy-carte__corps { padding: 12px 12px 14px; }
+  .zl__produits .zy-carte__bas { flex-direction: column; align-items: stretch; }
+  .zl__produits .zy__btn { justify-content: center; }
+  .zl__news { display: flex; gap: 8px; margin-top: 10px; }
+  .zl__news input { flex: 1 1 0; width: 0; min-width: 0; height: 44px; border-radius: 999px; border: 1px solid rgba(13,31,56,.15); padding: 0 16px; font: 14px "Poppins", sans-serif; background: #fff; }
+  .zl__news button { flex: none; height: 44px; padding: 0 18px; border: 0; border-radius: 999px; background: #0D1F38; color: #FDFCF8; font: 600 14px "Poppins", sans-serif; cursor: pointer; }
+  .zl__merci { font-size: 13px; color: #047857; margin: 8px 0 0; }
+  .zl__devise { text-align: center; font-family: "Caveat", cursive; font-size: 28px; color: #D6A64F; margin: 30px 0 0; }
+  .zl__lien--news { flex-wrap: wrap; padding-right: 14px; }
+  .zl__lien--news .zl__texte { max-width: none; }
+  .zl__lien--news::before { display: none; }
+  .zl [hidden] { display: none !important; }
+</style>
+
+{%- liquid
+  assign boutique = section.settings.collection
+-%}
+<main class="zl">
+  <header class="zl__haut" {% if section.settings.image_fond != blank %}style="background-image:url('{{ section.settings.image_fond | image_url: width: 1200 }}')"{% elsif section.settings.image_fond_url != blank %}style="background-image:url('{{ section.settings.image_fond_url }}')"{% endif %}>
+    {%- if section.settings.logo != blank -%}
+      {{ section.settings.logo | image_url: width: 240 | image_tag: class: 'zl__logo', alt: 'Zayado' }}
+    {%- endif -%}
+    <h1 class="zl__nom">{{ section.settings.nom }}</h1>
+    <p class="zl__slogan">{{ section.settings.slogan }}</p>
+    <hr class="zl__trait">
+    <nav class="zl__reseaux" aria-label="Réseaux sociaux">
+      {%- if section.settings.instagram != blank -%}<a class="zl__reseau" href="{{ section.settings.instagram }}" target="_blank" rel="noopener" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg></a>{%- endif -%}
+      {%- if section.settings.youtube != blank -%}<a class="zl__reseau" href="{{ section.settings.youtube }}" target="_blank" rel="noopener" aria-label="YouTube"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12 31 31 0 0 0 1 16.8a3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8ZM9.7 15.1V8.9l5.8 3.1-5.8 3.1Z"/></svg></a>{%- endif -%}
+      {%- if section.settings.tiktok != blank -%}<a class="zl__reseau" href="{{ section.settings.tiktok }}" target="_blank" rel="noopener" aria-label="TikTok"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.6 5.8A4.3 4.3 0 0 1 15.5 3h-3.1v12.4a2.6 2.6 0 1 1-2.6-2.6c.3 0 .5 0 .8.1V9.7a5.7 5.7 0 1 0 4.9 5.7V9.1a7.3 7.3 0 0 0 4.3 1.4V7.4a4.3 4.3 0 0 1-3.2-1.6Z"/></svg></a>{%- endif -%}
+      {%- if section.settings.spotify != blank -%}<a class="zl__reseau" href="{{ section.settings.spotify }}" target="_blank" rel="noopener" aria-label="Spotify"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a11 11 0 1 0 0 22 11 11 0 0 0 0-22Zm5 15.9a.7.7 0 0 1-1 .2c-2.7-1.6-6-2-10-1.1a.7.7 0 1 1-.3-1.3c4.3-1 8-.6 11 1.2.3.2.4.7.3 1Zm1.4-3a.9.9 0 0 1-1.2.3c-3-1.9-7.7-2.4-11.3-1.3a.9.9 0 0 1-.5-1.7c4.1-1.2 9.2-.6 12.7 1.5.4.3.5.8.3 1.2Zm.1-3.2C14.9 8.6 8.9 8.4 5.5 9.4a1 1 0 1 1-.6-2c4-1.2 10.5-1 14.6 1.5a1 1 0 0 1-1 1.8Z"/></svg></a>{%- endif -%}
+      {%- if section.settings.linkedin != blank -%}<a class="zl__reseau" href="{{ section.settings.linkedin }}" target="_blank" rel="noopener" aria-label="LinkedIn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5ZM3 9.5h4v11H3v-11Zm7 0h3.8v1.6h.1c.5-1 1.8-2 3.7-2 4 0 4.7 2.6 4.7 6v5.4h-4v-4.8c0-1.2 0-2.6-1.6-2.6s-1.9 1.2-1.9 2.5v4.9h-4v-11Z"/></svg></a>{%- endif -%}
+    </nav>
+  </header>
+
+  <div class="zl__corps">
+    <div class="zl__onglets" role="tablist">
+      <button class="zl__onglet" role="tab" aria-selected="true" aria-controls="zl-liens-{{ section.id }}" data-zl-onglet="liens">🔗 Liens</button>
+      <button class="zl__onglet" role="tab" aria-selected="false" aria-controls="zl-boutique-{{ section.id }}" data-zl-onglet="boutique">🛍 Boutique</button>
+    </div>
+
+    <div id="zl-liens-{{ section.id }}" class="zl__liste" role="tabpanel">
+      {%- for block in section.blocks -%}
+        {%- case block.type -%}
+          {%- when 'lien' -%}
+            <a class="zl__lien" href="{{ block.settings.url }}" {{ block.shopify_attributes }}>
+              {%- if block.settings.image != blank -%}<span class="zl__lien-img" style="background-image:url('{{ block.settings.image | image_url: width: 600 }}')"></span>
+              {%- elsif block.settings.image_url != blank -%}<span class="zl__lien-img" style="background-image:url('{{ block.settings.image_url }}')"></span>{%- endif -%}
+              <span class="zl__icone {% if block.settings.accent %}zl__icone--accent{% endif %}">{%- render 'zayado-icone', nom: block.settings.icone -%}</span>
+              <span class="zl__texte"><span class="zl__titre">{{ block.settings.titre }}</span><span class="zl__desc">{{ block.settings.desc }}</span></span>
+              <span class="zl__fleche" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#0D1F38" stroke-width="2.4"><path d="m9 6 6 6-6 6"/></svg></span>
+            </a>
+          {%- when 'newsletter' -%}
+            <div class="zl__lien zl__lien--news" {{ block.shopify_attributes }}>
+              <span class="zl__icone">{%- render 'zayado-icone', nom: 'mail' -%}</span>
+              <span class="zl__texte"><span class="zl__titre">{{ block.settings.titre }}</span><span class="zl__desc">{{ block.settings.desc }}</span></span>
+              <div style="flex-basis:100%">
+                {%- form 'customer' -%}
+                  <input type="hidden" name="contact[tags]" value="newsletter,linktree">
+                  <div class="zl__news">
+                    <input type="email" name="contact[email]" required placeholder="Votre e-mail" aria-label="Votre e-mail" autocomplete="email">
+                    <button type="submit">{{ block.settings.bouton }}</button>
+                  </div>
+                  {%- if form.posted_successfully? -%}<p class="zl__merci">Merci, c'est noté ! À très vite.</p>{%- endif -%}
+                  {%- if form.errors -%}<p class="zl__merci" style="color:#B42318">Adresse e-mail invalide, réessayez.</p>{%- endif -%}
+                {%- endform -%}
+              </div>
+            </div>
+        {%- endcase -%}
+      {%- endfor -%}
+    </div>
+
+    <div id="zl-boutique-{{ section.id }}" role="tabpanel" hidden>
+      {%- if boutique != blank and boutique.products_count > 0 -%}
+        <div class="zl__produits">
+          {%- for product in boutique.products limit: section.settings.nombre -%}
+            {% render 'zayado-carte-produit', product: product, libelle: 'Commander' %}
+          {%- endfor -%}
+        </div>
+        <p style="text-align:center; margin-top:18px"><a class="zy__btn zy__btn--ligne" href="{{ boutique.url }}">Toute la boutique →</a></p>
+      {%- else -%}
+        <p class="zl__desc" style="text-align:center">Choisissez la collection « Boutique » dans l'éditeur de thème.</p>
+      {%- endif -%}
+    </div>
+
+    {%- if section.settings.devise != blank -%}<p class="zl__devise">{{ section.settings.devise }}</p><hr class="zl__trait">{%- endif -%}
+  </div>
+</main>
+
+<script>
+  (function () {
+    var racine = document.currentScript.previousElementSibling;
+    var onglets = racine.querySelectorAll('[data-zl-onglet]');
+    onglets.forEach(function (b) {
+      b.addEventListener('click', function () {
+        onglets.forEach(function (o) {
+          var actif = o === b;
+          o.setAttribute('aria-selected', actif ? 'true' : 'false');
+          document.getElementById(o.getAttribute('aria-controls')).hidden = !actif;
+        });
+      });
+    });
+    if (location.hash === '#boutique') onglets[1].click();
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Zayado — Page de liens",
+  "tag": "section",
+  "settings": [
+    { "type": "image_picker", "id": "logo", "label": "Logo" },
+    { "type": "text", "id": "nom", "label": "Nom", "default": "ZAYADO" },
+    { "type": "textarea", "id": "slogan", "label": "Slogan", "default": "Entreprendre avec sens, clarté financière et équilibre" },
+    { "type": "image_picker", "id": "image_fond", "label": "Image d'en-tête" },
+    { "type": "text", "id": "image_fond_url", "label": "…ou adresse d'image d'en-tête", "default": "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/8a5a108e484b9f93ab9e25aaf8e7ed70dad093ccce6dc011f3c680c33b8672d4.jpeg" },
+    { "type": "header", "content": "Réseaux sociaux (vide = masqué)" },
+    { "type": "url", "id": "instagram", "label": "Instagram" },
+    { "type": "url", "id": "youtube", "label": "YouTube" },
+    { "type": "url", "id": "tiktok", "label": "TikTok" },
+    { "type": "url", "id": "spotify", "label": "Spotify (podcast)" },
+    { "type": "url", "id": "linkedin", "label": "LinkedIn" },
+    { "type": "header", "content": "Onglet Boutique" },
+    { "type": "collection", "id": "collection", "label": "Collection affichée" },
+    { "type": "range", "id": "nombre", "label": "Nombre de produits", "min": 2, "max": 12, "step": 2, "default": 6 },
+    { "type": "text", "id": "devise", "label": "Phrase de fin (manuscrite)", "default": "Réconcilier sens, travail et bien-être" }
+  ],
+  "blocks": [
+    { "type": "lien", "name": "Lien", "settings": [
+      { "type": "text", "id": "titre", "label": "Titre" },
+      { "type": "text", "id": "desc", "label": "Sous-titre" },
+      { "type": "url", "id": "url", "label": "Lien" },
+      { "type": "select", "id": "icone", "label": "Icône", "default": "maison", "options": [
+        { "value": "maison", "label": "Maison" }, { "value": "lotus", "label": "Lotus" }, { "value": "sac", "label": "Sac" },
+        { "value": "graphique", "label": "Graphique" }, { "value": "equipe", "label": "Équipe" }, { "value": "livre", "label": "Livre" },
+        { "value": "cle", "label": "Clé" }, { "value": "mail", "label": "E-mail" } ] },
+      { "type": "checkbox", "id": "accent", "label": "Icône terracotta", "default": false },
+      { "type": "image_picker", "id": "image", "label": "Image à droite" },
+      { "type": "text", "id": "image_url", "label": "…ou adresse d'image" } ] },
+    { "type": "newsletter", "name": "Newsletter", "limit": 1, "settings": [
+      { "type": "text", "id": "titre", "label": "Titre", "default": "Rester en contact" },
+      { "type": "text", "id": "desc", "label": "Sous-titre", "default": "Un e-mail par mois : conseils, nouveautés, invitations" },
+      { "type": "text", "id": "bouton", "label": "Bouton", "default": "S'inscrire" } ] }
+  ],
+  "presets": [{ "name": "Zayado — Page de liens" }]
+}
+{% endschema %}

@@ -1,0 +1,6 @@
+{
+  "sections": {
+    "texte": { "type": "zayado-journal-article", "settings": {} }
+  },
+  "order": ["texte"]
+}

@@ -1,0 +1,26 @@
+{%- comment -%} Page « Mes favoris » : lit la liste localStorage (remplie par zayado-favoris.js). {%- endcomment -%}
+<div class="zy-fav" data-testid="favoris-page">
+  <p class="zy-fav__stamp">Votre sélection</p>
+  <h1 class="zy-fav__titre">Mes favoris</h1>
+  <p class="zy-fav__main" id="zy-fav-compte">votre liste vous attend</p>
+
+  <div class="zy-fav__vide" id="zy-fav-vide" data-testid="favoris-vide">
+    <span class="zy-fav__coeur-vide">
+      <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#0D1F38" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+    </span>
+    <p class="zy-fav__vide-t">Aucun favori pour l'instant.</p>
+    <p class="zy-fav__vide-p">Le petit cœur sur une pièce la garde ici, tout simplement.</p>
+    <a href="/collections/produits" class="zy__btn zy__btn--plein zy-fav__cta" data-testid="favoris-vide-cta">Parcourir la sélection</a>
+  </div>
+
+  <div class="zy-fav__grille" id="zy-fav-grille"></div>
+</div>
+
+{% schema %}
+{
+  "name": "Zayado — Favoris",
+  "class": "zy",
+  "settings": [],
+  "presets": [{ "name": "Zayado — Favoris" }]
+}
+{% endschema %}

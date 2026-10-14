@@ -1,0 +1,42 @@
+{
+  "summary": "Tested Zayado V3 (marketplace+tunnel restructuration). Backend: 11/11 pytest passing on /api/leads (demo mode + Mongo upsert for sources 'tunnel-capture', 'box-equipe-devis', 'newsletter-journal', 'diagnostic'), /api/checkout (simule mode, catalogue prices), /api/orders/*/payment-status, /api/mollie/webhook. Frontend: all critical flows exercised — Nav 3 bars (topbar navy + search bar w/ icons + catalogue row + mega-menus Corps/Âme/Rituel), Tunnel capture → lead stored → /merci, Merci tripwires visible, BoxPreco shows deadline 20 nov 2026 + seuil 30 + 7-item contenu + 49€/59€ barred when ?preco=1, Devis form submits lead, Marketplace filters by collection/besoin/q with empty state + reset, FichePage with douleur/garanties/avis/FAQ/voisins, cockpit-vision fiche renders, unknown slug → fiche-introuvable, Favoris toggle heart → badge increments → /favoris lists item, Mobile 390: menu button only (catalogue row hidden), drawer with catalogues+cockpit+compte, no horizontal overflow on tunnel-home. Non-régression OK: /, /journal, /maison, /services, /diagnostic, /cockpit, /panier, /box-v1, /besoins all 200 without ErrorBoundary. Found 1 CRITICAL bug (price mismatch on box precommande) and 2 minor issues.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/checkout (box-hiver)", "issue": "Spec says box-hiver precommande total should be 49 € but backend CATALOGUE_PRIX['box-hiver']=79 so checkout returns total=79. See critical frontend-integration issue below (same root cause)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Nav.jsx (Marketplace key warning)", "issue": "React console warning 'Each child in a list should have a unique \"key\" prop. Check the render method of Marketplace' — triggered because the `chip()` helper in Marketplace.jsx returns elements from inside .map() without a `key` prop (COLLECTIONS.map(c => chip(...)) and besoinsDispo.map(b => chip(...)) at lines 74-81 and 87-91). Not breaking, but spams the console every render.", "selector": "Marketplace.jsx chip() helper", "priority": "LOW"},
+      {"component": "Merci.jsx tripwire-box CTA", "issue": "spec says box tripwire should link to '/box?preco=1' (so BoxPreco shows the 49€ price with 59€ barred & 'Précommander à 49€' CTA). Currently links to just '/box' → user lands on BoxPreco without ?preco=1, so no strikethrough on 59€. Minor UX regression vs spec.", "selector": "[data-testid=\"merci-tripwire-box-cta\"]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [
+      {"flow": "Box precommande → Checkout price mismatch (CRITICAL)", "issue": "On /box, BoxPreco shows 'Box entrepreneur apaisé — 49 €'. 'Précommander ma box' sends user to /checkout?items=box-hiver. BOTH data/content.js AND backend CATALOGUE_PRIX price 'box-hiver' at 79€, so the checkout order creates total=79€ in Mongo and /checkout UI shows 79€. End result: user is advertised 49€ but charged 79€. Verified: /checkout?items=box-hiver page body contains '79' and NOT '49'. Root cause: catalogue.js BOX_PRECO.entrepreneur.id='box-hiver' is reused from the legacy box product. Fix options: (a) change CATALOGUE_PRIX['box-hiver'] and PRODUCTS/BOXES in data/content.js to 49, or (b) introduce a new product_id (e.g. 'box-hiver-preco') and update BoxPreco+MARKET_ITEMS to use it.", "affected_selectors": ["[data-testid=\"box-precommander\"]", "[data-testid=\"box-final-cta\"]", "[data-testid=\"merci-tripwire-box-cta\"]"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "CRITICAL: Align box-hiver precommande price across stack. Either lower CATALOGUE_PRIX['box-hiver'] in backend/server.py AND BOXES entry in frontend/src/data/content.js from 79 → 49, or use a dedicated product_id for the precommande box so the 49€ advertised on /box matches the amount actually charged.",
+    "MEDIUM: Change Merci.jsx `<Link to=\"/box\">` to `<Link to=\"/box?preco=1\">` on the box tripwire CTA so the destination page shows the barred price 59€ as per spec.",
+    "LOW: In Marketplace.jsx fix the React key warning by assigning a key prop at the `.map()` sites (e.g. `COLLECTIONS.map((c) => <Fragment key={c.key}>{chip(...)}</Fragment>)`) or passing key through the chip helper."
+  ],
+  "critical_code_review_comments": [
+    "CRITICAL: data/catalogue.js and backend/server.py disagree on box-hiver price (49 vs 79) — single source of truth would prevent this. Consider exporting CATALOGUE_PRIX from one place and consuming on both sides, or at least adding a backend regression test asserting the preco price.",
+    "catalogue.js: `estPromo = (item) => item.id === 'box-hiver'` is hard-coded on a single id — fragile. Prefer a boolean flag on the item.",
+    "BoxPreco.jsx: `prixEntrepreneur = lancement ? 49 : BOX_PRECO.entrepreneur.prix` where BOX_PRECO.entrepreneur.prix is already 49 — the branch is a no-op (only strikethrough changes). Rename or clarify.",
+    "Nav.jsx mobile: 'Mon compte' button is wrapped in a flex row with 4 IconBtns and not responsive-hidden — still visible on 390 in header (noted in iteration 2, unchanged)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (11/11 pytest)", "frontend": "~90% — all specified flows render & integrate; 1 critical pricing integration bug + 1 medium link bug"},
+  "test_credentials": "n/a",
+  "seed_data_creation": "Test leads inserted via /api/leads during flow with sources 'tunnel-capture' and 'box-equipe-devis' (unique timestamp emails). Test orders created by /api/checkout box-hiver and cleaned by pytest. Favoris stored in localStorage (not server-side).",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend tests reused from iteration 2 still all pass (11/11). The pricing mismatch 49€/79€ is NOT in backend logic — it's a data inconsistency between data/catalogue.js (49€ marketing) and both data/content.js + backend/server.py CATALOGUE_PRIX (79€). After E1 fixes, retest: /checkout?items=box-hiver should show 49€ total in UI AND /api/checkout should return total=49. Also verify Merci.jsx tripwire-box href becomes '/box?preco=1'. React key warning in Marketplace is cosmetic. All data-testid attributes work reliably: tunnel-capture-*, merci-tripwire-*, box-*, market-fav-*, market-card-*, market-cta-*, fiche-*, nav-cat-*, mega-besoin-*, drawer-*.",
+  "rca of the issue": "Box precommande price mismatch RCA: Three price sources exist for 'box-hiver': (1) frontend/src/data/catalogue.js BOX_PRECO.entrepreneur.prix=49 (advertised on BoxPreco page), (2) frontend/src/data/content.js BOXES entry price=79 (used by CartContext to compute Panier totals), (3) backend/server.py CATALOGUE_PRIX['box-hiver']=79 (used by POST /api/checkout to compute server-side total). When user clicks 'Précommander ma box' on /box?preco=1, BoxPreco calls ajouter('box-hiver') + navigates to /checkout?items=box-hiver. Panier picks price 79€ from content.js, backend confirms 79€. User sees 49€ on /box but 79€ on /checkout and in the Mongo order document. Reproduction: open /box?preco=1 → click [data-testid=box-precommander] → observe /checkout shows 79€ not 49€. Mitigation: unify box-hiver price to 49 across the three sources, OR give the precommande box its own id."
+}

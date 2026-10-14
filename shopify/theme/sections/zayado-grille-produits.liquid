@@ -1,0 +1,41 @@
+{{ 'zayado.css' | asset_url | stylesheet_tag }}
+{%- liquid
+  assign coll = section.settings.collection
+  if coll == blank and collection
+    assign coll = collection
+  endif
+-%}
+<section class="zy {% if section.settings.fond == 'sable' %}zy--sable{% endif %}">
+  <div class="zy__wrap">
+    {%- if section.settings.surtitre != blank -%}<p class="zy__eyebrow">{{ section.settings.surtitre }}</p>{%- endif -%}
+    <h2 class="zy__titre zy__titre--m">{{ section.settings.titre | default: coll.title }}</h2>
+    {%- if section.settings.texte != blank -%}<p class="zy__texte">{{ section.settings.texte }}</p>{%- elsif coll.description != blank -%}<div class="zy__texte">{{ coll.description }}</div>{%- endif -%}
+    <div class="zy-grille" style="--zy-colonnes: {{ section.settings.colonnes }}">
+      {%- if coll != blank and coll.products_count > 0 -%}
+        {%- for product in coll.products limit: section.settings.nombre -%}
+          {% render 'zayado-carte-produit', product: product, libelle: section.settings.cta %}
+        {%- endfor -%}
+      {%- else -%}
+        <p class="zy__texte">Choisis une collection dans l'éditeur de thème (Outils IA, Accompagnement, Rachat & reprise ou Produits).</p>
+      {%- endif -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Zayado — Grille produits",
+  "tag": "section",
+  "settings": [
+    { "type": "collection", "id": "collection", "label": "Collection (vide = collection de la page)" },
+    { "type": "text", "id": "surtitre", "label": "Surtitre" },
+    { "type": "text", "id": "titre", "label": "Titre (vide = nom de la collection)" },
+    { "type": "textarea", "id": "texte", "label": "Texte" },
+    { "type": "range", "id": "nombre", "label": "Nombre de produits", "min": 3, "max": 24, "step": 1, "default": 9 },
+    { "type": "range", "id": "colonnes", "label": "Colonnes", "min": 2, "max": 4, "step": 1, "default": 3 },
+    { "type": "text", "id": "cta", "label": "Texte du bouton par défaut", "default": "Découvrir" },
+    { "type": "select", "id": "fond", "label": "Fond", "default": "ivoire", "options": [ { "value": "ivoire", "label": "Ivoire" }, { "value": "sable", "label": "Sable" } ] }
+  ],
+  "presets": [{ "name": "Zayado — Grille produits" }]
+}
+{% endschema %}

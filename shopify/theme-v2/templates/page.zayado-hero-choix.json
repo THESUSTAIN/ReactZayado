@@ -1,0 +1,6 @@
+{
+  "sections": {
+    "main": { "type": "zayado-hero-choix", "settings": {} }
+  },
+  "order": ["main"]
+}

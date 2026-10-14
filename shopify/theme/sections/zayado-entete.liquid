@@ -1,0 +1,108 @@
+{%- comment -%}
+  En-tête Zayado (remplace l'en-tête Dawn) : même composition que la vitrine React.
+  Bandeau bleu nuit · logo Z marine & or + devise · recherche · Mon espace (app VisionAct) · Panier · diagnostic
+  · rangée des catalogues (menu principal). Sur mobile : bouton menu qui ouvre un tiroir.
+{%- endcomment -%}
+{{ 'zayado.css' | asset_url | stylesheet_tag }}
+{%- liquid
+  assign menu = linklists[section.settings.menu]
+  assign compte = section.settings.lien_compte | default: 'https://app.zayado.net/login'
+-%}
+<header class="zy-entete" role="banner">
+  {%- if section.settings.bandeau != blank -%}
+    <div class="zy-entete__bandeau">
+      <div class="zy-entete__in">
+        <p>{{ section.settings.bandeau }}</p>
+        {%- if settings.social_instagram_link != blank or settings.social_linkedin_link != blank -%}
+          <p class="zy-entete__reseaux">
+            {%- if settings.social_instagram_link != blank -%}<a href="{{ settings.social_instagram_link }}" target="_blank" rel="noopener">Instagram</a>{%- endif -%}
+            {%- if settings.social_linkedin_link != blank -%}<a href="{{ settings.social_linkedin_link }}" target="_blank" rel="noopener">LinkedIn</a>{%- endif -%}
+          </p>
+        {%- endif -%}
+      </div>
+    </div>
+  {%- endif -%}
+
+  <div class="zy-entete__barre">
+    <div class="zy-entete__in">
+      <details class="zy-entete__tiroir">
+        <summary aria-label="Menu">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </summary>
+        <div class="zy-entete__tiroir-panneau">
+          <form action="{{ routes.search_url }}" method="get" role="search" class="zy-entete__recherche zy-entete__recherche--mobile">
+            <input type="search" name="q" placeholder="Rechercher…" aria-label="Rechercher">
+          </form>
+          {%- for lien in menu.links -%}
+            <a href="{{ lien.url }}" class="zy-entete__tiroir-lien{% if lien.active %} est-actif{% endif %}">{{ lien.title }}</a>
+          {%- endfor -%}
+          <a href="{{ compte }}" class="zy-entete__tiroir-lien">Mon espace VisionAct</a>
+          {%- if section.settings.cta_lien != blank -%}
+            <a href="{{ section.settings.cta_lien }}" class="zy__btn zy__btn--plein zy-entete__tiroir-cta">{{ section.settings.cta_texte }}</a>
+          {%- endif -%}
+        </div>
+      </details>
+
+      <a href="{{ routes.root_url }}" class="zy-entete__logo" aria-label="{{ shop.name }} — accueil">
+        {%- if section.settings.logo != blank -%}
+          {{ section.settings.logo | image_url: width: 200 | image_tag: alt: shop.name, width: 44, height: 44, class: 'zy-entete__logo-img' }}
+        {%- else -%}
+          <svg width="40" height="40" viewBox="0 0 48 48" fill="none" aria-hidden="true"><circle cx="24" cy="24" r="23" fill="#0D1F38"/><path d="M15 16h18L15 32h18" stroke="#F0DCAC" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        {%- endif -%}
+        <span class="zy-entete__nom">
+          <strong>Zayado</strong>
+          <em>{{ section.settings.devise }}</em>
+        </span>
+      </a>
+
+      <form action="{{ routes.search_url }}" method="get" role="search" class="zy-entete__recherche">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="search" name="q" value="{{ search.terms | escape }}" placeholder="Rechercher un produit, un besoin…" aria-label="Rechercher">
+      </form>
+
+      <nav class="zy-entete__icones" aria-label="Compte et panier">
+        <a href="{{ compte }}" class="zy-entete__icone zy-entete__icone--compte">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4.5 20c1.2-3.6 4-5.5 7.5-5.5s6.3 1.9 7.5 5.5"/></svg>
+          <span>Mon espace</span>
+        </a>
+        <a href="{{ routes.cart_url }}" class="zy-entete__icone" id="cart-icon-bubble">
+          <span class="zy-entete__pastille-wrap">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M5 8h14l-1.2 12H6.2L5 8Z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg>
+            {%- if cart.item_count > 0 -%}<b class="zy-entete__pastille">{{ cart.item_count }}</b>{%- endif -%}
+          </span>
+          <span>Panier</span>
+        </a>
+        {%- if section.settings.cta_lien != blank -%}
+          <a href="{{ section.settings.cta_lien }}" class="zy__btn zy__btn--plein zy-entete__cta">{{ section.settings.cta_texte }}</a>
+        {%- endif -%}
+      </nav>
+    </div>
+  </div>
+
+  {%- if menu.links.size > 0 -%}
+    <nav class="zy-entete__catalogues" aria-label="Menu principal">
+      <div class="zy-entete__in">
+        {%- for lien in menu.links -%}
+          <a href="{{ lien.url }}"{% if lien.active or lien.child_active %} class="est-actif" aria-current="page"{% endif %}>{{ lien.title }}</a>
+        {%- endfor -%}
+      </div>
+    </nav>
+  {%- endif -%}
+</header>
+
+{% schema %}
+{
+  "name": "Zayado — En-tête",
+  "class": "section-header",
+  "enabled_on": { "groups": ["header"] },
+  "settings": [
+    { "type": "image_picker", "id": "logo", "label": "Logo (facultatif)", "info": "Sans logo, le « Z » bleu nuit et or s'affiche." },
+    { "type": "text", "id": "devise", "label": "Devise sous le nom", "default": "clarté · sérénité · équilibre" },
+    { "type": "text", "id": "bandeau", "label": "Texte du bandeau bleu nuit", "default": "La maison des entrepreneurs apaisés" },
+    { "type": "link_list", "id": "menu", "label": "Menu", "default": "main-menu" },
+    { "type": "text", "id": "lien_compte", "label": "Lien « Mon espace »", "default": "https://app.zayado.net/login", "info": "L'espace client est l'appli VisionAct." },
+    { "type": "text", "id": "cta_texte", "label": "Bouton", "default": "Faire mon diagnostic" },
+    { "type": "text", "id": "cta_lien", "label": "Lien du bouton", "default": "https://app.zayado.net/diagnostic" }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,223 @@
+{
+  "sections": {
+    "hero": {
+      "type": "zayado-hero",
+      "settings": {
+        "fond": "ivoire",
+        "surtitre": "La maison des entrepreneurs apaisés",
+        "titre": "L'entreprise performante, sans vous y",
+        "mot_main": "épuiser.",
+        "texte": "Zayado équilibre votre vie personnelle et votre vie professionnelle : la santé financière de l'entreprise, le bien-être de celle ou celui qui la dirige. Commencez par le diagnostic : 2 minutes, votre profil, vos 3 leviers prioritaires.",
+        "bouton_1": "Faire mon diagnostic gratuit",
+        "lien_1": "https://app.zayado.net/public/tunnel",
+        "bouton_2": "Découvrir notre base",
+        "lien_2": "#base",
+        "mention": "Gratuit · 2 minutes · sans engagement"
+      }
+    },
+    "socles": {
+      "type": "zayado-cartes",
+      "settings": {
+        "fond": "sable",
+        "ancre": "base",
+        "surtitre": "La base Zayado",
+        "titre": "Deux socles, un",
+        "mot_main": "équilibre.",
+        "texte": "Zayado accompagne l'entrepreneur dans la construction d'une entreprise performante, rentable et équilibrée. Ni cabinet de conseil, ni marketplace de plus, ni application de bien-être : les trois, reliés.",
+        "colonnes": "2"
+      },
+      "blocks": {
+        "c1": {
+          "type": "carte",
+          "settings": {
+            "etiquette": "Socle 1",
+            "titre": "L'entrepreneur",
+            "sous_titre": "le bien-être, au centre",
+            "texte": "Votre énergie est un indicateur comme un autre : on la suit, on la protège.",
+            "liste": "Axes : physique, mental, performance\nProgression : énergie → focus → récupération → équilibre"
+          }
+        },
+        "c2": {
+          "type": "carte",
+          "settings": {
+            "etiquette": "Socle 2",
+            "titre": "L'entreprise",
+            "sous_titre": "la partie financière",
+            "texte": "Des chiffres compris, une trésorerie qui ne surprend plus, une rentabilité qui se construit.",
+            "liste": "Axes : clarté financière, rentabilité, trésorerie\nProgression : clarté → organisation → rentabilité → environnement"
+          }
+        }
+      },
+      "block_order": [
+        "c1",
+        "c2"
+      ]
+    },
+    "moyens": {
+      "type": "zayado-cartes",
+      "settings": {
+        "fond": "ivoire",
+        "surtitre": "Nos moyens pour y arriver",
+        "titre": "Quatre portes, une seule",
+        "mot_main": "maison.",
+        "colonnes": "4",
+        "numeroter": true
+      },
+      "blocks": {
+        "c1": {
+          "type": "carte",
+          "settings": {
+            "titre": "Acquérir",
+            "texte": "La croissance externe au service de l'équilibre : reprendre une entreprise qui tourne déjà, même sans apport.",
+            "cta": "Rachat & reprise",
+            "lien": "/collections/rachat-reprise"
+          }
+        },
+        "c2": {
+          "type": "carte",
+          "settings": {
+            "titre": "Optimiser",
+            "texte": "Rentabilité, coûts, organisation et environnement de travail, avec les bons experts.",
+            "cta": "Accompagnement",
+            "lien": "/collections/accompagnement"
+          }
+        },
+        "c3": {
+          "type": "carte",
+          "settings": {
+            "titre": "Piloter",
+            "texte": "Le Cockpit IA : vos chiffres, vos prospects, votre plan et votre énergie au même endroit.",
+            "cta": "Découvrir le Cockpit",
+            "lien": "/pages/cockpit"
+          }
+        },
+        "c4": {
+          "type": "carte",
+          "settings": {
+            "titre": "Équiper",
+            "texte": "Des produits et des partenaires sélectionnés pour l'entreprise et pour l'entrepreneur.",
+            "cta": "Les produits",
+            "lien": "/collections/produits"
+          }
+        }
+      },
+      "block_order": [
+        "c1",
+        "c2",
+        "c3",
+        "c4"
+      ]
+    },
+    "fil": {
+      "type": "zayado-cartes",
+      "settings": {
+        "fond": "sable",
+        "surtitre": "Le parcours Zayado",
+        "titre": "Un fil continu, du premier pas au",
+        "mot_main": "durable.",
+        "texte": "Chaque étape mène naturellement à la suivante, et le Cockpit garde le lien entre toutes.",
+        "colonnes": "4",
+        "numeroter": true
+      },
+      "blocks": {
+        "c1": {
+          "type": "carte",
+          "settings": {
+            "titre": "Le diagnostic",
+            "sous_titre": "gratuit, 2 minutes",
+            "texte": "Votre profil et vos 3 leviers prioritaires, côté entreprise et côté entrepreneur."
+          }
+        },
+        "c2": {
+          "type": "carte",
+          "settings": {
+            "titre": "Acquérir ou optimiser",
+            "sous_titre": "selon votre cap",
+            "texte": "Reprendre une entreprise, ou faire mieux avec ce que vous avez : on cadre le bon chantier."
+          }
+        },
+        "c3": {
+          "type": "carte",
+          "settings": {
+            "titre": "Le Cockpit",
+            "sous_titre": "le lien permanent",
+            "texte": "Chiffres, prospects, objectifs à 90 jours et énergie, suivis chaque semaine."
+          }
+        },
+        "c4": {
+          "type": "carte",
+          "settings": {
+            "titre": "La marketplace",
+            "sous_titre": "pour s'équiper",
+            "texte": "Produits, équipements et partenaires vérifiés, quand vous en avez besoin."
+          }
+        }
+      },
+      "block_order": [
+        "c1",
+        "c2",
+        "c3",
+        "c4"
+      ]
+    },
+    "valeurs": {
+      "type": "zayado-cartes",
+      "settings": {
+        "fond": "ivoire",
+        "surtitre": "Vision humaine",
+        "titre": "Une maison construite sur des valeurs, pas sur du",
+        "mot_main": "volume.",
+        "colonnes": "3"
+      },
+      "blocks": {
+        "c1": {
+          "type": "carte",
+          "settings": {
+            "titre": "Ouverture",
+            "texte": "Zayado s'adresse à toutes celles et ceux qui entreprennent, quelles que soient leurs convictions."
+          }
+        },
+        "c2": {
+          "type": "carte",
+          "settings": {
+            "titre": "Intégrité",
+            "texte": "Nous sélectionnons peu, honnêtement, et disons clairement ce que nous faisons et ne faisons pas."
+          }
+        },
+        "c3": {
+          "type": "carte",
+          "settings": {
+            "titre": "Sens",
+            "texte": "Entreprendre peut nourrir une vie, pas la consumer. C'est la boussole de chaque choix."
+          }
+        }
+      },
+      "block_order": [
+        "c1",
+        "c2",
+        "c3"
+      ]
+    },
+    "final": {
+      "type": "zayado-bandeau",
+      "settings": {
+        "mot_main": "on s'y met ?",
+        "titre": "Prêt à construire l'équilibre ?",
+        "texte": "Votre profil et vos 3 leviers prioritaires, sans engagement. Résultat immédiat.",
+        "bouton_1": "Faire mon diagnostic gratuit",
+        "lien_1": "https://app.zayado.net/public/tunnel",
+        "bouton_2": "Nous écrire",
+        "lien_2": "/pages/contact",
+        "centre": true
+      }
+    }
+  },
+  "order": [
+    "hero",
+    "socles",
+    "moyens",
+    "fil",
+    "valeurs",
+    "final"
+  ]
+}

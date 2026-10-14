@@ -1,0 +1,75 @@
+{{ 'zayado.css' | asset_url | stylesheet_tag }}
+{%- comment -%}
+  Le Journal Zayado — un texte (modèle d'article « article.journal »).
+  Mise en page selon la rubrique : article (image, sommaire de lecture), témoignage (grande citation), note (signée).
+{%- endcomment -%}
+{%- assign rubrique = 'article' -%}
+{%- if article.tags contains 'temoignage' -%}{%- assign rubrique = 'temoignage' -%}{%- elsif article.tags contains 'note' -%}{%- assign rubrique = 'note' -%}{%- endif -%}
+{%- assign mots = article.content | strip_html | split: ' ' | size -%}
+<article class="zy zy-texte zy-texte--{{ rubrique }}">
+  <div class="zy__wrap zy-texte__wrap">
+    <a class="zy-texte__retour" href="{{ blog.url }}">← Le Journal</a>
+
+    {%- case rubrique -%}
+      {%- when 'temoignage' -%}
+        <p class="zy__eyebrow">Témoignage</p>
+        <span class="zy-cj__guillemet zy-texte__guillemet" aria-hidden="true">«</span>
+        <h1 class="zy-texte__citation">{{ article.excerpt | strip_html | default: article.title }}</h1>
+        <p class="zy-texte__personne">{{ article.metafields.zayado.personne.value | default: article.title }}</p>
+      {%- when 'note' -%}
+        <p class="zy-texte__date-main">{% render 'zayado-date', d: article.published_at, annee: true %}</p>
+        <h1 class="zy__titre zy__titre--m">{{ article.title }}</h1>
+        <div class="zy-cj__signature zy-texte__signature">
+          {%- if article.user.image -%}{{ article.user.image | image_url: width: 120 | image_tag: class: 'zy-cj__avatar', alt: '' }}{%- else -%}<span class="zy-cj__avatar zy-cj__avatar--vide">{{ article.author | slice: 0 }}</span>{%- endif -%}
+          <span>{{ article.author }}<small>Note de la maison</small></span>
+        </div>
+      {%- else -%}
+        <p class="zy__eyebrow">Article · {% render 'zayado-date', d: article.published_at, annee: true %} · {{ mots | divided_by: 200 | at_least: 1 }} min de lecture</p>
+        <h1 class="zy__titre zy__titre--m">{{ article.title }}</h1>
+        {%- if article.excerpt != blank -%}<p class="zy__texte zy-texte__chapo">{{ article.excerpt | strip_html }}</p>{%- endif -%}
+        {%- if article.image -%}{{ article.image | image_url: width: 1600 | image_tag: class: 'zy-texte__img', alt: article.title, loading: 'eager' }}{%- endif -%}
+    {%- endcase -%}
+
+    <div class="zy-prose">{{ article.content }}</div>
+
+    {%- if rubrique == 'article' -%}
+      <p class="zy-texte__auteur">Par {{ article.author }}</p>
+    {%- endif -%}
+
+    {%- if section.settings.cta_titre != blank -%}
+      <aside class="zy--nuit zy-texte__cta">
+        <p class="zy-texte__cta-titre">{{ section.settings.cta_titre }} <span class="zy__main">{{ section.settings.cta_mot }}</span></p>
+        <p class="zy__texte">{{ section.settings.cta_texte }}</p>
+        <a class="zy__btn zy__btn--plein" href="{{ section.settings.cta_lien | default: 'https://app.zayado.net/public/tunnel' }}">{{ section.settings.cta_bouton }} →</a>
+      </aside>
+    {%- endif -%}
+  </div>
+
+  {%- assign autres = 0 -%}
+  <div class="zy__wrap zy-texte__suite">
+    <p class="zy__eyebrow">À lire ensuite</p>
+    <div class="zy-journal__grille">
+      {%- for a in blog.articles -%}
+        {%- if a.id == article.id -%}{%- continue -%}{%- endif -%}
+        {%- render 'zayado-carte-journal', article: a -%}
+        {%- assign autres = autres | plus: 1 -%}
+        {%- if autres == 3 -%}{%- break -%}{%- endif -%}
+      {%- endfor -%}
+    </div>
+  </div>
+</article>
+
+{% schema %}
+{
+  "name": "Zayado — Journal (texte)",
+  "tag": "section",
+  "settings": [
+    { "type": "header", "content": "Encadré en fin de texte" },
+    { "type": "text", "id": "cta_titre", "label": "Titre", "default": "Où en est vraiment" },
+    { "type": "text", "id": "cta_mot", "label": "Mot manuscrit", "default": "votre entreprise ?" },
+    { "type": "textarea", "id": "cta_texte", "label": "Texte", "default": "Vos vrais chiffres en 10 minutes : trésorerie, marge, mois d'autonomie et les 3 points à corriger en priorité." },
+    { "type": "text", "id": "cta_bouton", "label": "Bouton", "default": "Faire mon diagnostic" },
+    { "type": "url", "id": "cta_lien", "label": "Lien" }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,49 @@
+{%- comment -%}
+  Carte produit Zayado.
+  · Prix : celui de Shopify. Pour les abonnements et services, l'admin de l'appli (onglet Prix) met la fiche à jour.
+  · Bouton : mène à l'appli (inscription, paiement Mollie) via le métachamp zayado.lien_app ; à défaut, la fiche Shopify.
+  · Balise « bientot » : produit partenaire pas encore validé → ni prix ni achat, « Me prévenir » ouvre la fiche.
+  · Balise « sur-devis » : « Sur devis » à la place du prix.
+  Utilisation : {% render 'zayado-carte-produit', product: product, libelle: 'Découvrir' %}
+{%- endcomment -%}
+{%- assign bientot = false -%}
+{%- if product.tags contains 'bientot' -%}{%- assign bientot = true -%}{%- endif -%}
+{%- assign lien = product.metafields.zayado.lien_app.value | default: product.url -%}
+{%- assign cta = product.metafields.zayado.cta.value | default: libelle | default: 'Découvrir' -%}
+{%- if bientot -%}{%- assign lien = product.url -%}{%- assign cta = 'Me prévenir' -%}{%- endif -%}
+<article class="zy-carte">
+  <a href="{{ product.url }}" tabindex="-1" aria-hidden="true">
+    {%- if product.featured_image -%}
+      {{ product.featured_image | image_url: width: 800 | image_tag: class: 'zy-carte__img', loading: 'lazy', alt: product.title }}
+    {%- else -%}
+      <span class="zy-carte__img"></span>
+    {%- endif -%}
+  </a>
+  <div class="zy-carte__corps">
+    <span class="zy-carte__type">{{ product.type }}</span>
+    {%- if bientot -%}
+      <span class="zy__badge zy__badge--doux">Bientôt</span>
+    {%- elsif product.tags contains 'promo' -%}
+      <span class="zy__badge">Lancement</span>
+    {%- endif -%}
+    <h3 class="zy-carte__titre"><a href="{{ product.url }}">{{ product.title }}</a></h3>
+    {%- if product.metafields.zayado.benefice != blank -%}
+      <p class="zy-carte__benefice">{{ product.metafields.zayado.benefice.value }}</p>
+    {%- endif -%}
+    <div class="zy-carte__bas">
+      <span class="zy-carte__prix">
+        {%- if bientot -%}
+          <span class="zy-carte__bientot">En cours de sélection</span>
+        {%- elsif product.tags contains 'sur-devis' -%}
+          Sur devis
+        {%- else -%}
+          {%- if product.price_varies -%}Dès {% endif -%}{{ product.price | money }}
+        {%- endif -%}
+        {%- unless bientot -%}
+          {%- if product.metafields.zayado.mode_prix != blank -%}<span class="zy-carte__mode">{{ product.metafields.zayado.mode_prix.value }}</span>{%- endif -%}
+        {%- endunless -%}
+      </span>
+      <a class="zy__btn {% if bientot %}zy__btn--ligne{% else %}zy__btn--plein{% endif %}" href="{{ lien }}">{{ cta }}</a>
+    </div>
+  </div>
+</article>

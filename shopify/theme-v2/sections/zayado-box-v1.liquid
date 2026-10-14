@@ -1,0 +1,93 @@
+{%- comment -%} Box v1 — page précommande de la vitrine (2 box, seuil, garanties). {%- endcomment -%}
+{%- assign contenu_ent = "Carnet guidé « Mon cap 2027 »|Vision, objectifs, 3 priorités, gratitude — aux couleurs de Zayado.|Esprit · pièce maîtresse§Infusion bio « Calme et focus »|La pause qui repose — marques déjà conformes, jamais reconditionnées.|Rythme§Bougie naturelle ou brume d'ambiance|Le rituel du soir.|Rythme§Outil de micro-pause|Balle de massage ou bande de mobilité — bouger un peu, souvent.|Corps§Carte « Rituel 5 minutes »|Un recentrage à faire le matin.|Esprit · en pratique§Carte « Votre Cockpit IA » + QR code|L'abonnement 2 mois pour 1 €, juste pour vous.|Le passage vers le pilotage§Le geste qui fait tout|Mot signé à la main, papier de soie, sticker de fermeture — l'effet waouh à l'ouverture.|À partager : #EntrepreneurApaisé" | split: "§" -%}
+{%- assign contenu_eq = "Le contenu essentiel : carnet, infusion, outil de micro-pause, carte « Rituel 5 minutes »§Carte de remerciement à la place de la carte Cockpit§Dès 10 box : « le mot du dirigeant » imprimé sur chaque carte§Dès 10 box : votre logo sur la carte — un cadeau à votre image§Dès 25 box : carnet co-brandé Zayado × votre entreprise§Dès 10 box : envoi direct à chaque destinataire depuis votre liste" | split: "§" -%}
+{%- assign garanties = "Seuil de 30 box : s'il n'est pas atteint, chaque client est intégralement remboursé, sans aucune démarche.§Rétractation 14 jours après réception — sauf box personnalisées (ni reprises ni échangées).§Une seule série : précommander, c'est garantir votre box — pas de stock, pas de gaspillage." | split: "§" -%}
+<div class="zy-boxv1">
+  <section class="zy-boxv1__hero">
+    <p class="zy-boxv1__stamp">Test en précommande · édition limitée</p>
+    <h1 class="zy-anim" style="--d:.1s">La Box de fin d'année qui remet <em>l'équilibre</em> au centre.</h1>
+    <p class="zy-boxv1__sub zy-anim" style="--d:.25s">Pour vous, votre équipe, vos clients. On ne commande les box qu'une fois les précommandes en : {{ section.settings.seuil | default: 30 }} box minimum, sinon <strong>remboursement intégral</strong>, sans aucune démarche.</p>
+    <div class="zy-boxv1__badges zy-anim" style="--d:.4s">
+      <span class="zy-boxv1__badge zy-boxv1__badge--plein">Précommande jusqu'au {{ section.settings.deadline | default: "20 novembre 2026" }}</span>
+      <span class="zy-boxv1__badge">Seuil : {{ section.settings.seuil | default: 30 }} box · {{ section.settings.expedition | default: "expédition vers le 7 décembre" }}</span>
+    </div>
+  </section>
+
+  <section class="zy-boxv1__grille">
+    <article class="zy-boxv1__carte" data-testid="box-entrepreneur">
+      <div class="zy-boxv1__carte-tete">
+        <div>
+          <p class="zy-boxv1__carte-sur">Pour vous</p>
+          <h2>Box entrepreneur apaisé</h2>
+        </div>
+        <p class="zy-boxv1__prix">{{ section.settings.prix_entrepreneur | default: 49 }} € <s>{{ section.settings.prix_barre | default: 59 }} €</s></p>
+      </div>
+      <ul class="zy-boxv1__contenu">
+        {%- for c in contenu_ent -%}
+          {%- assign m = c | split: '|' -%}
+          <li><strong>{{ m[0] | strip }}</strong><span>{{ m[1] | strip }}</span><em>{{ m[2] | strip }}</em></li>
+        {%- endfor -%}
+      </ul>
+      <a class="zy__btn zy__btn--plein zy-boxv1__cta" href="{{ section.settings.lien_entrepreneur | default: '/products/box-entrepreneur-apaise' }}">Précommander la box →</a>
+    </article>
+
+    <article class="zy-boxv1__carte zy-boxv1__carte--equipe" data-testid="box-equipe">
+      <div class="zy-boxv1__carte-tete">
+        <div>
+          <p class="zy-boxv1__carte-sur">Pour vos équipes et clients</p>
+          <h2>Box équipe</h2>
+        </div>
+        <p class="zy-boxv1__prix">{{ section.settings.prix_equipe | default: 39 }} € <small>HT l'unité, dégressif dès 10 box</small></p>
+      </div>
+      <ul class="zy-boxv1__contenu zy-boxv1__contenu--simple">
+        {%- for c in contenu_eq -%}
+          <li><span>{{ c | strip }}</span></li>
+        {%- endfor -%}
+      </ul>
+      <div class="zy-boxv1__devis">
+        <p class="zy-boxv1__devis-t">Une question sur votre commande équipe ?</p>
+        {%- form 'customer', class: 'zy-boxv1__devis-form' -%}
+          {%- if form.posted_successfully? -%}
+            <p class="zy-boxv1__devis-ok">Reçu — votre devis arrive sous 48 h ouvrées.</p>
+          {%- else -%}
+            <input type="hidden" name="contact[tags]" value="box-equipe-devis">
+            <input type="email" name="contact[email]" required placeholder="votre@email.fr">
+            <button type="submit">Recevoir</button>
+          {%- endif -%}
+        {%- endform -%}
+      </div>
+      <a class="zy__btn zy__btn--ligne zy-boxv1__cta" href="{{ section.settings.lien_equipe | default: '/products/box-equipe-cadeaux' }}">Voir la box équipe →</a>
+    </article>
+  </section>
+
+  <section class="zy-boxv1__garanties">
+    <div class="zy-boxv1__garanties-in">
+      {%- for g in garanties -%}
+        <div class="zy-boxv1__garantie" data-testid="box-garantie-{{ forloop.index0 }}">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#D6A64F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+          <p>{{ g | strip }}</p>
+        </div>
+      {%- endfor -%}
+    </div>
+    <p class="zy-boxv1__qr">Dans chaque box : la carte « Votre Cockpit IA » avec QR code — 2 mois pour 1 €, le passage vers le pilotage.</p>
+    <p class="zy-boxv1__hashtag">Partagez votre ouverture : #EntrepreneurApaisé</p>
+  </section>
+</div>
+
+{% schema %}
+{
+  "name": "Zayado — Box précommande",
+  "class": "zy",
+  "settings": [
+    { "type": "text", "id": "deadline", "label": "Date limite", "default": "20 novembre 2026" },
+    { "type": "range", "id": "seuil", "label": "Seuil de box", "min": 10, "max": 100, "step": 5, "default": 30 },
+    { "type": "text", "id": "expedition", "label": "Expédition", "default": "expédition vers le 7 décembre" },
+    { "type": "text", "id": "prix_entrepreneur", "label": "Prix box entrepreneur (€)", "default": "49" },
+    { "type": "text", "id": "prix_barre", "label": "Prix barré (€)", "default": "59" },
+    { "type": "text", "id": "prix_equipe", "label": "Prix box équipe HT (€)", "default": "39" },
+    { "type": "url", "id": "lien_entrepreneur", "label": "Lien box entrepreneur" },
+    { "type": "url", "id": "lien_equipe", "label": "Lien box équipe" }
+  ],
+  "presets": [{ "name": "Zayado — Box précommande" }]
+}
+{% endschema %}

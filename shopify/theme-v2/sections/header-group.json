@@ -1,0 +1,55 @@
+{
+  "name": "t:sections.header.name",
+  "type": "header",
+  "sections": {
+    "entete": {
+      "type": "zayado-entete",
+      "blocks": {
+        "rayon-corps": {
+          "type": "rayon",
+          "settings": {
+            "titre": "Corps",
+            "description": "Ce qui soutient l'effort : le dos, l'énergie, la récupération.",
+            "collection": "corps"
+          }
+        },
+        "rayon-ame": {
+          "type": "rayon",
+          "settings": {
+            "titre": "Âme",
+            "description": "Ce qui clarifie la tête : focus, calme, cap.",
+            "collection": "ame"
+          }
+        },
+        "rayon-rituel": {
+          "type": "rayon",
+          "settings": {
+            "titre": "Rituel & Confort",
+            "description": "Ce qui rythme les journées : box, carnets, pauses qui reprennent.",
+            "collection": "rituel-confort"
+          }
+        },
+        "rayon-espace": {
+          "type": "rayon",
+          "settings": {
+            "titre": "Espace & Organisation",
+            "description": "Ce qui structure le quotidien : l'espace de travail et l'équipe.",
+            "collection": "espace-organisation"
+          }
+        }
+      },
+      "block_order": ["rayon-corps", "rayon-ame", "rayon-rituel", "rayon-espace"],
+      "settings": {
+        "menu": "main-menu",
+        "devise": "clarté · sérénité · équilibre",
+        "bandeau": "La maison des entrepreneurs apaisés",
+        "lien_compte": "https://app.zayado.net/login",
+        "cta_texte": "Faire mon diagnostic",
+        "cta_lien": "https://app.zayado.net/diagnostic"
+      }
+    }
+  },
+  "order": [
+    "entete"
+  ]
+}

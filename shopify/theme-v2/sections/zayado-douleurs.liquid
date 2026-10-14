@@ -1,0 +1,58 @@
+{{ 'zayado.css' | asset_url | stylesheet_tag }}
+{%- comment -%}
+  « Ce que vous vivez → ce que Zayado fait » : les vraies douleurs des entrepreneurs, chacune reliée
+  à la fonction Zayado qui la règle. Chaque carte = une douleur (bloc éditable dans l'éditeur de thème).
+{%- endcomment -%}
+<section class="zy" id="douleurs">
+  <div class="zy__wrap">
+    <p class="zy__eyebrow">{{ section.settings.surtitre }}</p>
+    <h2 class="zy__titre zy__titre--m">{{ section.settings.titre }}</h2>
+    {%- if section.settings.texte != blank -%}<p class="zy__texte">{{ section.settings.texte }}</p>{%- endif -%}
+    <div class="zy-douleurs__grille">
+      {%- for block in section.blocks -%}
+        <a class="zy-douleurs__carte" href="{{ block.settings.lien }}" {{ block.shopify_attributes }}>
+          <span class="zy-douleurs__douleur">« {{ block.settings.douleur }} »</span>
+          <span class="zy-douleurs__fonction">{{ block.settings.fonction }}</span>
+          <span class="zy-douleurs__reponse">{{ block.settings.reponse }}</span>
+          <span class="zy-douleurs__lien">{{ block.settings.cta }} →</span>
+        </a>
+      {%- endfor -%}
+    </div>
+    {%- if section.settings.bouton != blank -%}
+      <p class="zy-douleurs__cta"><a class="zy__btn zy__btn--plein" href="{{ section.settings.bouton_lien | default: 'https://app.zayado.net/onboarding?plan=serenite' }}">{{ section.settings.bouton }}</a></p>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Zayado — Vos douleurs",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "surtitre", "label": "Surtitre", "default": "Ce que vous vivez" },
+    { "type": "text", "id": "titre", "label": "Titre", "default": "Vous vous reconnaissez ? Zayado a été fait pour ça." },
+    { "type": "textarea", "id": "texte", "label": "Texte", "default": "Seul·e aux commandes, vous jonglez entre les chiffres, les clients, les idées et votre énergie. Chaque difficulté a sa réponse dans Zayado." },
+    { "type": "text", "id": "bouton", "label": "Bouton", "default": "Essayer Zayado — 2 mois pour 1 €" },
+    { "type": "url", "id": "bouton_lien", "label": "Lien du bouton" }
+  ],
+  "blocks": [
+    { "type": "douleur", "name": "Douleur", "limit": 8, "settings": [
+      { "type": "text", "id": "douleur", "label": "La douleur (mots du client)" },
+      { "type": "text", "id": "fonction", "label": "Fonction Zayado" },
+      { "type": "textarea", "id": "reponse", "label": "Ce que Zayado fait" },
+      { "type": "text", "id": "cta", "label": "Texte du lien", "default": "Voir comment" },
+      { "type": "url", "id": "lien", "label": "Lien" } ] }
+  ],
+  "presets": [{
+    "name": "Zayado — Vos douleurs",
+    "blocks": [
+      { "type": "douleur", "settings": { "douleur": "Je ne sais pas vraiment si je gagne de l'argent", "fonction": "Chiffres", "reponse": "Importez votre relevé bancaire ou votre FEC : trésorerie, marge et mois d'autonomie, expliqués simplement.", "cta": "Faire mon diagnostic à 27 €", "lien": "/products/kit-diagnostic-flash" } },
+      { "type": "douleur", "settings": { "douleur": "Je n'ai pas assez de clients, prospecter m'épuise", "fonction": "Radar", "reponse": "Chaque mois, de vraies entreprises qui bougent près de chez vous (création, recrutement, changement), avec le message de relance prêt.", "cta": "Voir le Radar", "lien": "/collections/outils-ia" } },
+      { "type": "douleur", "settings": { "douleur": "J'ai des visiteurs mais personne n'achète", "fonction": "Tunnels de vente", "reponse": "Une page de capture, une offre de démarrage et une page de vente rédigées pour vous, avec paiement en ligne.", "cta": "Créer mon tunnel", "lien": "/collections/outils-ia" } },
+      { "type": "douleur", "settings": { "douleur": "Je m'éparpille et je décide seul·e", "fonction": "Plan, Vision & Copilote IA", "reponse": "Votre vision transformée en 3 priorités par semaine, un plan daté et un copilote IA qui connaît votre projet pour trancher avec vous.", "cta": "Découvrir le Copilote", "lien": "/collections/outils-ia" } },
+      { "type": "douleur", "settings": { "douleur": "Je suis épuisé·e, je n'ai plus d'énergie", "fonction": "Bien-être", "reponse": "Un check-in du jour qui adapte votre charge à votre énergie, pour durer sans vous brûler.", "cta": "Prendre soin de moi", "lien": "/collections/produits" } },
+      { "type": "douleur", "settings": { "douleur": "Je veux me lancer, mais créer de zéro me fait peur et je n'ai pas d'apport", "fonction": "Reprise sans apport", "reponse": "Reprenez une entreprise qui a déjà des clients et un chiffre d'affaires. Zayado monte le financement avec ses partenaires (prêts d'honneur, garanties, crédit vendeur) et vous accompagne pour limiter la casse.", "cta": "Étudier ma reprise", "lien": "https://app.zayado.net/public/reprise" } }
+    ]
+  }]
+}
+{% endschema %}

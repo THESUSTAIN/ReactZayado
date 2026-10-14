@@ -1,0 +1,157 @@
+/* Copilote (ancien zip VisionAct) — thème nuit, activé par html.copilote. Typographie de l'app conservée. */
+html.copilote {
+    --background: #0b1a3d;
+    --foreground: #eceff7;
+    --card: rgba(255,255,255,0.07);
+    --card-foreground: #f6f3ec;
+    --popover: #294174;
+    --popover-foreground: #f6f3ec;
+    --primary: #DEC2A3;
+    --primary-foreground: #11223f;
+    --secondary: #294174;
+    --secondary-foreground: #f6f3ec;
+    --muted: #22386a;
+    --muted-foreground: #a8b6d1;
+    --accent: #34508A;
+    --accent-foreground: #f6f3ec;
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 12%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: #dec2a3;
+    --chart-1: #dec2a3;
+    --chart-2: #a8b6d1;
+    --chart-3: #f1e2cc;
+    --chart-4: #5a6c8f;
+    --chart-5: #2a3c66;
+    --radius: 1rem;
+    --sidebar: #294174;
+    --sidebar-foreground: #f6f3ec;
+    --sidebar-primary: #dec2a3;
+    --sidebar-primary-foreground: #0a1120;
+    --sidebar-accent: #34508A;
+    --sidebar-accent-foreground: #f6f3ec;
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: #dec2a3;
+}
+@layer components {
+  /* Le fond : dégradé navy royal, comme sur le modèle mobile. */
+  .fond-nuit {
+    /* Même dégradé que les pages publiques (Tarifs, Connexion) : du bleu clair en haut au bleu nuit en bas. */
+    background-color: #0b1a3d;
+    background-image: var(--zy-fond);
+    background-attachment: fixed;
+  }
+
+  /* Une seule matière : verre blanc translucide posé sur le navy.
+     La hiérarchie se fait par l'élévation (.verre-haut), pas par la matière. */
+  .verre {
+    background-color: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    border-radius: var(--radius);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+  }
+
+  .verre-haut {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    /* Le flou ne porte que sur les cartes hautes : c'est ce qui coûte cher au défilement. */
+    backdrop-filter: blur(20px);
+    box-shadow:
+      0 20px 44px -24px rgba(0, 0, 0, 0.75),
+      0 1px 0 rgba(255, 255, 255, 0.1) inset;
+  }
+
+  /* Libellés de section : police d'interface, capitales discrètes, espacement
+     normal. Les capitales en chasse fixe très espacées fatiguaient l'œil. */
+  .surtitre {
+    font-family: var(--font-sans);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-beige);
+  }
+
+  /* Petites informations factuelles : dates, étiquettes, sources. */
+  .etiquette {
+    font-family: var(--font-sans);
+    font-size: 0.72rem;
+    letter-spacing: 0;
+  }
+
+  .titre-serif {
+    font-family: var(--font-heading);
+    letter-spacing: -0.015em;
+  }
+
+  .chiffre {
+    font-family: var(--font-sans);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+  }
+}
+
+@keyframes monte-doux {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes glisse-bas {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.anim-monte {
+  animation: monte-doux 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.anim-glisse {
+  animation: glisse-bas 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-monte,
+  .anim-glisse {
+    animation: none;
+  }
+}
+
+/* Écrans du Copilote (pages/zayado) : leurs classes « claires » sont repeintes en thème nuit
+   sous .zy-nuit — une seule matière (verre translucide sur navy), comme le projet déployé. */
+.zy-nuit .bg-white { background-color: rgb(255 255 255 / 0.065); }
+.zy-nuit .bg-white\/60 { background-color: rgb(255 255 255 / 0.04); }
+.zy-nuit .bg-slate-50, .zy-nuit .bg-slate-50\/60 { background-color: rgb(255 255 255 / 0.045); }
+.zy-nuit .bg-slate-100 { background-color: rgb(255 255 255 / 0.09); }
+.zy-nuit .bg-slate-900, .zy-nuit .bg-slate-950 { background-color: #294174; }
+/* Boutons foncés des écrans Copilote : dégradé champagne, comme les autres boutons principaux de l'appli. */
+.zy-nuit button.bg-slate-900, .zy-nuit a.bg-slate-900, .zy-nuit .bg-amber-600 { background-color: #DEC2A3; background-image: var(--zy-degrade-champagne); color: #0f1b3a !important; }
+.zy-nuit button.bg-slate-900 *, .zy-nuit a.bg-slate-900 * { color: inherit; }
+.zy-nuit .text-white.bg-amber-600 { color: #0f1b3a !important; }
+.zy-nuit .border-slate-100, .zy-nuit .border-slate-200, .zy-nuit .border-slate-200\/80, .zy-nuit .border-slate-300, .zy-nuit .border-input { border-color: rgb(255 255 255 / 0.12); }
+.zy-nuit .text-slate-950, .zy-nuit .text-slate-900, .zy-nuit .text-slate-800 { color: #eceff7; }
+.zy-nuit .text-slate-700, .zy-nuit .text-slate-600 { color: #c9d3e6; }
+.zy-nuit .text-slate-500, .zy-nuit .text-slate-400, .zy-nuit .text-slate-300 { color: #9fb0cf; }
+.zy-nuit .bg-amber-50, .zy-nuit .bg-amber-50\/70 { background-color: rgb(222 194 163 / 0.13); }
+.zy-nuit .text-amber-600, .zy-nuit .text-amber-700, .zy-nuit .text-amber-800 { color: #DEC2A3; }
+.zy-nuit .border-amber-300, .zy-nuit .border-amber-400 { border-color: rgb(222 194 163 / 0.55); }
+.zy-nuit .hover\:border-amber-300:hover { border-color: rgb(222 194 163 / 0.55); }
+.zy-nuit .bg-amber-300 { background-color: #DEC2A3; }
+.zy-nuit .bg-green-50 { background-color: rgb(74 222 128 / 0.12); }
+.zy-nuit .text-green-700 { color: #86efac; }
+.zy-nuit .bg-red-50 { background-color: rgb(248 113 113 / 0.12); }
+.zy-nuit .text-red-600, .zy-nuit .text-red-700 { color: #fca5a5; }
+.zy-nuit .text-blue-600 { color: #93c5fd; }
+.zy-nuit .shadow-sm, .zy-nuit .shadow-xs { box-shadow: 0 16px 34px -18px rgb(4 13 34 / 0.6); }
+.zy-nuit section.rounded-2xl { backdrop-filter: blur(14px); }
+.zy-nuit input, .zy-nuit select, .zy-nuit textarea { color: #eceff7; color-scheme: dark; }
+.zy-nuit select option { background: #294174; }
+.zy-nuit input::placeholder, .zy-nuit textarea::placeholder { color: #7f90b0; }
+
+/* Tiroir Élan (Vision & Élan) */
+@keyframes tiroir-entre {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: none; }
+}
+.anim-tiroir {
+  animation: tiroir-entre 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}

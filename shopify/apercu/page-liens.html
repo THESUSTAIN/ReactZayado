@@ -1,0 +1,128 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Aperçu — page de liens Zayado</title><style>/* Zayado — styles des sections Shopify (mêmes couleurs et polices que la vitrine React). */
+@import url("https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Poppins:wght@400;500;600&display=swap");
+
+.zy {
+  --zy-nuit: #0D1F38; --zy-nuit-2: #16304F; --zy-ardoise: #2E4A6B; --zy-gris: #8FA3B8;
+  --zy-ivoire: #FDFCF8; --zy-sable: #F4EFE6; --zy-pierre: #F6F5F2; --zy-or: #D6A64F; --zy-or-clair: #F0DCAC;
+  font-family: "Poppins", sans-serif; color: var(--zy-nuit); background: var(--zy-ivoire);
+}
+.zy *, .zy *::before, .zy *::after { box-sizing: border-box; }
+.zy--sable { background: var(--zy-sable); }
+.zy--nuit { background: linear-gradient(135deg, var(--zy-nuit) 0%, var(--zy-nuit-2) 60%, var(--zy-ardoise) 100%); color: var(--zy-ivoire); }
+.zy__wrap { max-width: 1200px; margin: 0 auto; padding: 72px 24px; }
+.zy__eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .24em; text-transform: uppercase; color: var(--zy-or); margin: 0 0 12px; }
+.zy__titre { font-family: "Fraunces", Georgia, serif; font-weight: 600; font-size: clamp(30px, 4.4vw, 52px); line-height: 1.08; letter-spacing: -.01em; margin: 0; }
+.zy__titre--m { font-size: clamp(26px, 3.2vw, 38px); }
+.zy__main { font-family: "Caveat", cursive; font-weight: 600; color: var(--zy-or); font-size: 1.15em; }
+.zy__texte { font-size: 17px; line-height: 1.6; color: var(--zy-ardoise); max-width: 620px; margin: 16px 0 0; }
+.zy--nuit .zy__texte { color: #c9d3e6; }
+.zy__actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+.zy__btn { display: inline-flex; align-items: center; gap: 8px; height: 50px; padding: 0 26px; border-radius: 999px; font-weight: 600; font-size: 15px; text-decoration: none; transition: transform .2s ease, background-color .2s ease, box-shadow .2s ease; }
+.zy__btn:hover { transform: translateY(-2px); }
+.zy__btn--plein { background: var(--zy-nuit); color: var(--zy-ivoire); box-shadow: 0 10px 30px rgba(13, 31, 56, .18); }
+.zy--nuit .zy__btn--plein { background: var(--zy-sable); color: var(--zy-nuit); }
+.zy__btn--ligne { border: 1px solid rgba(13, 31, 56, .25); color: var(--zy-nuit); }
+.zy--nuit .zy__btn--ligne { border-color: rgba(253, 252, 248, .35); color: var(--zy-ivoire); }
+
+/* Hero */
+.zy-hero__grille { display: grid; gap: 48px; align-items: center; grid-template-columns: 1.1fr .9fr; }
+.zy-hero__img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 28px; box-shadow: 0 30px 80px rgba(13, 31, 56, .22); }
+
+/* Univers (4 piliers) */
+.zy-univers__grille { display: grid; gap: 18px; grid-template-columns: repeat(4, 1fr); margin-top: 40px; }
+.zy-univers__carte { display: flex; flex-direction: column; gap: 10px; padding: 26px; border-radius: 22px; background: #fff; border: 1px solid rgba(13, 31, 56, .08); text-decoration: none; color: inherit; transition: transform .25s ease, box-shadow .25s ease; }
+.zy-univers__carte:hover { transform: translateY(-4px); box-shadow: 0 18px 44px rgba(13, 31, 56, .12); }
+.zy-univers__num { font-family: "Fraunces", serif; font-size: 14px; color: var(--zy-or); }
+.zy-univers__nom { font-weight: 600; font-size: 19px; }
+.zy-univers__desc { font-size: 14px; line-height: 1.55; color: var(--zy-ardoise); }
+.zy-univers__lien { margin-top: auto; font-size: 14px; font-weight: 600; color: var(--zy-nuit); }
+
+/* Grille produits + carte */
+.zy-grille { display: grid; gap: 22px; grid-template-columns: repeat(var(--zy-colonnes, 3), 1fr); margin-top: 36px; }
+.zy-carte { display: flex; flex-direction: column; border-radius: 22px; overflow: hidden; background: #fff; border: 1px solid rgba(13, 31, 56, .08); transition: transform .25s ease, box-shadow .25s ease; }
+.zy-carte:hover { transform: translateY(-4px); box-shadow: 0 18px 44px rgba(13, 31, 56, .12); }
+.zy-carte__img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--zy-pierre); display: block; }
+.zy-carte__corps { display: flex; flex-direction: column; gap: 8px; padding: 20px 20px 22px; flex: 1; }
+.zy-carte__type { font-size: 11px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--zy-gris); }
+.zy-carte__titre { font-weight: 600; font-size: 17px; line-height: 1.3; margin: 0; }
+.zy-carte__titre a { color: inherit; text-decoration: none; }
+.zy-carte__benefice { font-size: 13px; color: var(--zy-ardoise); }
+.zy-carte__bas { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; padding-top: 12px; }
+.zy-carte__prix { font-weight: 600; font-size: 18px; }
+.zy-carte__mode { display: block; font-size: 11.5px; font-weight: 400; color: var(--zy-gris); }
+.zy-carte .zy__btn { height: 40px; padding: 0 18px; font-size: 13.5px; }
+.zy__badge { display: inline-block; align-self: flex-start; padding: 4px 10px; border-radius: 999px; background: var(--zy-or-clair); color: var(--zy-nuit); font-size: 11px; font-weight: 600; }
+
+/* Fiche produit */
+.zy-fiche__grille { display: grid; gap: 48px; grid-template-columns: 1fr 1fr; align-items: start; }
+.zy-fiche__img { width: 100%; border-radius: 24px; aspect-ratio: 1 / 1; object-fit: cover; background: var(--zy-pierre); }
+.zy-fiche__prix { font-family: "Fraunces", serif; font-size: 34px; margin: 18px 0 4px; }
+.zy-fiche__desc { font-size: 16px; line-height: 1.7; color: var(--zy-ardoise); margin-top: 18px; }
+.zy-fiche__reassurance { display: grid; gap: 10px; margin: 26px 0 0; padding: 0; list-style: none; font-size: 14px; color: var(--zy-ardoise); }
+.zy-fiche__reassurance li::before { content: "✓"; color: var(--zy-or); font-weight: 700; margin-right: 10px; }
+
+/* Services, tarifs, FAQ */
+.zy-services__grille { display: grid; gap: 18px; grid-template-columns: repeat(var(--zy-colonnes, 3), 1fr); margin-top: 36px; }
+.zy-services__carte { padding: 28px; border-radius: 22px; background: #fff; border: 1px solid rgba(13, 31, 56, .08); display: flex; flex-direction: column; gap: 12px; }
+.zy-tarifs__cadre { width: 100%; border: 0; border-radius: 24px; background: transparent; margin-top: 28px; }
+.zy-faq__item { border-bottom: 1px solid rgba(13, 31, 56, .12); padding: 20px 0; }
+.zy-faq__item summary { cursor: pointer; font-weight: 600; font-size: 17px; list-style: none; }
+.zy-faq__item p { color: var(--zy-ardoise); line-height: 1.6; margin: 12px 0 0; }
+
+@media (max-width: 989px) {
+  .zy-hero__grille, .zy-fiche__grille { grid-template-columns: 1fr; }
+  .zy-univers__grille { grid-template-columns: repeat(2, 1fr); }
+  .zy-grille, .zy-services__grille { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 589px) {
+  .zy__wrap { padding: 52px 18px; }
+  .zy-univers__grille, .zy-grille, .zy-services__grille { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { .zy * { transition: none !important; } }
+
+  .zl { min-height: 100vh; font-family: "Poppins", sans-serif; color: #0D1F38; background: #FDFCF8; }
+  .zl__haut { position: relative; text-align: center; padding: 44px 20px 22px; background-size: cover; background-position: center; }
+  .zl__haut::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(253,252,248,.6) 0%, rgba(253,252,248,.94) 80%, #FDFCF8 100%); }
+  .zl__haut > * { position: relative; z-index: 1; }
+  .zl__logo { width: 92px; height: auto; }
+  .zl__nom { font-family: "Fraunces", Georgia, serif; font-weight: 600; font-size: 40px; letter-spacing: .08em; margin: 6px 0 0; }
+  .zl__slogan { font-family: "Fraunces", Georgia, serif; font-size: 17px; line-height: 1.35; color: #2E4A6B; margin: 8px auto 0; max-width: 300px; }
+  .zl__trait { width: 56px; height: 2px; background: #D6A64F; border: 0; margin: 16px auto; border-radius: 2px; }
+  .zl__reseaux { display: flex; justify-content: center; gap: 14px; }
+  .zl__reseau { display: inline-flex; width: 42px; height: 42px; align-items: center; justify-content: center; border-radius: 999px; background: #fff; color: #0D1F38; border: 1px solid rgba(13,31,56,.08); transition: transform .2s ease, background-color .2s ease; }
+  .zl__reseau:hover { transform: translateY(-2px); background: #F0DCAC; }
+  .zl__reseau svg { width: 21px; height: 21px; }
+  .zl__corps { max-width: 520px; margin: 0 auto; padding: 4px 16px 40px; }
+  .zl__onglets { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 999px; background: #F6F5F2; border: 1px solid rgba(13,31,56,.08); margin: 0 auto 18px; max-width: 360px; }
+  .zl__onglet { height: 46px; border: 0; border-radius: 999px; background: transparent; font: 600 15px "Poppins", sans-serif; color: #0D1F38; cursor: pointer; transition: background-color .2s ease, color .2s ease; }
+  .zl__onglet[aria-selected="true"] { background: #0D1F38; color: #FDFCF8; }
+  .zl__liste { display: grid; gap: 12px; }
+  .zl__lien { position: relative; display: flex; align-items: center; gap: 14px; min-height: 92px; padding: 14px 64px 14px 14px; border-radius: 20px; overflow: hidden; text-decoration: none; color: inherit; background: #fff; border: 1px solid rgba(13,31,56,.08); box-shadow: 0 6px 22px rgba(13,31,56,.05); transition: transform .2s ease, box-shadow .2s ease; }
+  .zl__lien:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(13,31,56,.12); }
+  .zl__lien-img { position: absolute; inset: 0 0 0 52%; background-size: cover; background-position: center; -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 70%); mask-image: linear-gradient(90deg, transparent 0%, #000 70%); opacity: .85; }
+  .zl__lien::before { content: ""; position: absolute; inset: 0; z-index: 0; background: linear-gradient(90deg, #fff 0%, #fff 50%, rgba(255,255,255,.55) 64%, rgba(255,255,255,0) 80%); pointer-events: none; }
+  .zl__lien > *:not(.zl__lien-img) { z-index: 1; }
+  .zl__icone { position: relative; flex: 0 0 52px; height: 52px; border-radius: 999px; display: flex; align-items: center; justify-content: center; background: #F6F5F2; color: #0D1F38; }
+  .zl__icone--accent { background: #0D1F38; color: #F0DCAC; }
+  .zl__icone svg { width: 24px; height: 24px; }
+  .zl__texte { position: relative; flex: 1; min-width: 0; max-width: 58%; }
+  .zl__titre { display: block; font-weight: 600; font-size: 17px; line-height: 1.25; color: #0D1F38; }
+  .zl__desc { display: block; margin-top: 3px; font-family: "Fraunces", Georgia, serif; font-size: 13.5px; line-height: 1.35; color: #3D4F66; }
+  .zl__fleche { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); width: 38px; height: 38px; border-radius: 999px; background: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(13,31,56,.12); }
+  .zl__fleche svg { width: 16px; height: 16px; }
+  .zl__produits { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .zl__produits .zy-carte__corps { padding: 12px 12px 14px; }
+  .zl__produits .zy-carte__bas { flex-direction: column; align-items: stretch; }
+  .zl__produits .zy__btn { justify-content: center; }
+  .zl__news { display: flex; gap: 8px; margin-top: 10px; }
+  .zl__news input { flex: 1 1 0; width: 0; min-width: 0; height: 44px; border-radius: 999px; border: 1px solid rgba(13,31,56,.15); padding: 0 16px; font: 14px "Poppins", sans-serif; background: #fff; }
+  .zl__news button { flex: none; height: 44px; padding: 0 18px; border: 0; border-radius: 999px; background: #0D1F38; color: #FDFCF8; font: 600 14px "Poppins", sans-serif; cursor: pointer; }
+  .zl__merci { font-size: 13px; color: #047857; margin: 8px 0 0; }
+  .zl__devise { text-align: center; font-family: "Caveat", cursive; font-size: 28px; color: #D6A64F; margin: 30px 0 0; }
+  .zl__lien--news { flex-wrap: wrap; padding-right: 14px; }
+  .zl__lien--news .zl__texte { max-width: none; }
+  .zl__lien--news::before { display: none; }
+  .zl [hidden] { display: none !important; }
+</style></head>
+<body style="margin:0"><main class="zl"><header class="zl__haut" style="background-image:url('https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/8a5a108e484b9f93ab9e25aaf8e7ed70dad093ccce6dc011f3c680c33b8672d4.jpeg')"><img class="zl__logo" src="https://app.zayado.net/logo-zayado-bleu.png" alt="Zayado" onerror="this.remove()"><h1 class="zl__nom">ZAYADO</h1><p class="zl__slogan">Entreprendre avec sens, clarté financière et équilibre</p><hr class="zl__trait"><nav class="zl__reseaux"><a class="zl__reseau" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg></a><a class="zl__reseau" href="#"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12 31 31 0 0 0 1 16.8a3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8ZM9.7 15.1V8.9l5.8 3.1-5.8 3.1Z"/></svg></a><a class="zl__reseau" href="#"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.6 5.8A4.3 4.3 0 0 1 15.5 3h-3.1v12.4a2.6 2.6 0 1 1-2.6-2.6c.3 0 .5 0 .8.1V9.7a5.7 5.7 0 1 0 4.9 5.7V9.1a7.3 7.3 0 0 0 4.3 1.4V7.4a4.3 4.3 0 0 1-3.2-1.6Z"/></svg></a><a class="zl__reseau" href="#"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a11 11 0 1 0 0 22 11 11 0 0 0 0-22Zm5 15.9a.7.7 0 0 1-1 .2c-2.7-1.6-6-2-10-1.1a.7.7 0 1 1-.3-1.3c4.3-1 8-.6 11 1.2.3.2.4.7.3 1Zm1.4-3a.9.9 0 0 1-1.2.3c-3-1.9-7.7-2.4-11.3-1.3a.9.9 0 0 1-.5-1.7c4.1-1.2 9.2-.6 12.7 1.5.4.3.5.8.3 1.2Zm.1-3.2C14.9 8.6 8.9 8.4 5.5 9.4a1 1 0 1 1-.6-2c4-1.2 10.5-1 14.6 1.5a1 1 0 0 1-1 1.8Z"/></svg></a></nav></header>
+<div class="zl__corps"><div class="zl__onglets"><button class="zl__onglet" aria-selected="true">🔗 Liens</button><button class="zl__onglet" aria-selected="false">🛍 Boutique</button></div><div class="zl__liste"><a class="zl__lien" href="/"><span class="zl__lien-img" style="background-image:url('https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/06285b877c75137d7442e00075d21ae52aeed15ff6bf096ee15fd67956a01c5a.jpeg')"></span><span class="zl__icone "><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M4 11 12 4l8 7"/><path d="M6 9.5V20h12V9.5M10 20v-5h4v5"/></svg></span><span class="zl__texte"><span class="zl__titre">Découvrir Zayado</span><span class="zl__desc">Notre vision, nos services et la boutique</span></span><span class="zl__fleche"><svg viewBox="0 0 24 24" fill="none" stroke="#0D1F38" stroke-width="2.4"><path d="m9 6 6 6-6 6"/></svg></span></a><a class="zl__lien" href="https://app.zayado.net/onboarding?plan=serenite"><span class="zl__lien-img" style="background-image:url('https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/b7886a789d26a2f063fd3db2d3fef5259acbb23e5fd19e0bd4a65005d22cb085.jpeg')"></span><span class="zl__icone zl__icone--accent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20v-5M10 20v-8M15 20v-11M20 20V5"/></svg></span><span class="zl__texte"><span class="zl__titre">Copilote Zayado — 2 mois pour 1 €</span><span class="zl__desc">Vos chiffres, vos futurs clients et votre plan, guidés par l'IA</span></span><span class="zl__fleche"><svg viewBox="0 0 24 24" fill="none" stroke="#0D1F38" stroke-width="2.4"><path d="m9 6 6 6-6 6"/></svg></span></a><a class="zl__lien" href="/collections/accompagnement"><span class="zl__lien-img" style="background-image:url('https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/2901dc1fbd7d9f4f891c5bb561b96c9dea008dc4b614dd4c450038e9936a7fe8.jpeg')"></span><span class="zl__icone "><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.4"/><path d="M3.5 19c.6-3 2.8-5 5.5-5s4.9 2 5.5 5M14.5 14.3c.8-.4 1.6-.6 2.5-.6 2.2 0 3.9 1.6 4.4 4.3"/></svg></span><span class="zl__texte"><span class="zl__titre">Services & Accompagnement</span><span class="zl__desc">Des experts sélectionnés pour répondre à vos besoins</span></span><span class="zl__fleche"><svg viewBox="0 0 24 24" fill="none" stroke="#0D1F38" stroke-width="2.4"><path d="m9 6 6 6-6 6"/></svg></span></a><a class="zl__lien" href="https://app.zayado.net/public/reprise"><span class="zl__lien-img" style="background-image:url('https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/103b8ede3aa9b67d0aec3d3e1bfd6e773c01699f643fa6b1fb498a95d1f80522.jpeg')"></span><span class="zl__icone zl__icone--accent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="8" cy="15" r="4"/><path d="m11 12 8-8M16 7l2 2M14 9l2 2"/></svg></span><span class="zl__texte"><span class="zl__titre">Rachat & reprise d'entreprise</span><span class="zl__desc">Reprendre une entreprise qui tourne, même sans apport</span></span><span class="zl__fleche"><svg viewBox="0 0 24 24" fill="none" stroke="#0D1F38" stroke-width="2.4"><path d="m9 6 6 6-6 6"/></svg></span></a><a class="zl__lien" href="/collections/produits"><span class="zl__lien-img" style="background-image:url('https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/34dc1d19f13f50c924a21202732d56c9dcfb5ad01236e3fe7e24af9639588fe4.jpeg')"></span><span class="zl__icone "><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M5 8h14l-1.2 12H6.2L5 8Z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg></span><span class="zl__texte"><span class="zl__titre">Boutique Zayado</span><span class="zl__desc">Des objets choisis pour travailler mieux et vous sentir bien</span></span><span class="zl__fleche"><svg viewBox="0 0 24 24" fill="none" stroke="#0D1F38" stroke-width="2.4"><path d="m9 6 6 6-6 6"/></svg></span></a><a class="zl__lien" href="/collections/produits"><span class="zl__lien-img" style="background-image:url('https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/a752605fa8b89a6c95a8ad7798acf1d35a891f2765f23f3c44b7a04d41bee0eb.jpeg')"></span><span class="zl__icone zl__icone--accent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 20c-4 0-8-2.5-9-7 3 0 5.5 1 7 3M12 20c4 0 8-2.5 9-7-3 0-5.5 1-7 3M12 20c-2.2-2-3.2-4.5-3.2-7.2C8.8 9.5 10.3 6.6 12 5c1.7 1.6 3.2 4.5 3.2 7.8 0 2.7-1 5.2-3.2 7.2Z"/></svg></span><span class="zl__texte"><span class="zl__titre">Bien-être & Équilibre</span><span class="zl__desc">Des outils et conseils pour votre énergie au quotidien</span></span><span class="zl__fleche"><svg viewBox="0 0 24 24" fill="none" stroke="#0D1F38" stroke-width="2.4"><path d="m9 6 6 6-6 6"/></svg></span></a><a class="zl__lien" href="/blogs/journal"><span class="zl__lien-img" style="background-image:url('https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/f83fb9dd8c176c599fa5c8094a86094d08891a920c27d0b10d6edf898407b440.jpeg')"></span><span class="zl__icone "><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5Zm0 0v13"/></svg></span><span class="zl__texte"><span class="zl__titre">Journal</span><span class="zl__desc">Nos articles et conseils pour avancer avec sens</span></span><span class="zl__fleche"><svg viewBox="0 0 24 24" fill="none" stroke="#0D1F38" stroke-width="2.4"><path d="m9 6 6 6-6 6"/></svg></span></a><div class="zl__lien zl__lien--news"><span class="zl__icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/></svg></span><span class="zl__texte"><span class="zl__titre">Rester en contact</span><span class="zl__desc">Un e-mail par mois : conseils, nouveautés, invitations</span></span><div style="flex-basis:100%"><div class="zl__news"><input type="email" placeholder="Votre e-mail"><button>S'inscrire</button></div></div></div></div><p class="zl__devise">Réconcilier sens, travail et bien-être</p><hr class="zl__trait"></div></main></body></html>

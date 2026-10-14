@@ -1,0 +1,81 @@
+{%- comment -%} Page « Coming soon » de la vitrine : fond navy dégradé, 4 piliers, futurs rayons,
+aperçu cockpit, liste d'attente (formulaire client Shopify natif). {%- endcomment -%}
+{%- assign piliers = "Piloter l'activité|chart§Être accompagné|case§Bien-être|heart§Cap et priorités|target" | split: "§" -%}
+{%- assign rayons = "Lunettes & écrans|glasses§Ergonomie & fauteuils|chair§Ancrage & carnets|anchor§Bureau végétalisé|plant§Bouger récupérer|move§Pauses & rituels|coffee§Box & cadeaux|gift§Packs clé en main|pack" | split: "§" -%}
+<div class="zy-soon">
+  <div class="zy-soon__in">
+    <div class="zy-soon__logo">
+      <span class="zy-soon__z">Z</span>
+      <div>
+        <p class="zy-soon__marque">ZAYADO</p>
+        <p class="zy-soon__devise">la maison des entrepreneurs apaisés</p>
+      </div>
+    </div>
+
+    <div class="zy-soon__hero">
+      <p class="zy-soon__eyebrow"><span></span>Entreprendre avec clarté<span></span></p>
+      <h1 class="zy-soon__titre zy-anim" style="--d:.15s">Coming <em>soon</em></h1>
+      <p class="zy-soon__sub zy-anim" style="--d:.3s">{{ section.settings.sous_titre | default: "La boutique Zayado se prépare : une sélection d'objets et d'outils pour entreprendre sans s'épuiser — et le Cockpit au centre." }}</p>
+      <p class="zy-soon__citation zy-anim" style="--d:.45s">« Entreprendre avec clarté financière, sérénité et équilibre. »</p>
+    </div>
+
+    <div class="zy-soon__piliers">
+      {%- for p in piliers -%}
+        {%- assign m = p | split: '|' -%}
+        <div class="zy-soon__pilier zy-anim" style="--d: {{ 0.5 | plus: forloop.index0 | times: 0.1 }}s"><p>{{ m[0] | strip }}</p></div>
+      {%- endfor -%}
+    </div>
+
+    <p class="zy-soon__rayons-titre">Nos futurs rayons</p>
+    <div class="zy-soon__rayons">
+      {%- for r in rayons -%}
+        {%- assign m = r | split: '|' -%}
+        <div class="zy-soon__rayon zy-anim" style="--d: {{ 0.6 | plus: forloop.index0 | times: 0.06 }}s"><span class="zy-soon__rayon-ic"></span><p>{{ m[0] | strip }}</p></div>
+      {%- endfor -%}
+    </div>
+
+    <div class="zy-soon__cockpit">
+      <p class="zy-soon__cockpit-lbl">Et au centre : le Cockpit</p>
+      <div class="zy-soon__cockpit-grille">
+        <div class="zy-soon__jauge"><span class="zy-soon__jauge-n">78<small>/100</small></span><span class="zy-soon__jauge-l">équilibre</span></div>
+        <div>
+          <h2>Votre cockpit, pas une liste de plus.</h2>
+          <p class="zy-soon__cockpit-p">Il suit l'entreprise — trésorerie, marge, activité — et l'entrepreneur — énergie, charge mentale, sommeil. Et l'IA fait le lien.</p>
+          <div class="zy-soon__barres">
+            {%- assign barres = "Clarté financière|88§Énergie|72§Sérénité|80" | split: "§" -%}
+            {%- for b in barres -%}
+              {%- assign m = b | split: '|' -%}
+              <div class="zy-soon__barre"><span class="zy-soon__barre-l">{{ m[0] | strip }}</span><span class="zy-soon__barre-piste"><span class="zy-soon__barre-v" style="--v: {{ m[1] | strip }}%; --d: {{ 0.8 | plus: forloop.index0 | times: 0.15 }}s"></span></span><span class="zy-soon__barre-n">{{ m[1] | strip }}</span></div>
+            {%- endfor -%}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="zy-soon__attente">
+      <span class="zy-soon__badge">Coming soon</span>
+      {%- form 'customer', class: 'zy-soon__form' -%}
+        {%- if form.posted_successfully? -%}
+          <p class="zy-soon__ok">Vous serez prévenu à l'ouverture. <span>Votre email est enregistré sur la liste d'attente.</span></p>
+        {%- else -%}
+          <input type="hidden" name="contact[tags]" value="coming-soon-boutique">
+          <input type="email" name="contact[email]" required placeholder="votre@email.fr" class="zy-soon__champ" data-testid="coming-soon-email">
+          <button type="submit" class="zy-soon__btn" data-testid="coming-soon-notify">M'avertir à l'ouverture →</button>
+        {%- endif -%}
+      {%- endform -%}
+      <div class="zy-soon__domaines">zayado.net <em>•</em> app.zayado.net</div>
+      <p class="zy-soon__note">La boutique arrive — page déjà branchée sur Shopify.</p>
+    </div>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Zayado — Coming soon",
+  "class": "zy",
+  "settings": [
+    { "type": "textarea", "id": "sous_titre", "label": "Sous-titre", "default": "La boutique Zayado se prépare : une sélection d'objets et d'outils pour entreprendre sans s'épuiser — et le Cockpit au centre." }
+  ],
+  "presets": [{ "name": "Zayado — Coming soon" }]
+}
+{% endschema %}

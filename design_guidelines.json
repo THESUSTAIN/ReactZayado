@@ -1,113 +1,199 @@
 {
-  "project_name": "ZAYADO - Creative Link-in-Bio & Personal Hub Platform",
-  "theme": "Dark Modern Neo-Editorial & Tactile Glass",
-  "context": "Mobile/Web App Link-in-Bio Platform",
-  "design_archetype": "ARCHETYPE 5: LUXURY & ARCHETYPE 7: ELECTRIC DISRUPTION (Tactile Dark Glass + Neo-Editorial Typography)",
-  "instructions_to_main_agent": [
-    "Build a high-converting, ultra-sleek, interactive link-in-bio hub inspired by ZAYADO with live preview customization, link analytics, dynamic media embeds, QR code generation, theme builder, and social feed integration.",
-    "Ensure pure JS/JSX compatibility ( do NOT use TS types or .tsx extensions ).",
-    "Integrate Lucide Icons and optional @phosphor-icons/react for modern visual flair.",
-    "Include mandatory data-testid attributes on all interactive and key data display elements.",
-    "Implement smooth tabs, audio player widget, video preview modal, tip/donation micro-modal, and newsletter subscription form with Sonner toast feedback.",
-    "Use generous spacing (p-6, p-8, py-12) with smooth backdrop-blur glassmorphism panels, 1px subtle borders (border-white/10), and neon accent highlights."
-  ],
-  "typography": {
-    "heading_font": "Outfit / Cabinet Grotesk (sans-serif display with high character and tight tracking)",
-    "body_font": "Inter / DM Sans (clean legibility for bio text, link labels, and stats)",
-    "mono_font": "JetBrains Mono / Source Code Pro (used for stats badges, handles, and technical tags)",
-    "hierarchy": {
-      "h1_profile_title": "text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white",
-      "h2_section": "text-xl sm:text-2xl font-bold tracking-tight text-white/90",
-      "h3_card_header": "text-lg font-semibold text-white",
-      "body_text": "text-sm sm:text-base text-zinc-300 leading-relaxed",
-      "label_tag": "text-xs font-mono uppercase tracking-[0.2em] text-emerald-400"
-    }
+  "project_name": "Zayado",
+  "archetype": "LUXURY & APICULTURE / OLD MONEY TECH (Night Navy + Warm Gold Accents)",
+  "theme": "dark",
+  "locale": {
+    "language": "fr-FR",
+    "currency": "EUR (€)",
+    "number_format": "1 250,00 €",
+    "date_format": "DD/MM/YYYY"
   },
   "colors": {
-    "background": "bg-[#090A0F] (Deep Obsidian with subtle radial glow)",
-    "surface": "bg-zinc-900/60 backdrop-blur-xl border border-white/10 hover:border-emerald-500/40 transition-all duration-300",
-    "surface_hover": "hover:bg-zinc-800/80 hover:shadow-[0_0_25px_rgba(16,185,129,0.15)] hover:-translate-y-0.5",
-    "primary_accent": "#10B981 (Emerald Neon Glow for CTAs and highlighted links)",
-    "secondary_accent": "#8B5CF6 (Vibrant Electric Violet for secondary actions & feature tags)",
-    "text_primary": "#FFFFFF",
-    "text_secondary": "#A1A1AA (Zinc 400)",
-    "text_muted": "#71717A (Zinc 500)",
-    "border": "border-white/10",
-    "contrast_hover_rule": "Always explicitly define text color on hover, e.g. hover:bg-emerald-500 hover:text-black focus:ring-2 focus:ring-emerald-400"
+    "surfaces": [
+      {
+        "name": "page",
+        "kind": "solid",
+        "bg": "#0B111E",
+        "on_bg": "#F8FAFC",
+        "on_bg_muted": "#94A3B8"
+      },
+      {
+        "name": "panel",
+        "kind": "solid",
+        "bg": "#111B2E",
+        "on_bg": "#F8FAFC",
+        "on_bg_muted": "#94A3B8"
+      },
+      {
+        "name": "card_elevated",
+        "kind": "solid",
+        "bg": "#16233B",
+        "on_bg": "#F8FAFC",
+        "on_bg_muted": "#94A3B8"
+      },
+      {
+        "name": "glass_nav",
+        "kind": "glass",
+        "contrast_against": "#070C15",
+        "guarantee": "backdrop-blur-xl bg-[#0B111E]/85 border-t border-[#D4AF37]/20 shadow-2xl",
+        "on_bg": "#F8FAFC",
+        "on_bg_muted": "#94A3B8",
+        "roles": {
+          "active_tab": "#D4AF37",
+          "inactive_tab": "#64748B"
+        }
+      },
+      {
+        "name": "hero_vision_carousel",
+        "kind": "image",
+        "contrast_against": "#0A101C",
+        "guarantee": "scrim: linear-gradient(180deg, rgba(11,17,30,0.2) 0%, rgba(11,17,30,0.85) 100%)",
+        "on_bg": "#FFFFFF",
+        "on_bg_muted": "#E2E8F0",
+        "roles": {
+          "quote_serif": "#F8FAFC",
+          "tag_gold": "#D4AF37"
+        }
+      },
+      {
+        "name": "gold_badge",
+        "kind": "solid",
+        "bg": "#2A2312",
+        "on_bg": "#E5C05B",
+        "on_bg_muted": "#C29B38"
+      },
+      {
+        "name": "mocked_badge",
+        "kind": "solid",
+        "bg": "#3B1818",
+        "on_bg": "#FCA5A5",
+        "on_bg_muted": "#F87171"
+      },
+      {
+        "name": "inverse",
+        "kind": "solid",
+        "bg": "#F8FAFC",
+        "on_bg": "#0B111E",
+        "on_bg_muted": "#475569"
+      }
+    ],
+    "accent": "#D4AF37",
+    "on_accent": "#0B111E",
+    "gold_gradient": "linear-gradient(135deg, #F3E5AB 0%, #D4AF37 50%, #AA7C11 100%)",
+    "gold_border": "rgba(212, 175, 55, 0.25)",
+    "chart_gold_fill": "rgba(212, 175, 55, 0.18)",
+    "chart_gold_stroke": "#D4AF37",
+    "chart_navy_stroke": "#38BDF8",
+    "state_success": "#10B981",
+    "state_warning": "#F59E0B",
+    "state_danger": "#EF4444"
   },
-  "grids_and_layouts": {
-    "layout_mode": "Bento Grid + Mobile-First Center Column",
-    "container": "max-w-4xl mx-auto px-4 py-8 sm:py-12",
-    "mobile_preview_split": "grid grid-cols-1 lg:grid-cols-12 gap-8 items-start",
-    "preview_frame": "lg:col-span-5 sticky top-6 max-w-[380px] mx-auto w-full aspect-[9/19] rounded-[40px] border-[6px] border-zinc-800 shadow-2xl overflow-hidden bg-[#0A0D14]",
-    "builder_controls": "lg:col-span-7 space-y-6"
-  },
-  "components_structure": [
-    {
-      "name": "ProfileHeader",
-      "features": "Avatar with online indicator ring, verified badge, handle (@zayado.official), bio tagline, location tag, and social quick-links row.",
-      "testid": "profile-header"
+  "typography": {
+    "font_heading": "'Lora Variable', serif",
+    "font_sans": "'DM Sans Variable', sans-serif",
+    "font_mono": "'JetBrains Mono Variable', monospace",
+    "scale_px": {
+      "display": 52,
+      "h1": 38,
+      "h2": 28,
+      "h3": 20,
+      "body": 16,
+      "caption": 14
     },
-    {
-      "name": "FeaturedLinkCard",
-      "features": "Big banner link card with custom thumbnail, title, subtitle, click counter, animated shimmer border ('Tracing Beam'), and direct action arrow.",
-      "testid": "featured-link-card"
-    },
-    {
-      "name": "StandardLinksList",
-      "features": "Interactive stack of link items (Store, YouTube Latest Video, Podcast Episode, Booking, Contact Form, Newsletter, Support/Tip jar).",
-      "testid": "standard-links-list"
-    },
-    {
-      "name": "MediaEmbedWidget",
-      "features": "Embedded playable audio player widget / Spotify style mini-player & video modal trigger.",
-      "testid": "media-embed-widget"
-    },
-    {
-      "name": "TipJarModal",
-      "features": "Shadcn Dialog for micro-donations ($3, $5, $10, custom amount) with quick payment methods and confirmation toast.",
-      "testid": "tip-jar-modal"
-    },
-    {
-      "name": "QRCodeModal",
-      "features": "Modal to display & download printable custom QR code with brand logo overlay.",
-      "testid": "qr-code-modal"
-    },
-    {
-      "name": "AppearanceCustomizer",
-      "features": "Theme picker tab (Obsidian Emerald, Cyberpunk Purple, Swiss Clean, Sunset Glow) with real-time preview updating.",
-      "testid": "appearance-customizer"
-    },
-    {
-      "name": "AnalyticsSummary",
-      "features": "Quick analytics dashboard stats (Total Views, Link Clicks, CTR %, Top Location) powered by Shadcn charts / high-density metrics.",
-      "testid": "analytics-summary"
+    "rules": {
+      "headings": "font-serif tracking-tight text-slate-100 font-semibold",
+      "numbers_and_kpis": "font-mono font-medium tracking-tight text-amber-300",
+      "body": "font-sans leading-relaxed text-slate-200",
+      "labels_overlines": "text-xs font-mono uppercase tracking-[0.2em] text-[#D4AF37]/90",
+      "quotes": "font-serif italic text-lg sm:text-xl text-slate-100 leading-snug"
     }
-  ],
+  },
+  "entry_surfaces": {
+    "/": "mobile-first dark navy dashboard with gold accents — top serene status bar + KPI cards, 6-month gold area chart, life balance mini-radar, vision carousel with calming photo & quote, client-side FEC drag&drop entry, public signals radar, floating Claude 5.5 AI copilot bar, and sticky crystal bottom nav",
+    "/pilotage": "financial cockpit — real-time treasury runway gauge, client-side FEC accounting parser (CSV/TXT), automated grand-livre breakdown, revenue/expense ledger with filter tags",
+    "/radar": "real-time public market intelligence — live INSEE SIRENE & BODACC official business signals stream with mandatory dated badges and verified sources, Apollo Pro toggle preview",
+    "/plan": "serene action planner — tactical 3-tier matrix (Aujourd'hui, Cette semaine, Plus tard) linked to radar signals and cash impact",
+    "/bien-etre": "6-axis balance wheel (Radar chart: Santé, Pro, Finance, Sérénité, Famille, Sens) with daily micro-checkin and calm prompt",
+    "/vision": "mindful entrepreneur vision board — photo cards, financial autonomy target milestone, core 'Pourquoi' affirmation",
+    "/tunnels": "sales pipeline & conversion flow (Capture → Tripwire → Vente → Upsell) with deal amounts in EUR and lead stages",
+    "/tarifs": "5 tier pricing matrix (Rêveur, Solo, Pro, Équipe, Entreprise) with simulated Mollie payment flow featuring prominent MOCKED badge",
+    "/login": "minimalist navy & gold single-action sign-in with biometric mock and instant guest access"
+  },
+  "visual_enhancers": {
+    "luxury_dark_aesthetic": "Deep midnight blue canvas (#0B111E) with subtle golden borders (1px solid rgba(212,175,55,0.22)) and warm amber micro-glows.",
+    "gold_accents": "Metallic warm gold (#D4AF37) for KPI icons, primary actions, radar axes, chart strokes and active states.",
+    "bottom_navigation": "Crystal glass mobile bottom bar with 5 key anchors: Accueil, Vision, Plan, Radar, Plus (which opens Pilotage, Bien-être, Tunnels, Tarifs).",
+    "transversal_ai_chat": "Floating Claude Sonnet 5.5 Copilot drawer accessible across all screens for contextual questions on cash, balance, and next actions.",
+    "data_veracity_rule": "Every radar signal and accounting record displays its authentic origin badge (e.g. 'Source: BODACC du 12/08/2026', 'Source: INSEE / Sirene') and precise date."
+  },
   "image_urls": {
-    "profile_avatar": "https://images.unsplash.com/photo-1721637686340-de9f8cebda5a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTN8MHwxfHNlYXJjaHwyfHxsaW5rJTIwaW4lMjBiaW8lMjBwb3J0cmFpdCUyMHNvY2lhbCUyMHByb2ZpbGUlMjBjcmVhdGl2ZSUyMG1vZGVsJTIwc3RyZWV0d2VhciUyMGFlc3RoZXRpY3xlbnwwfHx8fDE3OTE5NzM4NDZ8MA&ixlib=rb-4.1.0&q=85",
-    "featured_thumbnail_1": "https://images.unsplash.com/photo-1635650804483-2a77a8c9e728?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTN8MHwxfHNlYXJjaHwxfHxsaW5rJTIwaW4lMjBiaW8lMjBwb3J0cmFpdCUyMHNvY2lhbCUyMHByb2ZpbGUlMjBjcmVhdGl2ZSUyMG1vZGVsJTIwc3RyZWV0d2VhciUyMGFlc3RoZXRpY3xlbnwwfHx8fDE3OTE5NzM4NDZ8MA&ixlib=rb-4.1.0&q=85",
-    "featured_thumbnail_2": "https://images.unsplash.com/photo-1582164256364-b0eccb922bff?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTN8MHwxfHNlYXJjaHwzfHxsaW5rJTIwaW4lMjBiaW8lMjBwb3J0cmFpdCUyMHNvY2lhbCUyMHByb2ZpbGUlMjBjcmVhdGl2ZSUyMG1vZGVsJTIwc3RyZWV0d2VhciUyMGFlc3RoZXRpY3xlbnwwfHx8fDE3OTE5NzM4NDZ8MA&ixlib=rb-4.1.0&q=85"
+    "vision_carousel_1": {
+      "url": "https://images.unsplash.com/photo-1603979649806-5299879db16b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTN8MHwxfHNlYXJjaHwxfHxjYWxtJTIwbW91bnRhaW4lMjBsYWtlJTIwc3Vuc2V0fGVufDB8fHx8MTc5MTgxODc4Mnww&ixlib=rb-4.1.0&q=85",
+      "description": "Lac de montagne paisible avec coucher de soleil doré pour le carrousel Vision & Sérénité",
+      "category": "vision_board"
+    },
+    "vision_carousel_2": {
+      "url": "https://images.unsplash.com/photo-1621519997950-158b631341b6?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTN8MHwxfHNlYXJjaHwyfHxjYWxtJTIwbW91bnRhaW4lMjBsYWtlJTIwc3Vuc2V0fGVufDB8fHx8MTc5MTgxODc4Mnww&ixlib=rb-4.1.0&q=85",
+      "description": "Vue sereine lac alpin au lever du soleil pour l'affirmation d'équilibre",
+      "category": "vision_board"
+    },
+    "vision_carousel_3": {
+      "url": "https://images.unsplash.com/photo-1721456794513-66071e3de1ff?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTN8MHwxfHNlYXJjaHwzfHxjYWxtJTIwbW91bnRhaW4lMjBsYWtlJTIwc3Vuc2V0fGVufDB8fHx8MTc5MTgxODc4Mnww&ixlib=rb-4.1.0&q=85",
+      "description": "Horizon brumeux et eau calme pour la carte clarté mentale",
+      "category": "vision_board"
+    }
   },
   "motion": {
-    "framework": "Framer Motion / Tailwind Transitions",
-    "hover_effect": "transform hover:-translate-y-1 hover:scale-[1.01] transition-all duration-200 ease-out",
-    "stagger_children": "Stagger entrance by 0.05s per link item for organic load feel",
-    "reduced_motion": "Use prefers-reduced-motion check to disable heavy transform animations"
+    "screen_transitions": "Subtle fade and translate-y (duration 0.25s ease-out)",
+    "radar_spin_in": "Radar balance wheel gentle expand on mount with spring physics",
+    "chart_draw": "Recharts Area and Line smooth animation duration 800ms",
+    "card_hover": "Hover translateY(-2px) with border-color transition to #D4AF37/60",
+    "ai_sheet_slide": "Smooth slide-in bottom sheet on mobile, slide-in right drawer on desktop",
+    "reduced_motion": "All transitions fallback to instant opacity fades when prefers-reduced-motion is true"
   },
-  "UNIVERSAL GUIDELINES FOR MAIN AGENT": [
-    "You tend to converge toward generic, 'on distribution' outputs. In frontend design, this creates what users call the 'AI slop' aesthetic. Avoid this: make creative, distinctive frontends that surprise and delight.",
-    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients.",
-    "Don't make generic centered layouts, simplistic gradients, and uniform styling.",
-    "Create depth through layered design elements with z-index hierarchy.",
-    "Use glass-morphism effects with backdrop filters (12-24px blur).",
-    "You MUST NOT apply universal transition (e.g., transition: all). This results in breaking transforms. Always add transitions for specific interactive elements like button, input excluding transforms.",
-    "You MUST NOT center align the app container, i.e., do not add .App { text-align: center; } in the css file. This disrupts the human natural reading flow of text.",
-    "Always use modern button styles like pill-shaped, or sharp button with interaction animations & color relevant to the app style.",
-    "NEVER use AI assistant Emoji characters like 🤖🧠💭💡🔮🎯 etc for icons. Use Lucide icons instead.",
-    "Every interaction needs micro-animations - hover states, transitions, parallax effects, and entrance animations. Static = dead.",
-    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
-    "Subtle grain textures, noise overlays, custom cursors, selection states, and loading animations: separates good from extraordinary.",
-    "All interactive and key informational elements MUST include a data-testid attribute."
+  "accessibility": {
+    "wcag_compliance": "WCAG AA with minimum 4.5:1 text contrast across all dark surfaces",
+    "focus_rings": "focus-visible:ring-2 focus-visible:ring-[#D4AF37] focus-visible:outline-none",
+    "data_test_ids": "All interactive buttons, inputs, tabs, modal triggers, and KPI cards include explicit data-testid attributes",
+    "screen_reader": "Aria labels provided for icon-only buttons (notifications, AI trigger, close modals, bottom nav)"
+  },
+  "component_hierarchy": {
+    "layout": {
+      "app_shell": "src/components/layout/AppShell.tsx",
+      "header": "src/components/layout/TopHeader.tsx",
+      "mobile_nav": "src/components/layout/MobileBottomNav.tsx",
+      "desktop_sidebar": "src/components/layout/DesktopSidebar.tsx",
+      "ai_copilot_drawer": "src/components/ai/AICopilotDrawer.tsx"
+    },
+    "modules": {
+      "today_dashboard": "src/pages/Home.tsx",
+      "pilotage_fec": "src/pages/Pilotage.tsx",
+      "radar_signals": "src/pages/Radar.tsx",
+      "action_plan": "src/pages/Plan.tsx",
+      "wellbeing_wheel": "src/pages/BienEtre.tsx",
+      "vision_board": "src/pages/Vision.tsx",
+      "conversion_tunnels": "src/pages/Tunnels.tsx",
+      "pricing_mollie": "src/pages/Tarifs.tsx"
+    },
+    "widgets": {
+      "financial_area_chart": "src/components/widgets/FinancialAreaChart.tsx",
+      "balance_radar_chart": "src/components/widgets/BalanceRadarChart.tsx",
+      "fec_uploader": "src/components/widgets/FecUploader.tsx",
+      "vision_carousel": "src/components/widgets/VisionCarousel.tsx",
+      "kpi_stat_card": "src/components/widgets/KpiStatCard.tsx",
+      "signal_badge": "src/components/widgets/SignalBadge.tsx",
+      "mollie_checkout_modal": "src/components/widgets/MollieCheckoutModal.tsx"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Adopt Dark Navy (#0B111E) and Gold (#D4AF37) theme faithfully to match user reference image.",
+    "Implement client-side CSV/FEC parsing so users can drag & drop sample FEC files or click 'Charger FEC Démo' to see live calculated entries (Compte 706 ventes, 606 achats, 512 banque, TVA).",
+    "Implement the 6-step loop: Pilotage (FEC & trésorerie) → Radar (signaux BODACC / INSEE datés) → Plan d'action → Bien-être (roue 6 axes) → Aujourd'hui → Tunnels (capture/tripwire/vente/upsell) → retour au Pilotage.",
+    "Every Radar signal MUST show real source tags ('BODACC 14/08/2026', 'INSEE SIRENE', 'Registre National des Entreprises') and clear dates.",
+    "Mollie checkout flow on /tarifs MUST display a prominent red/amber 'MOCKED' badge with simulated transaction status (Succès, En attente, Annulé) and plan activation.",
+    "Include floating Claude Sonnet 5.5 Copilot assistant on all screens with pre-prompted quick questions (ex: 'Analyse ma trésorerie', 'Quel signal Radar prioriser ?', 'Équilibre pro/perso').",
+    "Ensure the Mobile Bottom Bar is always present on mobile viewports (with tabs: Aujourd'hui, Vision, Plan, Radar, Plus) and adapts gracefully to desktop sidebar.",
+    "Use French (France) conventions throughout: EUR currency, 24-hour time, French financial terms (FEC, Trésorerie, TVA, BODACC, INSEE, Chiffre d'Affaires).",
+    "All interactive elements must carry meaningful data-testid attributes."
   ]
 }

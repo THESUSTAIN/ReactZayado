@@ -1,0 +1,6 @@
+{
+  "sections": {
+    "liste": { "type": "zayado-journal-liste", "settings": {} }
+  },
+  "order": ["liste"]
+}

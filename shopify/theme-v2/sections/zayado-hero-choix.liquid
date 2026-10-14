@@ -1,0 +1,30 @@
+{%- comment -%} Choix de l'image hero (page interne de la vitrine) : 3 propositions. {%- endcomment -%}
+<div class="zy-choix">
+  <p class="zy-choix__stamp">Choix du hero</p>
+  <h1 class="zy-choix__titre">Trois propositions — dites-nous votre numéro.</h1>
+  <p class="zy-choix__p">L'option 1 est actuellement en place sur l'accueil. Écrivez-nous (« image 2 » ou « image 3 ») et on bascule.</p>
+  <div class="zy-choix__liste">
+    <div class="zy-choix__option" data-testid="hero-option-1">
+      <div class="zy-choix__tete"><h2>Option 1 — Bureau & dashboard (actuelle)</h2><p>Laptop avec jauge d'équilibre 78/100, plantes, livres, thé.</p></div>
+      <img src="https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/8a5a108e484b9f93ab9e25aaf8e7ed70dad093ccce6dc011f3c680c33b8672d4.jpeg" alt="Option 1 — Bureau & dashboard" loading="lazy">
+    </div>
+    <div class="zy-choix__option" data-testid="hero-option-2">
+      <div class="zy-choix__tete"><h2>Option 2 — Montagne</h2><p>Bureau face à la montagne — l'apaisement avant tout.</p></div>
+      <img src="https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/4f573bfd2bf3e96af4ccd93442a2535468d663836df245508489c18c1087e3b6.jpeg" alt="Option 2 — Montagne" loading="lazy">
+    </div>
+    <div class="zy-choix__option" data-testid="hero-option-3">
+      <div class="zy-choix__tete"><h2>Option 3 — Mains & carnet</h2><p>L'écriture, le carnet, le dashboard discret.</p></div>
+      <img src="https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/abf97a988634230bc5716480ac9d74ae0dc712108f1ef57e2b2230ff03a5a409.jpeg" alt="Option 3 — Mains & carnet" loading="lazy">
+    </div>
+  </div>
+  <a href="/" class="zy-choix__retour">Retour à l'accueil</a>
+</div>
+
+{% schema %}
+{
+  "name": "Zayado — Choix du hero",
+  "class": "zy",
+  "settings": [],
+  "presets": [{ "name": "Zayado — Choix du hero" }]
+}
+{% endschema %}

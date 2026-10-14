@@ -1,0 +1,26 @@
+{{ 'zayado.css' | asset_url | stylesheet_tag }}
+<section class="zy {% if section.settings.fond == 'sable' %}zy--sable{% endif %}">
+  <div class="zy__wrap">
+    <p class="zy__eyebrow">{{ section.settings.surtitre }}</p>
+    <h2 class="zy__titre zy__titre--m">{{ section.settings.titre }}</h2>
+    {%- if section.settings.texte != blank -%}<p class="zy__texte">{{ section.settings.texte }}</p>{%- endif -%}
+    {%- comment -%} Grille des abonnements servie par l'app (/embed/tarifs) : toujours alignée sur les prix encaissés par Mollie. {%- endcomment -%}
+    <iframe class="zy-tarifs__cadre" src="{{ section.settings.url_app | default: 'https://app.zayado.net' }}/embed/tarifs" title="Offres Zayado" loading="lazy" style="height: {{ section.settings.hauteur }}px"></iframe>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Zayado — Offres",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "surtitre", "label": "Surtitre", "default": "Les offres" },
+    { "type": "text", "id": "titre", "label": "Titre", "default": "Choisissez votre Copilote" },
+    { "type": "textarea", "id": "texte", "label": "Texte", "default": "Sans engagement. Solo : 2 mois pour 1 € pour tout tester." },
+    { "type": "url", "id": "url_app", "label": "Adresse de l'app" },
+    { "type": "range", "id": "hauteur", "label": "Hauteur (px)", "min": 600, "max": 1800, "step": 50, "default": 1150 },
+    { "type": "select", "id": "fond", "label": "Fond", "default": "ivoire", "options": [ { "value": "ivoire", "label": "Ivoire" }, { "value": "sable", "label": "Sable" } ] }
+  ],
+  "presets": [{ "name": "Zayado — Offres" }]
+}
+{% endschema %}
