@@ -34,9 +34,10 @@ from sqlalchemy import Boolean, DateTime, String, Text, func, select
 from sqlalchemy.orm import Mapped, mapped_column
 
 LIENS_ZAYADO = """Pages Zayado à relier (n'en invente aucune autre) :
-- Diagnostic gratuit (2 min) : https://app.zayado.net/public/tunnel
-- Reprendre une entreprise, même sans apport : https://app.zayado.net/public/reprise
-- Le Cockpit IA (chiffres, prospects, plan, énergie) : https://zayado.net/pages/cockpit
+- Diagnostic gratuit (2 min) : https://zayado.net/pages/diagnostic
+- Reprendre une entreprise, même sans apport : https://zayado.net/pages/reprise
+- VisionAct, le copilote (chiffres, prospects, plan, énergie) : https://zayado.net/pages/vision-act
+- Guides offerts (trésorerie, anti-surcharge, lumière d'écran) : https://zayado.net/pages/liens
 - Accompagnement : https://zayado.net/collections/accompagnement
 - Outils IA et offres : https://zayado.net/collections/outils-ia
 - Produits bien-être et bureau : https://zayado.net/collections/produits"""
@@ -66,6 +67,10 @@ SYSTEME_NOTE = """Tu mets en forme une « note de la maison » du Journal Zayado
 écrit par la fondatrice à partir de ses notes en vrac. Garde SA voix, ses idées et ses mots : tu corriges, ordonnes et resserres,
 tu n'ajoutes ni idée, ni anecdote, ni chiffre. 250 à 450 mots. HTML simple (<p>, <strong>, <blockquote>). Vouvoiement du lecteur.
 Réponds UNIQUEMENT en JSON : {"titre": "…", "titre_seo": "…", "meta_description": "…", "extrait": "… (1 à 2 phrases)", "handle": "slug", "html": "<p>…</p>"}"""
+
+
+RUBRIQUES = {"tresorerie": "Trésorerie et chiffres (lecteur qui a peur de manquer d'argent)", "clients": "Trouver des clients (lecteur qui manque de clients)",
+             "energie": "Énergie du dirigeant (lecteur épuisé)", "organisation": "Organisation et équipe (lecteur débordé)"}
 
 
 def _json_llm(raw: str) -> dict:
@@ -107,6 +112,7 @@ class RedigerIn(BaseModel):
     angle: str = Field(default="", max_length=600)
     mot_cle: str = Field(default="", max_length=120)
     notes: str = Field(default="", max_length=6000)
+    categorie: str = Field(default="", pattern="^(|tresorerie|clients|energie|organisation)$")
 
 
 class ArticleMaj(BaseModel):
@@ -117,6 +123,7 @@ class ArticleMaj(BaseModel):
     handle: Optional[str] = Field(default=None, max_length=100)
     html: Optional[str] = Field(default=None, max_length=60000)
     statut: Optional[str] = Field(default=None, pattern="^(brouillon|pret|publie)$")
+    categorie: Optional[str] = Field(default=None, pattern="^(|tresorerie|clients|energie|organisation)$")
 
 
 class DemandeIn(BaseModel):
@@ -162,6 +169,7 @@ def install_journal(g: dict) -> None:
         handle: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
         html: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
         mot_cle: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+        categorie: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)  # rubrique du Journal (étiquette Shopify)
         statut: Mapped[str] = mapped_column(String(20), default="brouillon")  # brouillon | pret | publie
         shopify_id: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
         cree_le: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
@@ -215,7 +223,7 @@ def install_journal(g: dict) -> None:
     # ───────────────────────── Articles ─────────────────────────
     def _art(a: "ArticleJournal") -> dict:
         return {"id": a.id, "type": a.type, "titre": a.titre, "titre_seo": a.titre_seo, "meta_description": a.meta_description,
-                "extrait": a.extrait, "handle": a.handle, "html": a.html, "mot_cle": a.mot_cle, "statut": a.statut,
+                "extrait": a.extrait, "handle": a.handle, "html": a.html, "mot_cle": a.mot_cle, "categorie": a.categorie, "statut": a.statut,
                 "shopify_id": a.shopify_id, "cree_le": a.cree_le.isoformat() if a.cree_le else None,
                 "maj_le": a.maj_le.isoformat() if a.maj_le else None}
 
@@ -250,7 +258,7 @@ def install_journal(g: dict) -> None:
         else:
             if not body.titre.strip():
                 raise HTTPException(422, "Donnez au moins un titre ou choisissez une idée.")
-            demande = f"SUJET : {body.titre}\nANGLE : {body.angle or '(libre)'}\nMOT-CLÉ VISÉ : {body.mot_cle or '(libre)'}"
+            demande = f"SUJET : {body.titre}\nANGLE : {body.angle or '(libre)'}\nMOT-CLÉ VISÉ : {body.mot_cle or '(libre)'}\nRUBRIQUE : {RUBRIQUES.get(body.categorie, '(libre)')}"
             if body.notes.strip():
                 demande += f"\n\nÉLÉMENTS À INTÉGRER (de l'équipe Zayado, fiables) :\n{body.notes}"
             data = await _ia("journal-article", SYSTEME_ARTICLE, demande, delai=110)
@@ -260,7 +268,7 @@ def install_journal(g: dict) -> None:
             meta_description=(data.get("meta_description") or "")[:320] or None,
             extrait=(data.get("extrait") or "")[:600] or None,
             handle=_slug(data.get("handle") or data.get("titre") or body.titre)[:100],
-            html=_nettoyer_html(data.get("html") or ""), mot_cle=body.mot_cle[:120] or None)
+            html=_nettoyer_html(data.get("html") or ""), mot_cle=body.mot_cle[:120] or None, categorie=body.categorie or None)
         db.add(a)
         await db.commit()
         return _art(a)
@@ -294,8 +302,10 @@ def install_journal(g: dict) -> None:
 
     async def _blog_journal_id() -> str:
         gql = g.get("shopify_graphql")
+        if gql and g.get("shopify_pret") and not g["shopify_pret"]() and g.get("shopify_obtenir_jeton"):
+            await g["shopify_obtenir_jeton"]()  # boutique reliée par ID + secret client : on demande le jeton
         if not (gql and g.get("shopify_pret") and g["shopify_pret"]()):
-            raise HTTPException(503, "Shopify n'est pas relié : SHOPIFY_SHOP_DOMAIN et SHOPIFY_ADMIN_TOKEN manquent sur Railway.")
+            raise HTTPException(503, "Shopify n'est pas relié : SHOPIFY_SHOP_DOMAIN, SHOPIFY_CLIENT_ID et SHOPIFY_CLIENT_SECRET manquent sur Railway.")
         d = await gql("{blogs(first:20){nodes{id handle}}}")
         for b in (d.get("blogs") or {}).get("nodes") or []:
             if b.get("handle") == "journal":
@@ -332,7 +342,7 @@ def install_journal(g: dict) -> None:
             raise HTTPException(404, "Article introuvable.")
         seo = (a.titre_seo, a.meta_description) if a.titre_seo and a.meta_description else None
         a.shopify_id = await _creer_article_shopify(
-            a.titre, a.html or "", a.extrait or "", a.handle or _slug(a.titre), ["article" if a.type == "article" else "note"],
+            a.titre, a.html or "", a.extrait or "", a.handle or _slug(a.titre), ["article" if a.type == "article" else "note"] + ([a.categorie] if a.categorie else []),
             os.environ.get("JOURNAL_AUTEUR", "L'équipe Zayado"), seo=seo)
         a.statut = "pret"
         await db.commit()

@@ -7,15 +7,68 @@
 {%- assign cta = product.metafields.zayado.cta.value | default: section.settings.cta -%}
 <section class="zy">
   <div class="zy__wrap zy-fiche__grille">
-    <div>
+    <div class="zy-galerie" data-testid="fiche-galerie">
+      {%- if product.images.size > 1 -%}
+        <div class="zy-galerie__vignettes">
+          {%- for img in product.images limit: 6 -%}
+            <button type="button" class="zy-galerie__vignette" aria-current="{% if forloop.first %}true{% else %}false{% endif %}" data-src="{{ img | image_url: width: 1400 }}" aria-label="Image {{ forloop.index }}" data-testid="fiche-vignette-{{ forloop.index }}">{{ img | image_url: width: 160 | image_tag: alt: '' , loading: 'lazy' }}</button>
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
       {%- if product.featured_image -%}
-        {{ product.featured_image | image_url: width: 1400 | image_tag: class: 'zy-fiche__img', alt: product.title }}
+        {{ product.featured_image | image_url: width: 1400 | image_tag: class: 'zy-fiche__img', alt: product.title, data-zy-principale: '' }}
       {%- endif -%}
     </div>
     <div>
       <p class="zy__eyebrow">{{ product.type }}</p>
       <h1 class="zy__titre zy__titre--m">{{ product.title }}</h1>
+      {%- if product.vendor != blank and product.vendor != shop.name -%}<p class="zy-fiche__vendeur">Sélectionné par Zayado · conçu par <strong>{{ product.vendor }}</strong></p>{%- endif -%}
       {%- if product.metafields.zayado.benefice != blank -%}<p class="zy__texte">{{ product.metafields.zayado.benefice.value }}</p>{%- endif -%}
+      {%- liquid
+        assign avantages = product.metafields.zayado.avantages.value
+        if avantages == blank
+          assign avantages = section.settings.avantages | newline_to_br | split: '<br />'
+        endif
+      -%}
+      <ul class="zy-fiche__avantages" data-testid="fiche-avantages">
+        {%- for a in avantages -%}{%- if a != blank -%}<li><span aria-hidden="true">✓</span>{{ a | strip }}</li>{%- endif -%}{%- endfor -%}
+      </ul>
+      {%- unless product.has_only_default_variant -%}
+        {%- for opt in product.options_with_values -%}
+          {%- assign nom = opt.name | downcase -%}
+          <div class="zy-fiche__option" data-testid="fiche-option-{{ forloop.index }}">
+            <p class="zy-fiche__option-nom">{{ opt.name }} : <strong data-zy-choix>{{ opt.selected_value }}</strong></p>
+            <div class="zy-fiche__pastilles">
+              {%- for v in opt.values -%}
+                {%- assign vd = v | downcase -%}
+                {%- if nom contains 'coul' or nom contains 'color' -%}
+                  {%- liquid
+                    assign fond = '#D9D4CC'
+                    if vd contains 'noir' or vd contains 'black'
+                      assign fond = '#111827'
+                    elsif vd contains 'écaille' or vd contains 'ecaille' or vd contains 'tortoise'
+                      assign fond = 'linear-gradient(135deg,#5B3A1E,#B07A45 45%,#3B2414)'
+                    elsif vd contains 'transp' or vd contains 'clear' or vd contains 'cristal'
+                      assign fond = 'linear-gradient(135deg,#FFFFFF,#E5E7EB)'
+                    elsif vd contains 'blanc' or vd contains 'white'
+                      assign fond = '#FFFFFF'
+                    elsif vd contains 'bleu' or vd contains 'blue' or vd contains 'navy'
+                      assign fond = '#1E3D63'
+                    elsif vd contains 'rose' or vd contains 'pink'
+                      assign fond = '#E8B4B8'
+                    elsif vd contains 'gris' or vd contains 'grey' or vd contains 'gray'
+                      assign fond = '#9CA3AF'
+                    endif
+                  -%}
+                  <button type="button" class="zy-fiche__pastille zy-fiche__pastille--rond" style="--fond: {{ fond }}" aria-pressed="{% if v == opt.selected_value %}true{% else %}false{% endif %}" data-valeur="{{ v | escape }}" aria-label="{{ v | escape }}" data-testid="fiche-pastille-{{ v | handleize }}"><span></span><em>{{ v }}</em></button>
+                {%- else -%}
+                  <button type="button" class="zy-fiche__pastille" aria-pressed="{% if v == opt.selected_value %}true{% else %}false{% endif %}" data-valeur="{{ v | escape }}" data-testid="fiche-pastille-{{ v | handleize }}">{{ v }}</button>
+                {%- endif -%}
+              {%- endfor -%}
+            </div>
+          </div>
+        {%- endfor -%}
+      {%- endunless -%}
 
       {%- if bientot -%}
         {%- comment -%}
@@ -23,8 +76,9 @@
           Le visiteur laisse son e-mail (client Shopify, balises « prevenir » + le handle du produit) :
           vous savez quels produits intéressent avant de signer avec le partenaire.
         {%- endcomment -%}
+        <div class="zy-fiche__statut" data-testid="fiche-statut-bientot"><span aria-hidden="true">!</span><div><strong>Bientôt disponible</strong><p>Ce produit arrive dans la boutique Zayado. Inscrivez-vous : vous serez prévenu·e en premier.</p></div></div>
         <div class="zy-prevenir" id="prevenir">
-          <p class="zy-prevenir__titre">En cours de <span class="zy__main">sélection</span></p>
+          <p class="zy-prevenir__titre">Soyez informé·e <span class="zy__main">en premier</span></p>
           <p class="zy-prevenir__texte">{{ section.settings.texte_bientot }}</p>
           {%- form 'customer', class: 'zy-prevenir__form' -%}
             {%- if form.posted_successfully? -%}
@@ -71,6 +125,25 @@
     </div>
   </div>
 </section>
+<script>
+  (function () {
+    var f = document.currentScript.previousElementSibling, p = f.querySelector('[data-zy-principale]');
+    f.querySelectorAll('.zy-galerie__vignette').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (p) { p.src = b.dataset.src; p.removeAttribute('srcset'); }
+        f.querySelectorAll('.zy-galerie__vignette').forEach(function (o) { o.setAttribute('aria-current', o === b ? 'true' : 'false'); });
+      });
+    });
+    f.querySelectorAll('.zy-fiche__option').forEach(function (o) {
+      o.querySelectorAll('.zy-fiche__pastille').forEach(function (b) {
+        b.addEventListener('click', function () {
+          o.querySelectorAll('.zy-fiche__pastille').forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+          o.querySelector('[data-zy-choix]').textContent = b.dataset.valeur;
+        });
+      });
+    });
+  })();
+</script>
 
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"Product","name":{{ product.title | json }},"description":{{ product.description | strip_html | truncate: 300 | json }},"url":{{ shop.url | append: product.url | json }}{% if product.featured_image %},"image":{{ product.featured_image | image_url: width: 1200 | prepend: 'https:' | json }}{% endif %},"brand":{"@type":"Brand","name":{{ product.vendor | json }}}{% unless bientot or devis %},"offers":{"@type":"Offer","priceCurrency":{{ cart.currency.iso_code | json }},"price":{{ product.price | divided_by: 100.0 | json }},"availability":"https://schema.org/{% if product.available %}InStock{% else %}OutOfStock{% endif %}","url":{{ shop.url | append: product.url | json }}}{% endunless %}}
@@ -84,6 +157,7 @@
     { "type": "text", "id": "cta", "label": "Texte du bouton (si le produit n'a pas de métachamp zayado.cta)", "default": "Commander sur Zayado" },
     { "type": "url", "id": "lien_defaut", "label": "Lien par défaut (si le produit n'a pas de métachamp zayado.lien_app)" },
     { "type": "textarea", "id": "texte_bientot", "label": "Texte des produits « bientôt »", "default": "Nous testons ce produit avec un partenaire avant de le proposer. Laissez votre e-mail : vous serez le premier informé de sa sortie." },
+    { "type": "textarea", "id": "avantages", "label": "Avantages cochés (un par ligne)", "info": "Remplacé par le métachamp zayado.avantages du produit", "default": "Sélectionné et testé par l'équipe Zayado\nPensé pour les journées de travail intenses\nPaiement sécurisé, suivi dans votre espace" },
     { "type": "text", "id": "reassurance_1", "label": "Réassurance 1", "default": "Paiement sécurisé par Mollie" },
     { "type": "text", "id": "reassurance_2", "label": "Réassurance 2", "default": "Suivi de commande dans votre espace Zayado" },
     { "type": "text", "id": "reassurance_3", "label": "Réassurance 3", "default": "Une question ? Réponse sous 24 h" }

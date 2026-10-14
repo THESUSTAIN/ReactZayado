@@ -50,7 +50,7 @@ function Editeur({ article, onRetour, onChange }) {
     <div className="space-y-4" data-testid="article-editeur">
       <button type="button" onClick={onRetour} className="inline-flex items-center gap-1.5 text-xs text-offwhite/60 hover:text-offwhite"><ArrowLeft size={14} /> Tous les articles</button>
       <Carte>
-        <div className="mb-4 flex flex-wrap items-center gap-2"><Badge s={a.statut} /><span className="text-xs text-offwhite/45">{a.type === "note" ? "Note de la maison" : "Article"}{a.mot_cle ? ` · mot-clé : ${a.mot_cle}` : ""}</span></div>
+        <div className="mb-4 flex flex-wrap items-center gap-2"><Badge s={a.statut} /><span className="text-xs text-offwhite/45">{a.type === "note" ? "Note de la maison" : "Article"}{a.categorie ? ` · rubrique : ${a.categorie}` : ""}{a.mot_cle ? ` · mot-clé : ${a.mot_cle}` : ""}</span></div>
         <div className="space-y-3">
           <label className="block"><span className="mb-1 block text-xs font-semibold text-offwhite/60">Titre</span><input className={`${CHAMP} text-base font-semibold`} value={a.titre || ""} onChange={(e) => maj("titre", e.target.value)} /></label>
           <label className="block"><span className="mb-1 block text-xs font-semibold text-offwhite/60">Chapô (extrait affiché dans la liste)</span><textarea rows={2} className={CHAMP} value={a.extrait || ""} onChange={(e) => maj("extrait", e.target.value)} /></label>
@@ -89,7 +89,7 @@ export default function AdminArticles() {
   const [mode, setMode] = useState("article");
   const [theme, setTheme] = useState("");
   const [idees, setIdees] = useState(null);
-  const [form, setForm] = useState({ titre: "", angle: "", mot_cle: "", notes: "" });
+  const [form, setForm] = useState({ titre: "", angle: "", mot_cle: "", notes: "", categorie: "tresorerie" });
   const [occupe, setOccupe] = useState("");
   const [ouvert, setOuvert] = useState(null);
 
@@ -104,7 +104,7 @@ export default function AdminArticles() {
   };
   const rediger = async (donnees) => {
     setOccupe("redaction");
-    try { const a = await redigerArticle({ type: mode, ...donnees }); toast.success("Brouillon prêt."); charger(); setOuvert(a); setForm({ titre: "", angle: "", mot_cle: "", notes: "" }); }
+    try { const a = await redigerArticle({ type: mode, categorie: mode === "article" ? form.categorie : "", ...donnees }); toast.success("Brouillon prêt."); charger(); setOuvert(a); setForm({ ...form, titre: "", angle: "", mot_cle: "", notes: "" }); }
     catch (e) { toast.error(e?.message || "Rédaction impossible."); }
     setOccupe("");
   };
@@ -161,6 +161,10 @@ export default function AdminArticles() {
               <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                 <input className={CHAMP} placeholder="Titre ou sujet" value={form.titre} onChange={(e) => setForm({ ...form, titre: e.target.value })} />
                 <input className={CHAMP} placeholder="Mot-clé Google visé (facultatif)" value={form.mot_cle} onChange={(e) => setForm({ ...form, mot_cle: e.target.value })} />
+                <select className={CHAMP} value={form.categorie} onChange={(e) => setForm({ ...form, categorie: e.target.value })} data-testid="articles-categorie" aria-label="Rubrique du Journal">
+                  <option value="tresorerie">Rubrique : Trésorerie</option><option value="clients">Rubrique : Clients</option>
+                  <option value="energie">Rubrique : Énergie</option><option value="organisation">Rubrique : Organisation</option>
+                </select>
               </div>
               <textarea rows={3} className={`${CHAMP} mt-2`} placeholder="Angle, exemples réels, chiffres vérifiés à intégrer (facultatif)" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
               <button type="button" disabled={!!occupe || !form.titre.trim()} onClick={() => rediger(form)} className={`${BTN_PLEIN} mt-2`} data-testid="articles-rediger">

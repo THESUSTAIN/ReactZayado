@@ -833,3 +833,46 @@ h1, h2, h3, .h0, .h1, .h2, .h3 { font-family: "Poppins", sans-serif !important; 
 .zy-gar__texte { margin: 0; font-size: 14px; line-height: 1.55; color: rgba(13, 31, 56, .68); }
 .zy-gar__lien { display: inline-block; margin-top: 8px; font-size: 13.5px; font-weight: 600; color: #1E3D63; }
 .zy-commu__reseaux a.zy-commu__tous { background: linear-gradient(135deg, #F1E2CC 0%, #DEC2A3 100%); color: #0D1F38; }
+/* Pas deux blocs « guide » d'affilée : si la page a déjà son guide, le pied de page n'affiche que l'accroche */
+body:has(main [data-zy-aimant]) .zy-pied__haut > .zy-aim { display: none; }
+body:has(main [data-zy-aimant]) .zy-pied__haut { grid-template-columns: minmax(0, 1fr); padding-bottom: 28px; }
+.zy-journal__news .zy-aim__puce { background: transparent; color: #F6F5F2; border-color: rgba(246, 245, 242, .3); }
+.zy-journal__news .zy-aim__puce[aria-checked="true"] { background: linear-gradient(135deg, #F1E2CC 0%, #DEC2A3 100%); color: #0D1F38; border-color: transparent; }
+
+/* ── Fiche produit (modèle vidéo) ── */
+.zy-galerie { display: flex; gap: 12px; align-items: flex-start; }
+.zy-galerie .zy-fiche__img { flex: 1; min-width: 0; }
+.zy-galerie__vignettes { display: flex; flex-direction: column; gap: 10px; flex: none; width: 76px; }
+.zy-galerie__vignette { padding: 0; border: 2px solid transparent; border-radius: 14px; overflow: hidden; background: #F6F5F2; cursor: pointer; transition: border-color .2s ease; }
+.zy-galerie__vignette img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; }
+.zy-galerie__vignette[aria-current="true"] { border-color: #1E3D63; }
+@media (max-width: 749px) { .zy-galerie { flex-direction: column-reverse; } .zy-galerie__vignettes { flex-direction: row; width: 100%; overflow-x: auto; } .zy-galerie__vignette { width: 64px; flex: none; } }
+.zy-fiche__vendeur { margin: 6px 0 0; font-size: 13.5px; color: rgba(13, 31, 56, .6); }
+.zy-fiche__avantages { list-style: none; margin: 18px 0 0; padding: 0; display: grid; gap: 9px; }
+.zy-fiche__avantages li { display: flex; gap: 10px; align-items: center; font-size: 15px; }
+.zy-fiche__avantages li span { width: 22px; height: 22px; flex: none; border-radius: 999px; display: grid; place-items: center; background: linear-gradient(120deg, #0D1F38 0%, #1E3D63 55%, #2E4A6B 100%); color: #F1E2CC; font-size: 12px; font-weight: 700; }
+.zy-fiche__option { margin-top: 20px; }
+.zy-fiche__option-nom { margin: 0 0 10px; font-size: 14px; color: rgba(13, 31, 56, .7); }
+.zy-fiche__option-nom strong { color: #0D1F38; }
+.zy-fiche__pastilles { display: flex; flex-wrap: wrap; gap: 10px; }
+.zy-fiche__pastille { min-height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(13, 31, 56, .2); background: #FFFFFF; font: 500 14px "Poppins", sans-serif; color: #0D1F38; cursor: pointer; transition: border-color .2s ease, box-shadow .2s ease; }
+.zy-fiche__pastille[aria-pressed="true"] { border-color: #1E3D63; box-shadow: 0 0 0 2px #1E3D63 inset; }
+.zy-fiche__pastille--rond { padding: 0; border: 0; background: transparent; display: grid; justify-items: center; gap: 6px; min-height: 0; box-shadow: none !important; }
+.zy-fiche__pastille--rond span { width: 38px; height: 38px; border-radius: 999px; background: var(--fond); border: 1px solid rgba(13, 31, 56, .18); box-shadow: 0 0 0 3px #FFFFFF; transition: box-shadow .2s ease; }
+.zy-fiche__pastille--rond[aria-pressed="true"] span { box-shadow: 0 0 0 3px #FFFFFF, 0 0 0 5px #1E3D63; }
+.zy-fiche__pastille--rond em { font-style: normal; font-size: 12px; color: rgba(13, 31, 56, .7); }
+.zy-fiche__statut { display: flex; gap: 12px; align-items: flex-start; margin-top: 22px; padding: 14px 16px; border-radius: 16px; background: #F7EFE4; border: 1px solid #F1E2CC; }
+.zy-fiche__statut > span { width: 26px; height: 26px; flex: none; border-radius: 999px; display: grid; place-items: center; background: #DEC2A3; color: #0D1F38; font-weight: 700; }
+.zy-fiche__statut strong { font-size: 15px; }
+.zy-fiche__statut p { margin: 2px 0 0; font-size: 13.5px; color: rgba(13, 31, 56, .7); }
+/* ── Même style ── */
+.zy-style__tete { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 22px; }
+.zy-style__fleches { display: flex; gap: 8px; }
+.zy-style__fleches button { width: 44px; height: 44px; border-radius: 999px; border: 1px solid rgba(13, 31, 56, .2); background: #FFFFFF; color: #0D1F38; font-size: 18px; cursor: pointer; transition: background-color .2s ease, color .2s ease; }
+.zy-style__fleches button:hover { background: #0D1F38; color: #F6F5F2; }
+.zy-style__piste { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(240px, calc((100% - 54px) / 4)); gap: 18px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 6px; }
+.zy-style__piste::-webkit-scrollbar { display: none; }
+.zy-style__item { scroll-snap-align: start; min-width: 0; }
+@media (max-width: 749px) { .zy-style__piste { grid-auto-columns: 72%; } }
+.zy-style__item .zy-carte__img { height: auto; aspect-ratio: 4 / 3; }
+.zy-style__item .zy-carte { height: 100%; }

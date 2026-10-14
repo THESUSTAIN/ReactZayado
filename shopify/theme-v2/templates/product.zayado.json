@@ -11,11 +11,16 @@
     "garanties": {
       "type": "zayado-garanties",
       "settings": {}
+    },
+    "meme-style": {
+      "type": "zayado-meme-style",
+      "settings": {}
     }
   },
   "order": [
     "fiche",
-    "garanties",
-    "faq"
+    "meme-style",
+    "faq",
+    "garanties"
   ]
 }

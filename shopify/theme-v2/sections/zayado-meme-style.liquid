@@ -1,0 +1,44 @@
+{%- comment -%} « Dans le même style » : carrousel des autres produits de la première collection du produit. {%- endcomment -%}
+{%- liquid
+  assign coll = product.collections | where: 'handle', 'produits' | first
+  for c in product.collections
+    if c.handle != 'produits' and c.handle != 'promos' and c.handle != 'frontpage'
+      assign coll = c
+      break
+    endif
+  endfor
+-%}
+{%- if coll and coll.products_count > 1 -%}
+<section class="zy zy-style" data-testid="meme-style">
+  <div class="zy__wrap">
+    <div class="zy-style__tete">
+      <div><p class="zy__eyebrow">{{ coll.title }}</p><h2 class="zy__titre zy__titre--m">{{ section.settings.titre }}</h2></div>
+      <div class="zy-style__fleches">
+        <button type="button" aria-label="Précédent" data-dir="-1" data-testid="meme-style-prec">←</button>
+        <button type="button" aria-label="Suivant" data-dir="1" data-testid="meme-style-suiv">→</button>
+      </div>
+    </div>
+    <div class="zy-style__piste">
+      {%- for p in coll.products limit: 12 -%}
+        {%- if p.id != product.id -%}<div class="zy-style__item">{%- render 'zayado-carte-produit', product: p -%}</div>{%- endif -%}
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+<script>
+  (function () {
+    var s = document.currentScript.previousElementSibling, piste = s.querySelector('.zy-style__piste');
+    s.querySelectorAll('[data-dir]').forEach(function (b) {
+      b.addEventListener('click', function () { piste.scrollBy({ left: +b.dataset.dir * piste.clientWidth * .8, behavior: 'smooth' }); });
+    });
+  })();
+</script>
+{%- endif -%}
+{% schema %}
+{
+  "name": "Zayado — Même style",
+  "tag": "div",
+  "settings": [{ "type": "text", "id": "titre", "label": "Titre", "default": "Dans le même style" }],
+  "presets": [{ "name": "Zayado — Même style" }]
+}
+{% endschema %}

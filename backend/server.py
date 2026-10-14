@@ -5407,6 +5407,7 @@ async def _migrer_colonnes() -> None:
         ("referrals", "recompense_type", "VARCHAR(20) DEFAULT 'mois_offert'"),
         ("referrals", "recompense_valeur", "FLOAT DEFAULT 0"),
         ("vision_checkins", "clarte", "INTEGER"),
+        ("journal_articles", "categorie", "VARCHAR(20)"),
     ]
     for table, col, typ in ajouts:
         try:
