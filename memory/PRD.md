@@ -132,3 +132,10 @@
 - Railway : ajouter VITE_SHOP_URL=https://zayado.net et ajouter https://tm2fg0-nk.myshopify.com à CORS_ORIGINS (le domaine zayado.net est déjà autorisé), puis redéployer.
 - Shopify : renseigner les liens réseaux sociaux (Réglages du thème › Réseaux sociaux), puis déployer le thème Préparation.
 
+## Mises à jour 14/10/2026 (soir)
+- Journal : 21 articles IA publiés avec photo (5 Trésorerie, 5 Clients, 5 Énergie, 5 Organisation + anciens), via outils/generer_journal.py (API admin → Shopify). Notes de la maison : à écrire par la fondatrice (1 seule pour l'instant).
+- IA articles (journal_ext.py) : liens vers zayado.net/pages/*, champ « rubrique » (colonne categorie, ajoutée à la base automatiquement au démarrage), étiquette Shopify de la rubrique, jeton Shopify demandé automatiquement. Admin : sélecteur articles-categorie.
+- Fiche produit d'après la vidéo : galerie avec vignettes, avantages cochés (métachamp zayado.avantages ou réglage), pastilles de variantes, encadré « Bientôt disponible », carrousel zayado-meme-style, garanties en bas.
+- Pied de page : le bloc guide est masqué quand la page en a déjà un. Tests iteration_6 OK (débordement 9px corrigé ensuite).
+- À faire : avis clients vérifiés (validation dans l'admin), Notes de la maison, tunnel « Optimisation d'entreprise ».
+

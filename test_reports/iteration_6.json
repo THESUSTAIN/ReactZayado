@@ -1,0 +1,24 @@
+{
+  "summary": "Contre-test complet iter_6 : backend admin IA, Journal (4 rubriques), footer guide dédoublement, fiche produit refaite, admin React. 95% des exigences validées. Un seul point mineur : léger débordement horizontal (~9 px) sur la fiche produit en 390 px.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Fiche produit Shopify (/products/amber-blue-light-glasses)", "issue": "Débordement horizontal mineur en 390px: scrollWidth=399, innerWidth=390 (overflow de 9px). Toutes les sections (zy-galerie, zy-fiche__avantages, zy-fiche__statut, zy-prevenir, zy-aim--carte, zy-fiche__desc, zy-meme-style…) ont right=399 au lieu de ≤390. Vraisemblablement padding/largeur de .zy-fiche (ou grille parente) qui déborde côté droit de 9px.", "selector": "[data-testid=fiche-galerie], .zy-fiche__avantages, .zy-prevenir, [data-testid=meme-style]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Corriger le léger overflow horizontal (~9 px) sur la fiche produit refaite en 390 px (section .zy-fiche ou son conteneur). Les autres pages (/, /pages/coming-soon, /blogs/journal, /pages/vision-act) restent sans overflow."
+  ],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (login + GET/POST/DELETE /api/admin/articles tous OK, IA locale 25s, catégorie=organisation, liens zayado.net/pages/, aucun lien app.zayado.net/public, pas d'appel /shopify)", "frontend": "95% (10/11 : fiche=presque OK sauf overflow 9px, journal 4 rubriques ≥5 articles chacune avec images, pas de filtre Témoignages sur /blogs/journal, ld+json Article sur 2 articles ouverts, footer guide masqué sur /blogs/journal + /pages/coming-soon + / et visible sur /pages/vision-act, admin [data-testid=articles-categorie] avec 4 rubriques)"},
+  "test_credentials": "admin@zayado.net / Admin!2026 (admin local — ok)",
+  "seed_data_creation": "Un article de test (id 1c9147c6-073b-4f21-9249-40ce5c7285e3, 'Test QA tresorerie', categorie=organisation) a été créé puis supprimé (DELETE 200). Aucun /shopify appelé.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Détails validés : (1) Fiche /products/amber-blue-light-glasses : [data-testid=fiche-galerie] + <img> OK ; [data-testid=fiche-avantages] avec 3 <li> cochés OK ; [data-testid=fiche-statut-bientot] OK ; #prevenir OK ; [data-testid=meme-style] OK, boutons meme-style-prec et meme-style-suiv défilent (scrollLeft 0→636) ; images cartes 238×179 (ratio ~4/3) OK ; [data-testid=garanties] OK. Seul point à régler : overflow horizontal 9px en 390px (sw=399). (2) Journal : /blogs/journal/tagged/tresorerie=5 articles, /clients=5, /energie=6, /organisation=5, toutes les cartes contiennent une <img> (vérifié par ancêtre proche). (3) /blogs/journal : zéro lien contenant 'témoign' ou '/temoign'. (4) 2 articles ouverts (prevision-tresorerie-tpe-90-jours, tva-tresorerie-sous-compte) : <script type=\"application/ld+json\"> contient @type=Article, contenu non vide (>4700 car). (5) Pied de page : sur /blogs/journal, /pages/coming-soon et / le .zy-pied__haut > .zy-aim existe mais n'est PAS visible (offsetWidth=0/offsetHeight=0 ou display:none) ; sur /pages/vision-act il est bien visible. (6) Backend : POST /api/admin/articles {categorie:'organisation'} → 200 en 25s, categorie='organisation' confirmé, html 5266 car, html contient 'zayado.net/pages/' et NE contient PAS 'app.zayado.net/public'. (7) Admin React (/admin → onglet 'Articles du Journal') : [data-testid=articles-categorie] est un <select> avec 4 <option> (tresorerie, clients, energie, organisation).",
+  "rca of the issue": "Overflow 9px en 390 px sur la fiche produit : toutes les lignes de contenu (galerie, avantages, statut, prevenir, aim--carte, desc, meme-style) ont right=399 au lieu de ≤390. Les cartes elles-mêmes mesurent 381 px de large à partir d'un left ~18. Les deux côtés semblent avoir une marge/padding asymétrique de l'ordre de 9 px, suggérant soit un padding-right manquant sur le wrapper .zy-fiche sur mobile, soit une largeur fixe/min-width sur un enfant (ex. carrousel [data-testid=meme-style]) qui pousse le conteneur. Vérifier dans /app/shopify/theme-v2/sections/zayado-fiche-produit.liquid et zayado.css les règles @media (max-width: 480px) de .zy-fiche, .zy-galerie et .zy-ms (ou équivalent) pour aligner padding-left/padding-right et empêcher overflow-x. Les autres pages (/pages/coming-soon, /, /blogs/journal, /pages/vision-act) ne présentent pas d'overflow (confirmé iter_5)."
+}

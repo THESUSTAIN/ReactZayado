@@ -876,3 +876,4 @@ body:has(main [data-zy-aimant]) .zy-pied__haut { grid-template-columns: minmax(0
 @media (max-width: 749px) { .zy-style__piste { grid-auto-columns: 72%; } }
 .zy-style__item .zy-carte__img { height: auto; aspect-ratio: 4 / 3; }
 .zy-style__item .zy-carte { height: 100%; }
+@media (max-width: 989px) { .zy-fiche__grille { grid-template-columns: minmax(0, 1fr); } .zy-fiche__grille > * { min-width: 0; } }
