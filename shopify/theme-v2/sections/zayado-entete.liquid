@@ -42,7 +42,7 @@
                 {%- if bloc_cle == titre_cle -%}{%- assign rayon = bloc -%}{%- endif -%}
               {%- endif -%}
             {%- endfor -%}
-            <a href="{{ lien.url }}" class="zy-entete__tiroir-lien{% if lien.active %} est-actif{% endif %}">{{ lien.title }}</a>
+            <a href="{% if settings.zy_boutique_bientot and lien.title == 'Tout voir' %}/pages/coming-soon{% else %}{{ lien.url }}{% endif %}" class="zy-entete__tiroir-lien{% if lien.active %} est-actif{% endif %}">{{ lien.title }}</a>
             {%- if rayon != null -%}
               {%- assign col = collections[rayon.settings.collection] -%}
               {%- if col != blank -%}
@@ -115,7 +115,7 @@
             {%- if rayon != null -%}
               {%- assign col = collections[rayon.settings.collection] -%}
               <div class="zy-mega">
-                <a href="{{ lien.url }}"{% if lien.active or lien.child_active %} class="est-actif" aria-current="page"{% endif %} aria-haspopup="true">
+                <a href="{% if settings.zy_boutique_bientot and lien.title == 'Tout voir' %}/pages/coming-soon{% else %}{{ lien.url }}{% endif %}"{% if lien.active or lien.child_active %} class="est-actif" aria-current="page"{% endif %} aria-haspopup="true">
                   {{- lien.title -}}
                   <svg class="zy-mega__chevron" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>
                 </a>
@@ -124,7 +124,7 @@
                     <div class="zy-mega__intro">
                       <p class="zy-mega__titre">{{ rayon.settings.titre }}</p>
                       {%- if rayon.settings.description != blank -%}<p class="zy-mega__desc">{{ rayon.settings.description }}</p>{%- endif -%}
-                      <a class="zy__btn zy__btn--ligne zy-mega__tout" href="{{ lien.url }}">Tout {{ rayon.settings.titre | downcase }} →</a>
+                      <a class="zy__btn zy__btn--ligne zy-mega__tout" href="{% if settings.zy_boutique_bientot and lien.title == 'Tout voir' %}/pages/coming-soon{% else %}{{ lien.url }}{% endif %}">Tout {{ rayon.settings.titre | downcase }} →</a>
                     </div>
                     {%- if col != blank and col.products.size > 0 -%}
                       <div class="zy-mega__produits">
@@ -146,7 +146,7 @@
                 </div>
               </div>
             {%- else -%}
-              <a href="{% if forloop.first and settings.zy_boutique_bientot %}/pages/coming-soon{% else %}{{ lien.url }}{% endif %}"{% if forloop.first %} class="zy-entete__tout{% if lien.active %} est-actif{% endif %}"{% elsif lien.active %} class="est-actif" aria-current="page"{% endif %}>
+              <a href="{% if settings.zy_boutique_bientot and lien.title == 'Tout voir' %}/pages/coming-soon{% else %}{{ lien.url }}{% endif %}"{% if forloop.first %} class="zy-entete__tout{% if lien.active %} est-actif{% endif %}"{% elsif lien.active %} class="est-actif" aria-current="page"{% endif %}>
                 {%- if titre_cle == 'promos' -%}<svg class="zy-entete__etoile" viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7L12 17.2 5.8 20.9l1.6-7L2 9.2l7.1-.6z"/></svg>{%- endif -%}
                 {{- lien.title -}}
               </a>
@@ -159,7 +159,7 @@
             {%- assign a_droite = false -%}
             {%- for d in droites -%}{%- assign dd = d | strip -%}{%- if dd == titre_cle -%}{%- assign a_droite = true -%}{%- endif -%}{%- endfor -%}
             {%- if a_droite -%}
-              <a href="{{ lien.url }}"{% if lien.active %} class="est-actif" aria-current="page"{% endif %}>{{ lien.title }}</a>
+              <a href="{% if settings.zy_boutique_bientot and lien.title == 'Tout voir' %}/pages/coming-soon{% else %}{{ lien.url }}{% endif %}"{% if lien.active %} class="est-actif" aria-current="page"{% endif %}>{{ lien.title }}</a>
             {%- endif -%}
           {%- endfor -%}
         </div>

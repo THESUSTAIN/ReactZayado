@@ -731,7 +731,7 @@ h1, h2, h3, .h0, .h1, .h2, .h3 { font-family: "Poppins", sans-serif !important; 
 .zy-cs__icone { width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center; background: #F7EFE4; color: #2E4A6B; }
 .zy-cs__atout-titre { margin: 16px 0 6px; font-size: 18px; font-weight: 600; }
 .zy-cs__atout-texte { margin: 0; font-size: 14.5px; line-height: 1.6; color: rgba(13, 31, 56, .68); }
-.zy-cs__lancement { display: flex; justify-content: center; align-items: center; gap: 10px; width: max-content; margin: 36px auto 0; padding: 10px 22px; border-radius: 999px; background: #F6F5F2; border: 1px solid #ECE2D2; font-size: 12px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: #2E4A6B; }
+.zy-cs__lancement { display: flex; justify-content: center; align-items: center; gap: 10px; width: max-content; max-width: calc(100% - 48px); box-sizing: border-box; text-align: center; margin: 36px auto 0; padding: 10px 22px; border-radius: 999px; background: #F6F5F2; border: 1px solid #ECE2D2; font-size: 12px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: #2E4A6B; }
 .zy-cs__lancement span { width: 8px; height: 8px; border-radius: 999px; background: #DEC2A3; box-shadow: 0 0 0 4px rgba(222, 194, 163, .3); }
 .zy-cs__news { padding: 0 24px 96px; }
 .zy-cs__carte { max-width: 1000px; margin: 0 auto; display: grid; gap: 28px; align-items: center; padding: 40px; border-radius: 28px; background: linear-gradient(135deg, #1E3D63 0%, #16304F 55%, #0D1F38 100%); color: #F6F5F2; }
@@ -781,3 +781,6 @@ h1, h2, h3, .h0, .h1, .h2, .h3 { font-family: "Poppins", sans-serif !important; 
 .zy-tun__kit button { border: 0; cursor: pointer; font-family: "Poppins", sans-serif; }
 .zy-tun__kit-note { margin: 10px 0 0; font-size: 12px; opacity: .7; }
 .zy-tun__essai { display: inline-block; margin-top: 16px; font-weight: 600; color: #0D1F38; }
+
+.zy-cs { overflow-x: hidden; }
+.zy-cs__titre, .zy-cs__texte { overflow-wrap: anywhere; }

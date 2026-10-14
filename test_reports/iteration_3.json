@@ -1,0 +1,33 @@
+{
+  "summary": "Iteration 3: verified Shopify preview theme (preview_theme_id=205715800405) is free of yellow/orange colors on 6 pages (home, journal, journal/tagged/tresorerie, pages/coming-soon, pages/liens, collections/concentration-visuelle) at 1280px; /pages/coming-soon structure correct (data-testid=coming-soon, cta #liste-attente, 3 atouts, bloc marketplace, pastille Lancement); /pages/diagnostic and /pages/reprise expose tunnel-diagnostic/tunnel-envoyer and required inputs. React app redirects /public/tunnel, /public/tunnel/merci, /public/reprise, /public/reprise/rdv, /public/reprise/merci, /public/cession, /diagnostic, /legal/cgu, /legal/cgv, /legal/confidentialite, /legal/mentions, /partenaires/thesustain → zayado.net/pages/* ✓. React regression: /public/tunnel/confirmation, /public/tunnel/kit, /public/tunnel/fast-track still render (not redirected) ✓. Backend 4/4 pytest tests pass (offres, capture flow + prospect GET, kit/commande via Mollie simulé, 422 consentement + email invalide).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "zayado-entete.liquid (menu Shopify)", "issue": "Le PREMIER lien 'Tout voir' du menu principal pointe vers /collections/produits au lieu de /pages/coming-soon comme requis. Un second lien 'Tout voir' (dans un sous-menu) pointe bien vers /pages/coming-soon, mais le premier (top-level) ne respecte pas la consigne.", "selector": "header a:has-text('Tout voir')", "priority": "MEDIUM"},
+      {"component": "/pages/coming-soon (390px)", "issue": "Overflow horizontal détecté sur mobile 390px (document.scrollWidth > innerWidth). Vérifier marges/padding du hero bleu nuit et des cartes atout.", "selector": "[data-testid=coming-soon]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_tunnel_zayado_iter3.py",
+    "/app/test_reports/pytest/tunnel_iter3.xml"
+  ],
+  "action_items": [
+    "Changer le premier lien 'Tout voir' du menu Shopify (header) vers /pages/coming-soon (actuellement /collections/produits).",
+    "Corriger l'overflow horizontal du hero coming-soon en 390px (peut provenir d'un overflow du bloc 'Soyez parmi les premiers' ou des 3 cartes atout)."
+  ],
+  "critical_code_review_comments": [
+    "App.tsx VersBoutique utilise window.location.replace dans un useEffect : OK, mais le composant retourne null pendant la navigation; prévoir un petit indicateur 'Redirection…' pour éviter une page blanche perçue (surtout si le CDN est lent).",
+    "VITE_SHOP_URL doit être défini à la build (pas d'exécution) — s'assurer que les builds Prod/Preview l'ont bien (sinon redirection vers 'undefined/pages/…').",
+    "tunnel_zayado_ext.py : capture() accepte 'source' en texte libre; la normalisation ne retient que 'tunnel-reprise' sinon force 'tunnel-zayado' — la valeur 'shopify-diagnostic' envoyée par le thème est donc écrasée en 'tunnel-zayado' dans la BDD. À confirmer avec le besoin produit (traçabilité source Shopify perdue)."
+  ],
+  "updated_files": ["/app/backend/tests/test_tunnel_zayado_iter3.py"],
+  "success_rate": {"backend": "100% (4/4)", "frontend": "90% (couleurs OK partout, coming-soon OK, redirections OK, régression OK ; 1 lien 'Tout voir' incorrect + overflow mobile)"},
+  "test_credentials": "N/A (pages publiques Shopify + endpoints publics tunnel)",
+  "seed_data_creation": "Aucune (tests pytest utilisent la BD SQLite temporaire du conftest; aucun compte Shopify créé).",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Important : la navigation massive sur https://projet-creation-1.preview.emergentagent.com/* déclenche vite Cloudflare 'security verification' — faire 1 goto par test avec wait_until='load' + attente de 5–8 s avant de lire page.url (sinon VersBoutique n'a pas eu le temps d'exécuter window.location.replace). Pour les tests Shopify, TOUJOURS ajouter ?preview_theme_id=205715800405, accepter la bannière cookies, et masquer #preview-bar-iframe. Le forbidden-colors scan utilise 4 teintes de référence (rgb 214/166/79, 184/137/63, 240/220/172, 228/200/127) ± tolérance 15 ; les beiges 222/194/163 et 241/226/204 ne sont pas comptabilisés. Les tests backend passent via TestClient in-memory (conftest.py pose ENV, MOLLIE_API_KEY vide, FauxHttp simule Mollie).",
+  "rca of the issue": "Lien 'Tout voir' incorrect : zayado-entete.liquid contient deux occurrences du label 'Tout voir'; la première (menu principal) a probablement été laissée sur /collections/produits par oubli. Il suffit de changer l'URL de ce premier lien dans la section/sous-menu Shopify. Overflow mobile coming-soon : à chercher dans zayado-coming-soon.liquid (padding/width excessif sur .zy-cs ou .zy-cs__news à 390px)."
+}
