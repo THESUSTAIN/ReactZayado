@@ -1,0 +1,144 @@
+{%- comment -%} Tunnel public sur Shopify (diagnostic ou reprise). Les réponses partent vers l'appli (API publique) ;
+l'appli ne sert qu'au paiement Mollie (Kit) et à l'espace client. Réglage du thème : zy_app_url. {%- endcomment -%}
+{%- assign mode = section.settings.mode -%}
+{%- assign app = settings.zy_app_url | default: 'https://app.zayado.net' -%}
+<section class="zy zy-tun" data-zy-tunnel="{{ mode }}" data-app="{{ app }}"
+  data-pdf-tresorerie="{{ 'zayado-aimant-tresorerie.pdf' | asset_url }}" data-pdf-rituel="{{ 'zayado-aimant-rituel.pdf' | asset_url }}" data-testid="tunnel-{{ mode }}">
+  <div class="zy__wrap zy-tun__grille">
+    <div class="zy-tun__intro">
+      <p class="zy-tun__tampon">{{ section.settings.tampon }}</p>
+      <h1 class="zy__titre">{{ section.settings.titre }} <span class="zy__main">{{ section.settings.mot_main }}</span> {{ section.settings.titre_fin }}</h1>
+      <p class="zy__texte">{{ section.settings.texte }}</p>
+      <ol class="zy-tun__promesses">
+        {%- assign ps = section.settings.promesses | newline_to_br | split: '<br />' -%}
+        {%- for p in ps -%}{%- if p != blank -%}<li>{{ p | strip }}</li>{%- endif -%}{%- endfor -%}
+      </ol>
+    </div>
+
+    <div class="zy-tun__carte">
+      <form class="zy-tun__form" data-etape="capture" data-testid="tunnel-{{ mode }}-form">
+        <h2 class="zy-tun__h2">{% if mode == 'reprise' %}Fais le test{% else %}Ton diagnostic{% endif %}</h2>
+        {%- if mode == 'reprise' -%}
+          {%- assign qs = "salaire~Combien de temps peux-tu tenir sans te verser de salaire ?~moins6:Moins de 6 mois:2:0|6a18:6 à 18 mois:1:1|plus18:Plus de 18 mois:0:1§idee~As-tu déjà une idée précise et des premiers clients ?~oui:Oui, les deux:0:2|idee:Une idée, pas encore de clients:1:1|non:Pas encore:2:0§moteur~Ce qui te motive le plus~inventer:Inventer quelque chose de nouveau:0:2|developper:Faire grandir une activité qui marche déjà:2:0§secteur~Ton secteur~rester:Je veux rester dans mon métier:1:0|changer:Je suis prêt·e à changer:0:0" | split: '§' -%}
+        {%- else -%}
+          {%- assign qs = "situation~Ta situation~independant:Indépendant·e:0:0|tpe:Dirigeant·e de TPE (1 à 10 personnes):0:0|creation:En création ou en reprise:0:0§priorite~Ta priorité du moment~tresorerie:Trésorerie et chiffres:0:0|equilibre:Temps et équilibre:0:0|clients:Trouver des clients:0:0|organisation:Organisation et équipe:0:0" | split: '§' -%}
+        {%- endif -%}
+        {%- for q in qs -%}
+          {%- assign parts = q | split: '~' -%}
+          <fieldset class="zy-tun__q"><legend>{{ forloop.index }}. {{ parts[1] }}</legend>
+            {%- assign choix = parts[2] | split: '|' -%}
+            {%- for c in choix -%}{%- assign cc = c | split: ':' -%}
+              <label class="zy-tun__choix"><input type="radio" name="{{ parts[0] }}" value="{{ cc[0] }}" data-r="{{ cc[2] }}" data-c="{{ cc[3] }}" required data-testid="tunnel-{{ parts[0] }}-{{ cc[0] }}"><span>{{ cc[1] }}</span></label>
+            {%- endfor -%}
+          </fieldset>
+        {%- endfor -%}
+        <div class="zy-tun__champs">
+          <input class="zy-champ" name="prenom" placeholder="Ton prénom" autocomplete="given-name" data-testid="tunnel-prenom">
+          <input class="zy-champ" name="email" type="email" required placeholder="Ton e-mail" autocomplete="email" data-testid="tunnel-email">
+        </div>
+        <label class="zy-tun__rgpd"><input type="checkbox" name="consentement" required data-testid="tunnel-consentement"> J'accepte de recevoir mon résultat et les conseils Zayado par e-mail (désinscription en un clic). <a href="/pages/confidentialite">Confidentialité</a></label>
+        <button class="zy__btn zy__btn--plein zy-tun__envoyer" type="submit" data-testid="tunnel-envoyer">{% if mode == 'reprise' %}Voir mon profil{% else %}Voir mon diagnostic{% endif %} →</button>
+        <p class="zy-tun__erreur" hidden data-testid="tunnel-erreur"></p>
+      </form>
+
+      <div class="zy-tun__resultat" hidden data-testid="tunnel-resultat">
+        <p class="zy__eyebrow" data-res-sur></p>
+        <h2 class="zy-tun__h2" data-res-titre></h2>
+        <p class="zy__texte" data-res-texte></p>
+        {%- if mode == 'reprise' -%}
+          <form class="zy-tun__rdv" data-testid="tunnel-rdv-form">
+            <p class="zy-tun__h3">Ton appel stratégique offert (30 min)</p>
+            <input class="zy-champ" name="telephone" required placeholder="Ton téléphone" autocomplete="tel" data-testid="tunnel-rdv-telephone">
+            <input class="zy-champ" name="creneau" placeholder="Ton créneau idéal (ex. mardi matin)" data-testid="tunnel-rdv-creneau">
+            <textarea class="zy-champ" name="projet" rows="3" placeholder="Ton projet en 2 lignes (secteur, région, budget)" data-testid="tunnel-rdv-projet"></textarea>
+            <button class="zy__btn zy__btn--plein" type="submit" data-testid="tunnel-rdv-envoyer">Réserver mon appel →</button>
+          </form>
+          <p class="zy-tun__ok" hidden data-testid="tunnel-rdv-ok">C'est noté : on t'appelle au créneau choisi.</p>
+        {%- endif -%}
+        <a class="zy-tun__guide" data-res-guide target="_blank" rel="noopener" data-testid="tunnel-guide">Télécharger ton guide offert (PDF)</a>
+        <div class="zy-tun__kit" hidden data-testid="tunnel-kit">
+          <p class="zy-tun__kit-sur">Réservé aux nouveaux inscrits</p>
+          <p class="zy-tun__kit-titre"><span data-kit-titre></span> <strong data-kit-prix></strong></p>
+          <p data-kit-desc></p>
+          <ul data-kit-livrables></ul>
+          <button class="zy-cs__btn zy-cs__btn--beige" type="button" data-kit-acheter data-testid="tunnel-kit-acheter">Obtenir mon Kit</button>
+          <p class="zy-tun__kit-note">Paiement sécurisé par Mollie, sur votre espace Zayado. Aucun autre débit sans votre clic.</p>
+        </div>
+        <a class="zy-tun__essai" href="{{ app }}/login?next=%2Fonboarding%3Fplan%3Dserenite%26essai%3D1" data-testid="tunnel-essai">Tu préfères tester le copilote ? Démarrer l'essai →</a>
+      </div>
+    </div>
+  </div>
+</section>
+<script>
+(function () {
+  var s = document.currentScript.previousElementSibling, mode = s.dataset.zyTunnel, API = s.dataset.app + '/api';
+  var PRIO = {
+    tresorerie: ['Trésorerie et chiffres', "Regarde ton autonomie de trésorerie en mois : combien de mois tu tiens sans nouvelle vente. C'est le premier chiffre qui apaise ou qui alerte.", 'tresorerie'],
+    equilibre: ['Temps et équilibre', "Bloque cette semaine un créneau sans travail, et note-le comme un rendez-vous client. L'équilibre se pilote comme un chiffre.", 'rituel'],
+    clients: ['Trouver des clients', 'Liste 10 entreprises de ta zone qui ont bougé ce mois-ci (création, déménagement, levée) : ce sont les signaux les plus chauds.', 'tresorerie'],
+    organisation: ['Organisation et équipe', 'Écris les 3 tâches que tu refais chaque semaine : ce sont les premières à documenter ou à déléguer.', 'rituel']
+  };
+  var PROFILS = {
+    reprendre: ['Ton profil : repreneur.', "Tu veux des revenus rapidement et une activité qui a fait ses preuves. Reprendre une entreprise rentable te correspond, et son financement peut s'appuyer sur ses propres résultats."],
+    creer: ['Ton profil : créateur.', "Tu as une idée et du temps devant toi : créer peut te convenir. Regarde aussi les entreprises à reprendre dans ton domaine : c'est souvent un raccourci vers tes premiers clients."],
+    les_deux: ['Les deux chemins te sont ouverts.', "Tes réponses ne tranchent pas. Le plus sûr est de comparer, chiffres en main, une création et une reprise dans ton secteur. C'est exactement ce qu'on fait pendant l'appel."]
+  };
+  var form = s.querySelector('.zy-tun__form'), res = s.querySelector('.zy-tun__resultat'), err = s.querySelector('.zy-tun__erreur'), pid = null;
+  function post(u, b) { return fetch(API + u, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b) }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.detail || 'Erreur'); return j; }); }); }
+  function kit() {
+    fetch(API + '/tunnel-zayado/offres').then(function (r) { return r.json(); }).then(function (o) {
+      var k = s.querySelector('.zy-tun__kit'), prix = Number(o.kit.prix).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
+      k.querySelector('[data-kit-titre]').textContent = o.kit.titre; k.querySelector('[data-kit-prix]').textContent = prix;
+      k.querySelector('[data-kit-desc]').textContent = o.kit.description;
+      k.querySelector('[data-kit-livrables]').innerHTML = o.kit.livrables.map(function (l) { return '<li>' + l.replace(/</g, '&lt;') + '</li>'; }).join('');
+      k.querySelector('[data-kit-acheter]').textContent = 'Obtenir mon Kit — ' + prix; k.hidden = false;
+    }).catch(function () {});
+  }
+  s.querySelector('[data-kit-acheter]').addEventListener('click', function (e) {
+    e.target.disabled = true;
+    post('/tunnel-zayado/kit/commande', { prospect_id: pid }).then(function (r) {
+      location.assign(r.checkout_url || (s.dataset.app + '/public/tunnel/confirmation?commande=' + r.commande_id));
+    }).catch(function (x) { e.target.disabled = false; alert(x.message); });
+  });
+  form.addEventListener('submit', function (e) {
+    e.preventDefault(); err.hidden = true;
+    var d = new FormData(form), b = { email: d.get('email'), prenom: d.get('prenom') || '', consentement: true, source: 'shopify-' + mode }, aim = 'tresorerie';
+    if (mode === 'reprise') {
+      var r = 0, c = 0, rep = {};
+      form.querySelectorAll('input[type=radio]:checked').forEach(function (i) { r += +i.dataset.r; c += +i.dataset.c; rep[i.name] = i.value; });
+      b.priorite = r >= c + 2 ? 'reprendre' : c >= r + 2 ? 'creer' : 'les_deux'; b.situation = 'reprise'; b.source = 'tunnel-reprise'; b.reponses_test = rep;
+    } else { b.situation = d.get('situation'); b.priorite = d.get('priorite'); }
+    form.querySelector('.zy-tun__envoyer').disabled = true;
+    post('/tunnel-zayado/capture', b).then(function (o) {
+      pid = o.prospect_id; form.hidden = true; res.hidden = false;
+      var merci = 'Merci' + (b.prenom ? ', ' + b.prenom : '') + '.';
+      if (mode === 'reprise') { var p = PROFILS[b.priorite]; res.querySelector('[data-res-sur]').textContent = merci; res.querySelector('[data-res-titre]').textContent = p[0]; res.querySelector('[data-res-texte]').textContent = p[1]; }
+      else { var q = PRIO[b.priorite]; aim = q[2]; res.querySelector('[data-res-sur]').textContent = merci + ' Ta priorité · ' + q[0]; res.querySelector('[data-res-titre]').textContent = 'Ton premier pas cette semaine'; res.querySelector('[data-res-texte]').textContent = q[1]; }
+      res.querySelector('[data-res-guide]').href = s.dataset['pdf' + aim.charAt(0).toUpperCase() + aim.slice(1)];
+      kit(); res.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }).catch(function (x) { err.textContent = x.message; err.hidden = false; form.querySelector('.zy-tun__envoyer').disabled = false; });
+  });
+  var rdv = s.querySelector('.zy-tun__rdv');
+  if (rdv) rdv.addEventListener('submit', function (e) {
+    e.preventDefault(); var d = new FormData(rdv);
+    post('/tunnel-zayado/reprise/rdv', { prospect_id: pid, telephone: d.get('telephone'), creneau: d.get('creneau'), projet: d.get('projet') })
+      .then(function () { rdv.hidden = true; s.querySelector('.zy-tun__ok').hidden = false; }).catch(function (x) { alert(x.message); });
+  });
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Zayado — Tunnel",
+  "tag": "div",
+  "settings": [
+    { "type": "select", "id": "mode", "label": "Tunnel", "default": "diagnostic", "options": [ { "value": "diagnostic", "label": "Diagnostic gratuit" }, { "value": "reprise", "label": "Créer ou reprendre" } ] },
+    { "type": "text", "id": "tampon", "label": "Tampon", "default": "Diagnostic gratuit · 2 minutes" },
+    { "type": "text", "id": "titre", "label": "Titre (début)", "default": "Combien de mois ton entreprise" },
+    { "type": "text", "id": "mot_main", "label": "Mot manuscrit", "default": "tient-elle" },
+    { "type": "text", "id": "titre_fin", "label": "Titre (fin)", "default": "sans nouvelle vente ?" },
+    { "type": "textarea", "id": "texte", "label": "Texte", "default": "La plupart des indépendants ne le savent pas, et c'est ce flou qui empêche de dormir. Quelques réponses, et tu repars avec ta priorité du moment, un premier pas concret et un guide offert." },
+    { "type": "textarea", "id": "promesses", "label": "Promesses (une par ligne)", "default": "Ta priorité du moment, nommée clairement\nUn premier pas concret pour cette semaine\nUn guide PDF offert, à lire ce soir" }
+  ]
+}
+{% endschema %}

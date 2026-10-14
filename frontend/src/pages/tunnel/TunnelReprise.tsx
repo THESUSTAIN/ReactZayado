@@ -65,7 +65,7 @@ function profil(rep: Record<string, string>): string {
   return r >= c + 2 ? "reprendre" : c >= r + 2 ? "creer" : "les_deux";
 }
 
-const champ = "w-full rounded-xl border bg-white px-4 py-3 text-[15px] outline-none transition-colors focus:border-[#C9A97E]";
+const champ = "w-full rounded-xl border bg-white px-4 py-3 text-[15px] outline-none transition-colors focus:border-[#DEC2A3]";
 
 // ---------------- 1. Capture + test ----------------
 export function RepriseCapture() {

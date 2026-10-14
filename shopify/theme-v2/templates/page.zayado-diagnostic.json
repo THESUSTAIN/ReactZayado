@@ -1,0 +1,7 @@
+{
+  "sections": {
+    "tunnel": { "type": "zayado-tunnel", "settings": { "mode": "diagnostic" } },
+    "faq": { "type": "zayado-faq", "settings": {} }
+  },
+  "order": ["tunnel", "faq"]
+}

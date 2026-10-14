@@ -18,8 +18,8 @@ import "@fontsource/poppins/700.css";
 import "@fontsource/caveat/600.css";
 
 export const NAVY = "#0D1F38";
-export const GOLD = "#D6A64F"; // or du site zayado.net (mots manuscrits, détails)
-export const GOLD_SOFT = "#F0DCAC";
+export const GOLD = "#DEC2A3"; // or du site zayado.net (mots manuscrits, détails)
+export const GOLD_SOFT = "#F1E2CC";
 /* Dégradés de la marque (identiques au site zayado.net) */
 export const DEGRADE_BLEU = "linear-gradient(120deg, #0D1F38 0%, #1E3D63 55%, #2E4A6B 100%)";
 export const DEGRADE_CHAMPAGNE = "linear-gradient(120deg, #F1E2CC 0%, #DEC2A3 100%)";
@@ -146,7 +146,7 @@ export function TunnelCapture() {
     mutationFn: (b: CaptureIn) => apiPost<CaptureOut>("/tunnel-zayado/capture", { ...b }),
     onSuccess: (r) => navigate(`/public/tunnel/merci?p=${r.prospect_id}`),
   });
-  const champ = "w-full rounded-xl border bg-white px-4 py-3 text-[15px] outline-none transition-colors focus:border-[#C9A97E]";
+  const champ = "w-full rounded-xl border bg-white px-4 py-3 text-[15px] outline-none transition-colors focus:border-[#DEC2A3]";
   return (
     <Cadre testId="tunnel-capture-page" seo={SEO_DIAGNOSTIC}>
       <section className="grid items-start gap-10 pt-6 md:grid-cols-[1.1fr_1fr] md:pt-12">
@@ -523,7 +523,7 @@ export function TunnelKit() {
               onClick={() => input.current?.click()}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => { e.preventDefault(); const file = e.dataTransfer.files?.[0]; if (file) envoyer.mutate(file); }}
-              className="mt-6 cursor-pointer rounded-[22px] border-2 border-dashed bg-white p-8 text-center transition-colors hover:border-[#C9A97E]"
+              className="mt-6 cursor-pointer rounded-[22px] border-2 border-dashed bg-white p-8 text-center transition-colors hover:border-[#DEC2A3]"
               style={{ borderColor: LINE }}
             >
               {envoyer.isPending ? <Loader2 className="mx-auto size-7 animate-spin" style={{ color: GOLD }} /> : <Upload className="mx-auto size-7" style={{ color: GOLD }} />}

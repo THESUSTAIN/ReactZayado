@@ -63,7 +63,7 @@
         {%- if section.settings.logo != blank -%}
           {{ section.settings.logo | image_url: width: 200 | image_tag: alt: shop.name, width: 44, height: 44, class: 'zy-entete__logo-img' }}
         {%- else -%}
-          <svg width="40" height="40" viewBox="0 0 48 48" fill="none" aria-hidden="true"><circle cx="24" cy="24" r="23" fill="#0D1F38"/><path d="M15 16h18L15 32h18" stroke="#F0DCAC" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg width="40" height="40" viewBox="0 0 48 48" fill="none" aria-hidden="true"><circle cx="24" cy="24" r="23" fill="#0D1F38"/><path d="M15 16h18L15 32h18" stroke="#F1E2CC" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         {%- endif -%}
         <span class="zy-entete__nom">
           <strong>Zayado</strong>
@@ -146,7 +146,7 @@
                 </div>
               </div>
             {%- else -%}
-              <a href="{{ lien.url }}"{% if forloop.first %} class="zy-entete__tout{% if lien.active %} est-actif{% endif %}"{% elsif lien.active %} class="est-actif" aria-current="page"{% endif %}>
+              <a href="{% if forloop.first and settings.zy_boutique_bientot %}/pages/coming-soon{% else %}{{ lien.url }}{% endif %}"{% if forloop.first %} class="zy-entete__tout{% if lien.active %} est-actif{% endif %}"{% elsif lien.active %} class="est-actif" aria-current="page"{% endif %}>
                 {%- if titre_cle == 'promos' -%}<svg class="zy-entete__etoile" viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7L12 17.2 5.8 20.9l1.6-7L2 9.2l7.1-.6z"/></svg>{%- endif -%}
                 {{- lien.title -}}
               </a>
@@ -193,7 +193,7 @@
     { "type": "text", "id": "liens_droite", "label": "Liens alignés à droite", "info": "Titres séparés par des virgules. Ex. Le journal, Services Pro, Partenaires", "default": "Le journal, Services Pro, Partenaires" },
     { "type": "text", "id": "lien_compte", "label": "Lien « Mon espace »", "default": "https://app.zayado.net/login", "info": "L'espace client est l'appli VisionAct." },
     { "type": "text", "id": "cta_texte", "label": "Bouton", "default": "Faire mon diagnostic" },
-    { "type": "text", "id": "cta_lien", "label": "Lien du bouton", "default": "https://app.zayado.net/diagnostic" }
+    { "type": "text", "id": "cta_lien", "label": "Lien du bouton", "default": "https://zayado.net/pages/diagnostic" }
   ]
 }
 {% endschema %}

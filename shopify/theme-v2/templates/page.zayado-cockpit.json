@@ -195,7 +195,7 @@
         "bouton_1": "Commencer l'essai",
         "lien_1": "https://app.zayado.net/onboarding?plan=serenite&essai=1",
         "bouton_2": "Faire le diagnostic",
-        "lien_2": "https://app.zayado.net/public/tunnel",
+        "lien_2": "/pages/diagnostic",
         "centre": true
       }
     }

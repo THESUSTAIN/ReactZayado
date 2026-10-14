@@ -44,7 +44,7 @@ ttq.load('VOTRE_PIXEL_TIKTOK');ttq.page();
     champs: {
       html_haut: `<div class="zy-rebours" data-fin="2026-12-31T23:59:00">L'offre se termine dans <b class="zy-rebours__t">--</b></div>`,
       css: `.zy-rebours{margin:0 0 20px;padding:12px 16px;border-radius:14px;background:#0D1F38;color:#FDFCF8;text-align:center;font-size:15px}
-.zy-rebours b{color:#F0DCAC;font-variant-numeric:tabular-nums}`,
+.zy-rebours b{color:#F1E2CC;font-variant-numeric:tabular-nums}`,
       js: `document.querySelectorAll('.zy-rebours').forEach(function(el){var fin=new Date(el.dataset.fin).getTime(),t=el.querySelector('.zy-rebours__t');
 function maj(){var r=Math.max(0,fin-Date.now()),j=Math.floor(r/864e5),h=Math.floor(r%864e5/36e5),m=Math.floor(r%36e5/6e4),s=Math.floor(r%6e4/1e3);
 t.textContent=j+' j '+h+' h '+m+' min '+s+' s';if(r<=0){el.textContent="L'offre est terminée.";clearInterval(i);}}var i=setInterval(maj,1000);maj();});`,
@@ -68,14 +68,14 @@ t.textContent=j+' j '+h+' h '+m+' min '+s+' s';if(r<=0){el.textContent="L'offre 
     cle: "garantie", nom: "Garantie satisfait ou remboursé", description: "Encadré de réassurance sous l'offre.",
     champs: {
       html_bas: `<div class="zy-garantie"><b>Garantie 30 jours satisfait ou remboursé.</b> Si l'offre ne vous convient pas, un simple e-mail suffit : vous êtes remboursé·e, sans justification.</div>`,
-      css: `.zy-garantie{margin-top:24px;padding:16px 18px;border-radius:16px;border:1px dashed #D6A64F;background:#FFFBF2;font-size:14px}`,
+      css: `.zy-garantie{margin-top:24px;padding:16px 18px;border-radius:16px;border:1px dashed #DEC2A3;background:#FFFBF2;font-size:14px}`,
     },
   },
   {
     cle: "bandeau-promo", nom: "Bandeau promo", description: "Message en haut de page (lancement, code promo…).",
     champs: {
       html_haut: `<div class="zy-promo">🎁 Offre de lancement : -20 % avec le code <b>LANCEMENT</b></div>`,
-      css: `.zy-promo{margin:0 0 16px;padding:10px 14px;border-radius:999px;background:#F0DCAC;color:#0D1F38;text-align:center;font-size:14px}`,
+      css: `.zy-promo{margin:0 0 16px;padding:10px 14px;border-radius:999px;background:#F1E2CC;color:#0D1F38;text-align:center;font-size:14px}`,
     },
   },
   {

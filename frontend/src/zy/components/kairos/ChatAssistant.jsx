@@ -608,7 +608,7 @@ function ChatTab({ firstName, grand = false }) {
                   onImage={(img) => setMessages((x) => [...x, { role: "assistant", content: img.description, image: img, le: new Date().toISOString() }])} i={i} />
               )}
               {m.juridique && (
-                <p className="inline-flex items-center gap-1.5 rounded-full border border-[#DEC2A3]/35 bg-[#DEC2A3]/10 px-2.5 py-1 text-[11px] font-semibold text-[#F0DCAC]" data-testid="chat-juridique-indicateur">
+                <p className="inline-flex items-center gap-1.5 rounded-full border border-[#DEC2A3]/35 bg-[#DEC2A3]/10 px-2.5 py-1 text-[11px] font-semibold text-[#F1E2CC]" data-testid="chat-juridique-indicateur">
                   <Scale size={12} /> Mode juridique : textes de loi cités, tant que vous parlez de droit
                 </p>
               )}
@@ -664,7 +664,7 @@ function ChatTab({ firstName, grand = false }) {
                 )}
                 <button onClick={changerModeJuridique} data-testid="chat-mode-juridique" aria-label={`Mode juridique : ${MODES_JURIDIQUE[modeJuridique]}`}
                   title="Auto : dès qu'on parle de droit, les textes de loi sont cités · Toujours · Non"
-                  className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[12px] font-medium transition-colors ${modeJuridique === "jamais" ? "border-white/12 text-offwhite/45" : modeJuridique === "toujours" ? "border-gold/60 bg-gold/15 text-gold" : "border-gold/35 bg-gold/[0.07] text-[#F0DCAC]"}`}>
+                  className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[12px] font-medium transition-colors ${modeJuridique === "jamais" ? "border-white/12 text-offwhite/45" : modeJuridique === "toujours" ? "border-gold/60 bg-gold/15 text-gold" : "border-gold/35 bg-gold/[0.07] text-[#F1E2CC]"}`}>
                   <Scale className="h-3.5 w-3.5" /> Juridique : {MODES_JURIDIQUE[modeJuridique]}
                 </button>
               </div>

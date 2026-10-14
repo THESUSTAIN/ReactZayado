@@ -9,7 +9,7 @@
         {%- if section.settings.texte != blank -%}<p class="zy-bandeau__phrase">{{ section.settings.texte }}</p>{%- endif -%}
       </div>
       <div class="zy-bandeau__actions">
-        {%- if section.settings.bouton_1 != blank -%}<a class="zy__btn zy-bandeau__btn" href="{{ section.settings.lien_1 | default: 'https://app.zayado.net/public/tunnel' }}">{{ section.settings.bouton_1 }} →</a>{%- endif -%}
+        {%- if section.settings.bouton_1 != blank -%}<a class="zy__btn zy-bandeau__btn" href="{{ section.settings.lien_1 | default: '/pages/diagnostic' }}">{{ section.settings.bouton_1 }} →</a>{%- endif -%}
         {%- if section.settings.bouton_2 != blank -%}<a class="zy__btn zy-bandeau__btn--ligne" href="{{ section.settings.lien_2 }}">{{ section.settings.bouton_2 }}</a>{%- endif -%}
       </div>
     </div>

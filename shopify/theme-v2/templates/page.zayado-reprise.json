@@ -1,0 +1,6 @@
+{
+  "sections": {
+    "tunnel": { "type": "zayado-tunnel", "settings": { "mode": "reprise", "tampon": "Créer ou reprendre · test gratuit en 2 minutes", "titre": "Tu veux lancer ta boîte ? Et si tu rachetais une entreprise", "mot_main": "qui tourne déjà", "titre_fin": "?", "texte": "Créer, c'est partir de zéro : trouver ses premiers clients, attendre avant de se verser un salaire. Reprendre, c'est démarrer avec des clients, un chiffre d'affaires et souvent une équipe dès le premier jour.", "promesses": "Des clients dès le premier jour\nPeu ou pas d'apport, c'est possible\nLe bon prix, sans mauvaise surprise" } }
+  },
+  "order": ["tunnel"]
+}

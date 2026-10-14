@@ -47,7 +47,7 @@
       {%- assign m = p | split: '|' -%}
       {%- if filtre == m[0] -%}
         {%- case m[0] -%}
-          {%- when 'tresorerie' -%}{%- assign aim = 'tresorerie' -%}{%- assign offre = 'Faire mon diagnostic gratuit' -%}{%- assign offre_url = 'https://app.zayado.net/public/tunnel' -%}
+          {%- when 'tresorerie' -%}{%- assign aim = 'tresorerie' -%}{%- assign offre = 'Faire mon diagnostic gratuit' -%}{%- assign offre_url = '/pages/diagnostic' -%}
           {%- when 'clients' -%}{%- assign aim = 'tresorerie' -%}{%- assign offre = 'Essayer le Radar de prospects' -%}{%- assign offre_url = '/collections/outils-ia' -%}
           {%- when 'energie' -%}{%- assign aim = 'rituel' -%}{%- assign offre = 'Voir les rituels et box' -%}{%- assign offre_url = '/collections/rituel-confort' -%}
           {%- else -%}{%- assign aim = 'rituel' -%}{%- assign offre = 'Voir Espace & Organisation' -%}{%- assign offre_url = '/collections/espace-organisation' -%}

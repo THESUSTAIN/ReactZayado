@@ -20,7 +20,7 @@ Textes, puces (une par ligne), liens et image réglables dans le customizer. {%-
 
     <div class="zy-aig__cartes">
       {%- comment -%} ── Carte 1 : Je pilote mon activité ── {%- endcomment -%}
-      <a class="zy-aig__carte zy-aig__carte--nuit zy-anim" style="--d: .45s" href="{{ section.settings.lien_1 | default: 'https://app.zayado.net/diagnostic' }}" data-testid="hero-carte-pilote">
+      <a class="zy-aig__carte zy-aig__carte--nuit zy-anim" style="--d: .45s" href="{{ section.settings.lien_1 | default: 'https://zayado.net/pages/diagnostic' }}" data-testid="hero-carte-pilote">
         <div class="zy-aig__carte-tete">
           <span class="zy-aig__num">01</span>
           <span class="zy-aig__kicker">{{ section.settings.kicker_1 | default: "Chiffres · Radar · Plan · Copilote IA" }}</span>
@@ -99,7 +99,7 @@ Textes, puces (une par ligne), liens et image réglables dans le customizer. {%-
     { "type": "textarea", "id": "texte_1", "label": "Texte", "default": "Votre vision, vos chiffres, vos prospects et votre plan au même endroit — avec un copilote qui connaît votre projet." },
     { "type": "textarea", "id": "puces_1", "label": "Puces (une par ligne)", "default": "Trésorerie, marge et mois d'autonomie, expliqués simplement\nDes prospects réels qui bougent près de chez vous\nUn plan daté et un copilote IA qui connaît votre projet" },
     { "type": "text", "id": "cta_1", "label": "Bouton", "default": "Faire mon diagnostic" },
-    { "type": "url", "id": "lien_1", "label": "Lien (défaut : https://app.zayado.net/diagnostic)" },
+    { "type": "url", "id": "lien_1", "label": "Lien (défaut : https://zayado.net/pages/diagnostic)" },
     { "type": "checkbox", "id": "carte_jauge", "label": "Afficher la mini-jauge d'équilibre", "default": true },
     { "type": "range", "id": "score", "label": "Score d'équilibre", "min": 0, "max": 100, "step": 1, "default": 78 },
     { "type": "textarea", "id": "jauges", "label": "Jauges (Libellé|Valeur, une par ligne)", "default": "Clarté financière|88\nÉnergie|72\nOrganisation|64" },

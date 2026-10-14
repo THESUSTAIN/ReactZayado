@@ -9,7 +9,7 @@
         "mot_main": "épuiser.",
         "texte": "Zayado équilibre votre vie personnelle et votre vie professionnelle : la santé financière de l'entreprise, le bien-être de celle ou celui qui la dirige. Commencez par le diagnostic : 2 minutes, votre profil, vos 3 leviers prioritaires.",
         "bouton_1": "Faire mon diagnostic gratuit",
-        "lien_1": "https://app.zayado.net/public/tunnel",
+        "lien_1": "/pages/diagnostic",
         "bouton_2": "Découvrir notre base",
         "lien_2": "#base",
         "mention": "Gratuit · 2 minutes · sans engagement"
@@ -205,7 +205,7 @@
         "titre": "Prêt à construire l'équilibre ?",
         "texte": "Votre profil et vos 3 leviers prioritaires, sans engagement. Résultat immédiat.",
         "bouton_1": "Faire mon diagnostic gratuit",
-        "lien_1": "https://app.zayado.net/public/tunnel",
+        "lien_1": "/pages/diagnostic",
         "bouton_2": "Nous écrire",
         "lien_2": "/pages/contact",
         "centre": true

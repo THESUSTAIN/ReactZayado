@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, type ReactNode } from "react";
-import { Link, Navigate, Routes, Route, useLocation } from "react-router-dom";
+import { Link, Navigate, Routes, Route, useLocation, useParams } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { TOKEN_KEY } from "@/lib/api";
 // Tunnel public Zayado (capture → Kit → Fast-Track → confirmation) — non référencé
@@ -183,22 +183,32 @@ function GardeAcces() {
   );
 }
 
+// Pages publiques = boutique Shopify. L'appli ne garde que connexion, espace client, paiement Mollie, /admin et /espace-vendeur.
+const BOUTIQUE = import.meta.env.VITE_SHOP_URL as string;
+const LEGAL: Record<string, string> = { cgu: "cgu", cgv: "cgv", mentions: "mentions-legales", "mentions-legales": "mentions-legales", confidentialite: "confidentialite" };
+function VersBoutique({ chemin, legal = false }: { chemin?: string; legal?: boolean }) {
+  const { page = "" } = useParams();
+  const cible = legal ? `/pages/${LEGAL[page] ?? page}` : chemin;
+  useEffect(() => { window.location.replace(`${BOUTIQUE}${cible}`); }, [cible]);
+  return null;
+}
+
 export default function App() {
   return (
     <>
       <GardeAcces />
       <Routes>
         <Route path="/login" element={<div className="zy-root"><Login /></div>} />
-        <Route path="/public/tunnel" element={<Suspense fallback={null}><TunnelCapture /></Suspense>} />
-        <Route path="/public/tunnel/merci" element={<Suspense fallback={null}><TunnelMerci /></Suspense>} />
+        <Route path="/public/tunnel" element={<VersBoutique chemin="/pages/diagnostic" />} />
+        <Route path="/public/tunnel/merci" element={<VersBoutique chemin="/pages/diagnostic" />} />
         <Route path="/public/tunnel/fast-track" element={<Suspense fallback={null}><TunnelFastTrack /></Suspense>} />
         <Route path="/public/tunnel/confirmation" element={<Suspense fallback={null}><TunnelConfirmation /></Suspense>} />
         <Route path="/t/:slug" element={<Suspense fallback={null}><TunnelPublic /></Suspense>} />
-        <Route path="/public/reprise" element={<Suspense fallback={null}><RepriseCapture /></Suspense>} />
-        <Route path="/public/reprise/rdv" element={<Suspense fallback={null}><RepriseRdv /></Suspense>} />
+        <Route path="/public/reprise" element={<VersBoutique chemin="/pages/reprise" />} />
+        <Route path="/public/reprise/rdv" element={<VersBoutique chemin="/pages/reprise" />} />
         {/* Zayado ne fait pas de cession : l'ancienne adresse renvoie vers la reprise sans apport */}
-        <Route path="/public/cession" element={<Navigate to="/public/reprise" replace />} />
-        <Route path="/public/reprise/merci" element={<Suspense fallback={null}><RepriseMerci /></Suspense>} />
+        <Route path="/public/cession" element={<VersBoutique chemin="/pages/reprise" />} />
+        <Route path="/public/reprise/merci" element={<VersBoutique chemin="/pages/reprise" />} />
         {/* Lien personnel envoyé au client (e-mail / WhatsApp) pour écrire son témoignage */}
         <Route path="/temoignage/:jeton" element={<Suspense fallback={null}><TemoignagePublic /></Suspense>} />
         <Route path="/public/tunnel/kit" element={<Suspense fallback={null}><TunnelKit /></Suspense>} />
@@ -246,7 +256,7 @@ export default function App() {
         <Route path="/app/diagnostic" element={<Zy><ZY.Diagnostic enApp /></Zy>} />
         <Route path="/app/marketplace" element={<Navigate to="/espace-vendeur" replace />} />
         {/* Un seul diagnostic public : le tunnel (capture → Kit → Fast-Track). Le diagnostic d'équilibre reste dans l'appli. */}
-        <Route path="/diagnostic" element={<Navigate to="/public/tunnel" replace />} />
+        <Route path="/diagnostic" element={<VersBoutique chemin="/pages/diagnostic" />} />
         <Route path="/onboarding" element={<Zy><ZY.Onboarding /></Zy>} />
         <Route path="/activer" element={<Zy><ZY.Activer /></Zy>} />
         <Route path="/compte" element={<Zy><ZY.MonCompte /></Zy>} />
@@ -260,9 +270,9 @@ export default function App() {
         <Route path="/v/:token" element={<Zy publique><ZY.PublicVision /></Zy>} />
         <Route path="/pricing" element={<Zy publique><ZY.Pricing /></Zy>} />
         <Route path="/pricing/success" element={<Zy publique><ZY.PricingSuccess /></Zy>} />
-        <Route path="/legal/confidentialite" element={<Zy publique><ZY.Confidentialite /></Zy>} />
-        <Route path="/partenaires/thesustain" element={<Zy publique><ZY.PartenariatTheSustain /></Zy>} />
-        <Route path="/legal/:page" element={<Zy publique><ZY.Legal /></Zy>} />
+        <Route path="/legal/confidentialite" element={<VersBoutique chemin="/pages/confidentialite" />} />
+        <Route path="/partenaires/thesustain" element={<VersBoutique chemin="/pages/maison" />} />
+        <Route path="/legal/:page" element={<VersBoutique legal />} />
         <Route path="/embed/tarifs" element={<Embed><ZY.TarifsEmbed /></Embed>} />
         <Route path="/embed/exercice/:slug" element={<Embed><ZY.ExerciceEmbed /></Embed>} />
         <Route path="/embed/confidentialite" element={<Embed><ZY.ConfidentialiteEmbed /></Embed>} />

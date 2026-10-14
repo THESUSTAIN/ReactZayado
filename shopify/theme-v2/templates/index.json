@@ -68,7 +68,7 @@
             "fonction": "Reprise sans apport",
             "reponse": "Reprenez une entreprise qui a déjà des clients et un chiffre d'affaires. Zayado monte le financement avec ses partenaires (prêts d'honneur, garanties, crédit vendeur) et vous accompagne pour limiter la casse.",
             "cta": "Étudier ma reprise",
-            "lien": "https://app.zayado.net/public/reprise"
+            "lien": "/pages/reprise"
           }
         }
       },
@@ -158,7 +158,7 @@
             "titre": "Reprendre une entreprise",
             "texte": "Trouver une entreprise rentable, l'évaluer, négocier et la financer sans apport (prêts d'honneur, garanties, crédit vendeur), avec un seul interlocuteur.",
             "cta": "Parler de mon projet",
-            "lien": "https://app.zayado.net/public/reprise"
+            "lien": "/pages/reprise"
           }
         }
       },

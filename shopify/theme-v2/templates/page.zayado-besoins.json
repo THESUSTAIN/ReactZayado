@@ -9,7 +9,7 @@
         "mot_main": "maintenant ?",
         "texte": "Pas un catalogue. Dites-nous où vous en êtes : nous vous montrons la voie, puis nous la tenons avec vous. Le conseil, le pilotage, les bons contacts et le bon équipement.",
         "bouton_1": "Faire mon diagnostic gratuit",
-        "lien_1": "https://app.zayado.net/public/tunnel",
+        "lien_1": "/pages/diagnostic",
         "bouton_2": "Parcourir les 4 piliers",
         "lien_2": "#piliers",
         "mention": "Gratuit · 2 minutes · sans engagement",
@@ -132,7 +132,7 @@
         "texte": "Chaque besoin se règle à l'un de ces trois niveaux. Le détail et le budget se cadrent avec vous, après le diagnostic.",
         "colonnes": "3",
         "bouton": "Le diagnostic vous dira par où commencer",
-        "bouton_lien": "https://app.zayado.net/public/tunnel"
+        "bouton_lien": "/pages/diagnostic"
       },
       "blocks": {
         "c1": {
@@ -183,7 +183,7 @@
         "bouton_1": "Découvrir le Cockpit",
         "lien_1": "/pages/cockpit",
         "bouton_2": "Faire le diagnostic",
-        "lien_2": "https://app.zayado.net/public/tunnel"
+        "lien_2": "/pages/diagnostic"
       }
     }
   },

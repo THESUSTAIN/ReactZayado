@@ -43,7 +43,7 @@
           "settings": {
             "titre": "Rachat & reprise d'entreprise",
             "desc": "Reprendre une entreprise qui tourne, même sans apport",
-            "url": "https://app.zayado.net/public/reprise",
+            "url": "/pages/reprise",
             "icone": "cle",
             "accent": true,
             "image_url": "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/103b8ede3aa9b67d0aec3d3e1bfd6e773c01699f643fa6b1fb498a95d1f80522.jpeg",

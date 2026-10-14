@@ -6,7 +6,7 @@
       "type": "zayado-pied",
       "blocks": {
         "boutique": { "type": "colonne", "settings": { "titre": "La boutique", "liens": "Concentration visuelle | /collections/concentration-visuelle\nCorps | /collections/corps\nÂme | /collections/ame\nRituel & Confort | /collections/rituel-confort\nEspace & Organisation | /collections/espace-organisation" } },
-        "copilote": { "type": "colonne", "settings": { "titre": "Le copilote", "liens": "Diagnostic gratuit | https://app.zayado.net/public/tunnel\nOutils & tarifs | /collections/outils-ia\nAccompagnement | /collections/accompagnement\nReprendre une entreprise | /collections/rachat-reprise\nMon espace | https://app.zayado.net/login" } },
+        "copilote": { "type": "colonne", "settings": { "titre": "Le copilote", "liens": "Diagnostic gratuit | /pages/diagnostic\nOutils & tarifs | /collections/outils-ia\nAccompagnement | /collections/accompagnement\nReprendre une entreprise | /collections/rachat-reprise\nMon espace | https://app.zayado.net/login" } },
         "maison": { "type": "colonne", "settings": { "titre": "La maison", "liens": "Le Journal | /blogs/journal\nNotes de la maison | /blogs/journal/tagged/note\nServices Pro | /pages/services\nNos partenaires | /pages/maison\nContact | /pages/contact" } },
         "aide": { "type": "colonne", "settings": { "titre": "Guides offerts", "liens": "Check-up trésorerie | /pages/liens\nRituel anti-surcharge | /pages/liens\nLumière d'écran | /pages/liens" } }
       },

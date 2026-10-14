@@ -20,7 +20,7 @@ export function GuideOffert({ aimant, accroche, testId }: { aimant: Aimant; accr
     <div className="mt-5 flex flex-col items-start gap-4 rounded-[22px] border bg-white p-6 sm:flex-row sm:items-center" style={{ borderColor: LINE }} data-testid={testId}>
       <Gift className="size-6 flex-none" style={{ color: GOLD }} />
       <div className="flex-1">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ color: "#B8893F" }}>{accroche}</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ color: "#A88B6A" }}>{accroche}</p>
         <p className="font-semibold" style={{ color: NAVY }}>{g.titre}</p>
         <p className="text-sm opacity-75">{g.desc}</p>
       </div>
@@ -49,7 +49,7 @@ export function AimantSortie({ aimant, source, accroche, testId }: { aimant: Aim
       ) : (
         <form className="mt-4 flex flex-wrap gap-2" onSubmit={(e) => { e.preventDefault(); envoyer.mutate(); }}>
           <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Ton e-mail" aria-label="Ton e-mail" autoComplete="email"
-            className="min-w-0 flex-[1_1_200px] rounded-full border bg-[#FDFCF8] px-5 py-3 text-[15px] outline-none focus:border-[#C9A97E]" style={{ borderColor: LINE }} data-testid={`${testId}-email`} />
+            className="min-w-0 flex-[1_1_200px] rounded-full border bg-[#FDFCF8] px-5 py-3 text-[15px] outline-none focus:border-[#DEC2A3]" style={{ borderColor: LINE }} data-testid={`${testId}-email`} />
           <button type="submit" disabled={envoyer.isPending} className="site-btn site-btn-primary px-6 py-3 text-[14.5px] disabled:opacity-50" data-testid={`${testId}-envoyer`}>
             {envoyer.isPending ? <Loader2 className="size-4 animate-spin" /> : null} Recevoir le guide <ArrowRight className="size-4" />
           </button>

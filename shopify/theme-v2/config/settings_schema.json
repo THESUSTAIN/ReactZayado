@@ -22,6 +22,12 @@
         "id": "zy_bientot_texte",
         "label": "Texte du bandeau des catégories",
         "default": "La boutique ouvre très bientôt. Laissez votre e-mail sur un produit : vous serez prévenu·e en premier, avec un guide offert."
+      },
+      {
+        "type": "text",
+        "id": "zy_app_url",
+        "label": "Adresse de l'appli (paiement, espace client)",
+        "default": "https://app.zayado.net"
       }
     ]
   },

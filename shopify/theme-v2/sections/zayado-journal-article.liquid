@@ -40,7 +40,7 @@
       <aside class="zy--nuit zy-texte__cta">
         <p class="zy-texte__cta-titre">{{ section.settings.cta_titre }} <span class="zy__main">{{ section.settings.cta_mot }}</span></p>
         <p class="zy__texte">{{ section.settings.cta_texte }}</p>
-        <a class="zy__btn zy__btn--plein" href="{{ section.settings.cta_lien | default: 'https://app.zayado.net/public/tunnel' }}">{{ section.settings.cta_bouton }} →</a>
+        <a class="zy__btn zy__btn--plein" href="{{ section.settings.cta_lien | default: '/pages/diagnostic' }}">{{ section.settings.cta_bouton }} →</a>
       </aside>
     {%- endif -%}
   </div>
