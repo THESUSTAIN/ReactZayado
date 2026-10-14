@@ -106,3 +106,17 @@
 - P1 Tâche 4 : SEO par catégorie (meta, FAQ, données structurées, pages collection)
 - P2 : tâches 5 à 9 (douleur client par page, photos réalistes, doc React↔Shopify, 10 livres SEO US, test complet)
 
+## Mises à jour 14/10/2026 (suite)
+- Aimants à prospects : 3 guides PDF rédigés (shopify/aimants/*.html → theme-v2/assets/zayado-aimant-{tresorerie,rituel,lumiere}.pdf + frontend/public/aimants/). Snippet Shopify zayado-aimant.liquid (client Shopify tagué newsletter, aimant-x, source-x ; PDF livré à l'écran).
+- Hero : inscription + 3 guides au choix sous les cartes. Page Liens : fenêtre guide avant chaque lien. Pied de page riche (zayado-pied). En-tête blanc. Bug du dégradé corrigé (variables CSS limitées à .zy → :root). Bouton CTA mobile qui débordait masqué.
+- SEO : outils/seo_collections.py (titre/description Google + douleur + FAQ + aimant en métachamps, 10 collections) ; section zayado-collection-seo (FAQPage + BreadcrumbList JSON-LD).
+- Boutique « Bientôt » : réglage du thème zy_boutique_bientot (activé) → aucun prix, « Me prévenir » + guide. product.json et collection.json passent sur les sections Zayado.
+- Journal A+C : par problème (tresorerie/clients/energie/organisation, articles étiquetés via l'API), « Par où commencer ? », bandeau parcours (guide + offre), Témoignages retiré des filtres, Notes de la maison conservé.
+- React : /api/leads accepte `aimant` (e-mail + Brevo si BREVO_API_KEY + BREVO_LISTE_AIMANTS) ; AimantSortie/GuideOffert dans les tunnels Diagnostic et Reprise ; textes de l'état vide du Radar réécrits. Tests : iteration_1 (React) et iteration_2 (Shopify) à 100 %.
+
+## Reste à faire
+- Mettre en ligne : déployer le thème Préparation + redéployer Railway (React/backend).
+- Brevo : clé + liste « aimants », brouillons d'e-mails de bienvenue ; installer l'app Brevo pour Shopify (synchro clients).
+- Bibliothèque : 10 livres (They Ask You Answer, Product-Led SEO, The Art of SEO, Everybody Writes, Content Inc., StoryBrand, DotCom Secrets, Expert Secrets, $100M Leads, Profit First) en articles résumés.
+- P2 : photos réalistes, doc React↔Shopify, décocher zy_boutique_bientot à l'ouverture.
+

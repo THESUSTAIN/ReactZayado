@@ -1,0 +1,34 @@
+{
+  "summary": "Validated the Zayado Shopify 'Préparation' preview theme (preview_id=205715800405) across home, journal, collection concentration-visuelle, product (plaid-recuperation-laine), tagged journal pages (tresorerie/energie) and pages/liens, at 390px and 1280px. All 8 feature checks from the request pass.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "zayado-pied.liquid: le logo footer (Zayado + baseline) perd en lisibilité sur fond navy foncé — contraste OK mais la baseline 'clarté · sérénité · équilibre' en italique or est petite (<12px probablement) ; vérifier en 390px.",
+    "Les filtres journal (Tout / Articles / Notes de la maison) sont implémentés en pilules — bien ; penser à ajouter aria-current cohérent sur l'onglet actif (déjà présent côté CSS d'après la liste des sélecteurs testés)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "100%"},
+  "test_credentials": "N/A (pages publiques)",
+  "seed_data_creation": "Aucune — aucun formulaire d'e-mail envoyé (consigne agent-to-agent respectée).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Pour tester le thème 'Préparation' il faut TOUJOURS ajouter ?preview_theme_id=205715800405 à chaque URL. Accepter la bannière cookies ('Accept') et masquer la barre d'aperçu Shopify (#preview-bar-iframe) qui peut recouvrir des éléments en bas. Le bouton 'Faire mon diagnostic' est volontairement masqué sous 768px. Le changement de titre du guide offert dans le pied-de-page se fait via les boutons role=radio data-testid=aimant-choix-{tresorerie|rituel|lumiere} ; le titre vit dans un div/p (pas h2/h3) — utiliser '.zy-aimant__titre' ou lire le texte global de la carte aimant. NE PAS soumettre de formulaire email (crée de vrais clients Shopify).",
+  "detailed_results": {
+    "gradient": "--zy-degrade-bleu = 'linear-gradient(120deg, #0D1F38 0%, #1E3D63 55%, #2E4A6B 100%)' sur /, /blogs/journal, /collections/concentration-visuelle, /products/plaid-recuperation-laine (390 & 1280px). 0 offender (.zy__btn--plein, .zy-aig__carte--nuit, .zy-pilule[aria-current] avec background-image:none).",
+    "header_white": ".zy-entete__bandeau=rgb(255,255,255), .zy-entete__barre=rgba(255,255,255,0.97), .zy-entete__catalogues=rgb(255,255,255). 390px: 0 overflow, bouton 'Faire mon diagnostic' bien masqué (offsetParent null).",
+    "footer": "[data-testid=pied-de-page] présent, 5 colonnes (Marque + 'La boutique' + 'Le copilote' + 'La maison' + 'Guides offerts'), 4 badges confiance (Mollie / Europe / Retour 14j / Testés), mentions légales ©2026 + nav legal, 3 choix aimant (tresorerie/rituel/lumiere), clic sur 'Lumière d'écran' change le titre du guide à 'Bien choisir sa lumière d'écran' (vérifié visuellement).",
+    "collection_bientot": "/collections/concentration-visuelle : [data-testid=collection-bientot] présent, 0 prix € trouvé dans la page, bouton 'Me prévenir' présent.",
+    "product_bientot": "/products/plaid-recuperation-laine : #prevenir (formulaire 'Me prévenir') présent, [data-zy-aimant] présent, aucun prix €.",
+    "journal": "H1='Le Journal des entrepreneurs qui veulent dormir tranquilles', filtres contiennent Tout/Articles/Notes de la maison, PAS de 'Témoignages', [data-testid=journal-par-ou-commencer] présent, 4 cartes journal-parcours-{tresorerie,clients,energie,organisation} présentes.",
+    "journal_tresorerie": "Clic sur journal-parcours-tresorerie (A href=/blogs/journal/tagged/tresorerie) → bandeau [data-testid=journal-parcours-bandeau] + offre [data-testid=journal-parcours-offre] présents, 2 articles filtrés.",
+    "journal_energie": "/blogs/journal/tagged/energie : bandeau présent, 'Notes de la maison' détecté dans le contenu.",
+    "liens": "/pages/liens : clic sur [data-testid=lien-decouvrir] ouvre un dialog[open] contenant 'GUIDE OFFERT · PDF' + 'Le check-up trésorerie en 10 minutes' + lien 'Non merci, continuer directement →'.",
+    "seo_collection": "/collections/concentration-visuelle : [data-testid=collection-douleur] ✓, [data-testid=collection-faq] ✓, scripts application/ld+json = ['FAQPage','BreadcrumbList'] ✓, <title>='Lunettes et filtres anti lumière bleue | Zayado' ✓."
+  }
+}
