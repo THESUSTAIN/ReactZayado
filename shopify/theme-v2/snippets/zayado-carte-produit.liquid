@@ -7,7 +7,7 @@
   Utilisation : {% render 'zayado-carte-produit', product: product, libelle: 'Découvrir' %}
 {%- endcomment -%}
 {%- assign bientot = false -%}
-{%- if product.tags contains 'bientot' -%}{%- assign bientot = true -%}{%- endif -%}
+{%- if product.tags contains 'bientot' or settings.zy_boutique_bientot -%}{%- assign bientot = true -%}{%- endif -%}
 {%- assign lien = product.metafields.zayado.lien_app.value | default: product.url -%}
 {%- assign cta = product.metafields.zayado.cta.value | default: libelle | default: 'Découvrir' -%}
 {%- if bientot -%}{%- assign lien = product.url -%}{%- assign cta = 'Me prévenir' -%}{%- endif -%}
@@ -33,7 +33,7 @@
     <div class="zy-carte__bas">
       <span class="zy-carte__prix">
         {%- if bientot -%}
-          <span class="zy-carte__bientot">En cours de sélection</span>
+          <span class="zy-carte__bientot">Bientôt disponible</span>
         {%- elsif product.tags contains 'sur-devis' -%}
           Sur devis
         {%- else -%}

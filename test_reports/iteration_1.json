@@ -1,0 +1,29 @@
+{
+  "summary": "Validated lead-magnet (aimant) end-to-end: backend POST /api/leads (6 cases: 3 valid aimants + no aimant + invalid aimant + 422 for email without @), static PDF serving for the 3 guides, and all frontend flows (tunnel capture + diagnostic → merci with priorite→aimant mapping, reprise capture + reprise/merci refus → fin, radar empty state). All 9 pytest tests pass. All UI flows pass.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_leads_aimants.py",
+    "/app/test_reports/pytest/leads_aimants.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py:7408 lignes — fichier monolithique très grand, à découper (déjà commencé via part2_ext).",
+    "capturer_lead: la table Lead stocke seulement 'source' (concaténé avec aimant) — pas de colonne dédiée au type d'aimant; acceptable mais limite l'analytique future.",
+    "Email de livraison du guide: en local le lien non-https déclenche un warning (attendu per contexte agent-to-agent)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_leads_aimants.py"
+  ],
+  "success_rate": { "backend": "100%", "frontend": "100%" },
+  "test_credentials": "test.pro@zayado.net / Test!2026 utilisé pour /radar (compte 'essentielle' redirige vers /activer et n'a pas accès au radar).",
+  "seed_data_creation": "Aucune — les leads créés par les tests utilisent TEST_* comme préfixe d'email.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Le endpoint /api/leads a un rate-limit (429) qui se déclenche vite — espacer les enchaînements de capture publique (>30s entre lots). Pour tester /radar il faut un compte au moins 'serenite' (ex: test.pro ou test.solo). Le bouton 'Se connecter' n'a pas type=submit : cliquer par texte avec force=True. Case consentement obligatoire sur /login.",
+  "rca of the issue": "N/A — aucun bug trouvé."
+}

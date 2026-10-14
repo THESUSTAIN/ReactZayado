@@ -10,6 +10,7 @@
 {%- endcomment -%}
 {%- paginate blog.articles by 12 -%}
 {%- assign filtre = current_tags | first -%}
+{%- assign parcours = "tresorerie|J'ai peur de manquer d'argent|Parcours trésorerie|graphique§clients|Je n'ai pas assez de clients|Parcours clients|equipe§energie|Je suis épuisé·e|Parcours énergie|lotus§organisation|Je suis débordé·e|Parcours organisation|cle" | split: '§' -%}
 {%- assign une = false -%}
 {%- if filtre == blank and paginate.current_page == 1 and blog.articles.size > 0 -%}{%- assign une = true -%}{%- endif -%}
 <section class="zy zy-journal">
@@ -19,15 +20,54 @@
       <h1 class="zy__titre">{{ section.settings.titre }} <span class="zy__main">{{ section.settings.mot_main }}</span></h1>
       <p class="zy__texte zy-journal__intro">{{ section.settings.texte }}</p>
       <nav class="zy-journal__filtres" aria-label="Rubriques du journal">
-        <a class="zy-pilule" href="{{ blog.url }}" {% if filtre == blank %}aria-current="page"{% endif %}>Tout</a>
-        <a class="zy-pilule" href="{{ blog.url }}/tagged/article" {% if filtre == 'article' %}aria-current="page"{% endif %}>Articles</a>
-        <a class="zy-pilule" href="{{ blog.url }}/tagged/temoignage" {% if filtre == 'temoignage' %}aria-current="page"{% endif %}>Témoignages</a>
-        <a class="zy-pilule" href="{{ blog.url }}/tagged/note" {% if filtre == 'note' %}aria-current="page"{% endif %}>Notes de la maison</a>
+        <a class="zy-pilule" href="{{ blog.url }}" {% if filtre == blank %}aria-current="page"{% endif %} data-testid="journal-filtre-tout">Tout</a>
+        <a class="zy-pilule" href="{{ blog.url }}/tagged/article" {% if filtre == 'article' %}aria-current="page"{% endif %} data-testid="journal-filtre-article">Articles</a>
+        <a class="zy-pilule" href="{{ blog.url }}/tagged/note" {% if filtre == 'note' %}aria-current="page"{% endif %} data-testid="journal-filtre-note">Notes de la maison</a>
       </nav>
+      {%- if section.settings.parcours -%}
+      <div class="zy-pc" data-testid="journal-par-ou-commencer">
+        <p class="zy-pc__titre">Par où commencer ? Quel est votre souci du moment ?</p>
+        <div class="zy-pc__grille">
+          {%- for p in parcours -%}
+            {%- assign m = p | split: '|' -%}
+            <a class="zy-pc__carte" href="{{ blog.url }}/tagged/{{ m[0] }}" {% if filtre == m[0] %}aria-current="page"{% endif %} data-testid="journal-parcours-{{ m[0] }}">
+              <span class="zy-pc__icone">{%- render 'zayado-icone', nom: m[3] -%}</span>
+              <span class="zy-pc__q">{{ m[1] }}</span>
+              <span class="zy-pc__sous">{{ m[2] }}</span>
+            </a>
+          {%- endfor -%}
+        </div>
+      </div>
+      {%- endif -%}
     </div>
   </header>
 
   <div class="zy__wrap zy-journal__corps">
+    {%- for p in parcours -%}
+      {%- assign m = p | split: '|' -%}
+      {%- if filtre == m[0] -%}
+        {%- case m[0] -%}
+          {%- when 'tresorerie' -%}{%- assign aim = 'tresorerie' -%}{%- assign offre = 'Faire mon diagnostic gratuit' -%}{%- assign offre_url = 'https://app.zayado.net/public/tunnel' -%}
+          {%- when 'clients' -%}{%- assign aim = 'tresorerie' -%}{%- assign offre = 'Essayer le Radar de prospects' -%}{%- assign offre_url = '/collections/outils-ia' -%}
+          {%- when 'energie' -%}{%- assign aim = 'rituel' -%}{%- assign offre = 'Voir les rituels et box' -%}{%- assign offre_url = '/collections/rituel-confort' -%}
+          {%- else -%}{%- assign aim = 'rituel' -%}{%- assign offre = 'Voir Espace & Organisation' -%}{%- assign offre_url = '/collections/espace-organisation' -%}
+        {%- endcase -%}
+        <div class="zy-parcours" data-testid="journal-parcours-bandeau">
+          <div>
+            <p class="zy__eyebrow">{{ m[2] }}</p>
+            <p class="zy__titre zy__titre--m" style="margin:0">« {{ m[1] }} »</p>
+            <ol class="zy-parcours__etapes">
+              <li>Lisez les articles ci-dessous, du plus utile au plus récent.</li>
+              <li>Téléchargez le guide offert et faites l'exercice ce soir.</li>
+              <li>Passez à l'action avec l'outil adapté.</li>
+            </ol>
+            <a class="zy__btn zy__btn--plein zy-parcours__offre" href="{{ offre_url }}" data-testid="journal-parcours-offre">{{ offre }} →</a>
+          </div>
+          {%- assign src = 'journal-' | append: m[0] -%}
+          {%- render 'zayado-aimant', aimant: aim, source: src, variante: 'carte' -%}
+        </div>
+      {%- endif -%}
+    {%- endfor -%}
     {%- if blog.articles.size == 0 -%}
       <p class="zy__texte">Rien ici pour l'instant. Le prochain texte arrive bientôt.</p>
     {%- endif -%}
@@ -50,20 +90,11 @@
       {%- for a in blog.articles -%}
         {%- if une and forloop.first -%}{%- continue -%}{%- endif -%}
         {%- render 'zayado-carte-journal', article: a -%}
-        {%- if forloop.index == 5 and section.settings.newsletter -%}
+        {%- if forloop.index == 3 and section.settings.newsletter -%}
           <aside class="zy-journal__news">
             <p class="zy__eyebrow">{{ section.settings.news_surtitre }}</p>
             <p class="zy-journal__news-titre">{{ section.settings.news_titre }}</p>
-            {%- form 'customer', class: 'zy-prevenir__form' -%}
-              {%- if form.posted_successfully? -%}
-                <p class="zy-prevenir__ok" role="status">Inscription confirmée. À très vite.</p>
-              {%- else -%}
-                <input type="hidden" name="contact[tags]" value="newsletter,journal">
-                <label class="zy-sr" for="journal-news-email">Votre e-mail</label>
-                <input id="journal-news-email" class="zy-champ" type="email" name="contact[email]" placeholder="votre@email.fr" required autocomplete="email">
-                <button class="zy__btn zy__btn--plein" type="submit">Recevoir la note</button>
-              {%- endif -%}
-            {%- endform -%}
+            {%- render 'zayado-aimant', aimant: 'tresorerie', source: 'journal', variante: 'carte', choix: true -%}
           </aside>
         {%- endif -%}
       {%- endfor -%}
@@ -85,12 +116,13 @@
   "tag": "section",
   "settings": [
     { "type": "text", "id": "tampon", "label": "Tampon", "default": "Le journal de la maison" },
-    { "type": "text", "id": "titre", "label": "Titre", "default": "Le Journal" },
-    { "type": "text", "id": "mot_main", "label": "Mot manuscrit", "default": "Zayado" },
-    { "type": "textarea", "id": "texte", "label": "Texte", "default": "Des articles pour décider, des témoignages de dirigeants qui respirent, et nos notes : ce que nous vivons, nous aussi, en entreprenant." },
+    { "type": "checkbox", "id": "parcours", "label": "Afficher « Par où commencer ? »", "default": true },
+    { "type": "text", "id": "titre", "label": "Titre", "default": "Le Journal des entrepreneurs qui veulent" },
+    { "type": "text", "id": "mot_main", "label": "Mot manuscrit", "default": "dormir tranquilles" },
+    { "type": "textarea", "id": "texte", "label": "Texte", "default": "Des articles concrets pour décider, et nos notes de la maison : ce que nous vivons, nous aussi, en entreprenant. Choisissez votre souci du moment, on vous guide." },
     { "type": "checkbox", "id": "newsletter", "label": "Inscription newsletter dans la liste", "default": true },
     { "type": "text", "id": "news_surtitre", "label": "Newsletter : surtitre", "default": "Chaque semaine" },
-    { "type": "text", "id": "news_titre", "label": "Newsletter : titre", "default": "La note d'équilibre : un chiffre, une idée, une action." }
+    { "type": "text", "id": "news_titre", "label": "Newsletter : titre", "default": "Commencez par un guide offert" }
   ]
 }
 {% endschema %}

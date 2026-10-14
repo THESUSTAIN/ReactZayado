@@ -1,6 +1,6 @@
 {{ 'zayado.css' | asset_url | stylesheet_tag }}
 {%- assign bientot = false -%}
-{%- if product.tags contains 'bientot' -%}{%- assign bientot = true -%}{%- endif -%}
+{%- if product.tags contains 'bientot' or settings.zy_boutique_bientot -%}{%- assign bientot = true -%}{%- endif -%}
 {%- assign devis = false -%}
 {%- if product.tags contains 'sur-devis' -%}{%- assign devis = true -%}{%- endif -%}
 {%- assign lien = product.metafields.zayado.lien_app.value | default: section.settings.lien_defaut | default: 'https://app.zayado.net/acheter' -%}
@@ -39,6 +39,16 @@
           {%- endform -%}
           <p class="zy-prevenir__rgpd">Un seul e-mail, le jour de la sortie. Désinscription en un clic.</p>
         </div>
+        {%- liquid
+          assign aim_p = 'lumiere'
+          for c in product.collections
+            if c.metafields.zayado.aimant != blank
+              assign aim_p = c.metafields.zayado.aimant.value
+              break
+            endif
+          endfor
+        -%}
+        <div style="margin-top:16px">{%- render 'zayado-aimant', aimant: aim_p, source: product.handle, variante: 'carte' -%}</div>
       {%- else -%}
         <p class="zy-fiche__prix">
           {%- if devis -%}Sur devis{%- else -%}{{ product.price | money }}{%- endif -%}

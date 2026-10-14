@@ -1,0 +1,75 @@
+{%- comment -%} Pied de page Zayado : promesse + guide offert, 4 colonnes, réassurance, mentions légales. {%- endcomment -%}
+{{ 'zayado.css' | asset_url | stylesheet_tag }}
+<footer class="zy-pied" data-testid="pied-de-page">
+  <div class="zy-pied__in">
+    <div class="zy-pied__haut">
+      <div>
+        <p class="zy-pied__accroche">{{ section.settings.accroche }} <em>{{ section.settings.mot_main }}</em></p>
+        <p class="zy-pied__sous">{{ section.settings.sous_titre }}</p>
+      </div>
+      {%- render 'zayado-aimant', aimant: 'tresorerie', source: 'pied', variante: 'carte', choix: true -%}
+    </div>
+
+    <div class="zy-pied__cols">
+      <div class="zy-pied__marque">
+        <div class="zy-pied__logo"><span class="zy-pied__z">Z</span><span class="zy-pied__nom"><strong>Zayado</strong><em>clarté · sérénité · équilibre</em></span></div>
+        <p class="zy-pied__texte">{{ section.settings.texte }}</p>
+        <div class="zy-pied__reseaux">
+          {%- if settings.social_instagram_link != blank -%}<a href="{{ settings.social_instagram_link }}" target="_blank" rel="noopener">Instagram</a>{%- endif -%}
+          {%- if settings.social_linkedin_link != blank -%}<a href="{{ settings.social_linkedin_link }}" target="_blank" rel="noopener">LinkedIn</a>{%- endif -%}
+          <a href="{{ section.settings.lien_liens }}" data-testid="pied-liens">Tous nos liens</a>
+        </div>
+      </div>
+      {%- for block in section.blocks -%}
+        <div {{ block.shopify_attributes }}>
+          <p class="zy-pied__h">{{ block.settings.titre }}</p>
+          <ul class="zy-pied__liste">
+            {%- for l in block.settings.menu.links -%}<li><a href="{{ l.url }}">{{ l.title }}</a></li>{%- endfor -%}
+            {%- assign lignes = block.settings.liens | newline_to_br | split: '<br />' -%}
+            {%- for ligne in lignes -%}
+              {%- assign p = ligne | strip | split: '|' -%}
+              {%- if p.size == 2 -%}<li><a href="{{ p[1] | strip }}">{{ p[0] | strip }}</a></li>{%- endif -%}
+            {%- endfor -%}
+          </ul>
+        </div>
+      {%- endfor -%}
+    </div>
+
+    <div class="zy-pied__confiance">
+      <div class="zy-pied__badge"><span>€</span>Paiement sécurisé par Mollie</div>
+      <div class="zy-pied__badge"><span>⌂</span>Données hébergées en Europe</div>
+      <div class="zy-pied__badge"><span>↺</span>Retour sous 14 jours</div>
+      <div class="zy-pied__badge"><span>✓</span>Produits choisis et testés</div>
+    </div>
+
+    <div class="zy-pied__bas">
+      <span>© {{ 'now' | date: '%Y' }} Zayado · {{ section.settings.societe }}</span>
+      <nav aria-label="Mentions légales">
+        {%- for l in linklists[section.settings.menu_legal].links -%}<a href="{{ l.url }}">{{ l.title }}</a>{%- endfor -%}
+      </nav>
+    </div>
+  </div>
+</footer>
+
+{% schema %}
+{
+  "name": "Zayado — Pied de page",
+  "tag": "div",
+  "settings": [
+    { "type": "text", "id": "accroche", "label": "Accroche", "default": "Une entreprise qui tourne, et des soirées" },
+    { "type": "text", "id": "mot_main", "label": "Mot manuscrit", "default": "tranquilles." },
+    { "type": "textarea", "id": "sous_titre", "label": "Sous-titre", "default": "Commencez par un guide offert : 10 minutes pour y voir clair. Ensuite, un e-mail utile par semaine au plus." },
+    { "type": "textarea", "id": "texte", "label": "Présentation", "default": "La maison des entrepreneurs apaisés : un copilote pour piloter vos chiffres et vos clients, une boutique d'objets choisis pour mieux travailler et mieux vivre." },
+    { "type": "text", "id": "societe", "label": "Société", "default": "SAS TheSustain · contact@zayado.net" },
+    { "type": "text", "id": "lien_liens", "label": "Lien « Tous nos liens »", "default": "/pages/liens" },
+    { "type": "link_list", "id": "menu_legal", "label": "Menu légal", "default": "footer" }
+  ],
+  "blocks": [
+    { "type": "colonne", "name": "Colonne", "limit": 4, "settings": [
+      { "type": "text", "id": "titre", "label": "Titre" },
+      { "type": "link_list", "id": "menu", "label": "Menu (facultatif)" },
+      { "type": "textarea", "id": "liens", "label": "Liens (un par ligne : Texte | URL)" }
+    ] }
+  ]
+}
+{% endschema %}

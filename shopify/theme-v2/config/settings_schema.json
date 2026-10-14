@@ -8,6 +8,24 @@
     "theme_support_url": "https://support.shopify.com/"
   },
   {
+    "name": "Zayado — Boutique",
+    "settings": [
+      {
+        "type": "checkbox",
+        "id": "zy_boutique_bientot",
+        "label": "Boutique en préparation (« Bientôt disponible »)",
+        "info": "Coché : aucun prix ni achat, chaque fiche propose « Me prévenir » + un guide offert. Décochez le jour de l'ouverture.",
+        "default": true
+      },
+      {
+        "type": "text",
+        "id": "zy_bientot_texte",
+        "label": "Texte du bandeau des catégories",
+        "default": "La boutique ouvre très bientôt. Laissez votre e-mail sur un produit : vous serez prévenu·e en premier, avec un guide offert."
+      }
+    ]
+  },
+  {
     "name": "t:settings_schema.logo.name",
     "settings": [
       {

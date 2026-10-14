@@ -7,6 +7,9 @@ Contenu lu dans les métachamps de la collection : zayado.douleur_titre, zayado.
   assign aim = mf.aimant.value | default: section.settings.aimant
 -%}
 {%- if section.settings.partie == 'haut' -%}
+  {%- if settings.zy_boutique_bientot -%}
+    <div class="zy-bientot-bandeau" data-testid="collection-bientot"><strong>Bientôt disponible</strong><span>{{ settings.zy_bientot_texte }}</span></div>
+  {%- endif -%}
   {%- if mf.douleur != blank -%}
   <section class="zy zy-cseo" data-testid="collection-douleur">
     <div class="zy__wrap zy-cseo__grille">
