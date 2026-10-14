@@ -178,9 +178,33 @@
             "question": "Et pour une équipe ou une grande entreprise ?",
             "reponse": "L'offre Équipe couvre jusqu'à 5 personnes. Au-delà, l'offre Entreprise se construit sur devis : écrivez-nous depuis la page contact."
           }
+        },
+        "seo1": {
+          "type": "question",
+          "settings": {
+            "question": "Qu'est-ce que VisionAct, le copilote Zayado ?",
+            "reponse": "VisionAct est une application de pilotage pour indépendants et dirigeants de TPE : trésorerie et mois d'autonomie calculés depuis votre relevé bancaire, Radar de prospects locaux, plan d'action daté, revue hebdo et copilote IA qui connaît votre projet."
+          }
+        },
+        "seo2": {
+          "type": "question",
+          "settings": {
+            "question": "Comment le Radar trouve-t-il des clients près de chez moi ?",
+            "reponse": "Chaque nuit, le Radar repère les entreprises de votre zone qui bougent (créations, déménagements, recrutements) et les classe selon les mots de votre métier. Vous ajoutez les plus chaudes à votre suivi en un clic."
+          }
+        },
+        "seo3": {
+          "type": "question",
+          "settings": {
+            "question": "Est-ce un logiciel de comptabilité ?",
+            "reponse": "Non. VisionAct vous aide à piloter au quotidien (trésorerie, priorités, prospection). Votre expert-comptable reste votre référence pour la comptabilité et la fiscalité."
+          }
         }
       },
       "block_order": [
+        "seo3",
+        "seo2",
+        "seo1",
         "q1",
         "q2",
         "q3",

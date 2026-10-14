@@ -21,10 +21,10 @@
 .zy--nuit { background: linear-gradient(135deg, var(--zy-nuit) 0%, var(--zy-nuit-2) 60%, var(--zy-ardoise) 100%); color: var(--zy-ivoire); }
 .zy__wrap { max-width: 1200px; margin: 0 auto; padding: 72px 24px; }
 .zy__eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .24em; text-transform: uppercase; color: var(--zy-or-texte); margin: 0 0 12px; }
-.zy__titre { font-family: "Poppins", sans-serif; font-weight: 600; font-size: clamp(30px, 4.4vw, 52px); line-height: 1.1; letter-spacing: -.02em; margin: 0; }
-.zy__titre--m { font-size: clamp(26px, 3.2vw, 38px); }
+.zy__titre { font-family: "Poppins", sans-serif; font-weight: 600; font-size: clamp(26px, 3.4vw, 40px); line-height: 1.1; letter-spacing: -.02em; margin: 0; }
+.zy__titre--m { font-size: clamp(22px, 2.5vw, 30px); }
 .zy__main { font-family: "Caveat", cursive; font-weight: 600; color: var(--zy-or-texte); font-size: 1.15em; }
-.zy__texte { font-size: 17px; line-height: 1.6; color: var(--zy-ardoise); max-width: 620px; margin: 16px 0 0; }
+.zy__texte { font-size: 15.5px; line-height: 1.6; color: var(--zy-ardoise); max-width: 620px; margin: 16px 0 0; }
 .zy--nuit .zy__texte { color: #c9d3e6; }
 .zy__actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
 .zy__btn { display: inline-flex; align-items: center; gap: 8px; height: 50px; padding: 0 26px; border-radius: 999px; font-weight: 600; font-size: 15px; text-decoration: none; transition: transform .2s ease, background-color .2s ease, box-shadow .2s ease; }
@@ -141,7 +141,7 @@ textarea.zy-champ { height: auto; min-height: 140px; padding: 14px 18px; border-
 .zy-une__img { width: 100%; height: 100%; min-height: 320px; object-fit: cover; display: block; }
 .zy-une__texte { padding: 40px; display: flex; flex-direction: column; justify-content: center; gap: 12px; }
 .zy-une__etiquette { align-self: flex-start; font-size: 11px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: var(--zy-or-clair); }
-.zy-une__titre { font-weight: 600; font-size: clamp(24px, 2.6vw, 34px); line-height: 1.15; letter-spacing: -.015em; margin: 0; }
+.zy-une__titre { font-weight: 600; font-size: clamp(21px, 2.1vw, 28px); line-height: 1.15; letter-spacing: -.015em; margin: 0; }
 .zy-une__extrait { font-size: 16px; line-height: 1.6; color: #c9d3e6; margin: 0; }
 .zy-une__meta { font-size: 13px; color: #9fb0cf; }
 
@@ -244,7 +244,7 @@ textarea.zy-champ { height: auto; min-height: 140px; padding: 14px 18px; border-
 .zy-bandeau { display: flex; align-items: center; justify-content: space-between; gap: 28px; padding: 44px; border-radius: 28px; color: var(--zy-ivoire); background: linear-gradient(135deg, var(--zy-nuit) 0%, var(--zy-nuit-2) 60%, var(--zy-ardoise) 100%); box-shadow: 0 30px 80px rgba(13, 31, 56, .16); }
 .zy-bandeau--centre { flex-direction: column; text-align: center; padding: 64px 32px; }
 .zy-bandeau__main { font-family: "Caveat", cursive; font-weight: 600; font-size: 26px; line-height: 1; color: var(--zy-or-clair); margin: 0 0 8px; }
-.zy-bandeau__titre { font-weight: 600; font-size: clamp(24px, 3vw, 36px); line-height: 1.15; letter-spacing: -.015em; margin: 0; }
+.zy-bandeau__titre { font-weight: 600; font-size: clamp(21px, 2.4vw, 30px); line-height: 1.15; letter-spacing: -.015em; margin: 0; }
 .zy-bandeau__phrase { font-size: 15.5px; line-height: 1.6; color: #c9d3e6; margin: 12px 0 0; max-width: 560px; }
 .zy-bandeau--centre .zy-bandeau__phrase { margin-left: auto; margin-right: auto; }
 .zy-bandeau__actions { display: flex; flex-wrap: wrap; gap: 12px; flex: none; }
@@ -269,10 +269,10 @@ textarea.zy-champ { height: auto; min-height: 140px; padding: 14px 18px; border-
 /* ══════════ En-tête Zayado (toutes les pages) ══════════ */
 .zy-entete { font-family: "Poppins", sans-serif; color: #0D1F38; position: sticky; top: 0; z-index: 50; }
 .zy-entete__in { max-width: 1200px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; gap: 20px; }
-.zy-entete__bandeau { background: #FFFFFF; color: #0D1F38; font-size: 12px; border-bottom: 1px solid #F0E8DA; }
+.zy-entete__bandeau { background: linear-gradient(120deg, #0D1F38 0%, #1E3D63 60%, #2E4A6B 100%); color: #F6F5F2; font-size: 12px; }
 .zy-entete__bandeau .zy-entete__in { justify-content: space-between; padding-top: 8px; padding-bottom: 8px; }
 .zy-entete__bandeau p { margin: 0; letter-spacing: .04em; }
-.zy-entete__reseaux a { color: #A88B6A; text-decoration: none; margin-left: 14px; }
+.zy-entete__reseaux a { color: #F1E2CC; text-decoration: none; margin-left: 14px; }
 .zy-entete__barre { background: rgba(255, 255, 255, .97); border-bottom: 1px solid #ECE2D2; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
 .zy-entete__barre .zy-entete__in { padding-top: 12px; padding-bottom: 12px; }
 .zy-entete__logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #0D1F38; flex: none; }
@@ -430,7 +430,7 @@ h1, h2, h3, .h0, .h1, .h2, .h3 { font-family: "Poppins", sans-serif !important; 
 @media (min-width: 990px) { .zy-aig__in { padding-top: 40px; padding-bottom: 52px; } }
 .zy-aig__tete { max-width: 760px; }
 .zy-aig__sur { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: #A88B6A; background: rgba(222, 194, 163, .12); border: 1px solid rgba(222, 194, 163, .35); border-radius: 999px; padding: 7px 16px; margin: 0; }
-.zy-aig__titre { margin: 18px 0 0; font-size: clamp(28px, 3.6vw, 42px); font-weight: 600; line-height: 1.08; letter-spacing: -.02em; color: #0D1F38; }
+.zy-aig__titre { margin: 18px 0 0; font-size: clamp(25px, 3vw, 36px); font-weight: 600; line-height: 1.08; letter-spacing: -.02em; color: #0D1F38; }
 .zy-aig__main { font-family: 'Caveat', cursive; font-style: normal; font-weight: 600; color: #DEC2A3; font-size: 1.12em; }
 .zy-aig__sous { margin: 14px 0 0; max-width: 600px; font-size: 15.5px; line-height: 1.6; color: rgba(13, 31, 56, .78); }
 .zy-aig__cartes { margin-top: 28px; display: grid; gap: 16px; }
@@ -447,7 +447,7 @@ h1, h2, h3, .h0, .h1, .h2, .h3 { font-family: "Poppins", sans-serif !important; 
 .zy-aig__carte-tete { display: flex; align-items: center; gap: 12px; }
 .zy-aig__num { font-family: 'Caveat', cursive; font-size: 22px; line-height: 1; color: #DEC2A3; }
 .zy-aig__kicker { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; opacity: .72; }
-.zy-aig__carte-titre { margin: 0; font-size: clamp(21px, 2.1vw, 27px); font-weight: 600; line-height: 1.14; letter-spacing: -.015em; color: inherit; }
+.zy-aig__carte-titre { margin: 0; font-size: clamp(19px, 1.8vw, 23px); font-weight: 600; line-height: 1.14; letter-spacing: -.015em; color: inherit; }
 .zy-aig__carte--nuit .zy-aig__carte-titre, .zy-aig__carte--nuit .zy-aig__carte-p, .zy-aig__carte--nuit .zy-aig__puces li { color: #F6F5F2; }
 .zy-aig__carte-p { margin: 0; font-size: 14.5px; line-height: 1.55; opacity: .82; max-width: 460px; }
 .zy-aig__puces { margin: 2px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
@@ -670,7 +670,7 @@ h1, h2, h3, .h0, .h1, .h2, .h3 { font-family: "Poppins", sans-serif !important; 
 .zy-pied__in { max-width: 1200px; margin: 0 auto; padding: 64px 24px 28px; }
 .zy-pied__haut { display: grid; gap: 28px; align-items: center; padding-bottom: 44px; border-bottom: 1px solid rgba(246, 245, 242, .12); }
 @media (min-width: 990px) { .zy-pied__haut { grid-template-columns: 1fr 1.1fr; gap: 56px; } }
-.zy-pied__accroche { margin: 0; font-size: clamp(26px, 3vw, 36px); font-weight: 600; line-height: 1.12; letter-spacing: -.015em; }
+.zy-pied__accroche { margin: 0; font-size: clamp(22px, 2.4vw, 30px); font-weight: 600; line-height: 1.12; letter-spacing: -.015em; }
 .zy-pied__accroche em { font-family: "Caveat", cursive; font-style: normal; color: #DEC2A3; font-size: 1.15em; }
 .zy-pied__sous { margin: 12px 0 0; color: rgba(246, 245, 242, .7); font-size: 15px; line-height: 1.6; }
 .zy-pied__cols { display: grid; gap: 30px; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 44px 0; }
@@ -716,7 +716,7 @@ h1, h2, h3, .h0, .h1, .h2, .h3 { font-family: "Poppins", sans-serif !important; 
 .zy-cs__in { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
 .zy-cs__hero { background: radial-gradient(700px 400px at 85% 0%, rgba(222, 194, 163, .14), transparent 60%), linear-gradient(165deg, #1E3D63 0%, #132C49 45%, #0A1B31 100%); color: #F6F5F2; text-align: center; padding: 96px 0 104px; }
 .zy-cs__pastille { display: inline-flex; margin: 0; padding: 9px 22px; border-radius: 999px; border: 1px solid rgba(241, 226, 204, .35); font-size: 12px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: #F1E2CC; }
-.zy-cs__titre { margin: 28px auto 0; max-width: 960px; font-size: clamp(34px, 5.4vw, 64px); line-height: 1.08; font-weight: 600; letter-spacing: -.02em; }
+.zy-cs__titre { margin: 28px auto 0; max-width: 960px; font-size: clamp(28px, 4.2vw, 48px); line-height: 1.08; font-weight: 600; letter-spacing: -.02em; }
 .zy-cs__titre span { color: #DEC2A3; }
 .zy-cs__citation { margin: 26px auto 0; max-width: 640px; font-family: "Caveat", cursive; font-size: 24px; color: #F1E2CC; }
 .zy-cs__texte { margin: 14px auto 0; max-width: 680px; font-size: 16px; line-height: 1.7; color: rgba(246, 245, 242, .75); }
@@ -737,7 +737,7 @@ h1, h2, h3, .h0, .h1, .h2, .h3 { font-family: "Poppins", sans-serif !important; 
 .zy-cs__carte { max-width: 1000px; margin: 0 auto; display: grid; gap: 28px; align-items: center; padding: 40px; border-radius: 28px; background: linear-gradient(135deg, #1E3D63 0%, #16304F 55%, #0D1F38 100%); color: #F6F5F2; }
 @media (min-width: 990px) { .zy-cs__carte { grid-template-columns: 1fr 1.05fr; } }
 .zy-cs__sur { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: #DEC2A3; }
-.zy-cs__h2 { margin: 10px 0 0; font-size: clamp(24px, 3vw, 32px); line-height: 1.15; font-weight: 600; }
+.zy-cs__h2 { margin: 10px 0 0; font-size: clamp(21px, 2.4vw, 27px); line-height: 1.15; font-weight: 600; }
 .zy-cs__news-texte { margin: 12px 0 0; font-size: 15px; line-height: 1.6; color: rgba(246, 245, 242, .72); }
 .zy-cs .zy-aim { background: rgba(255, 255, 255, .06); border-color: rgba(246, 245, 242, .14); color: #F6F5F2; box-shadow: none; }
 .zy-cs .zy-aim__sur { color: #DEC2A3; }
@@ -784,3 +784,52 @@ h1, h2, h3, .h0, .h1, .h2, .h3 { font-family: "Poppins", sans-serif !important; 
 
 .zy-cs { overflow-x: hidden; }
 .zy-cs__titre, .zy-cs__texte { overflow-wrap: anywhere; }
+@media (max-width: 989px) {
+  .zy-cs__carte, .zy-pied__haut, .zy-tun__grille, .zy-cseo__grille, .zy-parcours, .zy-aim--ligne { grid-template-columns: minmax(0, 1fr); }
+}
+.zy-aim, .zy-aim__form, .zy-aim__ligne { min-width: 0; max-width: 100%; box-sizing: border-box; }
+.zy-aim__ligne input { flex-basis: 160px; }
+.zy-pied__in { box-sizing: border-box; }
+.zy-cs__hero .zy-cs__titre { color: #F6F5F2; }
+.zy-cs__hero .zy-cs__titre span { color: #DEC2A3; }
+.zy-cs__carte .zy-cs__h2 { color: #F6F5F2; }
+
+/* ── Recherche guidée ── */
+.zy-rech { font-family: "Poppins", sans-serif; background: linear-gradient(120deg, #0D1F38 0%, #1E3D63 60%, #2E4A6B 100%); color: #F6F5F2; }
+.zy-rech__in { max-width: 1100px; margin: 0 auto; padding: 34px 24px 30px; text-align: center; }
+.zy-rech__intro { margin: 0 0 18px; font-size: 15px; color: rgba(246, 245, 242, .85); }
+.zy-rech__onglets { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.zy-rech__onglet { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 50px; border-radius: 999px; border: 1px solid rgba(246, 245, 242, .25); background: rgba(255, 255, 255, .06); color: #F6F5F2; font: 600 15px "Poppins", sans-serif; cursor: pointer; transition: background-color .2s ease, color .2s ease; }
+.zy-rech__onglet svg { width: 18px; height: 18px; }
+.zy-rech__onglet[aria-selected="true"] { background: #FFFFFF; color: #0D1F38; border-color: #FFFFFF; }
+.zy-rech__barre { display: flex; align-items: center; gap: 8px; margin-top: 18px; padding: 6px 6px 6px 22px; border-radius: 999px; background: #FFFFFF; box-shadow: 0 0 0 4px rgba(255, 255, 255, .25); }
+.zy-rech__barre input { flex: 1; min-width: 0; height: 48px; border: 0; outline: 0; background: transparent; font: 15px "Poppins", sans-serif; color: #0D1F38; }
+.zy-rech__barre button { flex: none; height: 48px; padding: 0 26px; border: 0; border-radius: 999px; background: linear-gradient(120deg, #0D1F38 0%, #1E3D63 55%, #2E4A6B 100%); color: #F6F5F2; font: 600 15px "Poppins", sans-serif; cursor: pointer; }
+.zy-rech__univers { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 0; padding: 14px 24px; background: #FFFFFF; border-bottom: 1px solid #ECE2D2; }
+.zy-rech__univers a { padding: 0 16px; color: #1E3D63; font-size: 14.5px; font-weight: 500; text-decoration: none; border-right: 1px solid rgba(13, 31, 56, .2); }
+.zy-rech__univers a:last-child { border-right: 0; }
+.zy-rech__univers a:hover, .zy-rech__tous { text-decoration: underline; text-underline-offset: 4px; }
+.zy-rech__tous { font-weight: 700 !important; }
+@media (max-width: 749px) { .zy-rech__onglets { grid-template-columns: repeat(2, minmax(0, 1fr)); } .zy-rech__barre button { padding: 0 16px; } .zy-rech__univers { justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; } .zy-rech__univers a { white-space: nowrap; } }
+/* ── Communauté ── */
+.zy-commu__grille { display: grid; gap: 32px; align-items: center; }
+@media (min-width: 990px) { .zy-commu__grille { grid-template-columns: .9fr 1.1fr; gap: 56px; } }
+.zy-commu__sur { display: block; font-size: 26px; margin-bottom: 4px; }
+.zy-commu__reseaux { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+.zy-commu__reseaux a { height: 42px; padding: 0 18px; border-radius: 999px; display: inline-flex; align-items: center; background: linear-gradient(120deg, #0D1F38 0%, #1E3D63 55%, #2E4A6B 100%); color: #F6F5F2; font-size: 14px; font-weight: 600; text-decoration: none; transition: transform .2s ease; }
+.zy-commu__reseaux a:hover { transform: translateY(-2px); }
+.zy-commu__mosaique { display: grid; grid-template-columns: 1.3fr 1fr; grid-template-rows: 1fr 1fr; gap: 12px; min-height: 360px; }
+.zy-commu__img { border-radius: 22px; overflow: hidden; display: block; background: #F1E2CC; }
+.zy-commu__img img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .5s ease; }
+.zy-commu__img:hover img { transform: scale(1.04); }
+.zy-commu__img--1 { grid-row: 1 / 3; }
+.zy-commu__img--4 { display: none; }
+/* ── Garanties ── */
+.zy-gar__grille { display: grid; gap: 18px; grid-template-columns: repeat(3, minmax(0, 1fr)); padding-top: 40px; padding-bottom: 40px; }
+@media (max-width: 749px) { .zy-gar__grille { grid-template-columns: minmax(0, 1fr); } }
+.zy-gar__item { text-align: center; padding: 22px; border-radius: 20px; background: #FFFFFF; border: 1px solid #ECE2D2; }
+.zy-gar__icone { width: 46px; height: 46px; margin: 0 auto; border-radius: 999px; display: grid; place-items: center; background: #F7EFE4; color: #1E3D63; }
+.zy-gar__titre { margin: 12px 0 4px; font-weight: 600; font-size: 16px; }
+.zy-gar__texte { margin: 0; font-size: 14px; line-height: 1.55; color: rgba(13, 31, 56, .68); }
+.zy-gar__lien { display: inline-block; margin-top: 8px; font-size: 13.5px; font-weight: 600; color: #1E3D63; }
+.zy-commu__reseaux a.zy-commu__tous { background: linear-gradient(135deg, #F1E2CC 0%, #DEC2A3 100%); color: #0D1F38; }

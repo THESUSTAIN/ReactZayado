@@ -1,7 +1,21 @@
 {
   "sections": {
-    "fiche": { "type": "zayado-fiche-produit", "settings": {} },
-    "faq": { "type": "zayado-faq", "settings": {} }
+    "fiche": {
+      "type": "zayado-fiche-produit",
+      "settings": {}
+    },
+    "faq": {
+      "type": "zayado-faq",
+      "settings": {}
+    },
+    "garanties": {
+      "type": "zayado-garanties",
+      "settings": {}
+    }
   },
-  "order": ["fiche", "faq"]
+  "order": [
+    "fiche",
+    "garanties",
+    "faq"
+  ]
 }

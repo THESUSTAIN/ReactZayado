@@ -44,7 +44,7 @@
             "texte": "Voir clair chaque jour, sans y passer vos soirées.",
             "liste": "Chiffres et trésorerie en un coup d'œil\nObjectifs à 90 jours et revue hebdo\nL'énergie suivie comme un indicateur",
             "cta": "Découvrir le Cockpit",
-            "lien": "/pages/cockpit"
+            "lien": "/pages/vision-act"
           }
         },
         "c3": {
@@ -181,7 +181,7 @@
         "titre": "Entre chaque étape, le Cockpit garde le cap.",
         "texte": "Le conseil passe, le pilotage reste : énergie, chiffres, objectifs à 90 jours et revue hebdo dans un seul cockpit IA.",
         "bouton_1": "Découvrir le Cockpit",
-        "lien_1": "/pages/cockpit",
+        "lien_1": "/pages/vision-act",
         "bouton_2": "Faire le diagnostic",
         "lien_2": "/pages/diagnostic"
       }

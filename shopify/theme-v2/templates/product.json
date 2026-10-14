@@ -7,10 +7,15 @@
     "faq": {
       "type": "zayado-faq",
       "settings": {}
+    },
+    "garanties": {
+      "type": "zayado-garanties",
+      "settings": {}
     }
   },
   "order": [
     "fiche",
+    "garanties",
     "faq"
   ]
 }

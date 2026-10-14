@@ -72,6 +72,10 @@
   </div>
 </section>
 
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Product","name":{{ product.title | json }},"description":{{ product.description | strip_html | truncate: 300 | json }},"url":{{ shop.url | append: product.url | json }}{% if product.featured_image %},"image":{{ product.featured_image | image_url: width: 1200 | prepend: 'https:' | json }}{% endif %},"brand":{"@type":"Brand","name":{{ product.vendor | json }}}{% unless bientot or devis %},"offers":{"@type":"Offer","priceCurrency":{{ cart.currency.iso_code | json }},"price":{{ product.price | divided_by: 100.0 | json }},"availability":"https://schema.org/{% if product.available %}InStock{% else %}OutOfStock{% endif %}","url":{{ shop.url | append: product.url | json }}}{% endunless %}}
+</script>
+
 {% schema %}
 {
   "name": "Zayado — Fiche produit",

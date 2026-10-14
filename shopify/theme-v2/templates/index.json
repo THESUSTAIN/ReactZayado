@@ -198,15 +198,25 @@
         "b2",
         "b3"
       ]
+    },
+    "recherche": {
+      "type": "zayado-recherche",
+      "settings": {}
+    },
+    "communaute": {
+      "type": "zayado-communaute",
+      "settings": {}
     }
   },
   "order": [
     "hero",
+    "recherche",
     "bandeau",
     "douleurs",
     "univers",
     "offres",
     "services",
+    "communaute",
     "faq"
   ]
 }

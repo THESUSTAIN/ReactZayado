@@ -1,0 +1,53 @@
+{%- comment -%} « Rejoignez la communauté » : réseaux sociaux (réglages du thème) + mosaïque d'images (choisies ou articles du Journal). {%- endcomment -%}
+<section class="zy zy-commu" data-testid="communaute">
+  <div class="zy__wrap zy-commu__grille">
+    <div>
+      <p class="zy__main zy-commu__sur">{{ section.settings.surtitre }}</p>
+      <h2 class="zy__titre zy__titre--m">{{ section.settings.titre }}</h2>
+      <p class="zy__texte">{{ section.settings.texte }}</p>
+      <div class="zy-commu__reseaux">
+        {%- assign rs = "instagram|Instagram§tiktok|TikTok§linkedin|LinkedIn§facebook|Facebook§youtube|YouTube§pinterest|Pinterest" | split: '§' -%}
+        {%- for r in rs -%}{%- assign m = r | split: '|' -%}{%- assign cle = 'social_' | append: m[0] | append: '_link' -%}
+          {%- if settings[cle] != blank -%}<a href="{{ settings[cle] }}" target="_blank" rel="noopener" data-testid="communaute-{{ m[0] }}">{{ m[1] }}</a>{%- endif -%}
+        {%- endfor -%}
+        {%- if section.settings.instagram != blank -%}<a href="{{ section.settings.instagram }}" target="_blank" rel="noopener">Instagram</a>{%- endif -%}
+        {%- if section.settings.linkedin != blank -%}<a href="{{ section.settings.linkedin }}" target="_blank" rel="noopener">LinkedIn</a>{%- endif -%}
+        {%- if section.settings.tiktok != blank -%}<a href="{{ section.settings.tiktok }}" target="_blank" rel="noopener">TikTok</a>{%- endif -%}
+        <a class="zy-commu__tous" href="/pages/liens" data-testid="communaute-tous-liens">Tous nos liens →</a>
+      </div>
+    </div>
+    <div class="zy-commu__mosaique">
+      {%- assign n = 0 -%}
+      {%- for i in (1..4) -%}{%- capture k %}image_{{ i }}{% endcapture -%}
+        {%- if section.settings[k] != blank -%}{%- assign n = n | plus: 1 -%}<div class="zy-commu__img zy-commu__img--{{ n }}">{{ section.settings[k] | image_url: width: 900 | image_tag: loading: 'lazy', alt: section.settings.titre }}</div>{%- endif -%}
+      {%- endfor -%}
+      {%- if n == 0 -%}
+        {%- for a in blogs.journal.articles limit: 4 -%}{%- if a.image -%}{%- assign n = n | plus: 1 -%}<a class="zy-commu__img zy-commu__img--{{ n }}" href="{{ a.url }}">{{ a.image | image_url: width: 900 | image_tag: loading: 'lazy', alt: a.title }}</a>{%- endif -%}{%- endfor -%}
+      {%- endif -%}
+      {%- if n == 0 -%}
+        <div class="zy-commu__img zy-commu__img--1"><img src="https://images.unsplash.com/photo-1762160687270-1602d25749b6?w=900&q=80&fm=jpg&fit=crop" alt="Entrepreneurs de la communauté Zayado" loading="lazy" width="900" height="900"></div>
+        <div class="zy-commu__img zy-commu__img--2"><img src="https://images.unsplash.com/photo-1581668181500-08c6a6e006f7?w=700&q=80&fm=jpg&fit=crop" alt="Entrepreneurs de la communauté Zayado" loading="lazy" width="900" height="900"></div>
+        <div class="zy-commu__img zy-commu__img--3"><img src="https://images.unsplash.com/photo-1678282931256-370578a0d036?w=700&q=80&fm=jpg&fit=crop" alt="Entrepreneurs de la communauté Zayado" loading="lazy" width="900" height="900"></div>
+      {%- endif -%}
+    </div>
+  </div>
+</section>
+{% schema %}
+{
+  "name": "Zayado — Communauté",
+  "tag": "div",
+  "settings": [
+    { "type": "text", "id": "surtitre", "label": "Surtitre manuscrit", "default": "Notre communauté" },
+    { "type": "text", "id": "titre", "label": "Titre", "default": "Rejoignez la communauté des entrepreneurs apaisés" },
+    { "type": "textarea", "id": "texte", "label": "Texte", "default": "Coulisses, conseils de trésorerie en 60 secondes, rituels et nouveautés de la boutique : suivez-nous là où vous êtes déjà." },
+    { "type": "text", "id": "instagram", "label": "Instagram (si absent des réglages du thème)" },
+    { "type": "text", "id": "linkedin", "label": "LinkedIn" },
+    { "type": "text", "id": "tiktok", "label": "TikTok" },
+    { "type": "image_picker", "id": "image_1", "label": "Image 1 (grande)" },
+    { "type": "image_picker", "id": "image_2", "label": "Image 2" },
+    { "type": "image_picker", "id": "image_3", "label": "Image 3" },
+    { "type": "image_picker", "id": "image_4", "label": "Image 4" }
+  ],
+  "presets": [{ "name": "Zayado — Communauté" }]
+}
+{% endschema %}

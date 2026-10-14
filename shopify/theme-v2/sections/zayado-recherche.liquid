@@ -1,0 +1,45 @@
+{%- comment -%} Recherche guidée : 4 onglets (produit, service, avantage, cadeau) + barre de recherche + univers. {%- endcomment -%}
+<section class="zy-rech" data-testid="recherche-guidee">
+  <div class="zy-rech__in">
+    <p class="zy-rech__intro">{{ section.settings.intro }}</p>
+    <div class="zy-rech__onglets" role="tablist">
+      {%- assign ongs = "produit|Produit|sac|Ex. : lunettes anti-lumière bleue, fauteuil, carnet…§service|Service|equipe|Ex. : comptable, assurance, coaching, outils IA…§avantage|Avantage|cle|Ex. : remise partenaire, essai offert, code promo…§cadeau|Idées cadeaux|lotus|Ex. : box équipe, cadeau client, rituel…" | split: '§' -%}
+      {%- for o in ongs -%}{%- assign m = o | split: '|' -%}
+        <button type="button" role="tab" class="zy-rech__onglet" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}" data-ph="{{ m[3] }}" data-type="{{ m[0] }}" data-testid="recherche-onglet-{{ m[0] }}">{%- render 'zayado-icone', nom: m[2] -%}<span>{{ m[1] }}</span></button>
+      {%- endfor -%}
+    </div>
+    <form class="zy-rech__barre" action="{{ routes.search_url }}" method="get" role="search">
+      <input type="hidden" name="options[prefix]" value="last">
+      <input type="search" name="q" placeholder="Ex. : lunettes anti-lumière bleue, fauteuil, carnet…" aria-label="Rechercher" data-testid="recherche-champ">
+      <button type="submit" data-testid="recherche-envoyer">Rechercher <span aria-hidden="true">→</span></button>
+    </form>
+  </div>
+  <nav class="zy-rech__univers" aria-label="Univers">
+    {%- assign lignes = section.settings.univers | newline_to_br | split: '<br />' -%}
+    {%- for l in lignes -%}{%- assign p = l | strip | split: '|' -%}
+      {%- if p.size == 2 -%}<a href="{{ p[1] | strip }}" {% if forloop.last %}class="zy-rech__tous"{% endif %}>{{ p[0] | strip }}</a>{%- endif -%}
+    {%- endfor -%}
+  </nav>
+</section>
+<script>
+  document.querySelectorAll('.zy-rech').forEach(function (s) {
+    var champ = s.querySelector('input[name=q]');
+    s.querySelectorAll('.zy-rech__onglet').forEach(function (b) {
+      b.addEventListener('click', function () {
+        s.querySelectorAll('.zy-rech__onglet').forEach(function (o) { o.setAttribute('aria-selected', o === b ? 'true' : 'false'); });
+        champ.placeholder = b.dataset.ph; champ.focus();
+      });
+    });
+  });
+</script>
+{% schema %}
+{
+  "name": "Zayado — Recherche",
+  "tag": "div",
+  "settings": [
+    { "type": "text", "id": "intro", "label": "Phrase d'accroche", "default": "Un produit, un service, un avantage… Trouvons ensemble la solution qui vous correspond." },
+    { "type": "textarea", "id": "univers", "label": "Univers (Texte | URL, un par ligne ; le dernier = « tous »)", "default": "Santé visuelle | /collections/concentration-visuelle\nErgonomie | /collections/corps\nComptabilité | /collections/accompagnement\nBien-être | /collections/rituel-confort\nOutils digitaux | /collections/outils-ia\nTous nos univers → | /collections/produits" }
+  ],
+  "presets": [{ "name": "Zayado — Recherche" }]
+}
+{% endschema %}

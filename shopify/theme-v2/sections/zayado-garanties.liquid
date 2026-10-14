@@ -1,0 +1,35 @@
+{%- comment -%} Réassurance (fiche produit, services) : 3 garanties avec icône et lien. {%- endcomment -%}
+<section class="zy zy-gar" data-testid="garanties">
+  <div class="zy__wrap zy-gar__grille">
+    {%- for i in (1..3) -%}
+      {%- capture t %}g{{ i }}_titre{% endcapture -%}{%- capture x %}g{{ i }}_texte{% endcapture -%}{%- capture u %}g{{ i }}_url{% endcapture -%}{%- capture ic %}g{{ i }}_icone{% endcapture -%}
+      <div class="zy-gar__item">
+        <span class="zy-gar__icone">{%- render 'zayado-icone', nom: section.settings[ic] -%}</span>
+        <p class="zy-gar__titre">{{ section.settings[t] }}</p>
+        <p class="zy-gar__texte">{{ section.settings[x] }}</p>
+        {%- if section.settings[u] != blank -%}<a class="zy-gar__lien" href="{{ section.settings[u] }}">En savoir plus →</a>{%- endif -%}
+      </div>
+    {%- endfor -%}
+  </div>
+</section>
+{% schema %}
+{
+  "name": "Zayado — Garanties",
+  "tag": "div",
+  "settings": [
+    { "type": "text", "id": "g1_icone", "label": "1 : icône", "default": "sac" },
+    { "type": "text", "id": "g1_titre", "label": "1 : titre", "default": "Livraison suivie" },
+    { "type": "text", "id": "g1_texte", "label": "1 : texte", "default": "En France métropolitaine, délai indiqué sur chaque fiche." },
+    { "type": "text", "id": "g1_url", "label": "1 : lien", "default": "/pages/cgv" },
+    { "type": "text", "id": "g2_icone", "label": "2 : icône", "default": "lotus" },
+    { "type": "text", "id": "g2_titre", "label": "2 : titre", "default": "14 jours pour changer d'avis" },
+    { "type": "text", "id": "g2_texte", "label": "2 : texte", "default": "Droit de rétractation simple, sans justification." },
+    { "type": "text", "id": "g2_url", "label": "2 : lien", "default": "/pages/cgv" },
+    { "type": "text", "id": "g3_icone", "label": "3 : icône", "default": "cle" },
+    { "type": "text", "id": "g3_titre", "label": "3 : titre", "default": "Paiement sécurisé" },
+    { "type": "text", "id": "g3_texte", "label": "3 : texte", "default": "Par Mollie, sur votre espace Zayado : vos données bancaires ne passent jamais par nous." },
+    { "type": "text", "id": "g3_url", "label": "3 : lien", "default": "/pages/confidentialite" }
+  ],
+  "presets": [{ "name": "Zayado — Garanties" }]
+}
+{% endschema %}

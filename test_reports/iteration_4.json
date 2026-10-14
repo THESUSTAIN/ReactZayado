@@ -1,0 +1,30 @@
+{
+  "summary": "Contre-test ciblé de 2 corrections sur l'aperçu Shopify (theme 205715800405). Fix #1 (liens 'Tout voir' -> /pages/coming-soon) VALIDÉ. Fix #2 (aucun débordement horizontal sur /pages/coming-soon en 390px) ÉCHOUE : scrollWidth=401 > innerWidth=390 (débordement ~11px).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "/pages/coming-soon (sections .zy-cs__lancement et .zy-pied)",
+        "issue": "Débordement horizontal en mobile 390px : document.documentElement.scrollWidth=401 (bodyScrollWidth=401) > window.innerWidth=390. Les éléments internes (p.zy-cs__sur, h2.zy-cs__h2, p.zy-cs__news-texte, div.zy-aim--carte dans la section lancement) sont positionnés à left=44 et s'étendent jusqu'à right=421 (377px de large + 44px de padding gauche = 421 > 390). Les éléments du pied (.zy-pied__accroche, .zy-pied__sous, .zy-aim--carte dans footer) sont à left=24, right=401. La règle CSS .zy-cs / .zy-cs__lancement ne contraint pas correctement la largeur à 100% de l'écran en mobile (sans doute un max-width/padding fixe qui ne tient pas compte du box-sizing ou un min-width sur un enfant).",
+        "selector": ".zy-cs__lancement, .zy-cs, .zy-pied, p.zy-cs__sur, .zy-aim--carte",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Corriger le CSS de .zy-cs / .zy-cs__lancement (et .zy-pied) dans /app/shopify/theme-v2/assets/zayado.css pour supprimer le débordement horizontal en 390px. Vérifier : (a) max-width/width:100% + box-sizing: border-box sur le conteneur, (b) padding gauche/droit cohérent avec la largeur du viewport, (c) absence d'un min-width ou d'une width fixe en px sur les enfants (p.zy-cs__sur, h2.zy-cs__h2, .zy-aim--carte). Un padding de 44px à gauche sur un enfant de 377px produit un right=421 > 390 : ajuster le padding mobile (ex. 16-20px) ou utiliser width:calc(100vw - 2*padding)."
+  ],
+  "critical_code_review_comments": [
+    "Débordement horizontal persistant après la correction annoncée : vérifier que les sélecteurs ciblés dans zayado.css ciblent bien les breakpoints <=390px (media query mobile). Possible que la correction n'ait été appliquée qu'au max-width desktop."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "50% (1/2 fixes validés)"},
+  "seed_data_creation": "Aucune",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Fix #1 validé définitivement : 4 liens 'Tout voir' (desktop top bar + mobile drawer, dupliqués x2) pointent tous vers /pages/coming-soon. Les liens Corps(/collections/corps), Âme(/collections/ame), Le journal(/blogs/journal) conservent leur URL d'origine. Fix #2 encore cassé : débordement de 11px sur mobile 390px. Les éléments fautifs identifiés sont dans .zy-cs__lancement (left=44, right=421) et .zy-pied (left=24, right=401). Après fix, revérifier via: viewport 390x844 -> page.goto /pages/coming-soon -> assert document.documentElement.scrollWidth <= window.innerWidth. En 1280px, OK (scrollWidth=1280=innerWidth).",
+  "rca of the issue": "RCA Fix #2 : le conteneur .zy-cs__lancement (ou un enfant comme p.zy-cs__sur / h2.zy-cs__h2 / .zy-aim--carte) applique un padding/margin horizontal (gauche=44px) qui, cumulé à la largeur de l'enfant (377px), produit un bord droit à 421px, dépassant le viewport (390px) de 31px côté lancement. Dans le pied, l'offset est de 24px, débordement de 11px (c'est ce dernier qui définit le scrollWidth global 401). Reproduction : set_viewport(390,844) -> goto /pages/coming-soon?preview_theme_id=205715800405 -> evaluate document.documentElement.scrollWidth=401. Mitigation : revoir les règles CSS mobile (@media max-width:...) de .zy-cs/.zy-cs__lancement/.zy-pied dans /app/shopify/theme-v2/assets/zayado.css pour appliquer box-sizing:border-box, width:100%, et un padding horizontal mobile réduit (ex 16px) ; vérifier qu'aucune .zy-aim--carte imbriquée n'a de min-width fixe en px."
+}
