@@ -1,0 +1,113 @@
+{
+  "project_name": "ZAYADO - Creative Link-in-Bio & Personal Hub Platform",
+  "theme": "Dark Modern Neo-Editorial & Tactile Glass",
+  "context": "Mobile/Web App Link-in-Bio Platform",
+  "design_archetype": "ARCHETYPE 5: LUXURY & ARCHETYPE 7: ELECTRIC DISRUPTION (Tactile Dark Glass + Neo-Editorial Typography)",
+  "instructions_to_main_agent": [
+    "Build a high-converting, ultra-sleek, interactive link-in-bio hub inspired by ZAYADO with live preview customization, link analytics, dynamic media embeds, QR code generation, theme builder, and social feed integration.",
+    "Ensure pure JS/JSX compatibility ( do NOT use TS types or .tsx extensions ).",
+    "Integrate Lucide Icons and optional @phosphor-icons/react for modern visual flair.",
+    "Include mandatory data-testid attributes on all interactive and key data display elements.",
+    "Implement smooth tabs, audio player widget, video preview modal, tip/donation micro-modal, and newsletter subscription form with Sonner toast feedback.",
+    "Use generous spacing (p-6, p-8, py-12) with smooth backdrop-blur glassmorphism panels, 1px subtle borders (border-white/10), and neon accent highlights."
+  ],
+  "typography": {
+    "heading_font": "Outfit / Cabinet Grotesk (sans-serif display with high character and tight tracking)",
+    "body_font": "Inter / DM Sans (clean legibility for bio text, link labels, and stats)",
+    "mono_font": "JetBrains Mono / Source Code Pro (used for stats badges, handles, and technical tags)",
+    "hierarchy": {
+      "h1_profile_title": "text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white",
+      "h2_section": "text-xl sm:text-2xl font-bold tracking-tight text-white/90",
+      "h3_card_header": "text-lg font-semibold text-white",
+      "body_text": "text-sm sm:text-base text-zinc-300 leading-relaxed",
+      "label_tag": "text-xs font-mono uppercase tracking-[0.2em] text-emerald-400"
+    }
+  },
+  "colors": {
+    "background": "bg-[#090A0F] (Deep Obsidian with subtle radial glow)",
+    "surface": "bg-zinc-900/60 backdrop-blur-xl border border-white/10 hover:border-emerald-500/40 transition-all duration-300",
+    "surface_hover": "hover:bg-zinc-800/80 hover:shadow-[0_0_25px_rgba(16,185,129,0.15)] hover:-translate-y-0.5",
+    "primary_accent": "#10B981 (Emerald Neon Glow for CTAs and highlighted links)",
+    "secondary_accent": "#8B5CF6 (Vibrant Electric Violet for secondary actions & feature tags)",
+    "text_primary": "#FFFFFF",
+    "text_secondary": "#A1A1AA (Zinc 400)",
+    "text_muted": "#71717A (Zinc 500)",
+    "border": "border-white/10",
+    "contrast_hover_rule": "Always explicitly define text color on hover, e.g. hover:bg-emerald-500 hover:text-black focus:ring-2 focus:ring-emerald-400"
+  },
+  "grids_and_layouts": {
+    "layout_mode": "Bento Grid + Mobile-First Center Column",
+    "container": "max-w-4xl mx-auto px-4 py-8 sm:py-12",
+    "mobile_preview_split": "grid grid-cols-1 lg:grid-cols-12 gap-8 items-start",
+    "preview_frame": "lg:col-span-5 sticky top-6 max-w-[380px] mx-auto w-full aspect-[9/19] rounded-[40px] border-[6px] border-zinc-800 shadow-2xl overflow-hidden bg-[#0A0D14]",
+    "builder_controls": "lg:col-span-7 space-y-6"
+  },
+  "components_structure": [
+    {
+      "name": "ProfileHeader",
+      "features": "Avatar with online indicator ring, verified badge, handle (@zayado.official), bio tagline, location tag, and social quick-links row.",
+      "testid": "profile-header"
+    },
+    {
+      "name": "FeaturedLinkCard",
+      "features": "Big banner link card with custom thumbnail, title, subtitle, click counter, animated shimmer border ('Tracing Beam'), and direct action arrow.",
+      "testid": "featured-link-card"
+    },
+    {
+      "name": "StandardLinksList",
+      "features": "Interactive stack of link items (Store, YouTube Latest Video, Podcast Episode, Booking, Contact Form, Newsletter, Support/Tip jar).",
+      "testid": "standard-links-list"
+    },
+    {
+      "name": "MediaEmbedWidget",
+      "features": "Embedded playable audio player widget / Spotify style mini-player & video modal trigger.",
+      "testid": "media-embed-widget"
+    },
+    {
+      "name": "TipJarModal",
+      "features": "Shadcn Dialog for micro-donations ($3, $5, $10, custom amount) with quick payment methods and confirmation toast.",
+      "testid": "tip-jar-modal"
+    },
+    {
+      "name": "QRCodeModal",
+      "features": "Modal to display & download printable custom QR code with brand logo overlay.",
+      "testid": "qr-code-modal"
+    },
+    {
+      "name": "AppearanceCustomizer",
+      "features": "Theme picker tab (Obsidian Emerald, Cyberpunk Purple, Swiss Clean, Sunset Glow) with real-time preview updating.",
+      "testid": "appearance-customizer"
+    },
+    {
+      "name": "AnalyticsSummary",
+      "features": "Quick analytics dashboard stats (Total Views, Link Clicks, CTR %, Top Location) powered by Shadcn charts / high-density metrics.",
+      "testid": "analytics-summary"
+    }
+  ],
+  "image_urls": {
+    "profile_avatar": "https://images.unsplash.com/photo-1721637686340-de9f8cebda5a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTN8MHwxfHNlYXJjaHwyfHxsaW5rJTIwaW4lMjBiaW8lMjBwb3J0cmFpdCUyMHNvY2lhbCUyMHByb2ZpbGUlMjBjcmVhdGl2ZSUyMG1vZGVsJTIwc3RyZWV0d2VhciUyMGFlc3RoZXRpY3xlbnwwfHx8fDE3OTE5NzM4NDZ8MA&ixlib=rb-4.1.0&q=85",
+    "featured_thumbnail_1": "https://images.unsplash.com/photo-1635650804483-2a77a8c9e728?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTN8MHwxfHNlYXJjaHwxfHxsaW5rJTIwaW4lMjBiaW8lMjBwb3J0cmFpdCUyMHNvY2lhbCUyMHByb2ZpbGUlMjBjcmVhdGl2ZSUyMG1vZGVsJTIwc3RyZWV0d2VhciUyMGFlc3RoZXRpY3xlbnwwfHx8fDE3OTE5NzM4NDZ8MA&ixlib=rb-4.1.0&q=85",
+    "featured_thumbnail_2": "https://images.unsplash.com/photo-1582164256364-b0eccb922bff?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTN8MHwxfHNlYXJjaHwzfHxsaW5rJTIwaW4lMjBiaW8lMjBwb3J0cmFpdCUyMHNvY2lhbCUyMHByb2ZpbGUlMjBjcmVhdGl2ZSUyMG1vZGVsJTIwc3RyZWV0d2VhciUyMGFlc3RoZXRpY3xlbnwwfHx8fDE3OTE5NzM4NDZ8MA&ixlib=rb-4.1.0&q=85"
+  },
+  "motion": {
+    "framework": "Framer Motion / Tailwind Transitions",
+    "hover_effect": "transform hover:-translate-y-1 hover:scale-[1.01] transition-all duration-200 ease-out",
+    "stagger_children": "Stagger entrance by 0.05s per link item for organic load feel",
+    "reduced_motion": "Use prefers-reduced-motion check to disable heavy transform animations"
+  },
+  "UNIVERSAL GUIDELINES FOR MAIN AGENT": [
+    "You tend to converge toward generic, 'on distribution' outputs. In frontend design, this creates what users call the 'AI slop' aesthetic. Avoid this: make creative, distinctive frontends that surprise and delight.",
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients.",
+    "Don't make generic centered layouts, simplistic gradients, and uniform styling.",
+    "Create depth through layered design elements with z-index hierarchy.",
+    "Use glass-morphism effects with backdrop filters (12-24px blur).",
+    "You MUST NOT apply universal transition (e.g., transition: all). This results in breaking transforms. Always add transitions for specific interactive elements like button, input excluding transforms.",
+    "You MUST NOT center align the app container, i.e., do not add .App { text-align: center; } in the css file. This disrupts the human natural reading flow of text.",
+    "Always use modern button styles like pill-shaped, or sharp button with interaction animations & color relevant to the app style.",
+    "NEVER use AI assistant Emoji characters like 🤖🧠💭💡🔮🎯 etc for icons. Use Lucide icons instead.",
+    "Every interaction needs micro-animations - hover states, transitions, parallax effects, and entrance animations. Static = dead.",
+    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
+    "Subtle grain textures, noise overlays, custom cursors, selection states, and loading animations: separates good from extraordinary.",
+    "All interactive and key informational elements MUST include a data-testid attribute."
+  ]
+}
