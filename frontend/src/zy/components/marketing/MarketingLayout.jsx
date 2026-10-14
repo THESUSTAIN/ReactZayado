@@ -1,6 +1,10 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { useMarque, logoApp } from "@/zy/lib/marque";
+import { getToken } from "@/zy/lib/kairosApi";
+
+// Connecté : directement l'onboarding (essai Solo), sinon connexion d'abord.
+const lienEssai = () => (getToken() ? "/onboarding?plan=serenite&essai=1" : "/login?next=%2Fonboarding");
 
 // Liens réels uniquement (les anciennes pages /ia… n'existent plus).
 const LIENS = [
@@ -26,7 +30,7 @@ export function MarketingLayout({ children }) {
             <Lien key={l.label} l={l} testid={`mkt-nav-${l.label.toLowerCase().replace(/[^a-z]/g, "-")}`} className="text-sm text-offwhite/65 transition-colors hover:text-gold" />
           ))}
         </nav>
-        <Link to="/login?next=%2Fonboarding" data-testid="mkt-nav-cta" className="btn-gold !px-5 !py-2.5 text-sm">Essayer 2 mois pour 1 €</Link>
+        <Link to={lienEssai()} data-testid="mkt-nav-cta" className="btn-gold !px-5 !py-2.5 text-sm">Essayer 2 mois pour 1 €</Link>
       </header>
 
       <main>{children}</main>
@@ -46,7 +50,7 @@ export function MarketingLayout({ children }) {
           <div>
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-gold">Commencer</p>
             <ul className="space-y-2 text-sm text-offwhite/60">
-              <li><Link to="/login?next=%2Fonboarding" className="hover:text-gold">Essayer 2 mois pour 1 €</Link></li>
+              <li><Link to={lienEssai()} className="hover:text-gold">Essayer 2 mois pour 1 €</Link></li>
               <li><Link to="/login" className="hover:text-gold">Se connecter</Link></li>
               <li><Link to="/pricing" className="hover:text-gold">Voir les tarifs</Link></li>
             </ul>

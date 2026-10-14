@@ -9,21 +9,23 @@ export const ORDRE_OFFRES = ["essentielle", "reveur", "serenite", "pro", "busine
 export const NOMS_OFFRES = { essentielle: "Sans offre", reveur: "Rêveur", serenite: "Solo", pro: "Pro", business: "Équipe", entreprise: "Entreprise" };
 
 export const MODULES_MIN = {
-  vision: "reveur", idees: "reveur", chat: "reveur",
-  cockpit: "serenite", actions: "serenite", radar: "serenite", revue: "serenite", bienetre: "reveur",
+  vision: "reveur", idees: "reveur", chat: "reveur", chiffres: "reveur", tunnels: "reveur",
+  // Rêveur : Radar découverte (5 signaux / jour, 10 prospects suivis) et 1 tunnel — limites appliquées par le serveur.
+  cockpit: "serenite", actions: "serenite", radar: "reveur", revue: "serenite", bienetre: "reveur",
   agents: "serenite", documents: "pro", mafoi: "reveur",
   agent_business: "pro", alertes: "pro",
   rh: "business", equipe: "business",
 };
 
-// Page → module (le plus précis d'abord).
+// Page → module (le plus précis d'abord). Couvre les pages actuelles (/radar, /pilotage…) et les anciennes /app/*.
 const PAGES = [
   ["/app/chatbot-b2b", "agent_business"], ["/app/agents", "agents"], ["/app/radar", "radar"],
   ["/app/revue", "revue"], ["/app/bien-etre", "bienetre"], ["/app/ma-foi", "mafoi"],
   ["/vision-board", "vision"], ["/app/actions", "idees"], ["/app/ideas", "idees"], ["/app/sources", "idees"],
   ["/app/processus", "actions"], ["/app/collaborateurs", "cockpit"],
+  ["/plan-action", "actions"], ["/radar", "radar"], ["/pilotage", "chiffres"], ["/tunnels", "tunnels"], ["/copilote", "cockpit"],
 ];
-export const moduleDePage = (pathname) => (pathname === "/app" ? "cockpit" : (PAGES.find(([p]) => pathname.startsWith(p)) || [])[1] || null);
+export const moduleDePage = (pathname) => (pathname === "/app" || pathname === "/" ? "cockpit" : (PAGES.find(([p]) => pathname.startsWith(p)) || [])[1] || null);
 
 // « Voir l'app comme… » : un admin peut prévisualiser une offre (seulement dans l'interface).
 const CLE_APERCU = "zayado_apercu_plan";

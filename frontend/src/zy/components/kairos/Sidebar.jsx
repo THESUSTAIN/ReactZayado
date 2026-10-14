@@ -121,7 +121,7 @@ function SidebarEntreprise() {
   const [planActuel, setPlanActuel] = useState(null);
   useEffect(() => { chargerAbonnement().then((a) => setPlanActuel(planEffectif(a))).catch(() => {}); }, []);
   // Verrou « Inclus dès … » selon l'offre (toutes les offres, plus seulement Rêveur).
-  const MOD_MENU = { pilotage: "cockpit", tunnels: "cockpit", today: "cockpit", vision: "vision", partage: "vision", reprise: "cockpit", radar: "radar", actions: "idees", elan: "idees", wellbeing: "bienetre", mafoi: "mafoi", agent: "agents" };
+  const MOD_MENU = { pilotage: "chiffres", tunnels: "tunnels", today: "cockpit", vision: "vision", partage: "vision", reprise: "cockpit", radar: "radar", actions: "idees", elan: "idees", wellbeing: "bienetre", mafoi: "mafoi", agent: "agents" };
   const verrouille = (key) => key !== "equipe" && !menusEntreprise && !!planActuel && !aDroit(planActuel, MOD_MENU[key]);
   const [active, setActive] = useState(deriveActive());
   useEffect(() => { setActive(deriveActive()); }, [deriveActive]);

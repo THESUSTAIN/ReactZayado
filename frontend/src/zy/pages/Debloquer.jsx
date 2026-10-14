@@ -1,3 +1,4 @@
+import { lancerPaiement } from "@/zy/lib/checkout";
 import React from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import {
@@ -83,9 +84,9 @@ export default function Debloquer() {
               <Link to="/pricing" data-testid="debloquer-offres" className="inline-flex items-center gap-2 rounded-full px-7 py-3.5 text-[15px] font-semibold text-navy-900 shadow-[0_10px_30px_rgba(222,194,163,0.25)] transition hover:brightness-105" style={{ background: "linear-gradient(to bottom,#F1E2CC,#DEC2A3)" }}>
                 <Sparkles size={16} /> Voir les offres
               </Link>
-              <Link to="/activer" data-testid="debloquer-essai" className="inline-flex items-center rounded-full border border-white/20 px-7 py-3.5 text-[15px] font-semibold text-offwhite transition hover:bg-white/10">
+              <button type="button" onClick={() => lancerPaiement("serenite")} data-testid="debloquer-essai" className="inline-flex items-center rounded-full border border-white/20 px-7 py-3.5 text-[15px] font-semibold text-offwhite transition hover:bg-white/10">
                 Essayer Solo · 2 mois pour 1 €
-              </Link>
+              </button>
             </div>
             <p className="mt-4 text-xs text-offwhite/40">Sans engagement, résiliable en 1 clic.</p>
           </div>

@@ -5,6 +5,7 @@ chez Zayado afin que produits, services et SaaS passent par le même flux.
 """
 import asyncio
 from datetime import datetime, timedelta, timezone
+import logging
 import os
 import uuid
 import httpx
@@ -347,6 +348,25 @@ def install_commerce(g: dict) -> None:
     def _entetes() -> dict:
         return {"Authorization": f"Bearer {_mollie_key()}", "Content-Type": "application/json"}
 
+    def _profil_mollie(corps: dict) -> dict:
+        """Jeton d'organisation / OAuth (access_…) : Mollie exige profileId (et testmode en test)."""
+        if _mollie_key().startswith("access_"):
+            if os.environ.get("MOLLIE_PROFILE_ID"):
+                corps["profileId"] = os.environ["MOLLIE_PROFILE_ID"]
+            if os.environ.get("MOLLIE_TESTMODE") == "1":
+                corps["testmode"] = True
+        return corps
+
+    def _refus_mollie(r: httpx.Response, quoi: str) -> HTTPException:
+        """Message lisible : le motif exact de Mollie (champ + détail), aussi écrit dans les logs."""
+        try:
+            j = r.json()
+            motif = f"{j.get('detail', '')}{' (champ ' + j['field'] + ')' if j.get('field') else ''}".strip()
+        except Exception:  # noqa: BLE001
+            motif = r.text[:200]
+        logging.getLogger("kairos").warning("Mollie %s refusé %s : %s", quoi, r.status_code, motif)
+        return HTTPException(502, f"Mollie a refusé {quoi} ({r.status_code}) : {motif or 'motif non précisé'}")
+
     async def _mollie(methode: str, chemin: str, corps: dict | None = None) -> dict:
         """Appel générique à l'API Mollie v2 (clients, abonnements)."""
         if not _mollie_key():
@@ -354,13 +374,13 @@ def install_commerce(g: dict) -> None:
         url = f"https://api.mollie.com/v2/{chemin}"
         async with httpx.AsyncClient(timeout=20) as client:
             if methode == "POST":
-                r = await client.post(url, json=corps or {}, headers=_entetes())
+                r = await client.post(url, json=_profil_mollie(dict(corps or {})), headers=_entetes())
             elif methode == "DELETE":
                 r = await client.delete(url, headers=_entetes())
             else:
                 r = await client.get(url, headers=_entetes())
         if r.status_code >= 400 and not (methode == "DELETE" and r.status_code in (404, 410, 422)):
-            raise HTTPException(502, f"Mollie a refusé la demande ({r.status_code}).")
+            raise _refus_mollie(r, "la demande")
         try:
             return r.json()
         except Exception:  # noqa: BLE001 — DELETE renvoie un corps vide
@@ -397,10 +417,10 @@ def install_commerce(g: dict) -> None:
             # pour les prélèvements suivants.
             payload.update({"customerId": customer_id, "sequenceType": "first"})
         async with httpx.AsyncClient(timeout=20) as client:
-            response = await client.post("https://api.mollie.com/v2/payments", json=payload,
+            response = await client.post("https://api.mollie.com/v2/payments", json=_profil_mollie(payload),
                                          headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
         if response.status_code >= 400:
-            raise HTTPException(502, f"Mollie a refusé le paiement ({response.status_code}).")
+            raise _refus_mollie(response, "le paiement")
         data = response.json()
         return {"id": data["id"], "checkout_url": data.get("_links", {}).get("checkout", {}).get("href")}
 
@@ -485,7 +505,15 @@ def install_commerce(g: dict) -> None:
         db.add(order)
         await db.flush()
         cid = await _client_mollie(db, user)
-        payment = await _mollie_create(order, cid)
+        try:
+            payment = await _mollie_create(order, cid)
+        except HTTPException as e:
+            # Client Mollie créé avec une autre clé (test ↔ live) : on en recrée un, une seule fois.
+            if "customer" not in str(e.detail).lower():
+                raise
+            a_mollie = await db.get(Abonnement, user.id)
+            a_mollie.mollie_customer_id = None
+            payment = await _mollie_create(order, await _client_mollie(db, user))
         order.mollie_payment_id = payment["id"]
         await db.commit()
         return {"ok": True, "checkoutUrl": payment["checkout_url"], "paymentId": payment["id"], "order": _serialise(order)}
@@ -531,7 +559,15 @@ def install_commerce(g: dict) -> None:
         db.add(order)
         await db.flush()
         cid = await _client_mollie(db, user)
-        payment = await _mollie_create(order, cid)
+        try:
+            payment = await _mollie_create(order, cid)
+        except HTTPException as e:
+            # Client Mollie créé avec une autre clé (test ↔ live) : on en recrée un, une seule fois.
+            if "customer" not in str(e.detail).lower():
+                raise
+            a_mollie = await db.get(Abonnement, user.id)
+            a_mollie.mollie_customer_id = None
+            payment = await _mollie_create(order, await _client_mollie(db, user))
         order.mollie_payment_id = payment["id"]
         await db.commit()
         return {"ok": True, "checkoutUrl": payment["checkout_url"], "paymentId": payment["id"], "order": _serialise(order)}
