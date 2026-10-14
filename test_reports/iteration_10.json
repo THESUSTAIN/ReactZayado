@@ -1,0 +1,37 @@
+{
+  "summary": "Retest des corrections post-iteration_9 sur l'URL preview locale (projet-creation-1.preview.emergentagent.com). Gating par forfait + redirections, bouton debloquer-essai, lien mkt-nav-cta, et messages d'erreur Mollie testés avec les 3 comptes (reveur/solo/pro). ✅ La majorité des exigences est respectée : (1) Rêveur sur / est redirigé vers /vision-board ; /plan-action -> /app/debloquer?m=actions ; /radar, /pilotage, /tunnels, /vision-board s'ouvrent. (2) Solo et Pro accèdent sans redirection à /, /plan-action, /radar, /pilotage, /tunnels. Pro accède aussi à /app/chatbot-b2b. (3) Le bouton data-testid=debloquer-essai lance bien POST /api/checkout {plan:'serenite', essai:true} et affiche une notification lisible « Mollie n'est pas configuré : MOLLIE_API_KEY manque côté serveur. » - pas de redirection silencieuse vers /. (4) Le lien data-testid=mkt-nav-cta sur /pricing, connecté en Rêveur, pointe bien vers /onboarding?plan=serenite&essai=1. (5) Les CTA /pricing (pricing-cta-serenite, pricing-cta-pro) renvoient 503 avec toast lisible. (6) Backend POST /api/checkout {plan:'pro',cycle:'mensuel'} avec jeton Rêveur -> HTTP 503 propre {detail:\"Mollie n'est pas configuré : MOLLIE_API_KEY manque côté serveur.\"} - aucun 500. ❌ UNE MISMATCH DÉCOUVERTE : la sidebar réellement utilisée est /app/frontend/src/components/vision/chrome.tsx (pas Sidebar.jsx). Dans ENTREES (ligne 51-62), les modules sont mal mappés par rapport à la grille voulue : l'entrée 'plan' a module:'idees' (niveau Rêveur -> JAMAIS verrouillée) alors que la tâche exige un cadenas « Inclus dès Solo » dessus pour un Rêveur ; l'entrée 'chiffres' a module:'cockpit' (niveau Solo -> verrouillée en Rêveur) alors que la tâche demande l'INVERSE (chiffres accessibles au Rêveur, pas de verrou). Résultat visuel observé : sur /app/debloquer avec un Rêveur, on voit nav-lock-today ET nav-lock-chiffres mais AUCUN nav-lock-plan - exactement l'inverse de la grille demandée.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "src/components/vision/chrome.tsx (Rail/BarreBas)", "issue": "ENTREES[plan] a module:'idees' au lieu de 'actions' => aucun verrou sur Plan pour un Rêveur. La tâche exige « Inclus dès Solo » sur Plan. Corriger : {cle:'plan', ..., module:'actions', ...}.", "selector": "[data-testid='nav-lock-plan']", "priority": "HIGH"},
+      {"component": "src/components/vision/chrome.tsx (Rail/BarreBas)", "issue": "ENTREES[chiffres] a module:'cockpit' au lieu de 'chiffres' => verrou sur Chiffres pour un Rêveur, alors que la grille attendue autorise les Chiffres dès Rêveur. Corriger : {cle:'chiffres', ..., module:'chiffres', ...}.", "selector": "[data-testid='nav-lock-chiffres']", "priority": "HIGH"},
+      {"component": "src/zy/components/kairos/Sidebar.jsx (code mort / divergent)", "issue": "La Sidebar.jsx historique définit MOD_MENU avec actions->'idees' aussi (ligne 124) et pilotage->'chiffres'. Ce composant ne semble plus utilisé sur /vision-board (sidebar count=0 constaté), mais data-testid='sidebar' est présent sur /app/debloquer (chrome.tsx aussi expose data-testid='sidebar'). Deux composants Sidebar définissent les mêmes testids - risque de confusion pour les futurs tests. Vérifier et supprimer le code mort si Sidebar.jsx n'est plus utilisé.", "selector": "n/a", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_10.json"],
+  "action_items": [
+    "HIGH — Corriger src/components/vision/chrome.tsx ligne 53 : {cle:'plan', ..., module:'actions'} (pour que Plan soit verrouillé en Rêveur).",
+    "HIGH — Corriger src/components/vision/chrome.tsx ligne 54 : {cle:'chiffres', ..., module:'chiffres'} (pour que Chiffres soit accessible dès Rêveur).",
+    "LOW — Vérifier si src/zy/components/kairos/Sidebar.jsx est encore utilisé ; si non, le supprimer. Le MOD_MENU y utilise aussi actions->'idees' et devra être corrigé si réactivé."
+  ],
+  "critical_code_review_comments": [
+    "chrome.tsx vs Sidebar.jsx : deux composants exportent le même data-testid='sidebar' et des data-testid='nav-*' qui se chevauchent. Un seul doit survivre.",
+    "MODULES_MIN dans droits.js est cohérent avec la grille attendue (actions:'serenite', chiffres:'reveur') ; le bug est dans le MAPPING NAV -> MODULE de chrome.tsx."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "100% (POST /api/checkout 503 propre, pas de 500)",
+    "frontend": "90% - Gating pages/redirections OK (Rêveur, Solo, Pro) ; debloquer-essai OK ; mkt-nav-cta OK ; CTA /pricing OK ; locks sidebar KO (plan/chiffres inversés)"
+  },
+  "test_credentials": "test.reveur@zayado.net, test.solo@zayado.net, test.pro@zayado.net / Test!2026 - tous validés",
+  "seed_data_creation": "Aucune",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Deux fichiers Sidebar coexistent : /app/frontend/src/zy/components/kairos/Sidebar.jsx (ancien, MOD_MENU) et /app/frontend/src/components/vision/chrome.tsx (nouveau, ENTREES). Pour les locks sidebar, c'est chrome.tsx qui s'applique sur les pages /, /vision-board, /app/debloquer. L'URL preview est protégée par Cloudflare après trop de navigations rapides - prévoir sleep ~60s entre batchs. Login via POST /api/auth/login {email, password} -> 200 {access_token}, à stocker dans localStorage['kairos_access_token']. Taux-limite 5 tentatives/15min par email côté backend.",
+  "rca of the issue": "Le mapping des modules dans chrome.tsx:ENTREES n'a pas été mis à jour pour refléter la grille demandée. 'plan' pointe sur le module 'idees' (reveur) au lieu de 'actions' (serenite) et 'chiffres' pointe sur 'cockpit' (serenite) au lieu de 'chiffres' (reveur). Correctif en 2 lignes dans /app/frontend/src/components/vision/chrome.tsx."
+}

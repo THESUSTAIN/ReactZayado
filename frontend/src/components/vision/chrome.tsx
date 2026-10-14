@@ -50,8 +50,8 @@ export type EntreeNav = {
 
 const ENTREES: EntreeNav[] = [
   { cle: "today", nom: "Aujourd'hui", Icone: LayoutDashboard, chemin: "/", module: "cockpit", menuPro: "today" },
-  { cle: "plan", nom: "Plan", Icone: CheckSquare, chemin: "/plan-action", aussi: ["/app/actions", "/app/processus", "/app/ideas", "/app/sources", "/app/revue"], module: "idees", menuPro: "actions" },
-  { cle: "chiffres", nom: "Chiffres", Icone: Wallet, chemin: "/pilotage", module: "cockpit", menuPro: "pilotage" },
+  { cle: "plan", nom: "Plan", Icone: CheckSquare, chemin: "/plan-action", aussi: ["/app/actions", "/app/processus", "/app/ideas", "/app/sources", "/app/revue"], module: "actions", menuPro: "actions" },
+  { cle: "chiffres", nom: "Chiffres", Icone: Wallet, chemin: "/pilotage", module: "chiffres", menuPro: "pilotage" },
   { cle: "clients", nom: "Radar", Icone: Target, chemin: "/radar", aussi: ["/tunnels", "/app/radar"], module: "radar", menuPro: "radar" },
   { cle: "vision", nom: "Vision", Icone: Compass, chemin: "/vision-board", aussi: ["/app/elan", "/app/partager"], module: "vision", menuPro: "vision" },
   { cle: "bienetre", nom: "Bien-être", Icone: HeartPulse, chemin: "/app/bien-etre", module: "bienetre", menuPro: "wellbeing" },
