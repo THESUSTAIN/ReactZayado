@@ -270,10 +270,10 @@ export default function RadarPage() {
               <EtatVide
                 testId="radar-vide"
                 icone={<Target className="size-6" />}
-                titre={data.reglages.zone ? "Rien de nouveau pour l'instant" : "Dis à Zayado où chercher"}
+                titre={data.reglages.zone ? "Tes prochains clients bougent déjà. Allons les chercher." : "Tes futurs clients sont à 20 km. Dis à Zayado où regarder."}
                 texte={data.reglages.zone
-                  ? "La recherche passe chaque nuit. Lance-la maintenant, ou ajoute à la main quelqu'un que tu connais déjà."
-                  : "Indique ton département et 2 ou 3 mots de ton métier dans les réglages : les premiers signaux arrivent dans la minute."}
+                  ? "La recherche passe chaque nuit. Lance-la maintenant, ou ajoute la personne à qui tu penses depuis une semaine : c'est souvent le contact le plus chaud."
+                  : "Ton département et 2 ou 3 mots de ton métier suffisent : les premiers signaux (créations, déménagements, recrutements) arrivent dans la minute."}
                 action={
                   saisieOuverte ? (
                     <form className="flex w-full max-w-md gap-2" data-testid="radar-form-prospect"

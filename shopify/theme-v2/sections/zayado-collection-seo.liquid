@@ -1,0 +1,54 @@
+{%- comment -%} SEO collection : partie « haut » = douleur du client + cadeau ; partie « bas » = FAQ + données structurées (FAQPage, BreadcrumbList).
+Contenu lu dans les métachamps de la collection : zayado.douleur_titre, zayado.douleur (texte), zayado.faq (json [{q,r}]), zayado.aimant (tresorerie|rituel|lumiere). {%- endcomment -%}
+{{ 'zayado.css' | asset_url | stylesheet_tag }}
+{%- liquid
+  assign mf = collection.metafields.zayado
+  assign faq = mf.faq.value
+  assign aim = mf.aimant.value | default: section.settings.aimant
+-%}
+{%- if section.settings.partie == 'haut' -%}
+  {%- if mf.douleur != blank -%}
+  <section class="zy zy-cseo" data-testid="collection-douleur">
+    <div class="zy__wrap zy-cseo__grille">
+      <div>
+        <p class="zy__eyebrow">{{ collection.title }}</p>
+        <h2 class="zy__titre zy__titre--m">{{ mf.douleur_titre.value | default: 'Vous vous reconnaissez ?' }}</h2>
+        <div class="zy-cseo__texte">{{ mf.douleur.value | newline_to_br }}</div>
+      </div>
+      {%- render 'zayado-aimant', aimant: aim, source: collection.handle, variante: 'carte' -%}
+    </div>
+  </section>
+  {%- endif -%}
+{%- else -%}
+  {%- if faq != blank -%}
+  <section class="zy zy--sable" data-testid="collection-faq">
+    <div class="zy__wrap" style="max-width: 860px">
+      <p class="zy__eyebrow">Questions fréquentes</p>
+      <h2 class="zy__titre zy__titre--m">{{ collection.title }} : vos questions</h2>
+      <div style="margin-top: 28px">
+        {%- for item in faq -%}
+          <details class="zy-faq__item" {% if forloop.first %}open{% endif %}><summary>{{ item.q }}</summary><p>{{ item.r }}</p></details>
+        {%- endfor -%}
+      </div>
+    </div>
+  </section>
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{%- for item in faq -%}{"@type":"Question","name":{{ item.q | json }},"acceptedAnswer":{"@type":"Answer","text":{{ item.r | json }}}}{%- unless forloop.last -%},{%- endunless -%}{%- endfor -%}]}
+  </script>
+  {%- endif -%}
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Accueil","item":{{ shop.url | append: '/' | json }}},{"@type":"ListItem","position":2,"name":{{ collection.title | json }},"item":{{ shop.url | append: collection.url | json }}}]}
+  </script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Zayado — SEO collection",
+  "tag": "div",
+  "settings": [
+    { "type": "select", "id": "partie", "label": "Partie", "default": "haut", "options": [ { "value": "haut", "label": "Haut : douleur + cadeau" }, { "value": "bas", "label": "Bas : FAQ + données structurées" } ] },
+    { "type": "select", "id": "aimant", "label": "Cadeau par défaut (si le métachamp est vide)", "default": "tresorerie", "options": [ { "value": "tresorerie", "label": "Check-up trésorerie" }, { "value": "rituel", "label": "Rituel anti-surcharge" }, { "value": "lumiere", "label": "Lumière d'écran" } ] }
+  ],
+  "presets": [{ "name": "Zayado — SEO collection" }]
+}
+{% endschema %}

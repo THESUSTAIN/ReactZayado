@@ -25,7 +25,7 @@ from urllib.parse import quote, urlparse
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import APIRouter, Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import (
@@ -6273,18 +6273,54 @@ class CheckoutIn(BaseModel):
 class LeadIn(BaseModel):
     email: str
     source: str = "inconnue"
+    aimant: Optional[str] = None
+
+
+AIMANTS = {
+    "tresorerie": "Le check-up trésorerie en 10 minutes",
+    "rituel": "Le rituel anti-surcharge en 7 jours",
+    "lumiere": "Bien choisir sa lumière d'écran",
+}
+
+
+async def _livrer_aimant(email: str, aimant: str, lien: str) -> None:
+    titre = AIMANTS[aimant]
+    html = _email_wrap(
+        f"<p>Bonjour,</p><p>Voici votre guide offert : <b>{titre}</b>.</p>"
+        f'<p><a href="{lien}" style="display:inline-block;padding:12px 22px;border-radius:999px;background:#0D1F38;color:#F6F5F2;text-decoration:none">Télécharger le guide (PDF)</a></p>'
+        "<p>Prenez 10 minutes ce soir pour le lire, stylo en main. Répondez simplement à cet e-mail si une question se pose : on lit tout.</p>"
+    )
+    try:
+        await send_email(to=email, subject=f"Votre guide : {titre}", html=html)
+    except Exception as e:  # noqa: BLE001 - la capture ne doit jamais échouer à cause de l'e-mail
+        logger.warning("aimant %s non envoyé à %s : %s", aimant, email, e)
+    cle, liste = os.environ.get("BREVO_API_KEY"), os.environ.get("BREVO_LISTE_AIMANTS")
+    if cle and liste:
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                await client.post("https://api.brevo.com/v3/contacts", headers={"api-key": cle},
+                                  json={"email": email, "listIds": [int(liste)], "updateEnabled": True, "attributes": {"AIMANT": aimant}})
+        except Exception as e:  # noqa: BLE001
+            logger.warning("contact Brevo non créé (%s) : %s", email, e)
 
 
 @api.post("/leads")
-async def capturer_lead(body: LeadIn, db: AsyncSession = Depends(get_db)):
+async def capturer_lead(body: LeadIn, request: Request, background: BackgroundTasks, db: AsyncSession = Depends(get_db)):
     """Capture publique — jamais d'authentification requise, c'est pour
-    des visiteurs anonymes sur les pages Fonctionnalités."""
+    des visiteurs anonymes sur les pages Fonctionnalités. Avec `aimant`, le guide est livré tout de suite."""
     email = body.email.strip().lower()
     if "@" not in email:
         raise HTTPException(422, "Email invalide.")
-    db.add(Lead(email=email, source=body.source[:100]))
+    aimant = body.aimant if body.aimant in AIMANTS else None
+    source = f"{body.source}:{aimant}" if aimant else body.source
+    db.add(Lead(email=email, source=source[:100]))
     await db.commit()
-    return {"ok": True}
+    if not aimant:
+        return {"ok": True}
+    chemin = f"/aimants/zayado-aimant-{aimant}.pdf"
+    origine = request.headers.get("origin") or str(request.base_url).rstrip("/")
+    background.add_task(_livrer_aimant, email, aimant, origine + chemin)
+    return {"ok": True, "guide": chemin, "titre": AIMANTS[aimant]}
 
 
 # ── Partie 2 : auth obligatoire en prod, images IA, marketplace, Qonto ──

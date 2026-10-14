@@ -1,0 +1,83 @@
+{%- comment -%} Capture e-mail + cadeau (aimant). Params : aimant (tresorerie|rituel|lumiere), source, variante (ligne|carte), choix (true = 3 cadeaux au choix), suite_url, suite_label.
+Inscription = client Shopify étiqueté newsletter + aimant-xxx + source-xxx (synchro Brevo via l'app Brevo pour Shopify). {%- endcomment -%}
+{%- liquid
+  assign a = aimant | default: 'tresorerie'
+  assign v = variante | default: 'carte'
+  assign uid = source | default: 'site' | append: '-' | append: a | handleize
+  assign guides = 'tresorerie,rituel,lumiere' | split: ','
+-%}
+<div class="zy-aim zy-aim--{{ v }}" data-zy-aimant="{{ a }}" data-zy-uid="{{ uid }}" data-testid="aimant-{{ uid }}">
+  {%- if choix -%}
+    <div class="zy-aim__choix" role="radiogroup" aria-label="Choisissez votre guide offert">
+      <button type="button" class="zy-aim__puce" role="radio" aria-checked="true" data-a="tresorerie" data-testid="aimant-choix-tresorerie">Check-up trésorerie</button>
+      <button type="button" class="zy-aim__puce" role="radio" aria-checked="false" data-a="rituel" data-testid="aimant-choix-rituel">Rituel anti-surcharge</button>
+      <button type="button" class="zy-aim__puce" role="radio" aria-checked="false" data-a="lumiere" data-testid="aimant-choix-lumiere">Lumière d'écran</button>
+    </div>
+  {%- endif -%}
+  {%- for g in guides -%}
+    {%- case g -%}
+      {%- when 'tresorerie' -%}{%- assign t = "Le check-up trésorerie en 10 minutes" -%}{%- assign d = "Savoir ce soir combien de mois votre activité tient sans nouvelle vente. 4 pages, un stylo suffit." -%}
+      {%- when 'rituel' -%}{%- assign t = "Le rituel anti-surcharge en 7 jours" -%}{%- assign d = "15 minutes par jour pour fermer les boucles ouvertes et retrouver des soirées calmes." -%}
+      {%- when 'lumiere' -%}{%- assign t = "Bien choisir sa lumière d'écran" -%}{%- assign d = "Yeux qui piquent, sommeil léger ? Les réglages gratuits d'abord, puis quoi acheter (ou pas)." -%}
+    {%- endcase -%}
+    <div class="zy-aim__texte" data-pour="{{ g }}" {% if g != a %}hidden{% endif %}>
+      <p class="zy-aim__sur">Guide offert · PDF</p>
+      <p class="zy-aim__titre">{{ t }}</p>
+      <p class="zy-aim__desc">{{ d }}</p>
+    </div>
+  {%- endfor -%}
+  {%- form 'customer', class: 'zy-aim__form', data-zy-form: '' -%}
+    <input type="hidden" name="contact[tags]" value="newsletter,aimant-{{ a }},source-{{ source | default: 'site' | handleize }}" data-zy-tags>
+    <div class="zy-aim__ligne">
+      <input type="email" name="contact[email]" required placeholder="Votre e-mail" aria-label="Votre e-mail" autocomplete="email" data-testid="aimant-email-{{ uid }}">
+      <button type="submit" data-testid="aimant-envoyer-{{ uid }}">Recevoir le guide <span aria-hidden="true">→</span></button>
+    </div>
+    <p class="zy-aim__legal">Gratuit. 1 e-mail utile par semaine au plus, désinscription en un clic.</p>
+  {%- endform -%}
+  <div class="zy-aim__merci" hidden data-testid="aimant-merci-{{ uid }}">
+    <p class="zy-aim__titre">C'est à vous. Bonne lecture !</p>
+    {%- for g in guides -%}
+      <a class="zy-aim__dl" data-pour="{{ g }}" href="{{ 'zayado-aimant-' | append: g | append: '.pdf' | asset_url }}" target="_blank" rel="noopener" {% if g != a %}hidden{% endif %} data-testid="aimant-telecharger-{{ uid }}-{{ g }}">Télécharger le guide (PDF)</a>
+    {%- endfor -%}
+    {%- if suite_url != blank -%}<a class="zy-aim__suite" href="{{ suite_url }}" data-testid="aimant-suite-{{ uid }}">{{ suite_label | default: 'Continuer' }} →</a>{%- endif -%}
+  </div>
+</div>
+<script>
+  (function () {
+    if (window.zyAimant) return; window.zyAimant = true;
+    function montrer(bloc, a) {
+      bloc.querySelectorAll('[data-pour]').forEach(function (e) { e.hidden = e.getAttribute('data-pour') !== a; });
+      bloc.querySelector('[data-zy-form]').hidden = true;
+      bloc.querySelectorAll('.zy-aim__choix, .zy-aim__texte').forEach(function (e) { e.hidden = true; });
+      var m = bloc.querySelector('.zy-aim__merci'); m.hidden = false;
+      m.querySelectorAll('[data-pour]').forEach(function (e) { e.hidden = e.getAttribute('data-pour') !== a; });
+    }
+    function init() {
+      document.querySelectorAll('[data-zy-aimant]').forEach(function (bloc) {
+        var tags = bloc.querySelector('[data-zy-tags]');
+        bloc.querySelectorAll('.zy-aim__puce').forEach(function (p) {
+          p.addEventListener('click', function () {
+            var a = p.getAttribute('data-a'); bloc.setAttribute('data-zy-aimant', a);
+            bloc.querySelectorAll('.zy-aim__puce').forEach(function (o) { o.setAttribute('aria-checked', o === p ? 'true' : 'false'); });
+            bloc.querySelectorAll('.zy-aim__texte').forEach(function (e) { e.hidden = e.getAttribute('data-pour') !== a; });
+            tags.value = tags.value.replace(/aimant-[a-z]+/, 'aimant-' + a);
+          });
+        });
+        var uid = bloc.getAttribute('data-zy-uid');
+        var deja = sessionStorage.getItem('zy-aim-' + uid);
+        if (deja && /customer_posted=true/.test(location.search)) montrer(bloc, deja);
+        var form = bloc.querySelector('[data-zy-form]');
+        form.addEventListener('submit', function (ev) {
+          var a = bloc.getAttribute('data-zy-aimant');
+          sessionStorage.setItem('zy-aim-' + uid, a);
+          ev.preventDefault();
+          var btn = form.querySelector('button'); btn.disabled = true;
+          fetch(form.action, { method: 'POST', body: new FormData(form), credentials: 'same-origin' })
+            .then(function (r) { if (/challenge/.test(r.url)) { form.submit(); return; } montrer(bloc, a); bloc.dispatchEvent(new CustomEvent('zy:inscrit', { bubbles: true })); })
+            .catch(function () { form.submit(); });
+        });
+      });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+  })();
+</script>

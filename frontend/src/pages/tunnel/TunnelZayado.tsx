@@ -8,6 +8,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, Check, CreditCard, Download, FileSpreadsheet, Loader2, ShieldCheck, Sparkles, Upload } from "lucide-react";
 import { apiGet, apiPost, apiUpload, errorMessage } from "@/lib/api";
+import { AimantSortie, GuideOffert, type Aimant } from "./AimantSortie";
 import type { Analyse, CaptureIn, CaptureOut, CheckoutOut, Commande, Offres, Prospect } from "./types";
 import "@fontsource-variable/fraunces";
 import "@fontsource/poppins/400.css";
@@ -40,6 +41,7 @@ const PRIORITES = [
   { v: "clients", l: "Trouver des clients", pas: "Lister 10 entreprises de ta zone qui ont bougé ce mois-ci (création, déménagement, levée) : ce sont les signaux les plus chauds." },
   { v: "organisation", l: "Organisation et équipe", pas: "Écrire les 3 tâches que tu refais chaque semaine : ce sont les premières à documenter ou à déléguer." },
 ];
+const AIMANT_PAR_PRIORITE: Record<string, Aimant> = { tresorerie: "tresorerie", clients: "tresorerie", equilibre: "rituel", organisation: "rituel" };
 
 export const eur = (v: string | number) =>
   new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: Number(v) % 1 === 0 ? 0 : 2 }).format(Number(v));
@@ -151,10 +153,10 @@ export function TunnelCapture() {
         <div>
           <p className="site-stamp" style={{ color: NAVY }}>Diagnostic gratuit · 2 minutes</p>
           <h1 style={{ fontFamily: DISPLAY, color: NAVY }} className="mt-6 text-[40px] font-semibold leading-[1.08] tracking-tight sm:text-5xl">
-            Entreprendre avec <span className="site-hand">clarté financière,</span> sérénité et équilibre.
+            Combien de mois ton entreprise <span className="site-hand">tient-elle</span> sans nouvelle vente ?
           </h1>
           <p className="mt-5 max-w-lg text-[16px] leading-relaxed opacity-75">
-            Quatre réponses, et tu repars avec ta priorité du moment et un premier pas concret, pour ton entreprise comme pour toi.
+            La plupart des indépendants ne le savent pas, et c'est ce flou qui empêche de dormir. Quatre réponses, et tu repars avec ta priorité du moment, un premier pas concret et un guide offert.
           </p>
           <ol className="mt-8 space-y-4">
             {[
@@ -171,6 +173,7 @@ export function TunnelCapture() {
               </li>
             ))}
           </ol>
+          <AimantSortie aimant="tresorerie" source="tunnel-diagnostic" accroche="Pas le temps maintenant ? Prends au moins ceci." testId="tunnel-capture-aimant" />
         </div>
 
         <form
@@ -272,6 +275,8 @@ export function TunnelMerci() {
             <p className="mt-2 leading-relaxed opacity-80">{priorite.pas}</p>
           </div>
         ) : null}
+
+        <GuideOffert aimant={AIMANT_PAR_PRIORITE[prospect.data?.priorite ?? ""] ?? "tresorerie"} accroche="Ton guide offert, comme promis" testId="tunnel-merci-guide" />
 
         {offres ? (
           <div className="mt-6 rounded-[26px] p-7 md:p-9" style={{ background: DEGRADE_CARTE, color: PAPER_2 }} data-testid="tunnel-tripwire-kit">
@@ -467,6 +472,7 @@ export function TunnelConfirmation() {
                   Si tu veux en parler à un expert plus tard, réponds simplement à notre e-mail : on fixera un rendez-vous ensemble.
                 </p>
               )}
+              <GuideOffert aimant="tresorerie" accroche="En bonus avec ton Kit" testId="tunnel-confirmation-guide" />
             </div>
           </>
         ) : !commande.isError ? <AttentePaiement statut="pending" /> : null}

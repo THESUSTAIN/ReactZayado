@@ -4,18 +4,113 @@
     "liens": {
       "type": "zayado-liens",
       "blocks": {
-        "decouvrir": { "type": "lien", "settings": { "titre": "Découvrir Zayado", "desc": "Notre vision, nos services et la boutique", "url": "/", "icone": "maison", "image_url": "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/06285b877c75137d7442e00075d21ae52aeed15ff6bf096ee15fd67956a01c5a.jpeg" } },
-        "copilote": { "type": "lien", "settings": { "titre": "Copilote Zayado — 2 mois pour 1 €", "desc": "Vos chiffres, vos futurs clients et votre plan, guidés par l'IA", "url": "https://app.zayado.net/onboarding?plan=serenite", "icone": "graphique", "accent": true, "image_url": "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/b7886a789d26a2f063fd3db2d3fef5259acbb23e5fd19e0bd4a65005d22cb085.jpeg" } },
-        "accompagnement": { "type": "lien", "settings": { "titre": "Services & Accompagnement", "desc": "Des experts sélectionnés pour répondre à vos besoins", "url": "/collections/accompagnement", "icone": "equipe", "image_url": "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/2901dc1fbd7d9f4f891c5bb561b96c9dea008dc4b614dd4c450038e9936a7fe8.jpeg" } },
-        "reprise": { "type": "lien", "settings": { "titre": "Rachat & reprise d'entreprise", "desc": "Reprendre une entreprise qui tourne, même sans apport", "url": "https://app.zayado.net/public/reprise", "icone": "cle", "accent": true, "image_url": "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/103b8ede3aa9b67d0aec3d3e1bfd6e773c01699f643fa6b1fb498a95d1f80522.jpeg" } },
-        "boutique": { "type": "lien", "settings": { "titre": "Boutique Zayado", "desc": "Des objets choisis pour travailler mieux et vous sentir bien", "url": "/collections/produits", "icone": "sac", "image_url": "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/34dc1d19f13f50c924a21202732d56c9dcfb5ad01236e3fe7e24af9639588fe4.jpeg" } },
-        "bienetre": { "type": "lien", "settings": { "titre": "Bien-être & Équilibre", "desc": "Des outils et conseils pour votre énergie au quotidien", "url": "/collections/produits", "icone": "lotus", "accent": true, "image_url": "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/a752605fa8b89a6c95a8ad7798acf1d35a891f2765f23f3c44b7a04d41bee0eb.jpeg" } },
-        "journal": { "type": "lien", "settings": { "titre": "Journal", "desc": "Nos articles et conseils pour avancer avec sens", "url": "/blogs/journal", "icone": "livre", "image_url": "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/f83fb9dd8c176c599fa5c8094a86094d08891a920c27d0b10d6edf898407b440.jpeg" } },
-        "newsletter": { "type": "newsletter", "settings": {} }
+        "decouvrir": {
+          "type": "lien",
+          "settings": {
+            "titre": "Découvrir Zayado",
+            "desc": "Notre vision, nos services et la boutique",
+            "url": "/",
+            "icone": "maison",
+            "image_url": "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/06285b877c75137d7442e00075d21ae52aeed15ff6bf096ee15fd67956a01c5a.jpeg",
+            "aimant": "tresorerie"
+          }
+        },
+        "copilote": {
+          "type": "lien",
+          "settings": {
+            "titre": "Copilote Zayado — 2 mois pour 1 €",
+            "desc": "Vos chiffres, vos futurs clients et votre plan, guidés par l'IA",
+            "url": "https://app.zayado.net/onboarding?plan=serenite",
+            "icone": "graphique",
+            "accent": true,
+            "image_url": "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/b7886a789d26a2f063fd3db2d3fef5259acbb23e5fd19e0bd4a65005d22cb085.jpeg",
+            "aimant": "tresorerie"
+          }
+        },
+        "accompagnement": {
+          "type": "lien",
+          "settings": {
+            "titre": "Services & Accompagnement",
+            "desc": "Des experts sélectionnés pour répondre à vos besoins",
+            "url": "/collections/accompagnement",
+            "icone": "equipe",
+            "image_url": "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/2901dc1fbd7d9f4f891c5bb561b96c9dea008dc4b614dd4c450038e9936a7fe8.jpeg",
+            "aimant": "tresorerie"
+          }
+        },
+        "reprise": {
+          "type": "lien",
+          "settings": {
+            "titre": "Rachat & reprise d'entreprise",
+            "desc": "Reprendre une entreprise qui tourne, même sans apport",
+            "url": "https://app.zayado.net/public/reprise",
+            "icone": "cle",
+            "accent": true,
+            "image_url": "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/103b8ede3aa9b67d0aec3d3e1bfd6e773c01699f643fa6b1fb498a95d1f80522.jpeg",
+            "aimant": "tresorerie"
+          }
+        },
+        "boutique": {
+          "type": "lien",
+          "settings": {
+            "titre": "Boutique Zayado",
+            "desc": "Des objets choisis pour travailler mieux et vous sentir bien",
+            "url": "/collections/produits",
+            "icone": "sac",
+            "image_url": "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/34dc1d19f13f50c924a21202732d56c9dcfb5ad01236e3fe7e24af9639588fe4.jpeg",
+            "aimant": "lumiere"
+          }
+        },
+        "bienetre": {
+          "type": "lien",
+          "settings": {
+            "titre": "Bien-être & Équilibre",
+            "desc": "Des outils et conseils pour votre énergie au quotidien",
+            "url": "/collections/produits",
+            "icone": "lotus",
+            "accent": true,
+            "image_url": "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/a752605fa8b89a6c95a8ad7798acf1d35a891f2765f23f3c44b7a04d41bee0eb.jpeg",
+            "aimant": "rituel"
+          }
+        },
+        "journal": {
+          "type": "lien",
+          "settings": {
+            "titre": "Journal",
+            "desc": "Nos articles et conseils pour avancer avec sens",
+            "url": "/blogs/journal",
+            "icone": "livre",
+            "image_url": "https://static.prod-images.emergentagent.com/jobs/699e8846-5505-436a-a263-98fd7ef7fcad/images/f83fb9dd8c176c599fa5c8094a86094d08891a920c27d0b10d6edf898407b440.jpeg",
+            "aimant": "rituel"
+          }
+        },
+        "newsletter": {
+          "type": "newsletter",
+          "settings": {
+            "titre": "3 guides offerts",
+            "desc": "Trésorerie, anti-surcharge, lumière d'écran : choisissez le vôtre"
+          }
+        }
       },
-      "block_order": ["decouvrir", "copilote", "accompagnement", "reprise", "boutique", "bienetre", "journal", "newsletter"],
-      "settings": { "nom": "ZAYADO", "slogan": "Entreprendre avec sens, clarté financière et équilibre", "devise": "Réconcilier sens, travail et bien-être", "nombre": 6 }
+      "block_order": [
+        "decouvrir",
+        "copilote",
+        "accompagnement",
+        "reprise",
+        "boutique",
+        "bienetre",
+        "journal",
+        "newsletter"
+      ],
+      "settings": {
+        "nom": "ZAYADO",
+        "slogan": "Entreprendre avec sens, clarté financière et équilibre",
+        "devise": "Réconcilier sens, travail et bien-être",
+        "nombre": 6
+      }
     }
   },
-  "order": ["liens"]
+  "order": [
+    "liens"
+  ]
 }

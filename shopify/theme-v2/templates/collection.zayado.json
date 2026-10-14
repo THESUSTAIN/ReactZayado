@@ -1,6 +1,8 @@
 {
   "sections": {
-    "grille": { "type": "zayado-grille-produits", "settings": { "nombre": 24, "colonnes": 3 } }
+    "seo-haut": { "type": "zayado-collection-seo", "settings": { "partie": "haut" } },
+    "grille": { "type": "zayado-grille-produits", "settings": { "nombre": 24, "colonnes": 3 } },
+    "seo-bas": { "type": "zayado-collection-seo", "settings": { "partie": "bas" } }
   },
-  "order": ["grille"]
+  "order": ["seo-haut", "grille", "seo-bas"]
 }

@@ -70,6 +70,13 @@ Textes, puces (une par ligne), liens et image réglables dans le customizer. {%-
       </a>
     </div>
 
+    {%- if section.settings.capture -%}
+      <div class="zy-anim" style="--d: .7s">
+        {%- if section.settings.capture_accroche != blank -%}<p class="zy-aim__hesite" style="margin-top:18px">{{ section.settings.capture_accroche }}</p>{%- endif -%}
+        {%- render 'zayado-aimant', aimant: section.settings.capture_aimant, source: 'hero', variante: 'ligne', choix: true -%}
+      </div>
+    {%- endif -%}
+
     {%- if section.settings.note != blank -%}
       <p class="zy-aig__note zy-anim" style="--d: .8s">{{ section.settings.note }}</p>
     {%- endif -%}
@@ -105,6 +112,10 @@ Textes, puces (une par ligne), liens et image réglables dans le customizer. {%-
     { "type": "url", "id": "lien_2", "label": "Lien (défaut : /collections/produits)" },
     { "type": "image_picker", "id": "image_2", "label": "Image de la carte" },
     { "type": "text", "id": "image_2_alt", "label": "Texte alternatif de l'image", "default": "Bureau apaisé : plantes, carnet et thé" },
+    { "type": "header", "content": "Inscription sous les cartes" },
+    { "type": "checkbox", "id": "capture", "label": "Afficher l'inscription + guide offert", "default": true },
+    { "type": "text", "id": "capture_accroche", "label": "Accroche manuscrite", "default": "Pas encore prêt·e ? Commencez par un guide offert." },
+    { "type": "select", "id": "capture_aimant", "label": "Guide sélectionné par défaut", "default": "tresorerie", "options": [ { "value": "tresorerie", "label": "Check-up trésorerie" }, { "value": "rituel", "label": "Rituel anti-surcharge" }, { "value": "lumiere", "label": "Lumière d'écran" } ] },
     { "type": "header", "content": "Bas du hero" },
     { "type": "text", "id": "note", "label": "Note (optionnelle)", "default": "Paiement sécurisé par Mollie · Sans engagement · Aucune donnée inventée : chaque chiffre a sa source et sa date." }
   ],

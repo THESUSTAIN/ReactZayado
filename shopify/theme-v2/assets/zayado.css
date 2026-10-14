@@ -605,3 +605,36 @@ h1, h2, h3, .h0, .h1, .h2, .h3 { font-family: "Poppins", sans-serif !important; 
 
 /* Cœur sur la fiche produit (à côté du titre) */
 .zy-fav-btn--fiche { position: static; display: inline-grid; margin-left: 12px; vertical-align: middle; width: 42px; height: 42px; flex: none; }
+
+/* ── Aimant (capture e-mail + guide offert) ── */
+.zy-aim { background: #FFFFFF; border: 1px solid #ECE2D2; border-radius: 22px; padding: 20px 22px; box-shadow: 0 24px 50px -38px rgba(13, 31, 56, .45); color: #0D1F38; }
+.zy-aim [hidden] { display: none !important; }
+.zy-aim__sur { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #B8893F; }
+.zy-aim__titre { margin: 6px 0 0; font-size: 18px; font-weight: 600; line-height: 1.25; }
+.zy-aim__desc { margin: 6px 0 0; font-size: 14px; line-height: 1.5; color: rgba(13, 31, 56, .75); }
+.zy-aim__form { margin-top: 14px; }
+.zy-aim__ligne { display: flex; gap: 8px; flex-wrap: wrap; }
+.zy-aim__ligne input { flex: 1 1 200px; min-width: 0; height: 46px; border-radius: 999px; border: 1px solid rgba(13, 31, 56, .18); padding: 0 18px; font: 15px "Poppins", sans-serif; background: #FDFCF8; color: #0D1F38; }
+.zy-aim__ligne input:focus { outline: 2px solid #D6A64F; outline-offset: 1px; }
+.zy-aim__ligne button { flex: none; height: 46px; padding: 0 22px; border: 0; border-radius: 999px; background: #0D1F38 linear-gradient(120deg, #0D1F38 0%, #1E3D63 55%, #2E4A6B 100%); color: #F6F5F2; font: 600 14.5px "Poppins", sans-serif; cursor: pointer; transition: transform .2s ease, opacity .2s ease; }
+@media (max-width: 520px) { .zy-aim__ligne button { flex: 1 1 100%; } }
+.zy-aim__ligne button:hover { transform: translateY(-2px); }
+.zy-aim__ligne button:disabled { opacity: .6; }
+.zy-aim__legal { margin: 8px 0 0; font-size: 12px; color: rgba(13, 31, 56, .55); }
+.zy-aim__choix { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.zy-aim__puce { height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid rgba(13, 31, 56, .15); background: #FDFCF8; font: 500 13px "Poppins", sans-serif; color: #0D1F38; cursor: pointer; transition: background-color .2s ease, color .2s ease; }
+.zy-aim__puce[aria-checked="true"] { background: #0D1F38; color: #F0DCAC; border-color: #0D1F38; }
+.zy-aim__merci { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.zy-aim__merci .zy-aim__titre { flex-basis: 100%; margin: 0; }
+.zy-aim__dl { display: inline-flex; align-items: center; height: 44px; padding: 0 22px; border-radius: 999px; background: #D6A64F; color: #0D1F38; font-weight: 600; font-size: 14.5px; text-decoration: none; }
+.zy-aim__suite { font-weight: 600; font-size: 14.5px; color: #0D1F38; }
+/* Variante « ligne » (sous le hero) */
+.zy-aim--ligne { margin-top: 18px; display: grid; gap: 12px; align-items: center; padding: 16px 20px; background: rgba(255, 255, 255, .75); backdrop-filter: blur(12px); }
+@media (min-width: 990px) { .zy-aim--ligne { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); padding: 16px 22px; } .zy-aim--ligne .zy-aim__choix { grid-column: 1 / -1; margin: 0; } .zy-aim--ligne .zy-aim__form { margin: 0; } }
+.zy-aim--ligne .zy-aim__titre { font-size: 16px; }
+.zy-aim--ligne .zy-aim__desc { font-size: 13px; }
+.zy-aim__hesite { margin: 0; font-family: 'Caveat', cursive; font-size: 22px; color: #B8893F; }
+/* SEO collection */
+.zy-cseo__grille { display: grid; gap: 24px; align-items: start; }
+@media (min-width: 990px) { .zy-cseo__grille { grid-template-columns: 1.2fr 1fr; gap: 40px; } }
+.zy-cseo__texte { margin-top: 14px; font-size: 15.5px; line-height: 1.7; color: rgba(13, 31, 56, .8); }

@@ -9,6 +9,7 @@ import { ArrowRight, Check, Download, Loader2, Phone } from "lucide-react";
 import { apiGet, apiPost, errorMessage } from "@/lib/api";
 import type { CaptureOut, CheckoutOut, Prospect } from "./types";
 import { Bouton, Cadre, DEGRADE_BLEU, DEGRADE_CARTE, DISPLAY, Erreur, GOLD, GOLD_SOFT, LINE, NAVY, eur, useOffres, type Seo } from "./TunnelZayado";
+import { AimantSortie, GuideOffert } from "./AimantSortie";
 
 const SEO_REPRISE: Seo = {
   titre: "Créer ou reprendre une entreprise ? Fais le test · Zayado",
@@ -107,6 +108,7 @@ export function RepriseCapture() {
             Tu es de l'autre côté ?{" "}
             <a href="/public/cession" className="font-medium underline underline-offset-4" style={{ color: NAVY }} data-testid="reprise-lien-cession">Tu veux vendre ton entreprise</a>
           </p>
+          <AimantSortie aimant="tresorerie" source="tunnel-reprise" accroche="Pas encore prêt·e pour le test ? Commence par lire les chiffres." testId="reprise-capture-aimant" />
         </section>
 
         <form
@@ -257,6 +259,7 @@ export function RepriseMerci() {
           <div className="mt-8 rounded-[22px] border bg-white p-6 text-center" style={{ borderColor: LINE }} data-testid="reprise-fin">
             <p style={{ fontFamily: DISPLAY, color: NAVY }} className="text-xl font-semibold">C'est noté, à très vite.</p>
             <p className="mt-2 opacity-75">On te contacte au créneau choisi. Prépare juste le nom de l'entreprise qui t'intéresse, si tu en as déjà une en tête.</p>
+            <GuideOffert aimant="tresorerie" accroche="Pour préparer l'appel, offert" testId="reprise-fin-guide" />
           </div>
         ) : offres ? (
           <div className="mt-8 rounded-[26px] border bg-white p-7 shadow-[0_20px_60px_rgba(13,31,56,0.08)] md:p-9" style={{ borderColor: LINE }} data-testid="reprise-upsell-kit">
