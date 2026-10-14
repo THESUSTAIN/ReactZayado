@@ -120,3 +120,15 @@
 - Bibliothèque : 10 livres (They Ask You Answer, Product-Led SEO, The Art of SEO, Everybody Writes, Content Inc., StoryBrand, DotCom Secrets, Expert Secrets, $100M Leads, Profit First) en articles résumés.
 - P2 : photos réalistes, doc React↔Shopify, décocher zy_boutique_bientot à l'ouverture.
 
+## Mises à jour 14/10/2026 (fin de journée)
+- Couleurs : tout le jaune/orangé (#D6A64F, #B8893F, #F0DCAC, #E4C87F, #9A6A2A) remplacé par le beige (#DEC2A3 / #F1E2CC, texte #A88B6A) dans le thème, les PDF et l'appli React. Règle notée dans zayado.css et index.css : JAMAIS de jaune.
+- Typo réduite (titres ~20 %). Bandeau d'en-tête redevenu dégradé bleu, barre blanche.
+- Nouvelles sections : zayado-recherche (Produit/Service/Avantage/Idées cadeaux), zayado-communaute (réseaux + mosaïque), zayado-garanties (fiche produit), zayado-coming-soon refaite (maquette Canva), zayado-tunnel (diagnostic + reprise sur Shopify : /pages/diagnostic, /pages/reprise → API appli → paiement Mollie sur l'appli).
+- SEO : JSON-LD FAQPage (zayado-faq), Product (fiche), Article (journal). Page cockpit → /pages/vision-act (+ redirection, titre/description Google, 3 FAQ).
+- Appli : /public/tunnel*, /public/reprise*, /diagnostic, /legal/*, /partenaires/thesustain → redirection vers VITE_SHOP_URL (zayado.net). Gardés : /login, espace client, /t/:slug (tunnels utilisateurs), /public/tunnel/fast-track|confirmation|kit, /pricing, /admin, /espace-vendeur.
+- Tests : iteration_3/4/5 à 100 % après corrections.
+
+## À faire côté utilisateur pour la mise en ligne
+- Railway : ajouter VITE_SHOP_URL=https://zayado.net et ajouter https://tm2fg0-nk.myshopify.com à CORS_ORIGINS (le domaine zayado.net est déjà autorisé), puis redéployer.
+- Shopify : renseigner les liens réseaux sociaux (Réglages du thème › Réseaux sociaux), puis déployer le thème Préparation.
+
