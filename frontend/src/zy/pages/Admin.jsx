@@ -707,7 +707,7 @@ function VideosIA() {
         if (la[0]) setForm((f) => ({ ...f, avatar_id: la[0].avatar_id }));
         if (lv[0]) setForm((f) => ({ ...f, voice_id: lv[0].voice_id }));
       })
-      .catch(() => setErreur("Impossible de joindre HeyGen — la clé HEYGEN_API_KEY n'est probablement pas configurée côté serveur (à ajouter dans les variables d'environnement)."))
+      .catch(() => setErreur("Impossible de charger HeyGen pour le moment (délai dépassé ou erreur du service). Réessaie dans un instant."))
       .finally(() => setChargement(false));
   }, []);
 
