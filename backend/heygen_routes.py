@@ -158,7 +158,8 @@ async def list_avatars(_=Depends(verify_admin)):
             status_code=502,
             detail="Impossible de contacter l'API HeyGen."
         )
-
+    
+    
 @heygen_router.get("/voices")
 async def list_voices(_=Depends(verify_admin)):
     async with httpx.AsyncClient(timeout=30) as client:
