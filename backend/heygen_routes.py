@@ -12,6 +12,12 @@ import logging
 import httpx
 import jwt
 from fastapi import APIRouter, HTTPException, Header, Depends
+import asyncio
+import time
+
+_AVATARS_CACHE = {"ts": 0.0, "data": None}
+_AVATARS_TTL = 3600
+_AVATARS_REFRESH_TASK = None
 
 logger = logging.getLogger(__name__)
 heygen_router = APIRouter(prefix="/heygen", tags=["HeyGen"])
@@ -54,112 +60,92 @@ def _heygen_headers():
 _AVATARS_CACHE = {"ts": 0.0, "data": None}
 _AVATARS_TTL = 3600  # 1 h : la liste HeyGen /v2/avatars est lourde et lente (> 30 s)
 
+async def _fetch_avatars():
+    headers = _heygen_headers()
+
+    async with httpx.AsyncClient(
+        timeout=httpx.Timeout(120.0, connect=10.0)
+    ) as client:
+        r = await client.get(
+            f"{HEYGEN_BASE_URL}/v2/avatars",
+            headers=headers,
+        )
+
+    if r.status_code != 200:
+        logger.error(
+            "HeyGen avatars: HTTP %s, body=%s",
+            r.status_code,
+            r.text[:500],
+        )
+        raise RuntimeError(
+            f"HeyGen API error: HTTP {r.status_code}"
+        )
+
+    result = r.json()
+    avatars = (result.get("data") or {}).get("avatars", [])
+
+    if not isinstance(avatars, list):
+        raise RuntimeError("Format avatars HeyGen invalide")
+
+    _AVATARS_CACHE.update(
+        ts=time.time(),
+        data=avatars,
+    )
+    return avatars
+
+
+async def _refresh_avatars_background():
+    try:
+        await _fetch_avatars()
+        logger.info("Cache HeyGen avatars actualisé")
+    except Exception:
+        logger.exception(
+            "Échec de l'actualisation du cache avatars"
+        )
 
 @heygen_router.get("/avatars")
 async def list_avatars(_=Depends(verify_admin)):
-    import time
+    global _AVATARS_REFRESH_TASK
 
     now = time.time()
+    cached = _AVATARS_CACHE["data"]
 
-    # Cache valide : ne pas rappeler HeyGen
-    if (
-        _AVATARS_CACHE["data"] is not None
-        and now - _AVATARS_CACHE["ts"] < _AVATARS_TTL
-    ):
-        return {"avatars": _AVATARS_CACHE["data"]}
+    # Cache encore valide : réponse immédiate
+    if cached is not None and now - _AVATARS_CACHE["ts"] < _AVATARS_TTL:
+        return {"avatars": cached}
 
-    url = f"{HEYGEN_BASE_URL}/v2/avatars"
+    # Cache expiré : on renvoie les données disponibles
+    # et on actualise en arrière-plan.
+    if cached is not None:
+        if (
+            _AVATARS_REFRESH_TASK is None
+            or _AVATARS_REFRESH_TASK.done()
+        ):
+            _AVATARS_REFRESH_TASK = asyncio.create_task(
+                _refresh_avatars_background()
+            )
 
+        return {"avatars": cached}
+
+    # Premier chargement sans cache : appel nécessaire
     try:
-        headers = _heygen_headers()
-
-        async with httpx.AsyncClient(
-            timeout=httpx.Timeout(120.0, connect=10.0)
-        ) as client:
-            r = await client.get(url, headers=headers)
-
-        logger.info(
-            "HeyGen avatars: HTTP %s",
-            r.status_code
-        )
-
-        if r.status_code != 200:
-            # Ne pas journaliser les en-têtes : ils contiennent la clé API.
-            logger.error(
-                "HeyGen avatars API error: status=%s body=%s",
-                r.status_code,
-                r.text[:1000]
-            )
-
-            # Une erreur d'authentification upstream ne doit pas
-            # être confondue avec le JWT administrateur de Zayado.
-            if r.status_code in (401, 403):
-                raise HTTPException(
-                    status_code=502,
-                    detail=(
-                        "HeyGen refuse la requête. "
-                        "Vérifie la clé API et les autorisations du compte."
-                    )
-                )
-
-            raise HTTPException(
-                status_code=502,
-                detail=f"Erreur de l'API HeyGen (HTTP {r.status_code})."
-            )
-
-        try:
-            result = r.json()
-        except ValueError:
-            logger.error(
-                "HeyGen avatars: réponse JSON invalide: %s",
-                r.text[:500]
-            )
-            raise HTTPException(
-                status_code=502,
-                detail="HeyGen a renvoyé une réponse JSON invalide."
-            )
-
-        data = result.get("data") or {}
-        avatars = data.get("avatars", [])
-
-        if not isinstance(avatars, list):
-            logger.error("Format inattendu dans la réponse HeyGen avatars")
-            raise HTTPException(
-                status_code=502,
-                detail="Format de réponse HeyGen inattendu."
-            )
-
-        _AVATARS_CACHE.update(ts=time.time(), data=avatars)
-
+        avatars = await _fetch_avatars()
         return {"avatars": avatars}
-
     except HTTPException:
         raise
-
     except httpx.TimeoutException:
-        logger.exception("Timeout sur HeyGen /v2/avatars")
-
-        if _AVATARS_CACHE["data"] is not None:
-            logger.warning("Utilisation du cache avatars périmé")
-            return {"avatars": _AVATARS_CACHE["data"]}
-
         raise HTTPException(
-            status_code=504,
-            detail="HeyGen ne répond pas dans le délai imparti."
+            504,
+            "HeyGen met trop de temps à répondre."
         )
-
-    except httpx.HTTPError:
-        logger.exception("Erreur réseau sur HeyGen /v2/avatars")
-
-        if _AVATARS_CACHE["data"] is not None:
-            return {"avatars": _AVATARS_CACHE["data"]}
-
+    except Exception:
+        logger.exception("Impossible de charger les avatars HeyGen")
         raise HTTPException(
-            status_code=502,
-            detail="Impossible de contacter l'API HeyGen."
+            502,
+            "Impossible de récupérer les avatars HeyGen."
         )
     
-    
+
 @heygen_router.get("/voices")
 async def list_voices(_=Depends(verify_admin)):
     async with httpx.AsyncClient(timeout=30) as client:
