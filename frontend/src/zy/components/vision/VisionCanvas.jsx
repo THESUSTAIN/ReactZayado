@@ -400,6 +400,7 @@ export function VisionCanvas({ readOnly = false, initialItems = null, liveData =
     try { localStorage.setItem(BOARD_STORAGE, key); } catch (_) {}
     setStyleMenuId(null); setEditingId(null); setSelectedId(null);
     setBoardKey(key);
+    try { window.dispatchEvent(new CustomEvent("zayado:board", { detail: key })); } catch (_) { /* hors navigateur */ }
   };
 
   /* ── Sauvegarde auto (debounce, pas pendant un glisser) ── */

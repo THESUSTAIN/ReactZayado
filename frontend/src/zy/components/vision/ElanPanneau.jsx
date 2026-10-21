@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ArrowRight, Feather, Heart, Image as ImageIcon, Loader2, X, Zap } from "lucide-react";
+import { ArrowRight, Feather, Heart, Image as ImageIcon, Loader2, Sparkles, X, Zap } from "lucide-react";
+import { AnalyserProjet } from "@/zy/components/vision/AnalyserProjet";
 import { createIdee, fetchIdees, fetchLettres, transformerIdee } from "@/zy/lib/kairosApi";
 import { apiPost } from "@/lib/api";
 import { Lettres } from "@/zy/pages/Elan";
@@ -11,7 +12,7 @@ import { Lettres } from "@/zy/pages/Elan";
 
 const EVT = "zayado:elan";
 export const ouvrirElan = (onglet = "idees") => window.dispatchEvent(new CustomEvent(EVT, { detail: onglet }));
-export const ONGLETS_ELAN = ["idees", "lettres", "mur"];
+export const ONGLETS_ELAN = ["idees", "lettres", "mur", "analyser"];
 
 export function useElanEvenement(onOuvrir) {
   useEffect(() => {
@@ -95,7 +96,7 @@ function LettresVolet() {
 
 export function ElanPanneau({ onglet, onOnglet, onFermer, onOuvrirMur, murActif }) {
   if (!onglet) return null;
-  const VOLETS = [["idees", "Idées", Zap], ["lettres", "Lettres", Feather], ["mur", "Mur", ImageIcon]];
+  const VOLETS = [["idees", "Idées", Zap], ["lettres", "Lettres", Feather], ["mur", "Mur", ImageIcon], ["analyser", "Analyser", Sparkles]];
   return (
     <aside className="anim-tiroir absolute inset-y-0 right-0 z-[70] flex w-full max-w-[420px] flex-col border-l border-white/10 bg-navy-900/95 shadow-[-24px_0_48px_rgba(4,10,28,0.45)] backdrop-blur-xl"
       data-testid="elan-panneau">
@@ -119,6 +120,7 @@ export function ElanPanneau({ onglet, onOnglet, onFermer, onOuvrirMur, murActif 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
         {onglet === "idees" && <Idees />}
         {onglet === "lettres" && <LettresVolet />}
+        {onglet === "analyser" && <AnalyserProjet />}
         {onglet === "mur" && (
           <div className="space-y-3" data-testid="elan-panneau-mur">
             <p className="text-[13.5px] leading-relaxed text-offwhite/70">Ton mur d'inspiration est un board du canvas : photos, citations, vidéos, audio — ce qui te rappelle pourquoi tu persévères.</p>
