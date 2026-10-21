@@ -92,9 +92,15 @@ def install_entreprise_assistant(g: dict) -> None:
     g["EntChrono"], g["EntSuiviTemps"] = EntChrono, EntSuiviTemps
     MODES = ("aucun", "travail", "dossier")
 
+    def _mode_defaut(m) -> str:
+        # Le dirigeant n'a pas de « Fiche » dans Équipe (personne au-dessus de lui pour l'activer) : sans réglage
+        # explicite, son chronomètre est en « temps de travail ». Les autres restent à « aucun » tant que
+        # l'entreprise ne l'a pas décidé.
+        return "travail" if getattr(m, "role", "") == "proprietaire" else "aucun"
+
     async def mode_de(db, m) -> str:
         r = await db.get(EntSuiviTemps, m.id)
-        return r.mode if r else "aucun"
+        return r.mode if r else _mode_defaut(m)
 
     def _aware(d: datetime) -> datetime:
         return d if d.tzinfo else d.replace(tzinfo=timezone.utc)
@@ -193,8 +199,10 @@ def install_entreprise_assistant(g: dict) -> None:
         if not moi:
             raise HTTPException(404, "Tu ne fais partie d'aucune équipe.")
         rows = (await db.execute(select(EntSuiviTemps).where(EntSuiviTemps.org_id == moi.org_id))).scalars().all()
-        tous = {r.membre_id: r.mode for r in rows}
-        return {"moi": tous.get(moi.id, "aucun"), "equipe": tous if moi.role in GERANTS else {}}
+        regles = {r.membre_id: r.mode for r in rows}
+        membres = (await db.execute(select(EntMembre).where(EntMembre.org_id == moi.org_id))).scalars().all()
+        tous = {x.id: regles.get(x.id, _mode_defaut(x)) for x in membres}
+        return {"moi": tous.get(moi.id, _mode_defaut(moi)), "equipe": tous if moi.role in GERANTS else {}}
 
     async def _lignes_temps(db, moi, debut: str, fin: str, membre_id: Optional[str]) -> list:
         try:

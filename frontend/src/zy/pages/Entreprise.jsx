@@ -163,23 +163,21 @@ export default function Entreprise() {
   const [sansClasseur, setSansClasseur] = useState(false);
   const orgId = moi?.org?.id || "";
   const aConfigurer = estPatron && paramsQ.isSuccess && !paramsQ.data?.classeur && !sansClasseur && !sansClasseurChoisi(orgId);
-  const OUVERTS_AU_DEMARRAGE = ["demarrage", "equipe", "assistant", "bases", "reglages"];
+  // Démarrage NON bloquant : sans base reliée, le dirigeant y arrive par défaut (aucune vue demandée), mais
+  // Planning, Absences, Temps (chronomètre), Pièces… fonctionnent sans classeur et restent accessibles.
+  // Avant, toute autre vue renvoyait de force sur « Démarrage » : la page semblait cassée.
+  const vueDemandee = params.get("vue");
   useEffect(() => {
-    if (aConfigurer && !OUVERTS_AU_DEMARRAGE.includes(onglet)) aller("demarrage");
-  }, [aConfigurer, onglet, aller]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (aConfigurer && !vueDemandee) aller("demarrage");
+  }, [aConfigurer, vueDemandee, aller]);
   const remplacees = { planning: "planning", absences: "absences", chrono: "temps", pieces: "pieces" };
   const modelesPresents = new Set(pagesSheet.map((p) => p.modele).filter(Boolean));
   const visibles = SECTIONS_ENTREPRISE.filter((s) => !s.droit || estPatron || d[s.droit]);
   const item = (s, groupe) => ({ key: s.key, groupe, label: !estPatron && s.nomMembre ? s.nomMembre : s.nom, icon: <s.Icon size={16} /> });
   const menuItems = moi && !moi.actif ? [
     { key: "aujourdhui", groupe: "Pour commencer", label: "Créer mon espace", icon: <Sparkles size={16} /> },
-  ] : aConfigurer ? [
-    { key: "demarrage", groupe: "Pour commencer", label: "Démarrage (3 étapes)", icon: <Sparkles size={16} /> },
-    ...visibles.filter((s) => s.key === "equipe").map((s) => item(s, "Pour commencer")),
-    { key: "bases", groupe: "Outils", label: "Bases & pages", icon: <FileSpreadsheet size={16} /> },
-    { key: "assistant", groupe: "Outils", label: "Assistant", icon: <Bot size={16} /> },
-    ...visibles.filter((s) => s.key === "reglages").map((s) => item(s, "Outils")),
   ] : [
+    ...(aConfigurer ? [{ key: "demarrage", groupe: "Pour commencer", label: "Démarrage (3 étapes)", icon: <Sparkles size={16} /> }] : []),
     ...visibles.filter((s) => s.key === "aujourdhui").map((s) => item(s, "Quotidien")),
     ...pagesSheet.map((p) => ({ key: `page-${p.id}`, groupe: "Quotidien", label: p.name, icon: <FileSpreadsheet size={16} /> })),
     ...visibles.filter((s) => remplacees[s.key] && !modelesPresents.has(remplacees[s.key])).map((s) => item(s, "Quotidien")),
@@ -226,7 +224,7 @@ export default function Entreprise() {
                 {onglet === "equipe" && <Equipe moi={moi} membres={membres} recharger={charger} />}
                 {onglet === "absences" && <Absences moi={moi} noms={noms} membres={membres} />}
                 {onglet === "planning" && <Planning moi={moi} noms={noms} membres={membres} />}
-                {onglet === "chrono" && <div className="space-y-4"><Chrono /><DecompteDossiers /><Temps moi={moi} noms={noms} /></div>}
+                {onglet === "chrono" && <div className="space-y-4"><Chrono moi={moi} /><DecompteDossiers /><Temps moi={moi} noms={noms} /></div>}
                 {onglet === "decompte" && (d.saisir_soi
                   ? <Decompte moi={moi} membres={membres} noms={noms} />
                   : <SectionReservee titre="Le décompte du mois" texte="Cette section n'est pas ouverte sur ton compte." aller={aller} />)}
@@ -488,13 +486,20 @@ function Equipe({ moi, membres, recharger }) {
                       {["manager", "membre", "prestataire", "partenaire"].map((r) => <option key={r} value={r}>{ROLES[r]}</option>)}
                     </select>
                   )}
+                  {d.gerer_equipe && m.role === "proprietaire" && (
+                    <button className={bouton2} onClick={() => setOuvert(ouvert === m.id ? null : m.id)} aria-expanded={ouvert === m.id} data-testid={`ent-suivi-${m.id}`}>
+                      <Timer size={14} /> Suivi du temps <ChevronDown size={14} className={ouvert === m.id ? "rotate-180" : ""} />
+                    </button>
+                  )}
                   {d.gerer_equipe && m.role !== "proprietaire" && (
                     <button className={bouton2} onClick={() => setOuvert(ouvert === m.id ? null : m.id)} aria-expanded={ouvert === m.id} data-testid={`ent-fiche-${m.id}`}>
                       Fiche <ChevronDown size={14} className={ouvert === m.id ? "rotate-180" : ""} />
                     </button>
                   )}
                 </div>
-                {ouvert === m.id && <FicheGerant membre={m} moi={moi} recharger={recharger} />}
+                {ouvert === m.id && (m.role === "proprietaire"
+                  ? <div className="mt-3 rounded-xl border border-white/15 bg-white/[0.04] p-3.5"><SuiviTempsMembre membre={m} /></div>
+                  : <FicheGerant membre={m} moi={moi} recharger={recharger} />)}
               </li>
             );
           })}
@@ -1337,8 +1342,10 @@ function ReglagesPaie({ moi, membres, noms, recharger }) {
 }
 
 // ── Chronomètre : un bouton, ou une phrase au chat (« je commence la compta » / « j'ai fini ») ──────────────────────
-function Chrono() {
+function Chrono({ moi }) {
   const [c, setC] = useState(null);
+  const [activation, setActivation] = useState(false);
+  const gerant = ["proprietaire", "manager"].includes(moi?.role);
   const [projet, setProjet] = useState("");
   const [dos, setDos] = useState({ dossier: "", ticket: "", referent: "", libelle: "" });
   const [maintenant, setMaintenant] = useState(Date.now());
@@ -1353,8 +1360,30 @@ function Chrono() {
     catch (e) { toast.error(msg(e)); }
   };
   if (!c) return <Loader2 className="animate-spin text-white/50" />;
+  const activerPourMoi = async (mode) => {
+    if (!moi?.membre_id) return;
+    setActivation(true);
+    try { await entSuiviTempsMaj(moi.membre_id, mode); toast.success("Chronomètre activé."); await charger(); }
+    catch (e) { toast.error(msg(e)); }
+    finally { setActivation(false); }
+  };
   if (c.mode === "aucun" && !c.en_cours) {
-    return <section className={carte} data-testid="ent-chrono-off"><p className={titreCarte}>Chronomètre</p><p className={aide}>Il n'est pas activé pour toi. C'est ton entreprise qui l'active (Équipe › Fiche › Suivi du temps).</p></section>;
+    return (
+      <section className={carte} data-testid="ent-chrono-off">
+        <p className={titreCarte}>Chronomètre</p>
+        {gerant ? (
+          <>
+            <p className={aide}>Il n'est pas encore activé sur ton compte. Choisis comment tu suis ton temps (tu le règles pour ton équipe dans Équipe › Fiche › Suivi du temps).</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button className={bouton} disabled={activation} onClick={() => activerPourMoi("travail")} data-testid="ent-chrono-activer-travail">{activation ? <Loader2 size={16} className="animate-spin" /> : <Timer size={16} />} Temps de travail</button>
+              <button className={bouton2} disabled={activation} onClick={() => activerPourMoi("dossier")} data-testid="ent-chrono-activer-dossier">Par dossier</button>
+            </div>
+          </>
+        ) : (
+          <p className={aide}>Il n'est pas activé pour toi. C'est la personne qui gère l'entreprise qui l'active (Équipe › Fiche › Suivi du temps). En attendant, tu peux ajouter ton temps à la main ci-dessous.</p>
+        )}
+      </section>
+    );
   }
   const parDossier = c.mode === "dossier";
   return (
@@ -1652,7 +1681,7 @@ function ReprisePartenaire({ dossiers }) {
 // Le dirigeant décide, personne par personne : pas de chronomètre, temps de travail (salarié), ou temps par dossier (partenaire)
 function SuiviTempsMembre({ membre }) {
   const [mode, setMode] = useState(null);
-  useEffect(() => { entSuiviTemps().then((r) => setMode(r.equipe?.[membre.id] || "aucun")).catch(() => setMode("aucun")); }, [membre.id]);
+  useEffect(() => { entSuiviTemps().then((r) => setMode(r.equipe?.[membre.id] || (membre.role === "proprietaire" ? "travail" : "aucun"))).catch(() => setMode("aucun")); }, [membre.id]);
   if (mode === null) return null;
   const changer = async (m) => { try { setMode((await entSuiviTempsMaj(membre.id, m)).mode); toast.success("Suivi du temps enregistré."); } catch (e) { toast.error(msg(e)); } };
   return (

@@ -54,6 +54,11 @@ export default function EspaceBases({ ouvrir }: { ouvrir: (pageId: string) => vo
       <section className={carte} data-testid="espace-modeles">
         <h2 className="font-heading text-base font-semibold text-slate-900">Pages prêtes à l'emploi</h2>
         <p className="mt-1 text-sm text-slate-500">Chaque modèle crée son onglet dans le classeur s'il n'existe pas. La première fois, les données déjà saisies dans Zayado y sont envoyées.</p>
+        {!classeur && (
+          <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800" data-testid="espace-modeles-sans-classeur">
+            Relie d'abord ton classeur ci-dessus pour ajouter ces pages. Sans classeur, Planning, Absences, Temps (chronomètre) et Pièces fonctionnent déjà depuis le menu, avec les données gardées dans Zayado.
+          </p>
+        )}
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {(modeles.data ?? []).map((m) => {
             const Icone = ICONE_VUE[m.vue] ?? Table2;
