@@ -824,3 +824,12 @@ export const temoignagesAuto = (actif) => jsendMsg(`/admin/temoignages/auto?acti
 export const temoignagesTour = () => jsendMsg("/admin/temoignages/tour", "POST");
 export const fetchTemoignagePublic = (jeton) => jget(`/public/temoignage/${encodeURIComponent(jeton)}`);
 export const envoyerTemoignagePublic = (jeton, data) => jsendMsg(`/public/temoignage/${encodeURIComponent(jeton)}`, "POST", data);
+
+// ── Reprise d'entreprise : simulation (connecté / public) et « Analyser ce projet » d'un tableau Vision ──────────
+// Ces fonctions étaient importées par SimulationReprise.jsx et AnalyserProjet.jsx (ajoutés le 21/10) mais
+// n'existaient pas ici : le build Vite échouait (« Missing export ») et plus rien ne se déployait.
+export const simulerReprise = (corps, board = "") =>
+  jsendDetail(`/reprise/simulation${board ? `?board=${encodeURIComponent(board)}` : ""}`, "POST", corps);
+export const simulerReprisePublique = (corps) => jsendDetail("/public/reprise/simulation", "POST", corps);
+export const fetchAnalyseTableau = (cle) => jget(`/vision/boards/${encodeURIComponent(cle)}/analyse`);
+export const lancerConseilTableau = (cle, corps = {}) => jsendDetail(`/vision/boards/${encodeURIComponent(cle)}/conseil`, "POST", corps);
