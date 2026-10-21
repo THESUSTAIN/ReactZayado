@@ -6448,6 +6448,9 @@ from actualite_ext import install_actualite  # noqa: E402
 install_actualite(globals())
 from organisation_ext import install_organisation  # noqa: E402
 install_organisation(globals())
+# Testez votre projet (reprise, sans IA) + rendez-vous à 5 € + Conseil des 5 + modèle du chat selon l'offre
+from reprise_conseil_ext import install_reprise_conseil  # noqa: E402
+install_reprise_conseil(globals())
 
 # ─────────────── Processus (page /app/processus) ───────────────
 # Avant : stockés dans le navigateur uniquement, avec 4 processus de démonstration
