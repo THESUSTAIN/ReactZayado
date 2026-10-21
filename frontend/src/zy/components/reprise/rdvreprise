@@ -1,0 +1,108 @@
+import React, { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { CalendarCheck, Loader2 } from "lucide-react";
+import { envoyerRapportReprise, fetchCreneauxReprise, reserverRdvReprise } from "@/zy/lib/kairosApi";
+
+/** Rendez-vous de 20 minutes avec Marie-Esther à 5 € : créneau, questionnaire de filtre, paiement Mollie. */
+const JOURS = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
+export const creneauLisible = (c) => {
+  const d = new Date(`${c}:00`);
+  const h = c.slice(11, 13).replace(/^0/, ""), m = c.slice(14, 16);
+  return `${JOURS[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1} · ${h} h${m === "00" ? "" : ` ${m}`}`;
+};
+
+const QUESTIONS = [
+  ["profil", "Vous êtes…", [["salarie_reprend", "Salarié, je reprends l'entreprise de mon patron"], ["repreneur_cible", "Repreneur, j'ai une entreprise en vue"],
+    ["repreneur_recherche", "Repreneur, je cherche encore"], ["dirigeant", "Dirigeant d'entreprise"], ["autre", "Autre"]]],
+  ["cible", "Avez-vous déjà une entreprise cible ?", [["oui", "Oui"], ["en_discussion", "En discussion avec le vendeur"], ["non", "Pas encore"]]],
+  ["echeance", "Quand souhaitez-vous reprendre ?", [["moins_6_mois", "Dans moins de 6 mois"], ["6_12_mois", "Dans 6 à 12 mois"], ["plus_tard", "Plus tard"]]],
+];
+
+const choixCls = "mt-1 w-full rounded-xl border border-[#DCCFB8] bg-white px-3 py-2 text-[13.5px] text-[#1A2B57] outline-none";
+
+export function RdvReprise({ simulationId = "" }) {
+  const [creneaux, setCreneaux] = useState(null);
+  const [choix, setChoix] = useState("");
+  const [q, setQ] = useState({ profil: "", cible: "", echeance: "", question: "" });
+  const [envoi, setEnvoi] = useState(false);
+  const ok = q.profil && q.cible && q.echeance;
+
+  useEffect(() => { fetchCreneauxReprise().then(setCreneaux).catch(() => setCreneaux({ creneaux: [] })); }, []);
+
+  const reserver = async () => {
+    if (!choix || !ok) return;
+    setEnvoi(true);
+    try {
+      const r = await reserverRdvReprise(choix, simulationId, q);
+      if (r.checkout_url) window.location.assign(r.checkout_url);
+    } catch (err) {
+      toast.error(typeof err.detail === "string" ? err.detail : "La réservation n'a pas abouti.");
+      fetchCreneauxReprise().then(setCreneaux).catch(() => {});
+    } finally { setEnvoi(false); }
+  };
+
+  return (
+    <div className="rounded-3xl bg-[#FAF7F1] p-5 text-[#1A2B57]" data-testid="rdv-carte">
+      <p className="text-[11px] uppercase tracking-[0.18em] text-[#7A5C3E]">Si vous voulez aller plus loin</p>
+      <h2 className="mt-1 text-[19px] font-normal leading-snug">20 minutes avec <span className="whitespace-nowrap">Marie-Esther</span> sur votre rapport</h2>
+      <p className="mt-2 text-[13.5px] text-[#4B5568]">Experte en analyse financière, du côté du repreneur. Elle relit votre rapport et vous dit ce qu'elle vérifierait en premier.</p>
+      {creneaux === null ? <p className="mt-4 flex items-center gap-2 text-[13px]"><Loader2 size={14} className="animate-spin" /> Créneaux…</p>
+        : creneaux.creneaux?.length ? (
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            {creneaux.creneaux.slice(0, 8).map((c) => (
+              <button key={c} onClick={() => setChoix(c)} data-testid={`creneau-${c}`}
+                className={`whitespace-nowrap rounded-xl border px-2 py-2 text-[12px] ${choix === c ? "border-[#1A2B57] bg-[#1A2B57] text-white" : "border-[#DCCFB8]"}`}>
+                {creneauLisible(c)}
+              </button>
+            ))}
+          </div>
+        ) : <p className="mt-4 text-[13px]">Tous les créneaux de la période sont pris. Revenez dans quelques jours.</p>}
+      <p className="mb-2 mt-5 text-[11px] uppercase tracking-[0.18em] text-[#7A5C3E]">Pour préparer vos 20 minutes</p>
+      {QUESTIONS.map(([cle, libelle, options]) => (
+        <label key={cle} className="mb-2 block text-[12.5px] text-[#4B5568]">{libelle}
+          <select value={q[cle]} onChange={(e) => setQ({ ...q, [cle]: e.target.value })} data-testid={`rdv-q-${cle}`} className={choixCls}>
+            <option value="">Choisissez…</option>
+            {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+        </label>
+      ))}
+      <textarea value={q.question} onChange={(e) => setQ({ ...q, question: e.target.value.slice(0, 500) })} rows={2}
+        placeholder="Votre question principale (facultatif)" data-testid="rdv-q-question" className={choixCls} />
+      <div className="mt-4 flex items-center justify-between"><span className="text-[13.5px]">En visio · 20 minutes</span><span className="text-[26px]">{(creneaux?.prix || "5.00").replace(".00", "")}&nbsp;€</span></div>
+      <button onClick={reserver} disabled={!choix || !ok || envoi} data-testid="rdv-reserver"
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-[#1A2B57] py-3 text-[14px] font-medium text-white disabled:opacity-50">
+        {envoi ? <Loader2 size={16} className="animate-spin" /> : <CalendarCheck size={16} />}
+        {!choix ? "Choisissez un créneau" : !ok ? "Répondez aux 3 questions" : `Réserver ${creneauLisible(choix)}`}
+      </button>
+      <p className="mt-3 text-[11.5px] text-[#6B7486]">5 € déduits si vous continuez avec Zayado. Paiement sécurisé. <span className="whitespace-nowrap">Marie-Esther</span> vous envoie le lien de la visio par e-mail.</p>
+    </div>
+  );
+}
+
+/** Recevoir son rapport par e-mail (visiteur sans compte). Le consentement à l'atelier est séparé et facultatif. */
+export function RapportParEmail({ simulationId }) {
+  const [email, setEmail] = useState("");
+  const [atelier, setAtelier] = useState(false);
+  const [etat, setEtat] = useState("");
+  const envoyer = async (e) => {
+    e.preventDefault();
+    setEtat("envoi");
+    try { await envoyerRapportReprise(simulationId, email.trim(), atelier); setEtat("ok"); }
+    catch (err) { toast.error(typeof err.detail === "string" ? err.detail : "L'envoi n'a pas abouti."); setEtat(""); }
+  };
+  if (etat === "ok") return <p className="text-[13.5px]" data-testid="rapport-envoye">C'est envoyé. Pensez à regarder dans vos courriers indésirables si vous ne le voyez pas d'ici quelques minutes.</p>;
+  return (
+    <form onSubmit={envoyer} className="space-y-2" data-testid="rapport-email">
+      <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="vous@exemple.fr"
+        className="w-full rounded-xl border border-white/15 bg-white/[0.07] px-3.5 py-2.5 text-[14px] text-offwhite outline-none focus:border-[#EADFC0]" />
+      <label className="flex items-start gap-2 text-[12px] text-offwhite/65">
+        <input type="checkbox" checked={atelier} onChange={(e) => setAtelier(e.target.checked)} className="mt-0.5" />
+        Je souhaite aussi recevoir l'invitation à l'atelier mensuel et les e-mails de Zayado sur la reprise. Désinscription en un clic.
+      </label>
+      <button type="submit" disabled={etat === "envoi"} className="rounded-full border border-[#EADFC0] px-4 py-2 text-[13.5px] font-medium disabled:opacity-50">
+        {etat === "envoi" ? "Envoi…" : "Recevoir mon rapport"}
+      </button>
+    </form>
+  );
+}
+
