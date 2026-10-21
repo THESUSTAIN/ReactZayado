@@ -71,6 +71,8 @@ const PAGES = [
   { label: "Radar", path: "/app/radar", mots: "marché veille signaux prospects" },
   { label: "Revue hebdo", path: "/app/revue", mots: "semaine bilan review" },
   { label: "Élan · Idées", path: "/app/ideas", mots: "idee idées capture boîte élan geste" },
+  { label: "Analyser un projet", path: "/vision-board?elan=analyser", mots: "conseil des 5 swot panel acheteurs tester idee projet analyser valider" },
+  { label: "Testez votre projet de reprise", path: "/app/testez-votre-projet", mots: "reprise rachat entreprise simulation ebe banque credit vendeur rendez-vous" },
   { label: "Plan d'action · Objectifs", path: "/app/actions?tab=objectifs", mots: "objectifs 90 jours cap trimestre feuille de route roadmap jalons" },
   { label: "Plan d'action · Actions", path: "/app/actions", mots: "taches missions todo priorités actions" },
   { label: "Plan d'action · Processus", path: "/app/actions?tab=processus", mots: "processus workflow étapes routine" },
