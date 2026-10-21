@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ChevronLeft, Zap, Scale, X } from "lucide-react";
+import { ChevronLeft, Zap, Scale, Sparkles, X } from "lucide-react";
 import { call } from "@/zy/lib/part2Api";
 import { VisionCanvas } from "@/zy/components/vision/VisionCanvas";
 import { ElanPanneau, ONGLETS_ELAN, useElanEvenement } from "@/zy/components/vision/ElanPanneau";
@@ -34,6 +34,10 @@ export default function VisionBoard() {
         <span className="hidden text-[12px] text-offwhite/45 md:inline">Ton atelier plein écran — l'IA propose, tu valides.</span>
         <span className="ml-auto" />
         <DecisionsDiscernees />
+        <button onClick={() => maj({ elan: elan === "analyser" ? null : "analyser" })} data-testid="vision-analyser" aria-pressed={elan === "analyser"}
+          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-colors ${elan === "analyser" ? "bg-[#FAF7F1] text-[#1A2B57]" : "border border-[#EADFC0]/50 text-[#EADFC0] hover:bg-white/10"}`}>
+          <Sparkles size={14} /> <span className="hidden sm:inline">Analyser ce projet</span>
+        </button>
         <button onClick={() => maj({ elan: elan ? null : "idees" })} data-testid="vision-elan-toggle" aria-pressed={!!elan}
           className={` inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12.5px] font-semibold transition-colors ${elan ? "bg-gold text-navy-900" : "border border-gold/40 text-gold hover:bg-gold/10"}`}>
           <Zap size={14} /> Élan
