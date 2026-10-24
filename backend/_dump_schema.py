@@ -21,3 +21,8 @@ print(f"TABLES ({len(tables)}):")
 for t in tables:
     print(f"  - {t.name} ({len(t.columns)} colonnes)")
 print("\nÉcrit -> /app/recovered/zayado_schema_mysql.sql")
+
+
+
+
+
