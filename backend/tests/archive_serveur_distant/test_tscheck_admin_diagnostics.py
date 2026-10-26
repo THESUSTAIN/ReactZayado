@@ -36,7 +36,9 @@ def _read_env_secrets():
 
 def test_diagnostics_requires_admin_role():
     r = requests.get(f"{API}/admin/diagnostics", timeout=15)
-    assert r.status_code == 401, f"expected 401 with no token, got {r.status_code}: {r.text}"
+    # Hors aperçu : 401 sans jeton. En mode aperçu développeur, la requête sans jeton
+    # retombe sur le compte démo (rôle client) → 403. Jamais 200 dans les deux cas.
+    assert r.status_code in (401, 403), f"expected 401/403 with no token, got {r.status_code}: {r.text}"
 
     client_token = _login(CLIENT_EMAIL, CLIENT_PASSWORD)
     r = requests.get(

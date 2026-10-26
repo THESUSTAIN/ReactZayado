@@ -224,6 +224,7 @@ _ROUTES_PUBLIQUES_EXACTES = {
     "/api/push/public-key",            # clé publique VAPID : publique par nature (service worker)
     "/api/accueil/choix",              # mesure d'accueil (écran de présentation, avant connexion)
     "/api/contenu/login-carousel",     # carrousel de la page /login (sans compte)
+    "/api/marque",                     # marque affichée sur /login et le site (marque_ext : GET public)
 }
 _ROUTES_PUBLIQUES_PREFIXES = (
     "/api/connexion/",                 # options, lien magique, OAuth (démo bloquée à part)
@@ -5347,7 +5348,7 @@ async def exporter(db: AsyncSession = Depends(get_db)):
 @api.delete("/donnees")
 async def supprimer_donnees(db: AsyncSession = Depends(get_db)):
     uid = _uid()
-    for modele in (VisionChatMessage, VisionCheckin, VisionVictoire, VisionTache, VisionObjectif, VisionBalance, CopiloteDecision, SavedArticle, VisionBoardData, BalanceWheelData, RoadmapItem, Idee, VisionProfile, ProcessusData):
+    for modele in (VisionChatMessage, VisionCheckin, VisionVictoire, VisionTache, VisionObjectif, VisionBalance, CopiloteDecision, SavedArticle, VisionBoardData, BalanceWheelData, RoadmapItem, Idee, VisionProfile, globals()["ProcessusData"]):  # ProcessusData : processus_ext.py
         await db.execute(sa_delete(modele).where(modele.user_id == uid))
     await db.commit()
     return {"ok": True}
@@ -6429,9 +6430,7 @@ install_admin_plus(globals())
 # Admin › Prix : les prix saisis en admin s'appliquent au paiement, à la grille et aux fiches Shopify
 from prix_ext import install_prix  # noqa: E402
 install_prix(globals())
-# Admin : installer la boutique Shopify en un clic (produits, collections, pages, Journal, menus)
-from boutique_installation_ext import install_boutique_installation  # noqa: E402
-install_boutique_installation(globals())
+# (install_boutique_installation est déjà appelé plus haut, après shopify_auth : second appel retiré, routes en double)
 # Journal : articles préparés par l'IA (depuis les newsletters reçues) et témoignages clients
 from journal_ext import install_journal  # noqa: E402
 install_journal(globals())
@@ -6452,157 +6451,11 @@ install_organisation(globals())
 from reprise_conseil_ext import install_reprise_conseil  # noqa: E402
 install_reprise_conseil(globals())
 
-# ─────────────── Processus (page /app/processus) ───────────────
-# Avant : stockés dans le navigateur uniquement, avec 4 processus de démonstration
-# affichés à tout nouveau compte. Maintenant : par utilisateur, côté serveur.
-
-class ProcessusData(Base):
-    __tablename__ = "processus_data"
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
-    user_id: Mapped[str] = mapped_column(String(36), unique=True, index=True)
-    items: Mapped[list] = mapped_column(JSON, default=list)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
-
-
-class ProcessusIn(BaseModel):
-    items: List[dict] = Field(default_factory=list)
-
-
-@api.get("/processus")
-async def lire_processus(db: AsyncSession = Depends(get_db)):
-    row = (await db.execute(select(ProcessusData).where(ProcessusData.user_id == _uid()))).scalar_one_or_none()
-    return {"items": (row.items if row else []) or []}
-
-
-@api.put("/processus")
-async def enregistrer_processus(body: ProcessusIn, db: AsyncSession = Depends(get_db)):
-    import json as _json
-    items = body.items[:50]
-    if len(_json.dumps(items)) > 200_000:
-        raise HTTPException(413, "Trop de contenu.")
-    uid = _uid()
-    row = (await db.execute(select(ProcessusData).where(ProcessusData.user_id == uid))).scalar_one_or_none()
-    if row:
-        row.items = items
-    else:
-        db.add(ProcessusData(user_id=uid, items=items))
-    await db.commit()
-    return {"ok": True, "items": items}
-
-
-# ─────────────── Demandes Collaborateurs (page /app/collaborateurs) ───────────────
-# Corrigé : le formulaire postait vers une route inexistante et affichait
-# « Demande envoyée » sans rien enregistrer.
-
-class DemandeCollaborateur(Base):
-    __tablename__ = "demandes_collaborateur"
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
-    user_id: Mapped[str] = mapped_column(String(36), index=True)
-    message: Mapped[str] = mapped_column(Text)
-    contact: Mapped[str] = mapped_column(String(255), default="")
-    canal: Mapped[str] = mapped_column(String(50), default="collaborateur")
-    statut: Mapped[str] = mapped_column(String(20), default="nouvelle")  # nouvelle / en_cours / traitee
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
-    # Réponse de l'équipe, visible par l'utilisateur dans « Mes demandes » (colonnes ajoutées
-    # automatiquement aux bases existantes par la réparation de schéma au démarrage).
-    reponse: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    maj_le: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-
-
-class DemandeCollaborateurIn(BaseModel):
-    message: str
-    contact: str = ""
-    channel: str = "collaborateur"
-    objet: str = ""
-    important: bool = False
-
-
-@api.post("/growth/work-request")
-async def creer_demande_collaborateur(body: DemandeCollaborateurIn, db: AsyncSession = Depends(get_db)):
-    message = (body.message or "").strip()
-    if not message:
-        raise HTTPException(422, "Le message est vide.")
-    uid = _uid()
-    profil = await _profil(db, uid)
-    objet = (body.objet or "").strip()[:200]
-    if objet:
-        message = f"Objet : {objet}\n\n{message}"
-    if body.important:
-        message = f"[IMPORTANT] {message}"
-    d = DemandeCollaborateur(user_id=uid, message=message[:5000], contact=(body.contact or "").strip()[:255],
-                             canal=(body.channel or "collaborateur")[:50])
-    db.add(d)
-    await db.commit()
-    # Notification e-mail à l'équipe (best effort : la demande est déjà enregistrée).
-    dest = os.environ.get("NOTIF_EMAIL", "contact@zayado.net")
-    try:
-        import html as _html
-        sujet = ("⚠️ IMPORTANT · " if body.important else "") + (f"Collaborateur : {objet}" if objet else "Nouvelle demande Collaborateurs")
-        await send_email(to=dest, subject=sujet,
-                         html=_email_wrap(f"<p><b>De :</b> {_html.escape(profil.prenom or '')} {_html.escape(profil.email or '')}</p>"
-                               f"<p><b>Contact indiqué :</b> {_html.escape(d.contact or '—')}</p>"
-                               f"<p>{_html.escape(d.message).replace(chr(10), '<br>')}</p>"))
-    except Exception:  # noqa: BLE001
-        logger.warning("Notification e-mail de la demande collaborateur non envoyée.")
-    return {"ok": True, "id": d.id}
-
-
-def _iso_naif(dt):
-    return None if dt is None else (dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)).isoformat()
-
-
-@api.get("/demandes-collaborateur/mes")
-async def mes_demandes_collaborateur(db: AsyncSession = Depends(get_db)):
-    """Suivi côté utilisateur : ses demandes, leur statut et la réponse de l'équipe."""
-    uid = _uid()
-    rows = (await db.execute(select(DemandeCollaborateur).where(DemandeCollaborateur.user_id == uid)
-                             .order_by(DemandeCollaborateur.created_at.desc()).limit(30))).scalars().all()
-    return {"demandes": [{"id": r.id, "message": r.message, "statut": r.statut, "reponse": r.reponse,
-                          "created_at": _iso_naif(r.created_at), "maj_le": _iso_naif(r.maj_le)} for r in rows]}
-
-
-@api.get("/admin/demandes-collaborateur")
-async def admin_demandes_collaborateur(db: AsyncSession = Depends(get_db), _role=Depends(exiger_role("admin"))):
-    rows = (await db.execute(select(DemandeCollaborateur).order_by(DemandeCollaborateur.created_at.desc()).limit(200))).scalars().all()
-    emails = {u.id: u.email for u in (await db.execute(select(User).where(User.id.in_({r.user_id for r in rows})))).scalars()} if rows else {}
-    return {"demandes": [{"id": r.id, "user_id": r.user_id, "email": emails.get(r.user_id), "message": r.message, "contact": r.contact,
-                          "statut": r.statut, "reponse": r.reponse, "maj_le": _iso_naif(r.maj_le),
-                          "created_at": _iso_naif(r.created_at)} for r in rows]}
-
-
-class DemandeMajIn(BaseModel):
-    statut: Optional[str] = None
-    reponse: Optional[str] = Field(default=None, max_length=5000)
-    prevenir: bool = True
-
-
-@api.patch("/admin/demandes-collaborateur/{demande_id}")
-async def admin_maj_demande(demande_id: str, body: DemandeMajIn, db: AsyncSession = Depends(get_db), _role=Depends(exiger_role("admin"))):
-    d = await db.get(DemandeCollaborateur, demande_id)
-    if not d:
-        raise HTTPException(404, "Demande introuvable.")
-    if body.statut:
-        if body.statut not in ("nouvelle", "en_cours", "traitee"):
-            raise HTTPException(422, "Statut inconnu.")
-        d.statut = body.statut
-    if body.reponse is not None:
-        d.reponse = body.reponse.strip() or None
-    d.maj_le = datetime.now(timezone.utc)
-    await db.commit()
-    envoye = False
-    if body.prevenir and body.reponse:
-        u = await db.get(User, d.user_id)
-        dest = (d.contact or "").strip() or (u.email if u else "")
-        if dest and "@" in dest:
-            import html as _html
-            try:
-                await send_email(to=dest, subject="L'équipe Zayado a répondu à ta demande",
-                                 html=_email_wrap(f"<p>Bonjour,</p><p>{_html.escape(body.reponse).replace(chr(10), '<br>')}</p>"
-                                                  f"<p>Tu retrouves le suivi dans Zayado › Collaborateurs.</p>"))
-                envoye = True
-            except Exception:  # noqa: BLE001
-                logger.warning("Réponse à la demande %s non envoyée par e-mail.", demande_id)
-    return {"ok": True, "email_envoye": envoye}
+# Processus (page /app/processus) et Demandes Collaborateurs (page /app/collaborateurs) : modules dédiés
+from processus_ext import install_processus  # noqa: E402
+install_processus(globals())
+from demandes_collaborateur_ext import install_demandes_collaborateur  # noqa: E402
+install_demandes_collaborateur(globals())
 
 
 # ─────────────── Récupération des données du compte démo ───────────────

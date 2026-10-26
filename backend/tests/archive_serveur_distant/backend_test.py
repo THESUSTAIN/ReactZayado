@@ -21,7 +21,7 @@ def test_root():
     r = requests.get(f"{BASE_URL}/api/", timeout=15)
     assert r.status_code == 200
     data = r.json()
-    assert "Kairos" in data.get("message", "")
+    assert "Zayado" in data.get("message", "")
 
 
 def _consume_sse(message, token=None, timeout=90):
@@ -73,6 +73,10 @@ def test_chat_stream_recuperation_and_history():
     assert reg.status_code == 200, reg.text
     token = reg.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
+
+    # Le chat IA est réservé aux offres actives : l'essai Rêveur (gratuit, sans CB) l'ouvre.
+    r_essai = requests.post(f"{BASE_URL}/api/essai-reveur", headers=headers, timeout=15)
+    assert r_essai.status_code == 200, r_essai.text
 
     h0 = requests.get(f"{BASE_URL}/api/copilote/history", headers=headers, timeout=15)
     assert h0.status_code == 200 and h0.json() == []

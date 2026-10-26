@@ -26,9 +26,10 @@ os.environ.update({
     "PUBLIC_FRONTEND_URL": "https://app.zayado.net",
 })
 # Aucune vraie clé pendant les tests (les tests qui en ont besoin les posent).
+# Valeur vide (et non pop) : sinon load_dotenv() de server.py recharge la clé de backend/.env.
 for _k in ("MAMMOTH_API_KEY", "MAMMOUTH_API_KEY", "EMERGENT_LLM_KEY", "OPENAI_API_KEY", "IMAGE_API_KEY", "APOLLO_API_KEY",
            "DATAFORSEO_LOGIN", "DATAFORSEO_PASSWORD", "SHOPIFY_SHOP_DOMAIN", "SHOPIFY_ADMIN_TOKEN", "MOLLIE_API_KEY"):
-    os.environ.pop(_k, None)
+    os.environ[_k] = ""
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 

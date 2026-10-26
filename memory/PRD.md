@@ -151,3 +151,10 @@
 - Mollie (commerce_ext.py) : motif exact du refus renvoyé + journalisé ; MOLLIE_PROFILE_ID / MOLLIE_TESTMODE pris en compte si la clé est un jeton access_… ; client Mollie recréé si créé avec une autre clé.
 - PROD : POST /api/checkout → 502 « Mollie a refusé la demande (400) » à la création du client : cause exacte visible après redéploiement (probable clé Mollie invalide ou jeton d'organisation sans profileId).
 
+
+## Audit & refonte d'architecture (juin 2026) — voir docs/AUDIT-REFONTE-2026-06.md et docs/architecture/ARCHITECTURE.md
+- Corrigé : /api/marque public (401 avant connexion), isolation des tests (clé IA rechargée par load_dotenv), double install_boutique_installation, test Vitest Mémoire, test_foi_cles visait une copie morte.
+- Rangé : 18 tests serveur distant → backend/tests/archive_serveur_distant ; doublons frontend → archives/frontend-doublons ; kairos.db et memory/.tok_local retirés du suivi Git (restent sur disque).
+- Extraction server.py : processus_ext.py, demandes_collaborateur_ext.py (routes/tables identiques, tests de caractérisation).
+- Résultats : pytest 237 passés / 0 échec ; typecheck + build OK ; vitest 8/8 ; 653 routes identiques.
+- Backlog : rotation secrets (JWT, Shopify, Mollie, Brevo) ; extraire d'autres domaines de server.py ; statut vitrine-entreprise/exports ; 16 articles Journal ; Notes de la maison.

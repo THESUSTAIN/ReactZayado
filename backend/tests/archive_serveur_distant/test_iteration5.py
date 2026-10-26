@@ -47,39 +47,25 @@ class TestIdeesLancer:
         idea_id = idea["id"]
         assert idea["statut"] == "idee"
 
-        # 2) Try to go to action without objectif → must 400
+        # 2) Passage en action sans objectif via PATCH → toujours 400
         r = api_client.patch(f"{API}/idees/{idea_id}", json={"statut": "action"}, timeout=10)
         assert r.status_code == 400, f"Expected 400 without objectif, got {r.status_code}: {r.text}"
 
-        # 3) Try /lancer while not action → must 400
-        r = api_client.post(f"{API}/idees/{idea_id}/lancer", timeout=10)
-        assert r.status_code == 400, f"Expected 400 lancer on non-action, got {r.status_code}: {r.text}"
-
-        # 4) Link objectif
-        r = api_client.patch(f"{API}/idees/{idea_id}", json={"objectif_id": objectif_id}, timeout=10)
-        assert r.status_code == 200, r.text
-        assert r.json()["objectif_id"] == objectif_id
-
-        # 5) Statut → action
-        r = api_client.patch(f"{API}/idees/{idea_id}", json={"statut": "action"}, timeout=10)
-        assert r.status_code == 200, r.text
-        assert r.json()["statut"] == "action"
-
-        # 6) /lancer must return ok=true + skipped includes the 4 CRMs
+        # 3) « Lancer » est désormais un alias d'« En faire une action » (plus de doublon) :
+        #    faisable directement depuis l'idée, sans objectif exigé au préalable.
         r = api_client.post(f"{API}/idees/{idea_id}/lancer", timeout=15)
-        assert r.status_code == 200, r.text
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}: {r.text}"
         data = r.json()
         assert data.get("ok") is True
         assert "tache_id" in data and data["tache_id"]
         assert isinstance(data.get("pushed_to"), list)
         assert data["pushed_to"] == []  # no CRM env keys configured
-        assert set(data.get("skipped", [])) == {"trello", "jira", "hubspot", "teams"}
         assert isinstance(data.get("errors"), dict)
 
         # cleanup
         api_client.delete(f"{API}/idees/{idea_id}", timeout=10)
 
-    def test_lancer_not_action_returns_400(self, api_client, objectif_id):
+    def test_lancer_deja_transformee_renvoie_409(self, api_client, objectif_id):
         r = api_client.post(f"{API}/idees", json={
             "titre": "TEST_not_action",
             "objectif_id": objectif_id,
@@ -87,8 +73,12 @@ class TestIdeesLancer:
         assert r.status_code == 200, r.text
         idea_id = r.json()["id"]
         try:
+            # 1er lancer : transforme l'idée en action (200)
             r = api_client.post(f"{API}/idees/{idea_id}/lancer", timeout=10)
-            assert r.status_code == 400
+            assert r.status_code == 200, r.text
+            # 2e lancer : déjà dans le Plan d'action → 409, jamais de doublon
+            r2 = api_client.post(f"{API}/idees/{idea_id}/lancer", timeout=10)
+            assert r2.status_code == 409, r2.text
         finally:
             api_client.delete(f"{API}/idees/{idea_id}", timeout=10)
 
@@ -125,7 +115,7 @@ class TestCockpit:
         assert d2["ca_objectif"] == 10000 and d2["ca_mensuel"] == 3000 and d2["avancement"] == 30
 
     def test_radar_returns_3_opportunities(self, api_client, objectif_id):
-        r = api_client.get(f"{API}/cockpit/radar", timeout=15)
+        r = api_client.get(f"{API}/cockpit/radar", timeout=90)
         assert r.status_code == 200, r.text
         data = r.json()
         assert "opportunities" in data

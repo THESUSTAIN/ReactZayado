@@ -89,3 +89,8 @@ android-sdk/
 credentials.json
 *.key
 .credentials
+
+# Bases locales et jetons de session (audit 2026-06)
+backend/kairos.db
+backend/*.db-journal
+memory/.tok_local

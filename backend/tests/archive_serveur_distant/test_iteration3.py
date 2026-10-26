@@ -154,7 +154,8 @@ def test_sources_analyser(s):
 
 
 def test_sources_valider_retrogrades(s):
-    # projet sans objectif → doit être rétrogradé en idée
+    # Le projet sans objectif n'est plus rétrogradé : /sources/valider le range
+    # en objectif, l'action part dans le Plan, l'idée reste une idée.
     items = [
         {"titre": "TEST_sync_projet_noobj", "type": "projet", "objectif_id": None},
         {"titre": "TEST_sync_action_noobj", "type": "action", "objectif_id": None},
@@ -163,19 +164,23 @@ def test_sources_valider_retrogrades(s):
     r = s.post(f"{API}/sources/valider", json={"items": items})
     assert r.status_code == 200, r.text
     d = r.json()
-    assert d.get("retrogrades", 0) >= 2
-    # Vérifier que les idées créées apparaissent
+    assert d.get("crees", 0) == 3, d
+    assert d.get("idees_creees", 0) >= 1, d
+    # L'idée créée apparaît bien, marquée « sync »
     lst = s.get(f"{API}/idees").json()
-    titres = {it["titre"]: it for it in lst}
-    for t in ("TEST_sync_projet_noobj", "TEST_sync_action_noobj", "TEST_sync_idee"):
-        assert t in titres, f"{t} manquant"
-        assert titres[t]["source"] == "sync"
-        # projet/action rétrogradés → statut = idee
-        assert titres[t]["statut"] == "idee"
+    assert any(it["titre"] == "TEST_sync_idee" and it["source"] == "sync" and it["statut"] == "idee" for it in lst), lst
+    # Le projet est rangé en objectif — ou en idée si le compte a déjà ses 5 objectifs actifs
+    objs = s.get(f"{API}/objectifs").json()
+    lignes = objs if isinstance(objs, list) else objs.get("items", objs.get("objectifs", []))
+    assert any(o["titre"] == "TEST_sync_projet_noobj" for o in lignes) or \
+        any(it["titre"] == "TEST_sync_projet_noobj" for it in lst), (lignes, lst)
     # cleanup
-    for t in titres.values():
-        if t["titre"].startswith("TEST_sync"):
-            s.delete(f"{API}/idees/{t['id']}")
+    for it in lst:
+        if it["titre"].startswith("TEST_sync"):
+            s.delete(f"{API}/idees/{it['id']}")
+    for o in lignes:
+        if o["titre"].startswith("TEST_sync"):
+            s.delete(f"{API}/objectifs/{o['id']}")
 
 
 # ── Transcrire ──

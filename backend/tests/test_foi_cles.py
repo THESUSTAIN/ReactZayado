@@ -5,7 +5,8 @@ import re
 from pathlib import Path
 
 RACINE = Path(__file__).resolve().parents[2]
-FOI = RACINE / "frontend" / "src" / "features" / "thesustain"
+# Source active (importée par zy/pages/MaFoi.jsx) ; l'ancienne copie src/features/ est archivée.
+FOI = RACINE / "frontend" / "src" / "zy" / "features" / "thesustain"
 
 
 def cles_serveur() -> set:

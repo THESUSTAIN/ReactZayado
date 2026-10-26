@@ -1,3 +1,4 @@
+import { test, expect } from "vitest";
 import {
   catalogue, comparer, marquerRecite, versetsARevoir, statut, niveauJoueur, serieEnCours,
   construireQuete, appliquerRecitation, normaliserJeu, jeuParDefaut, INTERVALLES, jourPlus,

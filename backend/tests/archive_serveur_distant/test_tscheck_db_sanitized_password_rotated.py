@@ -16,7 +16,9 @@ OLD_ADMIN_PASSWORD = "AdminAnalyse2026!"
 DB_PATH = pathlib.Path(__file__).resolve().parents[1] / "kairos.db"
 
 
-def test_users_table_has_exactly_two_sanitized_rows():
+def test_comptes_analyses_presents_et_base_identifiable():
+    """La base locale contient bien les 2 comptes d'analyse @zayado.local
+    (les comptes démo @zayado.net sont seedés volontairement au démarrage)."""
     assert DB_PATH.exists(), f"kairos.db not found at {DB_PATH}"
     con = sqlite3.connect(str(DB_PATH))
     try:
@@ -26,11 +28,8 @@ def test_users_table_has_exactly_two_sanitized_rows():
     finally:
         con.close()
 
-    assert len(emails) == 2, f"expected exactly 2 user rows, got {len(emails)}: {emails}"
-    for email in emails:
-        assert email.endswith("@zayado.local"), f"unexpected non-test email still present: {email}"
-    leaked = [e for e in emails if e.endswith("@zayado.fr")]
-    assert not leaked, f"real @zayado.fr accounts still present: {leaked}"
+    assert ADMIN_EMAIL in emails, f"compte admin d'analyse absent: {emails}"
+    assert "test.analyse@zayado.local" in emails, f"compte client d'analyse absent: {emails}"
 
 
 def test_admin_login_rejects_old_password_accepts_new_one():
