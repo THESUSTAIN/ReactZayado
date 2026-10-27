@@ -42,7 +42,7 @@ zayado.net (Shopify) ──liens / iframes /embed/*──► frontend ; ◄─�
 - Tests : `backend/tests/` — **autonomes** (TestClient en mémoire, SQLite temporaire, réseau simulé par `conftest.py`).
   `tests/archive_serveur_distant/` : anciens tests contre un serveur réel, lancés seulement avec `ZAYADO_LIVE_TESTS=1`.
 
-Convention pour extraire un domaine de `server.py` (appliquée à Processus et Demandes Collaborateurs) :
+Convention pour extraire un domaine de `server.py` (appliquée à Processus, Demandes Collaborateurs, Agent Business, Diagnostics, Compte démo) :
 1. test de caractérisation sur l'ancien code ; 2. module `xxx_ext.py` avec `install_xxx(g)` au même endroit
 de la séquence ; 3. mêmes routes, tables, colonnes ; republier dans `g` les symboles lus ailleurs ;
 4. comparer la liste des routes avant/après et relancer la suite.
@@ -61,7 +61,7 @@ de la séquence ; 3. mêmes routes, tables, colonnes ; republier dans `g` les sy
 
 | Domaine | Source officielle | Remarque |
 |---|---|---|
-| Accès aux modules par offre | `frontend/src/zy/lib/droits.js` (`MODULES_MIN`, `planEffectif`) | Côté serveur : vérifications dans les routes concernées. |
+| Accès aux modules par offre, liste et noms des offres | `frontend/src/zy/lib/droits.js` (`MODULES_MIN`, `planEffectif`, `OFFRES_PAYANTES`, `NOMS_OFFRES_PAYANTES`) | Côté serveur : vérifications dans les routes concernées. |
 | Quotas tunnels / radar par offre | `frontend/src/zayado/droits.ts` | Responsabilité différente de `droits.js` (quotas, pas verrous) → pas de fusion. |
 | Prix | Admin › Prix (`prix_ext.py`, `/api/tarifs/grille`) | Lu par l'app et les fiches Shopify. |
 | Marque (nom, logos, pieds) | `marque_ext.py` (`/api/marque`, public) | |

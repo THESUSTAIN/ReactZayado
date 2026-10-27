@@ -8,6 +8,7 @@ import { saveProfile, savePouls, postCheckin, fetchTarifsFondateur, fetchState, 
 import { toast } from "sonner";
 import { PLANS, PLANS_LANCEMENT, PLAN_ENTREPRISE, prixFondateurMois, usePrix, ESSAI, REVEUR_OFFERT, essaiDuree, essaiPeriode } from "@/zy/lib/plans";
 import { lancerPaiement } from "@/zy/lib/checkout";
+import { OFFRES_PAYANTES } from "@/zy/lib/droits";
 import { activerPush, pushSupporte } from "@/zy/lib/push";
 import { appliquerTheme, themeActuel } from "@/zy/lib/theme";
 import { THESUSTAIN_URL } from "@/zy/components/kairos/TheSustainInfo";
@@ -261,7 +262,7 @@ export default function Onboarding() {
     saveProfile({ contexte_metier: { onboarding_etape: i, onboarding_total: NB, onboarding_maj: new Date().toISOString(), onboarding_brouillon: b.slice(0, 1990) } }).catch(() => {});
   }, [i, pret]); // eslint-disable-line react-hooks/exhaustive-deps
   const LISTE_PLANS = construirePlans(fondateurOuvert);
-  const [plan, setPlan] = useState(["reveur", "serenite", "pro", "business", "entreprise"].includes(planParam) ? planParam : "serenite");
+  const [plan, setPlan] = useState(OFFRES_PAYANTES.includes(planParam) ? planParam : "serenite");
   const [saving, setSaving] = useState(false);
   const [savePhase, setSavePhase] = useState(0);
   const [saveError, setSaveError] = useState("");

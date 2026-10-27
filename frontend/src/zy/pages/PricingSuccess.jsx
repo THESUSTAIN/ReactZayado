@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { fetchAbonnement } from "@/zy/lib/kairosApi";
 import { oublierAbonnement } from "@/zy/lib/acces";
+import { NOMS_OFFRES_PAYANTES as NOMS } from "@/zy/lib/droits";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Check, ArrowRight, Sparkles } from "lucide-react";
@@ -11,7 +12,6 @@ const NAVY = "#0f1b3a";
 export default function PricingSuccess() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const NOMS = { reveur: "Rêveur", serenite: "Solo", pro: "Pro", business: "Équipe", entreprise: "Entreprise" };
   // Le message dépend du serveur (paiement confirmé par Mollie), jamais de l'adresse seule.
   const [etat, setEtat] = useState({ statut: "verif", abo: null });
   useEffect(() => {

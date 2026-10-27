@@ -94,3 +94,6 @@ credentials.json
 backend/kairos.db
 backend/*.db-journal
 memory/.tok_local
+outils_dev/ref/
+outils_dev/av/
+outils_dev/*.txt

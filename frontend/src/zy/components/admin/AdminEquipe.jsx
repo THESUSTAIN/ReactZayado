@@ -8,8 +8,7 @@ import {
   fetchAdminJournal, fetchAdminFoiSignalements, deciderFoiSignalement,
 } from "@/zy/lib/kairosApi";
 import { Carte, MOTIFS_ACCES } from "./AdminGestion";
-
-const NOMS = { reveur: "Rêveur", serenite: "Solo", pro: "Pro", business: "Équipe", entreprise: "Entreprise" };
+import { NOMS_OFFRES_PAYANTES as NOMS } from "@/zy/lib/droits";
 const INPUT = "h-9 rounded-lg border border-white/15 bg-navy-800 px-3 text-sm text-offwhite outline-none focus:border-gold/60";
 const SELECT = "h-9 rounded-lg border border-white/15 bg-navy-800 px-2 text-sm";
 const BTN = "inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-2.5 py-1 text-xs hover:bg-white/10 disabled:opacity-50";

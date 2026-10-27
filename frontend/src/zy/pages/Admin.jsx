@@ -29,6 +29,7 @@ import { Utilisateurs, ComptesVendeurs, CatalogueAdmin, Parrainage } from "@/zy/
 import { DeploiementBoutique } from "@/zy/components/admin/DeploiementBoutique";
 import AdminRetention from "@/zy/components/admin/AdminRetention";
 import { useThemePro } from "@/zy/lib/themePro";
+import { OFFRES_PAYANTES, NOMS_OFFRES_PAYANTES as NOMS_OFFRES } from "@/zy/lib/droits";
 import { AdminPaiementsTunnels, AdminVendeursFinances } from "@/zy/components/vendeur/VendeurDokan";
 import { AdminTunnels } from "@/pages/zayado/AdminTunnels";
 import { AdminPartenaires } from "@/pages/zayado/AdminPartenaires";
@@ -285,7 +286,6 @@ function Carte({ children }) {
   return <div className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">{children}</div>;
 }
 
-const NOMS_OFFRES = { reveur: "Rêveur", serenite: "Solo", pro: "Pro", business: "Équipe", entreprise: "Entreprise" };
 const eur = (v) => `${Number(v || 0).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €`;
 
 function Kpi({ label, valeur, note, or }) {
@@ -373,7 +373,7 @@ function VueEnsemble({ allerA }) {
       <Carte>
         <p className="mb-3 font-semibold">Abonnés par offre</p>
         <div className="flex flex-wrap gap-2" data-testid="admin-par-offre">
-          {["reveur", "serenite", "pro", "business", "entreprise"].map((k) => (
+          {OFFRES_PAYANTES.map((k) => (
             <span key={k} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm">{NOMS_OFFRES[k]} <b className="ml-1 text-gold">{ab.par_offre?.[k] || 0}</b></span>
           ))}
           <span className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-offwhite/60">Vendeurs {donnees.par_role.vendeur} · Admins {donnees.par_role.admin}</span>

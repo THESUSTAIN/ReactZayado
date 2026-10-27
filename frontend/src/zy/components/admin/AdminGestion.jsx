@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { NOMS_OFFRES as NOMS_BASE, OFFRES_PAYANTES } from "@/zy/lib/droits";
 import { ChevronLeft, ChevronRight, Loader2, Pencil, Search, Trash2, X, Gift, Plus, Check, Download, CalendarPlus, UserRound, Store } from "lucide-react";
 import {
   fetchAdminUtilisateurs, changerRoleUtilisateur, changerPlanUtilisateur, passerCompteGratuit,
@@ -23,7 +24,8 @@ const SELECT = "bg-navy-800 border border-white/15 rounded-lg text-xs px-2 py-1"
 const INPUT = "h-9 rounded-lg border border-white/15 bg-navy-800 px-3 text-sm text-offwhite outline-none focus:border-gold/60";
 const BTN = "inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-2.5 py-1 text-xs hover:bg-white/10 disabled:opacity-50";
 const BTN_OR = "inline-flex items-center gap-1.5 rounded-lg bg-gold px-3 py-1.5 text-xs font-semibold text-navy-900 disabled:opacity-50";
-const NOMS_OFFRES = { essentielle: "Aucune offre", reveur: "Rêveur", serenite: "Solo", pro: "Pro", business: "Équipe", entreprise: "Entreprise" };
+// Libellé admin : « Aucune offre » (au lieu de « Sans offre ») pour un compte sans abonnement.
+const NOMS_OFFRES = { ...NOMS_BASE, essentielle: "Aucune offre" };
 
 const dateFr = (iso) => (iso ? new Date(iso).toLocaleDateString("fr-FR") : "—");
 const depuis = (iso) => {
@@ -165,7 +167,7 @@ export function Utilisateurs() {
           </select>
           <select value={offre} onChange={(e) => { setOffre(e.target.value); setPage(1); }} className={SELECT} data-testid="admin-users-filtre-offre">
             <option value="">Toutes les offres</option><option value="payant">Payants</option><option value="offert">Gratuits (offerts)</option><option value="aucune">Sans offre</option>
-            {["reveur", "serenite", "pro", "business", "entreprise"].map((k) => <option key={k} value={k}>{NOMS_OFFRES[k]}</option>)}
+            {OFFRES_PAYANTES.map((k) => <option key={k} value={k}>{NOMS_OFFRES[k]}</option>)}
           </select>
           <select value={tri} onChange={(e) => { setTri(e.target.value); setPage(1); }} className={SELECT} data-testid="admin-users-tri">
             <option value="inscription">Plus récents inscrits</option><option value="connexion">Dernière connexion</option>
@@ -258,7 +260,7 @@ function FenetreGratuit({ u, onClose, onOk }) {
         <p className="mt-1 text-sm text-offwhite/65">Pour <b>{u.email}</b> — réservé aux collaborateurs et partenaires Zayado. Accès complet, sans date de fin ni prélèvement. Visible uniquement ici ; tu peux le retirer à tout moment.</p>
         <label className="mt-4 block text-xs text-offwhite/60">Offre accordée</label>
         <select value={plan} onChange={(e) => setPlan(e.target.value)} className={`${SELECT} mt-1 w-full py-2 text-sm`} data-testid="admin-gratuit-plan">
-          {["reveur", "serenite", "pro", "business", "entreprise"].map((k) => <option key={k} value={k}>{NOMS_OFFRES[k]}</option>)}
+          {OFFRES_PAYANTES.map((k) => <option key={k} value={k}>{NOMS_OFFRES[k]}</option>)}
         </select>
         <label className="mt-3 block text-xs text-offwhite/60">Pourquoi ?</label>
         <select value={motif} onChange={(e) => setMotif(e.target.value)} className={`${SELECT} mt-1 w-full py-2 text-sm`} data-testid="admin-gratuit-motif">

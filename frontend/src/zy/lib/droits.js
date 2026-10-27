@@ -7,6 +7,9 @@ import { chargerAbonnement } from "@/zy/lib/acces";
 
 export const ORDRE_OFFRES = ["essentielle", "reveur", "serenite", "pro", "business", "entreprise"];
 export const NOMS_OFFRES = { essentielle: "Sans offre", reveur: "Rêveur", serenite: "Solo", pro: "Pro", business: "Équipe", entreprise: "Entreprise" };
+// Offres payantes (sans « essentielle »), dans l'ordre croissant — listes déroulantes, comparatifs, admin.
+export const OFFRES_PAYANTES = ORDRE_OFFRES.slice(1);
+export const NOMS_OFFRES_PAYANTES = Object.fromEntries(OFFRES_PAYANTES.map((k) => [k, NOMS_OFFRES[k]]));
 
 export const MODULES_MIN = {
   vision: "reveur", idees: "reveur", chat: "reveur", chiffres: "reveur", tunnels: "reveur",

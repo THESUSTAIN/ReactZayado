@@ -13,6 +13,7 @@ import {
   oauthStockage, deconnecterCanal, fetchBoard, saveBoard, fetchActualiteOptions, fetchActualiteStatut, testerActualite, fetchOrganisation, rechercherEntreprise, enregistrerOrganisation,
 } from "@/zy/lib/kairosApi";
 import { oublierAbonnement } from "@/zy/lib/acces";
+import { OFFRES_PAYANTES } from "@/zy/lib/droits";
 import { pushSupporte, pushStatut, activerPush, desactiverPush } from "@/zy/lib/push";
 import { useKairos } from "@/zy/context/KairosContext";
 import { Sidebar } from "@/zy/components/kairos/Sidebar";
@@ -1263,11 +1264,10 @@ function GestionEquipe() {
 }
 
 // Ce que l'offre comprend, et ce que l'offre au-dessus ajouterait.
-const ORDRE_OFFRES = ["reveur", "serenite", "pro", "business", "entreprise"];
 function ContenuOffre({ plan }) {
   const toutes = [...PLANS, PLAN_ENTREPRISE];
   const actuelle = toutes.find((p) => p.key === plan);
-  const suivante = toutes.find((p) => p.key === ORDRE_OFFRES[ORDRE_OFFRES.indexOf(plan) + 1]);
+  const suivante = toutes.find((p) => p.key === OFFRES_PAYANTES[OFFRES_PAYANTES.indexOf(plan) + 1]);
   if (!actuelle || !actuelle.points?.length) return null;
   return (
     <div className="mt-4 grid gap-3 sm:grid-cols-2" data-testid="parametres-contenu-offre">

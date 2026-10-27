@@ -56,3 +56,18 @@ Non vérifié : déploiement Railway, thème Shopify (non modifié), WhatsApp-se
 2. Poursuivre l'extraction de `server.py` par domaine, un lot à la fois, même méthode (candidats délimités : Agent Business, récupération du compte démo, comptes démo auto).
 3. Décider du sort de `vitrine-entreprise/` et `exports/` après vérification des logs de production.
 4. Avant de pousser sur GitHub/Railway : relancer `pytest`, `yarn build`, puis tester la page de connexion en production (marque).
+
+## F. Deuxième passe (lots 9 à 12)
+
+| Lot | Modification | Vérification ciblée |
+|---|---|---|
+| 9 | Agent Business → `backend/agent_business_ext.py` (republie `AgentBusiness`, `_agent_du_proprietaire`, `_consigne_agent`, `AGENTS_PAR_PLAN` dans `g` pour `agents_perso_ext` / `entreprise_assistant_ext` ; `_client_llm`, `_profil`, `_role_courant` lus à l'appel pour rester remplaçables) | `tests/test_agent_business.py` (4 tests) passé sur l'ancien code **puis** sur le nouveau |
+| 10 | `/ia/statut` + `/admin/diagnostics` → `backend/diagnostics_ext.py` | Réponses JSON admin capturées avant/après : **identiques** |
+| 11 | Récupération compte démo → `backend/compte_demo_ext.py` (tables lues à l'appel) | `tests/test_compte_demo.py` passé avant puis après |
+| 12 | Frontend : une seule source pour la liste et les noms des offres (`OFFRES_PAYANTES`, `NOMS_OFFRES_PAYANTES` dans `zy/lib/droits.js`) ; 6 copies locales supprimées (Admin, AdminGestion, AdminEquipe, Parametres, PricingSuccess, Onboarding). Libellé admin « Aucune offre » conservé par surcharge. | `droits.test.js` (2 tests), typecheck, build, oxlint 0 erreur, navigateur : Admin › « Abonnés par offre » affiche Rêveur/Solo/Pro/Équipe/Entreprise, Réglages sans erreur JS |
+
+Outils de contrôle ajoutés : `outils_dev/routes_snapshot.py` (liste routes + tables), `outils_dev/couplage.py <début> <fin>` (symboles d'une plage de `server.py` utilisés ailleurs).
+
+Résultats après la passe : routes + tables **identiques** à la référence d'avant audit (commit 84fc4bd, 653 routes, 107 tables) ; pytest complet **243 passés, 0 échec** (lancé une fois, en fin de passe) ; vitest 10/10 ; build OK ; `curl` preview 200 sur les routes déplacées (Pro et admin). `server.py` : 7 412 → 6 923 lignes.
+
+Non traité volontairement (risque non évaluable sans tests) : WhatsApp (`_get_connection` utilisé par 5 modules, `WA_SERVICE_SECRET` remplacé par les tests) et Telegram (`_tg_send` utilisé par 4 modules) — aucun test ne couvre ces flux. `zayado/AdminTunnels.tsx` garde sa table `essentielle → "Rêveur"` (choix d'affichage distinct, non fusionné).
