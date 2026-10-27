@@ -160,3 +160,4 @@
 - Backlog : rotation secrets (JWT, Shopify, Mollie, Brevo) ; extraire d'autres domaines de server.py ; statut vitrine-entreprise/exports ; 16 articles Journal ; Notes de la maison.
 - Passe 2 (refonte) : agent_business_ext.py, diagnostics_ext.py, compte_demo_ext.py extraits de server.py (7412→6923 lignes) ; offres frontend centralisées dans zy/lib/droits.js ; pytest 243/0, vitest 10/10, routes identiques. Restant : WhatsApp/Telegram (pas de tests), secrets à renouveler.
 - Tests WhatsApp/Telegram ajoutés (17, tests/test_connexions_whatsapp_telegram.py) : prêts pour l'extraction.
+- Revue de code appliquée (cycle routers cassé via lib/tunnels_modeles.py, exec retiré, import * explicite, B023, __import__) ; pytest 260/0.

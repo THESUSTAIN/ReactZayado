@@ -81,3 +81,18 @@ Non traité volontairement (risque non évaluable sans tests) : WhatsApp (`_get_
 - Exécutés : seuls 17/17 ; avec `test_relances.py` 48/48 ; deux fois en parallèle (xdist) 17/17.
 
 Points d'attention pour l'extraction : `_get_connection`, `_connection_json`, `_tg_send`, `_tg_traiter` sont lus via `g[...]` par 9 modules (canaux, connexions_vault, crm, part2, pilotage, rappels, relances, trello, agents_perso), tous installés **après** ce bloc ; certains les capturent à l'installation → republier ces noms dans `g` avant leur installation. `WA_SERVICE_SECRET`, `WA_SERVICE_URL`, `BACKEND_PUBLIC_URL`, `_fernet`, `_client_llm` doivent être lus dans `g` à l'appel (les tests les remplacent sur `server`).
+
+## H. Revue de code — corrections appliquées et constats
+
+| Point | Constat vérifié | Action |
+|---|---|---|
+| Import circulaire `routers/copilote.py` ↔ `routers/admin_tunnels.py` | Réel (imports différés dans des fonctions : pas de plantage, mais couplage croisé) | `modele_pour` déplacé dans `lib/tunnels_modeles.py` (dépend seulement de `lib.db`) ; `copilote` l'importe de là ; `admin_tunnels` le ré-exporte. Il ne reste qu'un sens : `admin_tunnels → copilote`. |
+| `exec()` dans `tests/test_actualite.py` | Réel : le test exécutait des morceaux du source de `server.py` | Il appelle maintenant `server.termes_pertinence` / `server.article_pertinent` directement. |
+| Import `*` dans `backend/conftest.py` | Réel, mais nécessaire au fonctionnement (alias du module `conftest`) | Remplacé par la liste explicite (fixtures + `MDP`, `FAUX`, `FauxHttp`, `PNG`…). Un premier essai sans `FAUX` a cassé `test_crm_liaisons` : corrigé avant de continuer. |
+| Variable de boucle capturée (B023) | 3 cas (`boutique_installation_ext`, `entreprise_sheet_ext`, `entreprise_source_ext`) — fonctions appelées dans la même itération, donc sans bug réel | Valeurs liées en argument par défaut (comportement identique, alerte levée). |
+| Import dynamique `shopify_ext.py` | `__import__("uuid")` en dur, sans entrée utilisateur | Remplacé par `import uuid`. |
+| « 37 secrets en dur » dans les tests | Faux positif : valeurs factices (`test_cle`, `apollo-test`, mot de passe de comptes de test éphémères) passées à un réseau simulé | Aucun changement : un `.env.test` n'apporterait rien et rendrait la suite non autonome. |
+| « 71 variables non définies » | `ruff --select F821` sur tout le backend : **0** | Rien à corriger ; l'outil de revue ne comprend pas le motif `install_xxx(globals())`. |
+| Complexité `install_admin_plus` (413 l.) / `install_actualite` (396 l.) | Ce sont des conteneurs de 15 et 26 routes internes ; la complexité affichée est la somme | Non refactorisés maintenant (risque élevé, peu de tests sur ces écrans). Piste : sortir d'abord les fonctions pures (`_journal_admin`, calculs d'`admin_a_traiter`) au niveau du module, avec tests. |
+
+Vérifications : ruff F/B023 propre sur les fichiers touchés (hors imports inutilisés déjà présents) ; tests ciblés 82/82 ; suite complète relancée une fois car `conftest.py` concerne tous les tests : **260 passés, 0 échec**.

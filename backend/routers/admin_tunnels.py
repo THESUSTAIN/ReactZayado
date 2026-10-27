@@ -121,14 +121,7 @@ async def corriger_tunnel(owner: str, tid: str, b: TunnelAdminPatch):
 
 
 # ═══════════ Modèles préparamétrés (utilisés à la création d'un tunnel) ═══════════
-async def modele_pour(parcours: str, sujet: str, metier: str) -> dict | None:
-    """Appelé par la création de tunnel : renvoie les étapes + code du modèle admin, ou None."""
-    m = await db.tunnel_modeles.find_one({"id": parcours})
-    if not m:
-        return None
-    rem = lambda s: (s or "").replace("{sujet}", sujet).replace("{metier}", metier)  # noqa: E731
-    etapes = [{**e, **{k: rem(e.get(k)) for k in ("titre", "accroche", "contenu", "bouton", "offre_nom")}} for e in m["etapes"]]
-    return {"etapes": etapes, "code": m.get("code") or {}}
+from lib.tunnels_modeles import modele_pour  # noqa: E402,F401  (ré-export : ancien point d'accès)
 
 
 @router_public.get("/admin/tunnels-modeles")

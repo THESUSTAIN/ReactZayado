@@ -662,7 +662,7 @@ def install_entreprise_sheet(g: dict) -> None:
                 continue
             cfg, lignes = page.get("config") or {}, [l["data"] for l in cache["lignes"]]
             d, f_ = cfg.get("date_field"), cfg.get("end_field")
-            dans = lambda x: bool(x.get(d)) and str(x.get(d)) <= auj <= str(x.get(f_) or x.get(d))  # noqa: E731
+            dans = lambda x, d=d, f_=f_: bool(x.get(d)) and str(x.get(d)) <= auj <= str(x.get(f_) or x.get(d))  # noqa: E731
             heure = datetime.fromisoformat(cache["lu_le"]).astimezone(ZoneInfo(TZ)).strftime("%H:%M")
             base = {"source": f"{s['fichier_nom']} › {s['onglet'] or s['name']}", "lu_le": f"lu à {heure}", "page_id": page["id"]}
             if mod == "planning":

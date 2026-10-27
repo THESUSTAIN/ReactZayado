@@ -544,7 +544,7 @@ async def tunnel(tid: str):
 
 @router.post("/tunnels", response_model=Tunnel)
 async def creer_tunnel(b: TunnelIn):
-    from routers.admin_tunnels import modele_pour
+    from lib.tunnels_modeles import modele_pour
     from routers.tunnels_douleurs import etapes_douleur
     prof = await lire_profil()
     modele = await modele_pour(b.parcours, b.sujet.strip() or b.nom.strip(), prof["metier"] or "")

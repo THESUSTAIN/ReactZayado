@@ -153,12 +153,8 @@ def test_consigne_actu_interdit_d_inventer_et_dit_quand_il_n_y_a_rien():
 
 
 def test_flux_generaliste_filtre_sur_les_sujets_suivis():
-    import re
-    src = open("server.py", encoding="utf-8").read()
-    ns = {"re": re}
-    exec(src[src.index("SECTEURS_ACTU = {"):src.index("# Édition Google Actualités")], ns)
-    exec(src[src.index("def _sans_accent"):src.index("def secteurs_par_defaut")], ns)
-    termes = ns["termes_pertinence"](["finance"], ["fiscalité"])
-    assert not ns["article_pertinent"]({"titre": "Air Corsica ouvre une nouvelle ligne", "resume": ""}, termes)
-    assert ns["article_pertinent"]({"titre": "Les banques relèvent leurs taux", "resume": ""}, termes)
-    assert ns["article_pertinent"]({"titre": "Réforme de la fiscalité des PME", "resume": ""}, termes)
+    import server
+    termes = server.termes_pertinence(["finance"], ["fiscalité"])
+    assert not server.article_pertinent({"titre": "Air Corsica ouvre une nouvelle ligne", "resume": ""}, termes)
+    assert server.article_pertinent({"titre": "Les banques relèvent leurs taux", "resume": ""}, termes)
+    assert server.article_pertinent({"titre": "Réforme de la fiscalité des PME", "resume": ""}, termes)

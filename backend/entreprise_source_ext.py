@@ -121,7 +121,7 @@ def convertir(onglets: dict, correspondance: dict) -> dict:
             continue
         o = onglets[c["onglet"]]
         idx = {champ: o["colonnes"].index(col) for champ, col in (c.get("colonnes") or {}).items() if col in o["colonnes"]}
-        val = lambda l, ch: (l[idx[ch]] if ch in idx and idx[ch] < len(l) else "")  # noqa: E731
+        val = lambda l, ch, idx=idx: (l[idx[ch]] if ch in idx and idx[ch] < len(l) else "")  # noqa: E731
         if cible == "personnes":
             out["Annuaire"] = [{"Title": val(l, "nom"), "Email": val(l, "email"),
                                 "Role": "Employeur" if norm(val(l, "role")) in ("employeur", "dirigeant", "manager", "gerant", "responsable") else "Salarie",

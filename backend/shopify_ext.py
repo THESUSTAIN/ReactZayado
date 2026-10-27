@@ -27,6 +27,7 @@ import hmac
 import json
 import logging
 import os
+import uuid
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Optional
@@ -149,7 +150,7 @@ def install_shopify(g: dict) -> None:
         """Une ligne par (commande Shopify, vendeur). Statut recalculé à chaque événement Shopify."""
         __tablename__ = "shopify_orders"
         __table_args__ = (UniqueConstraint("shopify_order_id", "vendor_user_id", name="uq_shopify_order_vendor"),)
-        id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: __import__("uuid").uuid4().hex)
+        id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: uuid.uuid4().hex)
         shopify_order_id: Mapped[str] = mapped_column(String(40), index=True)
         vendor_user_id: Mapped[str] = mapped_column(String(36), index=True, default="")
         boutique: Mapped[str] = mapped_column(String(160), default="")

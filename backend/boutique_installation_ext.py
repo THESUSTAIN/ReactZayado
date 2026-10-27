@@ -116,7 +116,7 @@ def lire_journal(chemin: Path = DOSSIER / "textes-a-coller.md") -> list:
     for bloc in re.split(r"\n## ", texte)[1:]:
         titre = bloc.split("\n", 1)[0].strip()
 
-        def champ(nom):
+        def champ(nom, bloc=bloc):
             m = re.search(r"- \*\*" + re.escape(nom) + r"[^*]*:\*\*\s*(.+)", bloc)
             return m.group(1).strip().strip("`").strip() if m else ""
         corps = re.search(r"```html\n(.*?)```", bloc, re.S)
