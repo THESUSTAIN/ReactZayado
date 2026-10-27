@@ -71,3 +71,13 @@ Outils de contrôle ajoutés : `outils_dev/routes_snapshot.py` (liste routes + t
 Résultats après la passe : routes + tables **identiques** à la référence d'avant audit (commit 84fc4bd, 653 routes, 107 tables) ; pytest complet **243 passés, 0 échec** (lancé une fois, en fin de passe) ; vitest 10/10 ; build OK ; `curl` preview 200 sur les routes déplacées (Pro et admin). `server.py` : 7 412 → 6 923 lignes.
 
 Non traité volontairement (risque non évaluable sans tests) : WhatsApp (`_get_connection` utilisé par 5 modules, `WA_SERVICE_SECRET` remplacé par les tests) et Telegram (`_tg_send` utilisé par 4 modules) — aucun test ne couvre ces flux. `zayado/AdminTunnels.tsx` garde sa table `essentielle → "Rêveur"` (choix d'affichage distinct, non fusionné).
+
+## G. Filet de tests WhatsApp / Telegram (préalable à leur extraction)
+
+`backend/tests/test_connexions_whatsapp_telegram.py` — 17 tests, aucun code de production modifié.
+- Réseau simulé par un enregistreur (`Reseau`) qui vérifie URL, en-têtes (`x-service-secret`) et corps de chaque appel sortant ; IA simulée (`FauxLLM`) ou absente (repli `_repli`).
+- WhatsApp : `/connections`, `start` (500 sans secret, 502 injoignable, pas de doublon), `restart`, `status` (synchronisation avec le direct, conservation si injoignable), webhooks `message` (IA + historique, repli), `ready` (relance avec actions en attente vers `/send`), `disconnected` (401/400/OK).
+- Telegram : `connect` (422/400/502/500, webhook `BACKEND_PUBLIC_URL/api/webhooks/telegram/{uid}`, jeton chiffré Fernet), `status`, webhook (`/start`, « c'est fait », « dans l'app », « oui » → tâche ou décision, message libre IA/repli, fil réinjecté), `_md_vers_html`.
+- Exécutés : seuls 17/17 ; avec `test_relances.py` 48/48 ; deux fois en parallèle (xdist) 17/17.
+
+Points d'attention pour l'extraction : `_get_connection`, `_connection_json`, `_tg_send`, `_tg_traiter` sont lus via `g[...]` par 9 modules (canaux, connexions_vault, crm, part2, pilotage, rappels, relances, trello, agents_perso), tous installés **après** ce bloc ; certains les capturent à l'installation → republier ces noms dans `g` avant leur installation. `WA_SERVICE_SECRET`, `WA_SERVICE_URL`, `BACKEND_PUBLIC_URL`, `_fernet`, `_client_llm` doivent être lus dans `g` à l'appel (les tests les remplacent sur `server`).
