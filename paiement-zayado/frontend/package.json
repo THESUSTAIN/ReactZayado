@@ -1,0 +1,9 @@
+{
+  "name": "paiement-zayado",
+  "version": "1.0.1",
+  "private": true,
+  "description": "Page de paiement Zayado (paiement.zayado.net) : fichiers statiques + relais /api vers app.zayado.net",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" }
+}

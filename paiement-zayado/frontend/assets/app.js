@@ -38,7 +38,11 @@
 
   fetch(API + '/paiement/offres').then(function (r) { if (!r.ok) throw r; return r.json(); })
     .then(function (d) { offres = d.offres || []; afficher(); })
-    .catch(function () { $('offres').innerHTML = '<p class="note">Les offres ne se chargent pas. Réessayez dans un instant ou écrivez-nous depuis <a href="https://zayado.net/pages/contact">la page Contact</a>.</p>'; });
+    .catch(function (r) {
+      var code = r && r.status ? ' (code ' + r.status + ')' : '';
+      if (r && r.status === 404) console.error('API /paiement/offres introuvable : le fichier paiement_public_ext.py n\'est pas encore installé dans le backend de l\'appli.');
+      $('offres').innerHTML = '<p class="note">Les offres ne se chargent pas' + code + '. Réessayez dans un instant ou écrivez-nous depuis <a href="https://zayado.net/pages/contact">la page Contact</a>.</p>';
+    });
 
   $('cgv').addEventListener('change', maj);
   $('montant').addEventListener('input', maj);

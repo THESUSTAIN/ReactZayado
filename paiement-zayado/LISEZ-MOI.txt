@@ -43,6 +43,14 @@ Contenu du dossier
 
 Étape 2 · Mettre la page en ligne (au choix)
 --------------------------------------------
+  R. Railway (votre choix) : déployer le dossier frontend/ tel quel. Railway voit package.json
+     et lance « node server.js ». Ce petit serveur affiche la page ET relaie /api vers l'appli
+     (les fichiers _redirects et vercel.json ne servent pas sur Railway).
+       · Root Directory du service : frontend   (si vous déployez tout le dossier)
+       · Variables : aucune obligatoire. API_BASE=https://app.zayado.net par défaut.
+       · Settings > Networking > Custom Domain : paiement.zayado.net, puis le CNAME indiqué
+         par Railway chez votre registrar.
+       · Vérification : https://paiement.zayado.net/sante doit afficher « ok ».
   A. Netlify ou Vercel (le plus simple) : déposer le dossier frontend/, puis ajouter le domaine
      paiement.zayado.net. Le fichier _redirects (Netlify) ou vercel.json (Vercel) relaie /api
      vers l'appli : aucun réglage CORS n'est nécessaire.
@@ -52,6 +60,8 @@ Contenu du dossier
 
 Étape 3 · Tester
 ----------------
+  · https://paiement.zayado.net/api/paiement/offres doit afficher la liste des offres (JSON).
+    Si vous voyez {"detail":"Not Found"} : l'étape 1 (backend) n'est pas encore faite.
   · En local (ENV=local, sans clé Mollie), une commande passe directement « payée » : pratique
     pour vérifier l'affichage dans /admin.
   · En ligne, faire un paiement réel de l'avis express (49 €) puis le rembourser depuis Mollie.
