@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Votre paiement · Zayado</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="https://app.zayado.net/logo-app.png">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Nunito:wght@700;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="top"><div class="top-in"><a href="https://zayado.net"><img src="https://app.zayado.net/logo-app.png" alt="Zayado"></a><small>🔒 Paiement sécurisé · Mollie</small></div></header>
+<main class="wrap">
+  <div class="etat">
+    <div class="pastille" id="ic">…</div>
+    <h1 id="titre" style="font-size:26px">Vérification de votre paiement</h1>
+    <p id="texte" class="lead" style="margin:0 auto 18px">Un instant, nous interrogeons Mollie.</p>
+    <a class="btn" href="https://zayado.net" id="retour">Revenir sur zayado.net</a>
+  </div>
+</main>
+<footer class="foot">© Zayado · <a href="https://zayado.net/pages/contact">Contact</a></footer>
+<script>
+(function () {
+  var API = (window.ZAYADO_API || '/api').replace(/\/$/, '');
+  var id = (new URLSearchParams(location.search).get('commande') || '').replace(/[^a-f0-9-]/gi, '');
+  var essais = 0;
+  function poser(ic, t, x) { document.getElementById('ic').textContent = ic; document.getElementById('titre').textContent = t; document.getElementById('texte').textContent = x; }
+  function verifier() {
+    if (!id) return poser('?', 'Commande introuvable', 'Si vous avez été débité, écrivez-nous depuis la page Contact : nous retrouvons votre paiement.');
+    fetch(API + '/paiement/commande/' + id).then(function (r) { if (!r.ok) throw r; return r.json(); }).then(function (d) {
+      if (d.statut === 'paid') return poser('✓', 'Merci, votre paiement est confirmé', d.titre + ' · ' + d.montant + ' €. Vous recevez une confirmation par e-mail et nous revenons vers vous pour la suite.');
+      if (['failed', 'canceled', 'expired'].indexOf(d.statut) >= 0) {
+        poser('×', 'Le paiement n\'a pas abouti', 'Aucun montant n\'a été prélevé. Vous pouvez réessayer.');
+        var b = document.getElementById('retour'); b.textContent = 'Réessayer le paiement'; b.href = 'index.html'; return;
+      }
+      if (++essais < 10) return setTimeout(verifier, 3000);
+      poser('…', 'Paiement en cours de validation', 'Mollie n\'a pas encore confirmé. Vous recevrez un e-mail dès que c\'est fait ; inutile de payer une deuxième fois.');
+    }).catch(function () { poser('?', 'Vérification impossible pour le moment', 'Votre paiement est peut-être déjà validé. Vous recevrez un e-mail ; sinon, écrivez-nous depuis la page Contact.'); });
+  }
+  verifier();
+})();
+</script>
+</body>
+</html>

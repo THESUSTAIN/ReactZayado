@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Paiement sécurisé · Zayado</title>
+<meta name="description" content="Réglez une prestation Zayado en toute sécurité : avis express, bilan repreneur, aide au financement ou devis. Paiement par Mollie.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="https://app.zayado.net/logo-app.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Nunito:wght@700;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="top"><div class="top-in">
+  <a href="https://zayado.net"><img src="https://app.zayado.net/logo-app.png" alt="Zayado"></a>
+  <small>🔒 Paiement sécurisé · Mollie</small>
+</div></header>
+
+<main class="wrap">
+  <h1>Régler votre prestation <span class="hand">en toute sérénité</span></h1>
+  <p class="lead">Choisissez la prestation, indiquez vos coordonnées, puis payez sur la page sécurisée de Mollie (carte bancaire, virement, Apple Pay…). Vous recevez une confirmation par e-mail.</p>
+
+  <div class="grid">
+    <section>
+      <div id="offres" class="offres" aria-live="polite"><p class="note">Chargement des offres…</p></div>
+      <div class="alt">
+        Vous souhaitez <b>VisionAct</b> ? L'abonnement se prend dans l'appli : <a href="https://app.zayado.net/pricing">voir les formules</a>.<br>
+        Vous préparez un <b>rendez-vous « Ouvrir mon dossier »</b> ? Il se réserve avec son créneau : <a href="https://app.zayado.net/login?inscription=1&amp;next=/rdv-dossier">réserver</a>.
+      </div>
+    </section>
+
+    <aside class="carte">
+      <form id="form" novalidate>
+        <h2 style="font-size:20px">Vos coordonnées</h2>
+        <div class="duo">
+          <div><label for="prenom">Prénom</label><input id="prenom" name="prenom" type="text" autocomplete="given-name" required></div>
+          <div><label for="nom">Nom</label><input id="nom" name="nom" type="text" autocomplete="family-name" required></div>
+        </div>
+        <label for="email">E-mail</label><input id="email" name="email" type="email" autocomplete="email" required>
+        <div class="duo">
+          <div><label for="societe">Société <small>(facultatif)</small></label><input id="societe" name="societe" type="text" autocomplete="organization"></div>
+          <div><label for="telephone">Téléphone <small>(facultatif)</small></label><input id="telephone" name="telephone" type="tel" autocomplete="tel"></div>
+        </div>
+        <div id="bloc-devis" class="hide">
+          <div class="duo">
+            <div><label for="reference">Référence du devis</label><input id="reference" name="reference" type="text" placeholder="ZAY-2026-012"></div>
+            <div><label for="montant">Montant TTC (€)</label><input id="montant" name="montant" type="number" min="1" step="0.01" inputmode="decimal"></div>
+          </div>
+        </div>
+        <label for="message">Un mot pour l'expert <small>(facultatif)</small></label>
+        <textarea id="message" name="message" rows="2" maxlength="800"></textarea>
+        <label class="check"><input id="cgv" type="checkbox"> <span>J'accepte les <a href="https://zayado.net/pages/conditions-services" target="_blank" rel="noopener">conditions des services</a> et la <a href="https://zayado.net/policies/privacy-policy" target="_blank" rel="noopener">politique de confidentialité</a>.</span></label>
+        <div class="total"><span id="choix">Choisissez une prestation</span><strong id="prix">—</strong></div>
+        <button class="btn" id="payer" type="submit" disabled>Payer en toute sécurité</button>
+        <div id="erreur" class="msg" role="alert"></div>
+        <p class="note">Prix TTC. Zayado n'est pas assujettie à la TVA. Aucune donnée bancaire ne transite par Zayado : le paiement se fait chez Mollie.</p>
+      </form>
+    </aside>
+  </div>
+</main>
+
+<footer class="foot">© Zayado · <a href="https://zayado.net/pages/mentions-legales">Mentions légales</a> · <a href="https://zayado.net/pages/conditions-services">Conditions des services</a> · <a href="https://zayado.net/pages/contact">Contact</a></footer>
+<script src="assets/app.js"></script>
+</body>
+</html>

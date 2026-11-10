@@ -1,0 +1,71 @@
+PAIEMENT.ZAYADO.NET · notice d'installation
+============================================
+
+Trois adresses, trois rôles :
+  · zayado.net           la vitrine (Shopify)
+  · app.zayado.net       l'appli VisionAct, l'espace client et l'administration (/admin)
+  · paiement.zayado.net  la page de paiement des prestations, sans compte client
+  · studio.zayado.net    les outils internes
+
+Comment ça marche
+-----------------
+paiement.zayado.net n'a PAS sa propre base ni sa propre clé Mollie. C'est une page statique
+qui appelle l'API de l'appli (app.zayado.net/api). Chaque paiement :
+  1. crée une commande (CommerceOrder, type « paiement:<offre> ») dans la base de l'appli ;
+  2. ouvre la page de paiement Mollie avec la même clé que l'appli ;
+  3. est mis à jour par le webhook Mollie déjà en place (/api/mollie/webhook) ;
+  4. prévient les administrateurs (notification « Paiement en cours »).
+=> Tous les paiements se suivent dans app.zayado.net/admin, avec les autres commandes.
+
+Contenu du dossier
+------------------
+  frontend/                 la page à mettre en ligne (index.html, merci.html, assets/)
+  frontend/_redirects       relais /api → app.zayado.net (Netlify)
+  frontend/vercel.json      relais /api → app.zayado.net (Vercel)
+  nginx-paiement.conf       relais /api → app.zayado.net (votre propre serveur)
+  backend/paiement_public_ext.py   les 3 routes d'API à ajouter au backend de l'appli
+
+Étape 1 · Backend (développeur, 10 minutes)
+-------------------------------------------
+  1. Copier backend/paiement_public_ext.py à côté de reprise_conseil_ext.py.
+  2. Dans server.py, après install_reprise_conseil(globals()) :
+         from paiement_public_ext import install_paiement_public
+         install_paiement_public(globals())
+  3. Variables d'environnement (facultatives) :
+         PAIEMENT_FRONTEND_URL=https://paiement.zayado.net
+         PAIEMENT_WEBHOOK_BASE=https://app.zayado.net
+         PAIEMENT_OFFRES_ACTIVES=avis-express,bilan-repreneur,aide-financement,devis
+  4. À vérifier : le webhook /api/mollie/webhook met bien à jour toute CommerceOrder dont
+     l'identifiant est dans metadata.order_id (c'est déjà le cas pour le rendez-vous à 5 €).
+     Et la liste des commandes de /admin affiche bien tous les « kind » (paiement:…).
+  5. Si l'appli envoie un e-mail de confirmation après paiement pour les commandes, il partira
+     aussi pour ces paiements. Sinon, l'ajouter dans le webhook pour kind commençant par « paiement: ».
+
+Étape 2 · Mettre la page en ligne (au choix)
+--------------------------------------------
+  A. Netlify ou Vercel (le plus simple) : déposer le dossier frontend/, puis ajouter le domaine
+     paiement.zayado.net. Le fichier _redirects (Netlify) ou vercel.json (Vercel) relaie /api
+     vers l'appli : aucun réglage CORS n'est nécessaire.
+  B. Votre serveur : copier frontend/ dans /var/www/paiement.zayado.net et utiliser
+     nginx-paiement.conf.
+  DNS : un enregistrement CNAME « paiement » vers l'hébergeur choisi (ou A vers votre serveur).
+
+Étape 3 · Tester
+----------------
+  · En local (ENV=local, sans clé Mollie), une commande passe directement « payée » : pratique
+    pour vérifier l'affichage dans /admin.
+  · En ligne, faire un paiement réel de l'avis express (49 €) puis le rembourser depuis Mollie.
+
+Liens à utiliser sur zayado.net une fois en ligne
+-------------------------------------------------
+  https://paiement.zayado.net/?offre=avis-express
+  https://paiement.zayado.net/?offre=bilan-repreneur
+  https://paiement.zayado.net/?offre=aide-financement
+  https://paiement.zayado.net/?offre=devis          (évaluation, accompagnement, missions sur devis)
+  Offres prêtes mais désactivées (pages en veille) : clarte-financiere, suivi-cibles, relecture.
+  Pour les ouvrir : les ajouter à PAIEMENT_OFFRES_ACTIVES.
+
+Ce qui reste dans l'appli
+-------------------------
+  · VisionAct (abonnements) : app.zayado.net/pricing, il faut un compte.
+  · « Ouvrir mon dossier » (5 €) : app.zayado.net/rdv-dossier, il faut choisir un créneau.
